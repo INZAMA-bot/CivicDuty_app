@@ -1,0 +1,6 @@
+{
+  "name": "CivicDuty",
+  "description": "Speak. Serve. Be Heard. Civic accountability, service delivery reporting, and government desk portal for citizen reports, SLA tracking, anti-corruption, and public accountability.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

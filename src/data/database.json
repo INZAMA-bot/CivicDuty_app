@@ -1,0 +1,78 @@
+{
+  "version": "14.1.0",
+  "name": "CivicDuty Sovereign Governance Database",
+  "generated_at": "2026-08-25T10:00:00Z",
+  "collections": {
+    "countries": [
+      { "code": "UG", "name": "Uganda", "currency": "UGX", "desks": 146, "capital": "Kampala" },
+      { "code": "KE", "name": "Kenya", "currency": "KES", "desks": 47, "capital": "Nairobi" },
+      { "code": "NG", "name": "Nigeria", "currency": "NGN", "desks": 774, "capital": "Abuja" },
+      { "code": "GH", "name": "Ghana", "currency": "GHS", "desks": 261, "capital": "Accra" },
+      { "code": "RW", "name": "Rwanda", "currency": "RWF", "desks": 30, "capital": "Kigali" },
+      { "code": "TZ", "name": "Tanzania", "currency": "TZS", "desks": 184, "capital": "Dodoma" },
+      { "code": "ZA", "name": "South Africa", "currency": "ZAR", "desks": 257, "capital": "Pretoria" },
+      { "code": "ET", "name": "Ethiopia", "currency": "ETB", "desks": 98, "capital": "Addis Ababa" },
+      { "code": "EG", "name": "Egypt", "currency": "EGP", "desks": 27, "capital": "Cairo" },
+      { "code": "SN", "name": "Senegal", "currency": "XOF", "desks": 45, "capital": "Dakar" },
+      { "code": "ZM", "name": "Zambia", "currency": "ZMW", "desks": 116, "capital": "Lusaka" },
+      { "code": "ZW", "name": "Zimbabwe", "currency": "USD", "desks": 60, "capital": "Harare" },
+      { "code": "US", "name": "United States", "currency": "USD", "desks": 3143, "capital": "Washington, D.C." },
+      { "code": "GB", "name": "United Kingdom", "currency": "GBP", "desks": 333, "capital": "London" },
+      { "code": "IN", "name": "India", "currency": "INR", "desks": 766, "capital": "New Delhi" }
+    ],
+    "departments": [
+      { "id": "ug-unra", "country": "UG", "name": "UNRA", "full": "Uganda National Roads Authority", "sla": 48 },
+      { "id": "ug-nwsc", "country": "UG", "name": "NWSC", "full": "National Water & Sewerage Corp", "sla": 24 },
+      { "id": "ug-umeme", "country": "UG", "name": "Umeme", "full": "Umeme Electricity Distribution", "sla": 12 },
+      { "id": "ug-kcca", "country": "UG", "name": "KCCA", "full": "Kampala Capital City Authority", "sla": 48 },
+      { "id": "ug-police", "country": "UG", "name": "Police", "full": "Uganda Police Force (Professional Standards)", "sla": 24 },
+      { "id": "ug-moh", "country": "UG", "name": "MOH", "full": "Ministry of Health (Public Clinics)", "sla": 24 },
+      { "id": "ug-igg", "country": "UG", "name": "IGG", "full": "Inspectorate of Government (Anti-Corruption)", "sla": 72 },
+      { "id": "ke-kenha", "country": "KE", "name": "KeNHA", "full": "Kenya National Highways Authority", "sla": 48 },
+      { "id": "ke-kplc", "country": "KE", "name": "KPLC", "full": "Kenya Power & Lighting Company", "sla": 12 },
+      { "id": "ke-nairobi", "country": "KE", "name": "Nairobi County", "full": "Nairobi City County Government", "sla": 36 },
+      { "id": "ng-fedar", "country": "NG", "name": "FERMA", "full": "Federal Road Maintenance Agency", "sla": 48 },
+      { "id": "ng-eedc", "country": "NG", "name": "Disco", "full": "Electricity Distribution Companies", "sla": 12 },
+      { "id": "ng-lagos", "country": "NG", "name": "LASG", "full": "Lagos State Government", "sla": 24 }
+    ],
+    "profiles": {
+      "usr-9028-UG": {
+        "id": "usr-9028-UG",
+        "country": "UG",
+        "id_frag": "8841",
+        "display_name": "Inzama Robin",
+        "civic_score": 1240,
+        "rank": "Watchdog",
+        "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=256&auto=format&fit=crop&q=80",
+        "bio": "Parish Champion & Anti-Corruption Observer · Nakawa Division",
+        "followed": ["ug-unra", "ug-nwsc", "ug-umeme", "ug-kcca"],
+        "posts": 12,
+        "resolved": 8,
+        "corruption_reports": 2,
+        "upvotes_received": 42
+      }
+    },
+    "projects": [
+      {
+        "id": "PRJ-UMM-8821",
+        "country": "UG",
+        "dept": "ug-umeme",
+        "title": "Nakawa 33kV Substation Reliability Overhaul",
+        "budget": "UGX 450,000,000",
+        "contractor": "ABB / Roko Infrastructure JV",
+        "status": "In Progress (68% Complete)",
+        "deadline": "2026-11-30"
+      },
+      {
+        "id": "PRJ-KCCA-104",
+        "country": "UG",
+        "dept": "ug-kcca",
+        "title": "Bukoto-Kisaasi Dual Carriageway Drainage Rectification",
+        "budget": "UGX 1,200,000,000",
+        "contractor": "China Communications Construction Co.",
+        "status": "Active Site Work",
+        "deadline": "2026-12-15"
+      }
+    ]
+  }
+}
