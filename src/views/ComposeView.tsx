@@ -4,16 +4,17 @@ import { CountryCode, MediaItem, Post, TicketCategory } from '../types';
 import { allDepts, TERRITORY } from '../data/countries';
 import { primaryUnit, tiersFor } from '../data/tiers';
 import { CATEGORIES } from '../utils/helpers';
-import { Upload, Mic, Lock, AlertTriangle, MapPin, Info, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Upload, Mic, Lock, AlertTriangle, MapPin, Info, CheckCircle2, ShieldCheck, HelpCircle, Bike, Sparkles } from 'lucide-react';
 
 export const ComposeView: React.FC = () => {
-  const { user, go, addPost, toast, isOnline, queueOfflinePost } = useApp();
+  const { user, go, addPost, toast, isOnline, queueOfflinePost, openGuide, activeDept } = useApp();
 
   const country = user?.country || 'UG';
   const depts = allDepts(country);
   const territory = TERRITORY[country] || [];
 
-  const [dept, setDept] = useState('');
+  const [dept, setDept] = useState(activeDept || '');
+  const [profession, setProfession] = useState('Bodaboda Rider / Cyclist');
   const [othersText, setOthersText] = useState('');
   const [district, setDistrict] = useState('');
   const [subcounty, setSubcounty] = useState('');
@@ -170,6 +171,8 @@ export const ComposeView: React.FC = () => {
       created_at: new Date().toISOString(),
       comments: [],
       upvotes: 0,
+      downvotes: 0,
+      author_profession: profession,
       citizen_satisfied: null,
       escalated: false,
     };
@@ -193,6 +196,46 @@ export const ComposeView: React.FC = () => {
         <p className="text-[11px] mono text-slate-500 dark:text-slate-400 mt-1">Permanent public record. Service delivery is your right.</p>
       </div>
 
+      {/* 4-Step Citizen Reporting Guidance Stepper */}
+      <div className="bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+        <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
+          <span className="uppercase tracking-wider">Citizen Reporting Pathway</span>
+          <button
+            type="button"
+            onClick={() => openGuide('quickstart')}
+            className="text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 font-bold cursor-pointer"
+          >
+            <HelpCircle size={11} /> Need Guidance?
+          </button>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5 text-center">
+          <div className={`p-1.5 rounded-xl border transition-all ${
+            dept ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+          }`}>
+            <div className="text-[10px] font-black">{dept ? '✓' : '1'}</div>
+            <div className="text-[8.5px] font-bold truncate">1. Entity</div>
+          </div>
+          <div className={`p-1.5 rounded-xl border transition-all ${
+            parish ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+          }`}>
+            <div className="text-[10px] font-black">{parish ? '✓' : '2'}</div>
+            <div className="text-[8.5px] font-bold truncate">2. Parish</div>
+          </div>
+          <div className={`p-1.5 rounded-xl border transition-all ${
+            body ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+          }`}>
+            <div className="text-[10px] font-black">{body ? '✓' : '3'}</div>
+            <div className="text-[8.5px] font-bold truncate">3. Evidence</div>
+          </div>
+          <div className={`p-1.5 rounded-xl border transition-all ${
+            dept && parish && body ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-400 text-teal-700 dark:text-teal-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
+          }`}>
+            <div className="text-[10px] font-black">4</div>
+            <div className="text-[8.5px] font-bold truncate">4. Dispatch</div>
+          </div>
+        </div>
+      </div>
+
       {!isOnline && (
         <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-xs mono flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
@@ -202,33 +245,106 @@ export const ComposeView: React.FC = () => {
 
       {/* Department Selector */}
       <div className="space-y-2">
-        <label className="text-[9px] mono text-slate-400 uppercase tracking-widest block">Post to Wall</label>
+        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">Post to Wall</label>
         <select
           value={dept}
           onChange={(e) => setDept(e.target.value)}
           className="mono text-sm"
         >
-          <option value="">Select department...</option>
-          <optgroup label="── Lane 1: Government">
+          <option value="">Select institution, provider or desk...</option>
+          
+          <optgroup label="── 🏛️ Government & Statutory Desks">
             {depts
-              .filter((d) => d.lane === 'civic')
+              .filter((d) => d.lane === 'civic' || d.category === 'government')
               .map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.icon || '🏛'} {d.name} — {d.ministry || d.full}
                 </option>
               ))}
           </optgroup>
-          <optgroup label="── Lane 2: Private / Utility">
+
+          <optgroup label="── 🏫 Schools & Education">
             {depts
-              .filter((d) => d.lane === 'consumer')
+              .filter((d) => d.category === 'education')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🏢'} {d.full}
+                  {d.icon || '🏫'} {d.name} ({d.full})
                 </option>
               ))}
           </optgroup>
-          <optgroup label="── Not Listed">
-            <option value="others">Others / Not listed above</option>
+
+          <optgroup label="── 🏥 Hospitals & Healthcare">
+            {depts
+              .filter((d) => d.category === 'health')
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.icon || '🏥'} {d.name} — {d.full}
+                </option>
+              ))}
+          </optgroup>
+
+          <optgroup label="── 🍽️ Hospitality & Dining">
+            {depts
+              .filter((d) => d.category === 'hospitality')
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.icon || '🍽️'} {d.name} — {d.full}
+                </option>
+              ))}
+          </optgroup>
+
+          <optgroup label="── 💳 Finance, Banks & SACCOs">
+            {depts
+              .filter((d) => d.category === 'finance')
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.icon || '🏦'} {d.name} — {d.full}
+                </option>
+              ))}
+          </optgroup>
+
+          <optgroup label="── 🚌 Transport & Transit SACCOs">
+            {depts
+              .filter((d) => d.category === 'transport')
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.icon || '🚌'} {d.name} — {d.full}
+                </option>
+              ))}
+          </optgroup>
+
+          <optgroup label="── 🏢 Housing, Plazas & Markets">
+            {depts
+              .filter((d) => d.category === 'housing')
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.icon || '🏢'} {d.name} — {d.full}
+                </option>
+              ))}
+          </optgroup>
+
+          <optgroup label="── ⚡ Utilities & Telecom">
+            {depts
+              .filter((d) => d.category === 'utility' || d.category === 'telecom')
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.icon || '⚡'} {d.name} — {d.full}
+                </option>
+              ))}
+          </optgroup>
+
+          <optgroup label="── 🛡️ CSOs, NGOs & Contractors">
+            {depts
+              .filter((d) => d.category === 'cso' || d.category === 'contractor')
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.icon || '🛡️'} {d.name} — {d.full}
+                </option>
+              ))}
+          </optgroup>
+
+          <optgroup label="── ➕ Unlisted Entity">
+            <option value="others">Others / Register & Report Unlisted Provider</option>
           </optgroup>
         </select>
 
@@ -241,16 +357,72 @@ export const ComposeView: React.FC = () => {
               placeholder="e.g. Yaka token vendor, Private contractor"
               className="mono text-sm"
             />
-            <p className="text-[8px] mono text-slate-400 flex items-center gap-1">
-              <AlertTriangle size={12} className="text-amber-400" /> Tagged [Unverified] · auto-CC'd to relevant ministry
+            <p className="text-[8.5px] mono text-slate-700 dark:text-slate-300 flex items-center gap-1 font-bold">
+              <AlertTriangle size={12} className="text-amber-500" /> Tagged [Unverified] · auto-CC'd to relevant ministry
             </p>
+          </div>
+        )}
+      </div>
+
+      {/* Reporter Profession / Frontline Field Scout Category */}
+      <div className="space-y-1.5 p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/70 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] mono text-amber-950 dark:text-amber-300 font-black uppercase tracking-wider flex items-center gap-1.5">
+            <Bike size={13} className="text-amber-600 dark:text-amber-400" />
+            <span>Reporter Profession · Community Field Scout Tag</span>
+          </label>
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-200">
+            Perk Vault Bounties
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-600 dark:text-slate-400">
+          Self-identify your role. Bodaboda riders, drivers, and frontline citizens qualify for targeted micro-rewards &amp; fuel vouchers when reporting infrastructure hazards.
+        </p>
+
+        <select
+          value={profession}
+          onChange={(e) => setProfession(e.target.value)}
+          className="w-full mt-1 font-bold text-xs bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/80 rounded-xl p-2.5 text-slate-900 dark:text-slate-100"
+        >
+          <option value="Bodaboda Rider / Cyclist">
+            🛵 Bodaboda Rider / Cyclist (Frontline Road Scout · MoMo Fuel &amp; Airtime Eligible)
+          </option>
+          <option value="Taxi / Matatu / Commercial Driver">
+            🚐 Taxi / Matatu / Commercial Driver (Public Transit &amp; Highway Corridor Scout)
+          </option>
+          <option value="Market Vendor / Local Trader">
+            🥬 Market Vendor / Local Trader (Public Space &amp; Sanitation Scout)
+          </option>
+          <option value="Healthcare Worker / Nurse / Clinical Staff">
+            🏥 Healthcare Worker / Nurse / Clinical Staff (Health Service Monitor)
+          </option>
+          <option value="Teacher / Student / Youth Leader">
+            🎓 Teacher / Student / Youth Leader (Education &amp; Community Watch)
+          </option>
+          <option value="Artisan / Builder / Field Technician">
+            🛠️ Artisan / Builder / Field Technician (Infrastructure Quality Inspector)
+          </option>
+          <option value="Civil Servant / Public Officer">
+            🏛️ Civil Servant / Public Officer (Internal Oversight &amp; Whistleblower)
+          </option>
+          <option value="General Resident / Commuter">
+            🚶 General Resident / Commuter (Community Citizen)
+          </option>
+        </select>
+
+        {profession.toLowerCase().includes('boda') && (
+          <div className="mt-2 text-[10px] font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 bg-amber-100/80 dark:bg-amber-900/40 p-2 rounded-lg border border-amber-300 dark:border-amber-700">
+            <Sparkles size={12} className="text-amber-600 shrink-0" />
+            <span>
+              Road Scout Status: Verified reports on potholes, open culverts, and blackspots earn Perk Vault bounty points redeemable for fuel and airtime!
+            </span>
           </div>
         )}
       </div>
 
       {/* Territory Cascading Selector */}
       <div className="space-y-2">
-        <label className="text-[9px] mono text-slate-400 uppercase tracking-widest block">
+        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">
           Territory — District › SubCounty › Parish
         </label>
         <select
@@ -280,7 +452,7 @@ export const ComposeView: React.FC = () => {
           className="mono text-sm mb-1.5"
           style={{ opacity: district ? 1 : 0.4 }}
         >
-          <option value="">Select {tiersFor(country)[2]?.unit || 'Division'}...</option>
+          <option value="">Select {tiersFor(country)[2]?.unit || 'Sub-county'}...</option>
           {subcounties.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -302,17 +474,22 @@ export const ComposeView: React.FC = () => {
             </option>
           ))}
         </select>
+
+        <p className="text-[8.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 pt-0.5">
+          <Info size={11} className="text-teal-600 dark:text-teal-400 shrink-0" />
+          <span>Under decentralization laws, selecting your {primaryUnit(country, district)} routes directly to your grassroots parish chief & local engineering desk.</span>
+        </p>
       </div>
 
       {/* Category Picker */}
       <div className="space-y-2">
-        <label className="text-[9px] mono text-slate-400 uppercase tracking-widest block">Category</label>
+        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">Category</label>
         <button
           onClick={() => setCategory('corruption')}
-          className={`w-full mb-2 py-3 px-3.5 rounded-xl border text-xs mono font-bold transition-all flex items-center gap-2 ${
+          className={`w-full mb-2 py-3 px-3.5 rounded-xl border text-xs mono font-bold transition-all flex items-center gap-2 cursor-pointer ${
             category === 'corruption'
-              ? 'border-rose-500/50 text-rose-300 bg-rose-500/10 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
-              : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-rose-500/40 hover:text-rose-300'
+              ? 'border-rose-500 text-rose-900 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10 shadow-xs'
+              : 'bg-white dark:bg-slate-900/60 border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:border-rose-500 hover:text-rose-700 dark:hover:text-rose-300'
           }`}
         >
           <Lock size={14} /> Report Corruption / Misuse of Public Funds (+100pts)
@@ -323,10 +500,10 @@ export const ComposeView: React.FC = () => {
             <button
               key={c.id}
               onClick={() => setCategory(c.id)}
-              className={`py-2.5 px-1 rounded-xl border text-[8px] mono transition-all leading-tight text-center ${
+              className={`py-2.5 px-1 rounded-xl border text-[9px] mono transition-all leading-tight text-center cursor-pointer ${
                 category === c.id
-                  ? 'bg-teal-500/10 border-teal-500/50 text-teal-300 font-bold shadow-[0_0_8px_rgba(20,184,166,0.2)]'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                  ? 'bg-teal-50 dark:bg-teal-500/10 border-teal-500 text-teal-900 dark:text-teal-300 font-black shadow-xs'
+                  : 'bg-white dark:bg-slate-900/60 border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:border-emerald-500 font-bold'
               }`}
             >
               {c.label.split(' ')[0].replace('/', '')}
@@ -337,18 +514,18 @@ export const ComposeView: React.FC = () => {
 
       {/* Title & Details */}
       <div className="space-y-2">
-        <label className="text-[9px] mono text-slate-400 uppercase tracking-widest block">Headline</label>
+        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">Headline</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Brief summary of the issue..."
-          className="text-sm"
+          className="text-sm font-bold"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-[9px] mono text-slate-400 uppercase tracking-widest block">Details</label>
+        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">Details</label>
         <textarea
           rows={4}
           value={body}
@@ -359,37 +536,37 @@ export const ComposeView: React.FC = () => {
       </div>
 
       {/* GPS & Location Policy Selection */}
-      <div className="card p-4 space-y-3 border-slate-800">
+      <div className="card p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-[9px] mono text-slate-300 font-bold uppercase tracking-widest flex items-center gap-1.5">
-            <MapPin size={13} className="text-teal-400" /> Location Accuracy & Policy
+          <label className="text-[9.5px] mono text-slate-900 dark:text-slate-100 font-black uppercase tracking-widest flex items-center gap-1.5">
+            <MapPin size={13} className="text-emerald-700 dark:text-teal-400" /> Location Accuracy & Policy
           </label>
-          <span className="text-[8px] mono text-teal-400 bg-teal-500/10 border border-teal-500/30 px-2 py-0.5 rounded">
+          <span className="text-[8.5px] mono text-emerald-800 dark:text-teal-400 bg-emerald-50 dark:bg-teal-500/10 border border-emerald-300 dark:border-teal-500/30 px-2 py-0.5 rounded font-bold">
             GPS is Optional
           </span>
         </div>
 
-        <p className="text-[11px] text-slate-300 leading-relaxed">
+        <p className="text-[11.5px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
           How would you like to identify the issue location?
         </p>
 
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck size={13} className="text-teal-400" />
-              <span className="text-[11px] font-bold text-slate-200">1. Parish Territory</span>
+              <ShieldCheck size={13} className="text-emerald-700 dark:text-teal-400" />
+              <span className="text-[11px] font-black text-slate-900 dark:text-slate-200">1. Parish Territory</span>
             </div>
-            <p className="text-[9px] mono text-slate-400 leading-normal">
+            <p className="text-[9px] mono text-slate-600 dark:text-slate-400 leading-normal font-medium">
               e.g. Mbuya 1 Parish. Routes to Local Officers without revealing exact pin. Recommended for area-wide issues & privacy.
             </p>
           </div>
 
-          <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
+          <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
             <div className="flex items-center gap-1.5">
-              <MapPin size={13} className="text-amber-400" />
-              <span className="text-[11px] font-bold text-slate-200">2. Device GPS Pin</span>
+              <MapPin size={13} className="text-amber-600 dark:text-amber-400" />
+              <span className="text-[11px] font-black text-slate-900 dark:text-slate-200">2. Device GPS Pin</span>
             </div>
-            <p className="text-[9px] mono text-slate-400 leading-normal">
+            <p className="text-[9px] mono text-slate-600 dark:text-slate-400 leading-normal font-medium">
               Attaches exact lat/lng coordinates. Recommended for point repairs (e.g. broken pipe or specific pothole).
             </p>
           </div>
@@ -398,33 +575,33 @@ export const ComposeView: React.FC = () => {
         {/* GPS Acquire Button / Status */}
         <div
           className={`flex items-center gap-2.5 p-3 rounded-xl border transition-colors ${
-            gps ? 'bg-teal-500/10 border-teal-500/30' : 'bg-slate-900/60 border-slate-800'
+            gps ? 'bg-emerald-50 dark:bg-teal-500/10 border-emerald-300 dark:border-teal-500/30' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'
           }`}
         >
-          <div className={`w-2 h-2 rounded-full ${gps ? 'bg-teal-400 a-dot shadow-[0_0_8px_#2dd4bf]' : 'bg-slate-700'} flex-shrink-0`}></div>
-          <span className={`text-[10px] mono flex-1 ${gps ? 'text-teal-300 font-bold' : 'text-slate-400'}`}>
+          <div className={`w-2 h-2 rounded-full ${gps ? 'bg-emerald-500 a-dot' : 'bg-slate-400 dark:bg-slate-700'} flex-shrink-0`}></div>
+          <span className={`text-[10px] mono flex-1 ${gps ? 'text-emerald-800 dark:text-teal-300 font-black' : 'text-slate-700 dark:text-slate-400 font-bold'}`}>
             {gpsStatus}
           </span>
           <button
             onClick={handleAcquireGps}
-            className="text-[9px] mono bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 px-3 py-1 rounded-lg transition-colors font-bold"
+            className="text-[9px] mono bg-emerald-50 dark:bg-teal-500/10 hover:bg-emerald-100 text-emerald-800 dark:text-teal-300 border border-emerald-300 dark:border-teal-500/30 px-3 py-1 rounded-lg transition-colors font-black cursor-pointer"
           >
             {gps ? 'Re-acquire Pin' : 'Attach GPS Pin'}
           </button>
         </div>
 
-        <div className="flex items-start gap-1.5 text-[8.5px] mono text-slate-400 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80">
-          <Info size={13} className="text-teal-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-1.5 text-[8.5px] mono text-slate-700 dark:text-slate-400 bg-slate-100/70 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800/80">
+          <Info size={13} className="text-emerald-700 dark:text-teal-400 flex-shrink-0 mt-0.5" />
           <p className="leading-normal">
-            <strong className="text-slate-300">Why GPS is intentionally optional:</strong> Whistleblowers reporting corruption need location privacy; feature-phone USSD users (*3030#) don't have GPS; and parish-wide service outages affect the whole territory.
+            <strong className="text-slate-900 dark:text-slate-200">Why GPS is intentionally optional:</strong> Whistleblowers reporting corruption need location privacy; feature-phone USSD users (*3030#) don't have GPS; and parish-wide service outages affect the whole territory.
           </p>
         </div>
       </div>
 
       {/* Evidence Upload */}
       <div className="space-y-2">
-        <label className="text-[9px] mono text-slate-400 uppercase tracking-widest block">
-          Evidence <span className="text-slate-500">(Optional · Photo, Video, Document)</span>
+        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">
+          Evidence <span className="text-slate-500 font-normal">(Optional · Photo, Video, Document)</span>
         </label>
 
         <label className="drop-zone block cursor-pointer">
@@ -435,7 +612,7 @@ export const ComposeView: React.FC = () => {
             multiple
             onChange={handleFileSelect}
           />
-          <div className="flex items-center justify-center gap-2 text-slate-400 hover:text-teal-300">
+          <div className="flex items-center justify-center gap-2 text-slate-700 dark:text-slate-300 hover:text-emerald-700 font-bold">
             <Upload size={18} /> <span className="text-[13px] mono">Photo · Video · Document</span>
           </div>
         </label>
@@ -443,20 +620,20 @@ export const ComposeView: React.FC = () => {
         {/* Live Staged Media Card Preview */}
         {stagedMedia.length > 0 && (
           <div className="space-y-2 mt-2">
-            <p className="text-[9px] mono text-slate-400 uppercase tracking-widest">Staged Evidence ({stagedMedia.length})</p>
+            <p className="text-[9.5px] mono text-slate-700 dark:text-slate-300 uppercase tracking-widest font-black">Staged Evidence ({stagedMedia.length})</p>
             <div className="grid grid-cols-2 gap-2">
               {stagedMedia.map((m, idx) => (
-                <div key={idx} className="card p-2 relative flex items-center gap-2 overflow-hidden border-slate-800">
+                <div key={idx} className="card p-2 relative flex items-center gap-2 overflow-hidden border-slate-300 dark:border-slate-800">
                   {m.type === 'image' && (
                     <img src={m.url} alt="" className="w-10 h-10 object-cover rounded-lg flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-slate-200 truncate">{m.name}</p>
-                    <p className="text-[8px] mono text-slate-500">{m.type} · {m.size}</p>
+                    <p className="text-[10px] font-bold text-slate-900 dark:text-slate-200 truncate">{m.name}</p>
+                    <p className="text-[8px] mono text-slate-600 dark:text-slate-400 font-bold">{m.type} · {m.size}</p>
                   </div>
                   <button
                     onClick={() => removeStagedMedia(idx)}
-                    className="text-slate-500 hover:text-rose-400 p-1 text-xs mono"
+                    className="text-slate-500 hover:text-rose-600 p-1 text-xs mono font-black"
                   >
                     ✕
                   </button>
@@ -469,31 +646,31 @@ export const ComposeView: React.FC = () => {
 
       {/* Voice Note Simulation */}
       <div className="space-y-2">
-        <label className="text-[9px] mono text-slate-400 uppercase tracking-widest block">
-          Voice Note <span className="text-slate-500">(Optional · Supports feature phone citizens)</span>
+        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">
+          Voice Note <span className="text-slate-500 font-normal">(Optional · Supports feature phone citizens)</span>
         </label>
         <div className="flex items-center gap-3">
           <button
             onClick={toggleRecording}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs mono font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs mono font-bold transition-all cursor-pointer ${
               isRecording
-                ? 'border-rose-500/60 text-rose-300 bg-rose-500/10'
-                : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                ? 'border-rose-500 text-rose-900 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/10'
+                : 'bg-white dark:bg-slate-900/60 border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:border-slate-400'
             }`}
           >
             <Mic size={16} /> <span>{isRecording ? 'Stop Recording' : 'Record'}</span>
           </button>
-          <span className={`text-[9px] mono ${voiceSaved ? 'text-teal-400 font-bold' : 'text-slate-500'}`}>
+          <span className={`text-[9.5px] mono font-bold ${voiceSaved ? 'text-emerald-700 dark:text-teal-400' : 'text-slate-600 dark:text-slate-400'}`}>
             {isRecording ? 'Recording...' : voiceSaved ? 'Voice note attached ✓' : 'Tap to record'}
           </span>
         </div>
       </div>
 
       {/* Anonymous Toggle */}
-      <div className="card p-4 flex items-center justify-between gap-3 border-slate-800">
+      <div className="card p-4 flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-bold text-slate-200">Post anonymously</p>
-          <p className="text-[9px] mono text-slate-400 mt-0.5">
+          <p className="text-[13px] font-black text-slate-950 dark:text-slate-100">Post anonymously</p>
+          <p className="text-[9.5px] mono text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
             Displays as "Verified Citizen". NIN stored securely — revealed only by court order.
           </p>
         </div>
@@ -510,7 +687,7 @@ export const ComposeView: React.FC = () => {
 
       <button
         onClick={handleSubmit}
-        className="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] shadow-[0_0_20px_rgba(20,184,166,0.35)]"
+        className="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] shadow-md cursor-pointer"
       >
         Report to Wall →
       </button>

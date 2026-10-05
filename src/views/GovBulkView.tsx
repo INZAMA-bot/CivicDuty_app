@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ChevronLeft, Download, Upload } from 'lucide-react';
 import { getDept, makeCode, csvEscape } from '../utils/helpers';
@@ -18,8 +18,13 @@ export const GovBulkView: React.FC = () => {
   const [problems, setProblems] = useState<any[]>([]);
   const [issued, setIssued] = useState<any[]>([]);
 
+  useEffect(() => {
+    if (!user || !['node_admin', 'platform_admin'].includes(user.role)) {
+      go('gov_inbox');
+    }
+  }, [user, go]);
+
   if (!user || !['node_admin', 'platform_admin'].includes(user.role)) {
-    go('gov_inbox');
     return null;
   }
 

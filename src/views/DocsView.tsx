@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES } from '../data/countries';
 import { getCountryPitch } from '../data/countryPitches';
+import { OFFICIAL_DOCUMENTS, OfficialDocument } from '../data/officialDocs';
 import {
   ChevronLeft,
   ChevronRight,
@@ -36,14 +37,30 @@ import {
   Mail,
   Calendar,
   FileCheck,
+  Download,
+  BookOpen,
+  ExternalLink,
+  Copy,
+  Search,
+  CheckCheck,
+  Eye,
+  ScrollText,
+  Bookmark,
+  Printer,
+  Bus,
 } from 'lucide-react';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit } = useApp();
-  const [activeTab, setActiveTab] = useState<'pitch' | 'partner' | 'journeys' | 'architecture'>('pitch');
+  const [activeTab, setActiveTab] = useState<'pitch' | 'overview' | 'partner' | 'journeys' | 'architecture'>('overview');
   const [journeyRole, setJourneyRole] = useState<'citizen' | 'government' | 'entity'>('citizen');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [pitchCountry, setPitchCountry] = useState<string>(user?.country || 'UG');
+  
+  // Document Reader State
+  const [selectedDocId, setSelectedDocId] = useState<string>('concept-note');
+  const [docSearch, setDocSearch] = useState<string>('');
+  const [copiedDoc, setCopiedDoc] = useState<boolean>(false);
 
   // Government Partnership Form State
   const [partnerMinistry, setPartnerMinistry] = useState('');
@@ -308,9 +325,9 @@ export const DocsView: React.FC = () => {
             </h2>
           </div>
           
-          {/* Target Government Country Selector */}
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-teal-500/40 p-1.5 rounded-2xl shadow-sm">
-            <div className="pl-2 flex items-center gap-1.5 text-teal-700 dark:text-teal-400 text-[10px] mono font-bold">
+          {/* Target Government Country Selector - Centered & Polished */}
+          <div className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-teal-500/40 py-2 px-3 rounded-2xl shadow-sm mx-auto">
+            <div className="flex items-center gap-1.5 text-teal-700 dark:text-teal-400 text-[10px] mono font-bold">
               <Globe size={14} />
               <span>Pitching To:</span>
             </div>
@@ -321,7 +338,7 @@ export const DocsView: React.FC = () => {
                 setCurrentSlide(0);
                 toast(`Loaded pitch tailored for Government of ${COUNTRIES[e.target.value]?.name || 'Target Nation'}`);
               }}
-              className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs font-mono font-bold py-1.5 px-3 rounded-xl border border-teal-300 dark:border-teal-500/30 focus:outline-none focus:border-teal-500 cursor-pointer"
+              className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs font-mono font-bold py-1.5 px-3 rounded-xl border border-teal-300 dark:border-teal-500/30 focus:outline-none focus:border-teal-500 cursor-pointer w-full sm:w-auto"
             >
               {Object.entries(COUNTRIES).map(([code, c]) => (
                 <option key={code} value={code} className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
@@ -349,10 +366,49 @@ export const DocsView: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Brand Advertising & Fleet Sensitization Images */}
+        <div
+          onClick={() => go('transit_preview')}
+          className="mt-2.5 bg-slate-900 border border-emerald-500/50 p-2.5 rounded-2xl flex items-center justify-between gap-2.5 cursor-pointer hover:border-emerald-400 transition-all shadow-md group"
+          title="Inspect CivicDuty Brand Advertising, Kayoola Bus & Train Fleet Images"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <Bus size={15} />
+            </div>
+            <div className="text-left">
+              <div className="text-[11px] font-black uppercase text-white mono flex items-center gap-1.5">
+                <span>Brand Advertising &amp; Fleet Sensitization</span>
+                <span className="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-[8px] font-bold">
+                  Images
+                </span>
+              </div>
+              <div className="text-[9px] text-slate-300">
+                Kayoola EVS Buses, Passenger Train &amp; Transit Billboards Sensitization
+              </div>
+            </div>
+          </div>
+          <div className="px-2.5 py-1 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-[9px] mono uppercase flex items-center gap-1 shadow-sm shrink-0">
+            <span>View Ads</span>
+            <ArrowRight size={10} />
+          </div>
+        </div>
       </div>
 
       {/* Primary Section Switcher Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold mono">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold mono">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`py-2.5 px-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            activeTab === 'overview'
+              ? 'bg-amber-600 dark:bg-amber-500 text-white dark:text-slate-950 shadow-sm font-black'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          }`}
+        >
+          <ScrollText size={14} />
+          <span>Official Documents ({OFFICIAL_DOCUMENTS.length})</span>
+        </button>
         <button
           onClick={() => setActiveTab('pitch')}
           className={`py-2.5 px-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
@@ -395,9 +451,458 @@ export const DocsView: React.FC = () => {
           }`}
         >
           <Building2 size={14} />
-          <span>{countryData.code} Architecture</span>
+          <span>{countryData.code} Structure</span>
         </button>
       </div>
+
+      {/* ========================================================= */}
+      {/* TAB 0: OFFICIAL IN-SCREEN DOCUMENTATION & SLIDE CAROUSEL  */}
+      {/* ========================================================= */}
+      {activeTab === 'overview' && (() => {
+        const activeDoc = OFFICIAL_DOCUMENTS.find((d) => d.id === selectedDocId) || OFFICIAL_DOCUMENTS[0];
+        const activeDocIndex = OFFICIAL_DOCUMENTS.findIndex((d) => d.id === activeDoc.id);
+
+        const handleCopyDocText = (doc: OfficialDocument) => {
+          const fullText = [
+            `=================================================================`,
+            `${doc.title.toUpperCase()}`,
+            `${doc.subtitle}`,
+            `Category: ${doc.category} | Version: ${doc.version} | Date: ${doc.date}`,
+            `Author: ${doc.author} (${doc.authorTitle}) - ${doc.authorContact}`,
+            `=================================================================\n`,
+            `SUMMARY:\n${doc.summary}\n`,
+            ...doc.sections.map((s) => {
+              let sectionText = `-----------------------------------------------------------------\n`;
+              if (s.num) sectionText += `[${s.num}] `;
+              sectionText += `${s.title.toUpperCase()}\n-----------------------------------------------------------------\n`;
+              sectionText += `${s.content}\n`;
+              if (s.highlights && s.highlights.length > 0) {
+                sectionText += `\nKEY HIGHLIGHTS:\n` + s.highlights.map((h) => `• ${h}`).join('\n') + `\n`;
+              }
+              if (s.callout) {
+                sectionText += `\n[NOTE: ${s.callout.title}]\n${s.callout.text}\n`;
+              }
+              if (s.table) {
+                sectionText += `\n${s.table.headers.join(' | ')}\n`;
+                sectionText += s.table.headers.map(() => '---').join(' | ') + '\n';
+                sectionText += s.table.rows.map((row) => row.join(' | ')).join('\n') + '\n';
+              }
+              return sectionText;
+            }),
+            `\n=================================================================`,
+            `CivicDuty Sovereign Service Delivery & Nation Management Infrastructure`,
+            `Lead System Architect: Inzama Robin • 0778277900 / 0748338796 • inzamarobin279@gmail.com`,
+            `=================================================================`,
+          ].join('\n\n');
+
+          if (navigator?.clipboard?.writeText) {
+            navigator.clipboard.writeText(fullText);
+          }
+          setCopiedDoc(true);
+          toast(`"${doc.title}" copied to clipboard!`, 'success');
+          setTimeout(() => setCopiedDoc(false), 3000);
+        };
+
+        const filteredSections = activeDoc.sections.filter((s) => {
+          if (!docSearch.trim()) return true;
+          const q = docSearch.toLowerCase();
+          return (
+            s.title.toLowerCase().includes(q) ||
+            s.content.toLowerCase().includes(q) ||
+            (s.num && s.num.toLowerCase().includes(q)) ||
+            (s.highlights && s.highlights.some((h) => h.toLowerCase().includes(q))) ||
+            (s.callout && (s.callout.title.toLowerCase().includes(q) || s.callout.text.toLowerCase().includes(q)))
+          );
+        });
+
+        return (
+          <div className="space-y-4">
+            {/* Document Slide Carousel Header & Controller */}
+            <div className="card p-4 space-y-3 bg-gradient-to-br from-amber-500/10 via-slate-900/10 to-teal-500/10 dark:from-amber-950/40 dark:via-slate-950 dark:to-teal-950/30 border border-amber-300 dark:border-amber-500/40 rounded-2xl shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-500/20 pb-3">
+                <div>
+                  <span className="text-[10px] mono text-amber-800 dark:text-amber-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                    <FileCheck size={14} /> Sovereign Documentation Suite • Direct In-App Reader
+                  </span>
+                  <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">
+                    Official Document Slide Carousel
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Tap any document slide below to display its full text and diagrams directly on your screen without external downloads.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 self-start sm:self-center">
+                  <button
+                    onClick={() => {
+                      const prevIdx = activeDocIndex > 0 ? activeDocIndex - 1 : OFFICIAL_DOCUMENTS.length - 1;
+                      setSelectedDocId(OFFICIAL_DOCUMENTS[prevIdx].id);
+                    }}
+                    className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-300 text-xs font-mono font-bold flex items-center gap-1"
+                    title="Previous Document"
+                  >
+                    <ChevronLeft size={14} />
+                    <span className="hidden sm:inline">Prev Doc</span>
+                  </button>
+                  <span className="text-[10px] mono bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 font-bold px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-500/40">
+                    Doc {activeDocIndex + 1} / {OFFICIAL_DOCUMENTS.length}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const nextIdx = activeDocIndex < OFFICIAL_DOCUMENTS.length - 1 ? activeDocIndex + 1 : 0;
+                      setSelectedDocId(OFFICIAL_DOCUMENTS[nextIdx].id);
+                    }}
+                    className="p-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg text-xs font-mono flex items-center gap-1 shadow-sm"
+                    title="Next Document"
+                  >
+                    <span className="hidden sm:inline">Next Doc</span>
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Responsive Slide Deck of All 7 Documents */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 pt-1">
+                {OFFICIAL_DOCUMENTS.map((doc, idx) => {
+                  const isSelected = doc.id === activeDoc.id;
+                  return (
+                    <button
+                      key={doc.id}
+                      onClick={() => {
+                        setSelectedDocId(doc.id);
+                        setDocSearch('');
+                      }}
+                      className={`text-left p-3 rounded-xl border transition-all flex flex-col justify-between space-y-2 relative ${
+                        isSelected
+                          ? 'bg-white dark:bg-slate-900 border-amber-500 dark:border-amber-400 shadow-md ring-2 ring-amber-500/30'
+                          : 'bg-white/80 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-600/50 hover:bg-white dark:hover:bg-slate-900 shadow-sm'
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-[9px] mono font-bold px-2 py-0.5 rounded ${
+                              isSelected
+                                ? 'bg-amber-500 text-white dark:text-slate-950 font-black'
+                                : `${doc.color.badgeBg} ${doc.color.badgeText}`
+                            }`}
+                          >
+                            {doc.category}
+                          </span>
+                          <span className="text-[9px] mono text-slate-500 flex items-center gap-1">
+                            <Clock size={10} /> {doc.readTime}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 leading-snug line-clamp-2">
+                          {doc.title}
+                        </h4>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                          {doc.subtitle}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 pt-2 text-[10px] mono">
+                        <span className="text-slate-500 dark:text-slate-400 text-[9px] font-bold">
+                          {doc.version}
+                        </span>
+                        <span
+                          className={`font-bold flex items-center gap-1 text-[10px] ${
+                            isSelected
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
+                          <Eye size={12} />
+                          <span>{isSelected ? 'READING NOW' : 'Tap to Read'}</span>
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* In-Screen Document Viewer for Active Selected Document */}
+            <div className="card p-5 space-y-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm text-slate-800 dark:text-slate-200">
+              {/* Document Letterhead & Metadata Header */}
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded bg-amber-500/10 text-amber-800 dark:text-amber-400 text-[10px] mono font-bold border border-amber-500/30 flex items-center gap-1.5">
+                      <FileText size={12} /> {activeDoc.category}
+                    </span>
+                    <span className="text-[10px] mono text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-800">
+                      {activeDoc.version}
+                    </span>
+                    <span className="text-[10px] mono text-slate-500 hidden sm:inline">
+                      {activeDoc.date}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCopyDocText(activeDoc)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                      title="Copy full document text"
+                    >
+                      {copiedDoc ? (
+                        <>
+                          <CheckCheck size={14} className="text-emerald-500" />
+                          <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          <span>Copy Document</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => window.print()}
+                      className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono transition-all hidden sm:flex items-center gap-1"
+                      title="Print or Save as PDF via browser"
+                    >
+                      <Printer size={14} />
+                      <span>Print</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                    {activeDoc.title}
+                  </h1>
+                  <p className="text-xs text-teal-700 dark:text-teal-400 font-mono font-bold">
+                    {activeDoc.subtitle}
+                  </p>
+                </div>
+
+                {/* Author & Document Summary Callout */}
+                <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl space-y-2 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] mono text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      Author: {activeDoc.author} ({activeDoc.authorTitle})
+                    </span>
+                    <span className="text-[10px] text-slate-500">Contact: {activeDoc.authorContact}</span>
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans text-xs">
+                    <strong>Executive Context:</strong> {activeDoc.summary}
+                  </p>
+                </div>
+
+                {/* In-Document Search & Quick Jump Section Navigator */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search
+                        size={14}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                      <input
+                        type="text"
+                        value={docSearch}
+                        onChange={(e) => setDocSearch(e.target.value)}
+                        placeholder={`Search keywords inside "${activeDoc.title}"...`}
+                        className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                      />
+                    </div>
+                    {docSearch && (
+                      <button
+                        onClick={() => setDocSearch('')}
+                        className="text-xs text-amber-600 dark:text-amber-400 font-mono font-bold hover:underline self-start sm:self-center"
+                      >
+                        Clear Search
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Section Navigator Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[10px] mono">
+                    <span className="text-slate-500 font-bold whitespace-nowrap">Sections:</span>
+                    {activeDoc.sections.map((s, idx) => (
+                      <a
+                        key={s.id}
+                        href={`#${s.id}`}
+                        className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-900 hover:bg-amber-100 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 whitespace-nowrap transition-all"
+                      >
+                        {s.num ? `${s.num}. ` : `${idx + 1}. `}
+                        {s.title.split(':')[0].substring(0, 20)}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rendered Document Sections */}
+              <div className="space-y-6">
+                {filteredSections.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 mono text-xs space-y-2">
+                    <p>No sections match your search filter &quot;{docSearch}&quot;.</p>
+                    <button
+                      onClick={() => setDocSearch('')}
+                      className="px-3 py-1 bg-amber-600 text-white rounded-lg text-[11px] font-bold"
+                    >
+                      Reset Search
+                    </button>
+                  </div>
+                ) : (
+                  filteredSections.map((sec, sIdx) => (
+                    <div
+                      key={sec.id}
+                      id={sec.id}
+                      className="space-y-3 text-xs leading-relaxed scroll-mt-24 border-b border-slate-100 dark:border-slate-900 pb-5 last:border-b-0"
+                    >
+                      <h3 className="text-sm font-black uppercase text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-1">
+                        {sec.num ? (
+                          <span className="text-amber-600 dark:text-amber-400 mono">{sec.num}.</span>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 mono">§{sIdx + 1}</span>
+                        )}
+                        <span>{sec.title}</span>
+                      </h3>
+
+                      <div className="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed font-sans">
+                        {sec.content}
+                      </div>
+
+                      {/* Callout box if present */}
+                      {sec.callout && (
+                        <div
+                          className={`p-3.5 rounded-xl border space-y-1 ${
+                            sec.callout.type === 'indigo'
+                              ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900/50 text-indigo-950 dark:text-indigo-200'
+                              : sec.callout.type === 'emerald'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/50 text-emerald-950 dark:text-emerald-200'
+                              : sec.callout.type === 'teal'
+                              ? 'bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-900/50 text-teal-950 dark:text-teal-200'
+                              : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50 text-amber-950 dark:text-amber-200'
+                          }`}
+                        >
+                          <span className="font-bold text-[11px] mono uppercase block">
+                            📌 {sec.callout.title}
+                          </span>
+                          <p className="text-[11px] font-sans leading-relaxed">{sec.callout.text}</p>
+                        </div>
+                      )}
+
+                      {/* Highlights if present */}
+                      {sec.highlights && sec.highlights.length > 0 && (
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[10px] mono font-bold uppercase tracking-wider text-slate-500">
+                            Key Specifications & Takeaways:
+                          </span>
+                          <ul className="space-y-1">
+                            {sec.highlights.map((h, hIdx) => (
+                              <li
+                                key={hIdx}
+                                className="flex items-start gap-2 text-slate-700 dark:text-slate-300 text-[11px]"
+                              >
+                                <span className="text-teal-600 dark:text-teal-400 font-bold">•</span>
+                                <span>{h}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Structured table if present */}
+                      {sec.table && (
+                        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl my-2">
+                          <table className="w-full text-left mono text-[10px]">
+                            <thead className="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-bold">
+                              <tr>
+                                {sec.table.headers.map((th, thIdx) => (
+                                  <th key={thIdx} className="p-2.5">
+                                    {th}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                              {sec.table.rows.map((r, rIdx) => (
+                                <tr
+                                  key={rIdx}
+                                  className={
+                                    rIdx % 2 === 0
+                                      ? 'bg-white dark:bg-slate-950'
+                                      : 'bg-slate-50 dark:bg-slate-900/50'
+                                  }
+                                >
+                                  {r.map((cell, cIdx) => (
+                                    <td
+                                      key={cIdx}
+                                      className={`p-2.5 ${
+                                        cIdx === 0
+                                          ? 'font-bold text-slate-900 dark:text-slate-100'
+                                          : 'text-slate-600 dark:text-slate-400'
+                                      }`}
+                                    >
+                                      {cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Author & Institutional Signoff Box */}
+              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs mono">
+                <div>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block">
+                    Lead System Architect: Inzama Robin
+                  </span>
+                  <span className="text-[10px] text-slate-500">
+                    Phone: 0778277900 / 0748338796 • Email: inzamarobin279@gmail.com
+                  </span>
+                  <span className="text-[9px] text-teal-700 dark:text-teal-400 block mt-0.5">
+                    CivicDuty Sovereign Nation Management Platform • Kampala, Uganda
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCopyDocText(activeDoc)}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-3 rounded-lg flex items-center gap-1.5 w-fit shadow-sm transition-all text-xs"
+                  >
+                    <Copy size={13} />
+                    <span>Copy Full Document</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Next/Prev Document Quick Switcher Footer */}
+              <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4 text-xs mono">
+                <button
+                  onClick={() => {
+                    const prevIdx = activeDocIndex > 0 ? activeDocIndex - 1 : OFFICIAL_DOCUMENTS.length - 1;
+                    setSelectedDocId(OFFICIAL_DOCUMENTS[prevIdx].id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-3 py-2 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <ChevronLeft size={14} />
+                  <span>Previous: {OFFICIAL_DOCUMENTS[activeDocIndex > 0 ? activeDocIndex - 1 : OFFICIAL_DOCUMENTS.length - 1].category}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const nextIdx = activeDocIndex < OFFICIAL_DOCUMENTS.length - 1 ? activeDocIndex + 1 : 0;
+                    setSelectedDocId(OFFICIAL_DOCUMENTS[nextIdx].id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-black flex items-center gap-1.5 shadow-sm transition-all"
+                >
+                  <span>Next: {OFFICIAL_DOCUMENTS[activeDocIndex < OFFICIAL_DOCUMENTS.length - 1 ? activeDocIndex + 1 : 0].category}</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ========================================================= */}
       {/* TAB 1: PICTORIAL PITCH SLIDES DECK                        */}
@@ -816,8 +1321,8 @@ export const DocsView: React.FC = () => {
             >
               <Users size={18} className={journeyRole === 'citizen' ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500'} />
               <div className="mt-2">
-                <p className="text-xs font-black uppercase tracking-wider">1. Citizen</p>
-                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Speak, Track, Rate</p>
+                <p className="text-xs font-black uppercase tracking-wider">1. Citizen / Consumer</p>
+                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Service Consumer</p>
               </div>
             </button>
 
@@ -832,7 +1337,7 @@ export const DocsView: React.FC = () => {
               <Building size={18} className={journeyRole === 'government' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
               <div className="mt-2">
                 <p className="text-xs font-black uppercase tracking-wider">2. Government</p>
-                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Heads & Officers</p>
+                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">State & Regulator</p>
               </div>
             </button>
 
@@ -846,8 +1351,8 @@ export const DocsView: React.FC = () => {
             >
               <Briefcase size={18} className={journeyRole === 'entity' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'} />
               <div className="mt-2">
-                <p className="text-xs font-black uppercase tracking-wider">3. Entity</p>
-                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Utilities & CSR</p>
+                <p className="text-xs font-black uppercase tracking-wider">3. Entity Desk</p>
+                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Service Provider</p>
               </div>
             </button>
           </div>
@@ -861,8 +1366,8 @@ export const DocsView: React.FC = () => {
                     <Users size={20} />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Citizen Journey Map</h3>
-                    <p className="text-[10px] mono text-teal-700 dark:text-teal-400">From Report Filing to Verified Officer Resolution in {countryData.name}</p>
+                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Citizen & Consumer Journey</h3>
+                    <p className="text-[10px] mono text-teal-700 dark:text-teal-400">The Service Consumer & Stakeholder in {countryData.name}</p>
                   </div>
                 </div>
                 <span className="text-[9px] mono bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 font-bold px-2.5 py-1 rounded-full border border-teal-300 dark:border-teal-500/40">
@@ -875,29 +1380,29 @@ export const DocsView: React.FC = () => {
                 {[
                   {
                     num: '01',
-                    title: 'Onboard & Node Binding',
-                    desc: `Citizen registers with ${countryData.idLabel} or phone number. System auto-binds account to local node in ${countryData.name}.`,
+                    title: 'Onboard & Pin Monitored Entities',
+                    desc: `Citizen registers with ${countryData.idLabel} or phone and pins their local schools, clinics, utilities, banks, and parish desks.`,
                     detail: 'Accessible via Web App or feature phone USSD layer.',
                     icon: <UserCheck size={16} className="text-teal-700 dark:text-teal-300" />,
                   },
                   {
                     num: '02',
-                    title: 'Submit Geotagged Civic Issue',
-                    desc: 'Snap photo of road washouts, water leaks, or broken transformers. Add voice note or text with confidential whistleblowing.',
+                    title: 'Submit Service Deficit or Praise Report',
+                    desc: 'Report water outages, food hygiene breaches, billing errors, or road faults directly to the responsible entity or department wall.',
                     detail: 'Auto-captures GPS location & timestamp for tamper-proof filing.',
                     icon: <Send size={16} className="text-teal-700 dark:text-teal-300" />,
                   },
                   {
                     num: '03',
-                    title: 'Track Live Response Countdown',
-                    desc: 'Watch the SLA response timer count down in real-time. See which officer desk holds the active ticket.',
-                    detail: 'If unattended, auto-escalates to executive level.',
+                    title: 'Track Live Provider SLA Countdown',
+                    desc: 'Watch the published SLA response timer count down. See which provider officer or desk is actively handling the ticket.',
+                    detail: 'If unattended, auto-escalates to executive regulators and public index.',
                     icon: <Clock size={16} className="text-teal-700 dark:text-teal-300" />,
                   },
                   {
                     num: '04',
-                    title: 'Inspect Proof & Rate Officer',
-                    desc: 'Officer uploads timestamped photo proof of fixed work. Citizen confirms satisfaction to close ticket.',
+                    title: 'Inspect Proof & Rate Provider Trust Score',
+                    desc: 'Provider uploads timestamped photo proof or official resolution. Citizen verifies satisfaction to close ticket.',
                     detail: 'Ticket CANNOT close until citizen confirms satisfaction.',
                     icon: <CheckCircle2 size={16} className="text-teal-700 dark:text-teal-300" />,
                   },
@@ -938,8 +1443,8 @@ export const DocsView: React.FC = () => {
                     <Building size={20} />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Government Officer Journey</h3>
-                    <p className="text-[10px] mono text-indigo-700 dark:text-indigo-400">Desk Officer Workflow for {countryData.name}</p>
+                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Government & Regulator Journey</h3>
+                    <p className="text-[10px] mono text-indigo-700 dark:text-indigo-400">Public Service Delivery & Statutory Supervision in {countryData.name}</p>
                   </div>
                 </div>
                 <span className="text-[9px] mono bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 font-bold px-2.5 py-1 rounded-full border border-indigo-300 dark:border-indigo-500/40">
@@ -952,30 +1457,30 @@ export const DocsView: React.FC = () => {
                 {[
                   {
                     num: '01',
-                    title: 'Mount Desk via Single-Use Code',
-                    desc: `Government officer logs in using official access code (e.g. ${countryData.code}-DESK-ADMIN).`,
-                    detail: 'Instantly loads official jurisdiction desk with active response timers.',
+                    title: 'Mount Desk via Single-Use Security Code',
+                    desc: `Government officer or regulator logs in using official credentials (e.g. ${countryData.code}-DESK-ADMIN).`,
+                    detail: 'Loads jurisdictional queues, supervisory dashboards, and audit logs.',
                     icon: <Lock size={16} className="text-indigo-700 dark:text-indigo-300" />,
                   },
                   {
                     num: '02',
-                    title: 'Auto-Routed Geotagged Inbox',
-                    desc: 'Incoming citizen tickets land directly on the exact jurisdiction queue with urgency badges & GPS coordinates.',
-                    detail: 'No lost paperwork. 100% transparent audit log.',
+                    title: 'Auto-Routed Geotagged Inbox & Supervision',
+                    desc: 'Citizen reports land on specific jurisdiction desks with urgency indicators, GPS pins, and regulatory compliance flags.',
+                    detail: 'Zero lost paperwork. 100% transparent public audit trail.',
                     icon: <Layers size={16} className="text-indigo-700 dark:text-indigo-300" />,
                   },
                   {
                     num: '03',
-                    title: 'Dispatch Officers & Automated Invites',
-                    desc: 'Node Head issues single-use access codes to local officers or field engineers.',
-                    detail: 'Monitors team response resolution percentage and active SLA countdowns.',
+                    title: 'Dispatch Field Officers & Enforce Standards',
+                    desc: 'Assign field engineers, health inspectors, or parish caseworkers to resolve civic defects or audit non-compliant entities.',
+                    detail: 'Monitors resolution percentage against statutory SLA standards.',
                     icon: <Users size={16} className="text-indigo-700 dark:text-indigo-300" />,
                   },
                   {
                     num: '04',
-                    title: 'Upload Photo Proof of Work',
-                    desc: 'Field officer completes repair and uploads timestamped photo proof to trigger citizen verification.',
-                    detail: 'Earns officer merit rank and maintains public accountability record.',
+                    title: 'Upload Photo Proof of Work & Close Ticket',
+                    desc: 'Field officer completes repair and attaches timestamped photo evidence for citizen verification.',
+                    detail: 'Builds officer merit ranking and maintains public institutional accountability.',
                     icon: <Award size={16} className="text-indigo-700 dark:text-indigo-300" />,
                   },
                 ].map((s, idx) => (
@@ -1015,12 +1520,12 @@ export const DocsView: React.FC = () => {
                     <Briefcase size={20} />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Registered Entity Journey</h3>
-                    <p className="text-[10px] mono text-amber-800 dark:text-amber-400">Utilities, Businesses & NGOs in {countryData.name}</p>
+                    <h3 className="text-base font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Registered Entity Journey (Service Providers & Businesses)</h3>
+                    <p className="text-[10px] mono text-amber-800 dark:text-amber-400">Retailers, Bars, Chemists, Transit SACCOs, Schools, Healthcare, Utilities & Enterprises in {countryData.name}</p>
                   </div>
                 </div>
                 <span className="text-[9px] mono bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold px-2.5 py-1 rounded-full border border-amber-300 dark:border-amber-500/40">
-                  Enterprise Utility
+                  Provider & Business Desk
                 </span>
               </div>
 
@@ -1029,30 +1534,30 @@ export const DocsView: React.FC = () => {
                 {[
                   {
                     num: '01',
-                    title: 'Register Entity Account',
-                    desc: `Utilities (${countryData.agenciesUtility.slice(0, 2).join(', ')}), telecommunications, or NGOs register with Tax ID.`,
-                    detail: 'Mounts dedicated consumer & public utility lane desk.',
+                    title: 'Declare Professional Identity & Sector Typology',
+                    desc: 'Owners, General Managers, Pharmacists, Bar Proprietors, and Engineers register their business sector, typology, and professional title with exact "Other" customization.',
+                    detail: 'Captures precise professional credentials, official tax/license ID, and initial seat quota.',
                     icon: <Building2 size={16} className="text-amber-800 dark:text-amber-300" />,
                   },
                   {
                     num: '02',
-                    title: 'Flag Infrastructure Outages',
-                    desc: 'Report water main bursts or power grid faults directly to civil road authorities to coordinate repairs.',
-                    detail: 'Prevents utility service interruptions and operational losses.',
-                    icon: <Zap size={16} className="text-amber-800 dark:text-amber-300" />,
+                    title: 'Create Custom Roles & Mint Staff Access Passes',
+                    desc: 'Define custom operational roles with granular permissions (review replies, ticket resolutions, bulletins, billing) and mint single-use staff passes with 1-click WhatsApp/SMS dispatch.',
+                    detail: 'Dedicated non-geographic team layout allows assigning staff to specific duty stations, shifts, and custom permissions.',
+                    icon: <Users size={16} className="text-amber-800 dark:text-amber-300" />,
                   },
                   {
                     num: '03',
-                    title: 'Co-Sponsor Civic Infrastructure (CSR)',
-                    desc: 'Businesses co-fund streetlights or waste hubs in partnership with local authorities with full tax transparency.',
-                    detail: 'Direct alignment with local development plans.',
-                    icon: <Award size={16} className="text-amber-800 dark:text-amber-300" />,
+                    title: 'Receive, Triage & Resolve Consumer Reports',
+                    desc: 'Citizens submit feedback, service deficits, billing glitches, or food hygiene tickets directly to your verified desk.',
+                    detail: 'Investigate, communicate directly with consumers, and attach timestamped resolution proof.',
+                    icon: <Layers size={16} className="text-amber-800 dark:text-amber-300" />,
                   },
                   {
                     num: '04',
-                    title: 'Earn Verified Civic Trust Badge',
-                    desc: 'Build public brand reputation through verified community service metrics.',
-                    detail: 'Featured on the national public civic scoreboard.',
+                    title: 'Broadcast Service Advisories & Build Public Trust Score',
+                    desc: 'Post verified operational advisories to patrons and maintain SLA resolution speeds to elevate your public institutional trust score.',
+                    detail: 'Complies with statutory supervisory authorities (UNBS, NDA, UCC, BoU, MoES).',
                     icon: <ShieldCheck size={16} className="text-amber-800 dark:text-amber-300" />,
                   },
                 ].map((s, idx) => (
@@ -1078,7 +1583,7 @@ export const DocsView: React.FC = () => {
                 onClick={() => go('entity')}
                 className="w-full bg-amber-600 hover:bg-amber-500 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-black rounded-xl py-3 text-xs uppercase tracking-wider mono flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98]"
               >
-                <span>Register Business / Utility / NGO</span>
+                <span>Register Provider / Business / Utility</span>
                 <ArrowRight size={15} />
               </button>
             </div>

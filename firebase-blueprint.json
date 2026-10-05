@@ -1,0 +1,237 @@
+{
+  "entities": {
+    "Post": {
+      "title": "Post",
+      "description": "A citizen grievance, service breakdown, praise, or anti-corruption dispatch.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "country": { "type": "string", "maxLength": 8 },
+        "dept": { "type": "string", "maxLength": 128 },
+        "lane": { "type": "string", "enum": ["civic", "consumer"] },
+        "citizen_id": { "type": "string", "maxLength": 128 },
+        "citizen_name": { "type": "string", "maxLength": 128 },
+        "citizen_rank": { "type": "string", "maxLength": 64 },
+        "anonymous": { "type": "boolean" },
+        "category": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 256 },
+        "body": { "type": "string", "maxLength": 4000 },
+        "location": { "type": "string", "maxLength": 256 },
+        "source": { "type": "string", "enum": ["web", "sms", "ussd"] },
+        "status": { "type": "string", "enum": ["pending", "received", "investigating", "budget", "resolved", "overdue", "cannot"] },
+        "is_corruption": { "type": "boolean" },
+        "created_at": { "type": "string", "maxLength": 64 },
+        "upvotes": { "type": "number" },
+        "crypto_seal_hash": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "country", "dept", "lane", "title", "body", "source", "status", "created_at"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "A government or private commercial service desk entity.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "full": { "type": "string", "maxLength": 256 },
+        "country": { "type": "string", "maxLength": 8 },
+        "sla": { "type": "number" },
+        "lane": { "type": "string", "enum": ["civic", "consumer"] },
+        "category": { "type": "string", "maxLength": 64 },
+        "trustScore": { "type": "number" },
+        "isClaimed": { "type": "boolean" },
+        "claimedPlan": { "type": "string", "maxLength": 64 },
+        "claimedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "name", "full", "country", "sla"]
+    },
+    "Claim": {
+      "title": "Claim",
+      "description": "A verified commercial subscription claim by a private business entity.",
+      "type": "object",
+      "properties": {
+        "deptId": { "type": "string", "maxLength": 128 },
+        "country": { "type": "string", "maxLength": 8 },
+        "businessName": { "type": "string", "maxLength": 128 },
+        "representativeName": { "type": "string", "maxLength": 128 },
+        "officialEmail": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "role": { "type": "string", "maxLength": 64 },
+        "plan": { "type": "string", "maxLength": 64 },
+        "claimedAt": { "type": "string", "maxLength": 64 },
+        "verified": { "type": "boolean" },
+        "monthlyFee": { "type": "number" }
+      },
+      "required": ["deptId", "country", "businessName", "phone", "plan", "claimedAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Citizen profile with masked identity and gamified civic trust credit.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "country": { "type": "string", "maxLength": 8 },
+        "id_frag": { "type": "string", "maxLength": 32 },
+        "display_name": { "type": "string", "maxLength": 64 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "civic_score": { "type": "number" },
+        "rank": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "country", "id_frag", "display_name", "civic_score", "rank"]
+    },
+    "AuditReceipt": {
+      "title": "AuditReceipt",
+      "description": "Cryptographic proof receipt linking report text to SHA-256 seal.",
+      "type": "object",
+      "properties": {
+        "ticketId": { "type": "string", "maxLength": 128 },
+        "hash": { "type": "string", "maxLength": 128 },
+        "country": { "type": "string", "maxLength": 8 },
+        "dept": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["ticketId", "hash", "country", "timestamp"]
+    },
+    "FiscalVoucher": {
+      "title": "FiscalVoucher",
+      "description": "Phase 3 milestone fiscal release voucher with dual-signoff certification.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "voucherNumber": { "type": "string" },
+        "projectId": { "type": "string" },
+        "projectTitle": { "type": "string" },
+        "contractor": { "type": "string" },
+        "country": { "type": "string" },
+        "grossAmount": { "type": "number" },
+        "currency": { "type": "string" },
+        "netPayable": { "type": "number" },
+        "disbursementStatus": { "type": "string" },
+        "blockchainSeal": { "type": "string" }
+      },
+      "required": ["id", "voucherNumber", "projectId", "netPayable", "disbursementStatus"]
+    },
+    "CircularNotification": {
+      "title": "CircularNotification",
+      "description": "Phase 4 statutory circular notification dispatched to Parish Chiefs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "circularRef": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "channel": { "type": "string" },
+        "targetDistrict": { "type": "string" },
+        "targetChiefName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "circularRef", "subject", "channel", "status"]
+    },
+    "GatewayTransaction": {
+      "title": "GatewayTransaction",
+      "description": "Phase 5 African payment gateway transaction record for Mobile Money and cards.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "provider": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "reference": { "type": "string" },
+        "status": { "type": "string" },
+        "channel": { "type": "string" }
+      },
+      "required": ["id", "provider", "amount", "currency", "reference", "status"]
+    },
+    "OfficialQuery": {
+      "title": "OfficialQuery",
+      "description": "Administrative supervisory query issued to an accounting officer or desk head.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "queryRef": { "type": "string", "maxLength": 64 },
+        "country": { "type": "string", "maxLength": 8 },
+        "targetUnit": { "type": "string", "maxLength": 128 },
+        "targetOfficer": { "type": "string", "maxLength": 128 },
+        "targetOfficerTitle": { "type": "string", "maxLength": 128 },
+        "issuerName": { "type": "string", "maxLength": 128 },
+        "issuerTitle": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "subject": { "type": "string", "maxLength": 256 },
+        "grounds": { "type": "string", "maxLength": 4000 },
+        "deadlineHours": { "type": "number" },
+        "issuedAt": { "type": "string", "maxLength": 64 },
+        "deadlineAt": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["pending_response", "under_review", "resolved_exonerated", "remedial_directive", "escalated_igg"] },
+        "defenseText": { "type": "string", "maxLength": 4000 },
+        "defenseSubmittedAt": { "type": "string", "maxLength": 64 },
+        "determinationDecision": { "type": "string", "maxLength": 64 },
+        "determinationNotes": { "type": "string", "maxLength": 4000 },
+        "determinedAt": { "type": "string", "maxLength": 64 },
+        "auditHash": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "queryRef", "country", "targetUnit", "targetOfficer", "issuerName", "category", "subject", "grounds", "deadlineHours", "issuedAt", "status"]
+    },
+    "StationInvite": {
+      "title": "StationInvite",
+      "description": "Production parish command and station roster invite record across tiers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "stationId": { "type": "string", "maxLength": 128 },
+        "stationName": { "type": "string", "maxLength": 128 },
+        "tier": { "type": "number" },
+        "country": { "type": "string", "maxLength": 8 },
+        "designation": { "type": "string", "maxLength": 128 },
+        "officerName": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["vacant", "pending", "operational"] },
+        "invitedBy": { "type": "string", "maxLength": 128 },
+        "invitedAt": { "type": "string", "maxLength": 64 },
+        "acceptedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "stationId", "stationName", "tier", "country", "designation", "status"]
+    }
+  },
+  "firestore": {
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Citizen tickets, complaints, service breakdowns, and praises."
+    },
+    "/departments/{deptId}": {
+      "schema": "Department",
+      "description": "Public and private desks and ministries."
+    },
+    "/claims/{claimId}": {
+      "schema": "Claim",
+      "description": "Commercial desk subscription and verification claims."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Masked citizen identity records and civic score."
+    },
+    "/audit_ledger/{receiptId}": {
+      "schema": "AuditReceipt",
+      "description": "Immutable cryptographic audit receipts."
+    },
+    "/fiscal_vouchers/{voucherId}": {
+      "schema": "FiscalVoucher",
+      "description": "Phase 3 milestone financial release and escrow certification vouchers."
+    },
+    "/circular_notifications/{notifId}": {
+      "schema": "CircularNotification",
+      "description": "Phase 4 executive circular dispatch records for Parish Chiefs."
+    },
+    "/gateway_transactions/{txId}": {
+      "schema": "GatewayTransaction",
+      "description": "Phase 5 mobile money and card payment receipts."
+    },
+    "/official_queries/{queryId}": {
+      "schema": "OfficialQuery",
+      "description": "Statutory administrative queries, officer defenses, and supervisory determinations."
+    },
+    "/station_invites/{inviteId}": {
+      "schema": "StationInvite",
+      "description": "Statutory direct-report station invites and rosters across tiers."
+    }
+  }
+}

@@ -16,9 +16,12 @@ import {
   Send,
   QrCode,
   BadgeCheck,
-  CheckCheck
+  CheckCheck,
+  Database,
+  ExternalLink
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
+import { savePerkVoucherToCloud } from '../services/firestoreSync';
 
 interface RewardModalProps {
   isOpen: boolean;
@@ -43,7 +46,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
   entityName,
   contextTitle,
 }) => {
-  const { user, activeDeptCountry, logAudit, toast, setPosts } = useApp();
+  const { user, activeDeptCountry, logAudit, toast, setPosts, go } = useApp();
 
   const country = user?.country || activeDeptCountry || 'UG';
   const countryPerks = getCountryPerks(country);
@@ -60,12 +63,32 @@ export const RewardModal: React.FC<RewardModalProps> = ({
       : 'Thank you for active citizen monitoring on our public contract wall.'
   );
 
+  const [escrowInventory, setEscrowInventory] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [successData, setSuccessData] = useState<{
     code: string;
+    pin?: string;
     perkName: string;
     issuer: string;
     recipient: string;
+    fromEscrow: boolean;
+    ussdString?: string;
   } | null>(null);
+
+  // Load vault escrow inventory for stock counts
+  useEffect(() => {
+    if (isOpen) {
+      fetch(`/api/perks/vault?country=${country}&status=escrow_unassigned`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.vouchers) {
+            setEscrowInventory(data.vouchers);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, country]);
 
   useEffect(() => {
     if (countryPerks.digitalPerks.length > 0) {
@@ -90,27 +113,66 @@ export const RewardModal: React.FC<RewardModalProps> = ({
 
   const currentPerk = countryPerks.digitalPerks.find((p) => p.id === selectedPerkId) || countryPerks.digitalPerks[0];
 
-  const handleDispatch = (e: React.FormEvent) => {
+  // Check matching pre-funded vouchers in escrow
+  const matchingEscrowVouchers = escrowInventory.filter((v) => 
+    v.brand.toLowerCase().includes(currentPerk.brand.toLowerCase().split(' ')[0]) ||
+    currentPerk.brand.toLowerCase().includes(v.brand.toLowerCase().split(' ')[0])
+  );
+  const escrowStockCount = matchingEscrowVouchers.length;
+
+  const handleDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     const issuerLabel =
       issuerType === 'contractor'
         ? `${customContractor.trim() || 'Project Contractor'} (Contractor)`
         : `${customEntity.trim() || 'Public Entity'} (Entity Authority)`;
 
-    const perkCode = currentPerk.code || `PERK-${Math.floor(1000 + Math.random() * 9000)}`;
+    let finalCode = currentPerk.code || `PERK-${Math.floor(1000 + Math.random() * 9000)}`;
+    let finalPin: string | undefined = undefined;
+    let fromEscrow = false;
+    let ussdString: string | undefined = undefined;
+
+    try {
+      // Attempt to claim pre-funded voucher from Escrow Vault
+      const res = await fetch('/api/perks/dispatch-from-vault', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brand: currentPerk.brand,
+          recipientName: targetCitizenName,
+          recipientContact: targetCitizenPhone,
+          dispatchedBy: issuerLabel,
+          note: note.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.voucher) {
+        finalCode = data.voucher.voucherCode;
+        finalPin = data.voucher.pin;
+        fromEscrow = true;
+        ussdString = data.voucher.redemptionUssdString;
+        // Persist to Cloud Firestore
+        savePerkVoucherToCloud(data.voucher).catch(() => {});
+      }
+    } catch {
+      // fallback to standard dispatch
+    }
 
     const rewardData = {
       perkName: currentPerk.name,
-      perkCode,
+      perkCode: finalCode,
       brand: currentPerk.brand,
       rewardedBy: issuerLabel,
       rewardedAt: new Date().toISOString(),
       note: note.trim(),
+      fromEscrow,
     };
 
     // If attached to a specific post or comment, update post comments state
-    if (postId) {
+    if (postId && typeof setPosts === 'function') {
       setPosts((prevPosts) =>
         prevPosts.map((p) => {
           if (p.id === postId) {
@@ -130,16 +192,21 @@ export const RewardModal: React.FC<RewardModalProps> = ({
 
     logAudit(
       'PERK_DISPATCH',
-      `${issuerLabel} awarded ${currentPerk.name} voucher (${perkCode}) to ${recipient} for wall engagement.`
+      postId || 'ESCROW',
+      `${issuerLabel} awarded ${currentPerk.name} voucher (${finalCode})${fromEscrow ? ' [DRAWN FROM PRE-FUNDED ESCROW]' : ''} to ${recipient} for wall engagement.`
     );
 
     toast(`🎁 ${currentPerk.name} awarded to ${targetCitizenName}!`, 'emerald');
 
+    setIsSubmitting(false);
     setSuccessData({
-      code: perkCode,
+      code: finalCode,
+      pin: finalPin,
       perkName: currentPerk.name,
       issuer: issuerLabel,
       recipient,
+      fromEscrow,
+      ussdString,
     });
   };
 
@@ -259,32 +326,58 @@ export const RewardModal: React.FC<RewardModalProps> = ({
 
             {/* Perk Choice */}
             <div className="space-y-1.5">
-              <label className="text-[10px] mono text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider flex items-center justify-between">
-                <span>Select Digital Perk Voucher</span>
-                <span className="text-[8.5px] text-amber-700 dark:text-amber-400 font-medium">CSR Sponsored</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] mono text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider">
+                  Select Digital Perk Voucher
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    go('perk_vault');
+                  }}
+                  className="text-[9px] mono font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                >
+                  <Database size={10} />
+                  <span>Open Sovereign Perk Vault</span>
+                  <ExternalLink size={9} />
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-2">
-                {countryPerks.digitalPerks.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setSelectedPerkId(p.id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all ${
-                      selectedPerkId === p.id
-                        ? 'border-amber-600/50 bg-amber-600/10 text-amber-950 dark:text-amber-200 font-bold shadow-xs'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="text-[11px] flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <Ticket size={11} className="text-amber-600 dark:text-amber-400" />
-                        {p.name}
-                      </span>
-                      <span className="text-[8px] bg-amber-600/15 text-amber-800 dark:text-amber-300 px-1 rounded font-bold">{p.badge}</span>
-                    </div>
-                    <div className="text-[8.5px] opacity-80 mt-0.5">{p.subtext}</div>
-                  </button>
-                ))}
+                {countryPerks.digitalPerks.map((p) => {
+                  const stock = escrowInventory.filter((v) =>
+                    v.brand.toLowerCase().includes(p.brand.toLowerCase().split(' ')[0]) ||
+                    p.brand.toLowerCase().includes(v.brand.toLowerCase().split(' ')[0])
+                  ).length;
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPerkId(p.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all relative ${
+                        selectedPerkId === p.id
+                          ? 'border-amber-600/50 bg-amber-600/10 text-amber-950 dark:text-amber-200 font-bold shadow-xs'
+                          : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-[11px] flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Ticket size={11} className="text-amber-600 dark:text-amber-400" />
+                          {p.name}
+                        </span>
+                        {stock > 0 ? (
+                          <span className="text-[7.5px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-1 py-0.5 rounded font-mono font-bold border border-emerald-500/20">
+                            {stock} In Vault
+                          </span>
+                        ) : (
+                          <span className="text-[8px] bg-amber-600/15 text-amber-800 dark:text-amber-300 px-1 rounded font-bold">{p.badge}</span>
+                        )}
+                      </div>
+                      <div className="text-[8.5px] opacity-80 mt-0.5">{p.subtext}</div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -304,10 +397,17 @@ export const RewardModal: React.FC<RewardModalProps> = ({
 
             <button
               type="submit"
-              className="w-full bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold py-3 rounded-xl text-xs uppercase tracking-widest mono transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              className="w-full bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold py-3 rounded-xl text-xs uppercase tracking-widest mono transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               <Send size={14} />
-              <span>Dispatch Perk Voucher to Citizen</span>
+              <span>
+                {isSubmitting
+                  ? 'Dispatching from Escrow...'
+                  : escrowStockCount > 0
+                  ? `Dispatch Pre-Funded Voucher (${escrowStockCount} in Escrow)`
+                  : 'Dispatch Perk Voucher to Citizen'}
+              </span>
             </button>
           </form>
         ) : (
@@ -316,20 +416,45 @@ export const RewardModal: React.FC<RewardModalProps> = ({
               <CheckCircle2 size={28} />
             </div>
             <div>
-              <span className="chip ch-resolved text-[9px]">Perk Dispatched</span>
-              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 mt-1">{successData.perkName}</h3>
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <span className="chip ch-resolved text-[9px]">Perk Dispatched</span>
+                {successData.fromEscrow && (
+                  <span className="text-[8px] mono font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                    Pre-Funded Escrow
+                  </span>
+                )}
+              </div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">{successData.perkName}</h3>
               <p className="text-[11px] mono text-slate-500 dark:text-slate-400 mt-0.5">
                 Rewarded to <strong className="text-slate-800 dark:text-slate-200">{successData.recipient}</strong>
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 text-xs mono">
-              <div className="text-slate-500 text-[10px]">Voucher Authorization Code:</div>
-              <div className="text-base font-black text-amber-700 dark:text-amber-400 tracking-wider">
-                {successData.code}
+            <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs mono text-left">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
+                <span className="text-slate-500 text-[10px]">Voucher Authorization Code:</span>
+                <span className="text-sm font-black text-amber-700 dark:text-amber-400 tracking-wider">
+                  {successData.code}
+                </span>
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">
-                Issued By: {successData.issuer}
+
+              {successData.pin && (
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-500">Security PIN:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{successData.pin}</span>
+                </div>
+              )}
+
+              {successData.ussdString && (
+                <div className="flex items-center justify-between text-[10px] text-amber-600 dark:text-amber-400">
+                  <span>USSD Redeem:</span>
+                  <span className="font-bold">{successData.ussdString}</span>
+                </div>
+              )}
+
+              <div className="text-[9px] text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <span>Issued By: {successData.issuer}</span>
+                <span className="text-emerald-600 font-bold">SMS Push Sent ✓</span>
               </div>
             </div>
 
@@ -337,9 +462,10 @@ export const RewardModal: React.FC<RewardModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  toast(`Voucher code ${successData.code} copied!`, 'success');
+                  navigator.clipboard?.writeText(successData.code);
+                  toast(`Voucher code ${successData.code} copied!`, 'emerald');
                 }}
-                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs mono font-bold border border-slate-200 dark:border-slate-700 transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs mono font-bold border border-slate-200 dark:border-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Ticket size={13} className="text-amber-600 dark:text-amber-400" />
                 <span>Copy Code</span>
@@ -350,7 +476,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                   setSuccessData(null);
                   onClose();
                 }}
-                className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs mono transition-colors"
+                className="flex-1 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs mono transition-colors cursor-pointer"
               >
                 Done
               </button>

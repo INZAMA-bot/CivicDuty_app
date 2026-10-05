@@ -1,13 +1,13 @@
 import React from 'react';
 
 interface NoteBoxProps {
-  tone: 'emerald' | 'amber' | 'red';
+  tone: 'emerald' | 'amber' | 'red' | 'teal';
   title: string;
   text: string;
 }
 
 export const NoteBox: React.FC<NoteBoxProps> = ({ tone, title, text }) => {
-  const toneClasses = {
+  const toneMap = {
     amber: {
       wrap: 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-500/30',
       title: 'text-amber-900 dark:text-amber-300',
@@ -20,7 +20,13 @@ export const NoteBox: React.FC<NoteBoxProps> = ({ tone, title, text }) => {
       wrap: 'bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-500/30',
       title: 'text-teal-900 dark:text-teal-300',
     },
-  }[tone];
+    teal: {
+      wrap: 'bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-500/30',
+      title: 'text-teal-900 dark:text-teal-300',
+    },
+  };
+
+  const toneClasses = toneMap[tone] || toneMap.emerald;
 
   return (
     <div className={`p-3.5 rounded-xl border space-y-1 my-3 ${toneClasses.wrap}`}>

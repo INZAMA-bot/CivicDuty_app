@@ -172,7 +172,7 @@ export const GovProjectsView: React.FC = () => {
       return;
     }
     const item: ProjectMilestone = {
-      id: 'm-' + Date.now(),
+      id: `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: newMilestoneTitle.trim(),
       date: newMilestoneDate.trim() || 'Target Stage',
       done: false,
@@ -455,8 +455,8 @@ export const GovProjectsView: React.FC = () => {
             
             {selectedUnits.length > 0 && (
               <div className="space-y-1.5">
-                {selectedUnits.map((u) => (
-                  <div key={u.id} className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-950 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-800">
+                {selectedUnits.map((u, uIdx) => (
+                  <div key={`${u.id}-${uIdx}`} className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-950 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-800">
                     <div className="min-w-0">
                       <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{u.name}</div>
                       <div className="text-[9px] mono text-slate-500">{u.path}</div>
@@ -563,7 +563,7 @@ export const GovProjectsView: React.FC = () => {
                 const contractorSigned = Boolean(m.contractorVerified);
                 const fullyDone = m.done || (awarderSigned && contractorSigned);
                 return (
-                  <div key={m.id} className="p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 text-xs mono shadow-sm">
+                  <div key={`${m.id}-${idx}`} className="p-3 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 text-xs mono shadow-sm">
                     {/* Header: Phase Pill Badge and Actions */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">

@@ -26,7 +26,9 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
   const steps = [
     {
       step: 1,
-      title: 'Citizen SPEAKS (Filed)',
+      signal: 'red' as const,
+      phaseName: 'Signal 1: RED (Citizen Speaks)',
+      title: 'Citizen SPEAKS (Filed on Node)',
       desc: `Registered on ${post.territory.parish || 'Parish Node'} · ${timeAgo(post.created_at)}`,
       completed: true,
       icon: MapPin,
@@ -34,14 +36,18 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
     },
     {
       step: 2,
+      signal: 'red' as const,
+      phaseName: 'Signal 1: RED (SLA Active)',
       title: 'Department Assigned & Triaged',
-      desc: `Routed to ${post.dept.toUpperCase()} with statutory SLA`,
+      desc: `Routed to ${post.dept.toUpperCase()} with statutory SLA clock running`,
       completed: true,
       icon: Clock,
       badge: 'Triaged',
     },
     {
       step: 3,
+      signal: 'amber' as const,
+      phaseName: 'Signal 2: AMBER (Government Serves)',
       title: 'Government SERVES (Work Dispatched)',
       desc: isGovResponded
         ? 'Official Response & Field Crew Dispatched'
@@ -52,6 +58,8 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
     },
     {
       step: 4,
+      signal: 'amber' as const,
+      phaseName: 'Signal 2: AMBER (Field Resolution)',
       title: 'Proof of Resolution Uploaded',
       desc: isResolved
         ? 'Field verification photos & contractor signoff recorded'
@@ -62,6 +70,8 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
     },
     {
       step: 5,
+      signal: 'green' as const,
+      phaseName: 'Signal 3: GREEN (Citizen Heard)',
       title: 'Citizen Confirms HEARD (Resolution Signoff)',
       desc: isCitizenConfirmed
         ? 'Citizen verified and sealed with +250 CivicScore'
@@ -77,10 +87,14 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
   return (
     <div className="card p-4 space-y-3.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm transition-colors">
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+        <div className="flex items-center gap-2">
+          <div className="traffic-housing scale-75">
+            <div className={`traffic-bulb ${!isGovResponded ? 'bulb-red-on' : 'bulb-red-off'}`} />
+            <div className={`traffic-bulb ${isGovResponded && !isCitizenConfirmed ? 'bulb-amber-on' : 'bulb-amber-off'}`} />
+            <div className={`traffic-bulb ${isCitizenConfirmed ? 'bulb-green-on' : 'bulb-green-off'}`} />
+          </div>
           <span className="text-[11px] font-black mono uppercase tracking-wider text-slate-900 dark:text-slate-100">
-            5-Stage Sovereign Audit Stepper
+            3-Signal Sovereign Audit Stepper
           </span>
         </div>
         <button
@@ -103,13 +117,18 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
         {steps.map((s, idx) => {
           const Icon = s.icon;
           const isDone = s.completed;
+          const signalColor = s.signal === 'red' ? 'text-rose-500' : s.signal === 'amber' ? 'text-amber-500' : 'text-emerald-500';
           return (
             <div key={idx} className="relative flex items-start gap-3 text-left">
-              {/* Step Pip */}
+              {/* Step Pip with Traffic Light Color Coding */}
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 z-10 text-[10px] mono font-black transition-all ${
                   isDone
-                    ? 'bg-emerald-600 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                    ? s.signal === 'green'
+                      ? 'bg-emerald-600 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]'
+                      : s.signal === 'amber'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-[0_0_10px_rgba(245,158,11,0.5)]'
+                      : 'bg-rose-600 text-white shadow-[0_0_10px_rgba(239,68,68,0.5)]'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-300 dark:border-slate-700'
                 }`}
               >
@@ -129,7 +148,11 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
                   <span
                     className={`text-[7.5px] mono font-bold px-1.5 py-0.2 rounded-md ${
                       isDone
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30'
+                        ? s.signal === 'green'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30'
+                          : s.signal === 'amber'
+                          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30'
+                          : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30'
                         : 'bg-slate-100 dark:bg-slate-800/80 text-slate-500 border border-slate-200 dark:border-slate-700'
                     }`}
                   >

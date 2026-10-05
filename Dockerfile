@@ -1,35 +1,35 @@
-FROM node:22-alpine AS builder
+# Multi-stage Dockerfile for CivicDuty Fullstack Application
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy dependency manifests
+# Install dependencies first for efficient layer caching
 COPY package*.json ./
+RUN npm ci
 
-# Install all dependencies including devDependencies for build
-RUN npm ci || npm install
-
-# Copy application source
+# Copy full application source
 COPY . .
 
-# Generate PDF assets and compile full-stack production build
+# Compile frontend and backend bundles
 RUN npm run build
 
-# Production runtime stage
-FROM node:22-alpine AS runner
+# Production runner image
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Copy built frontend assets, compiled backend server, and database files
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/src/data ./src/data
-COPY --from=builder /app/public ./public
+# Install production dependencies only
+COPY package*.json ./
+RUN npm ci --only=production
 
-# Install production-only dependencies
-RUN npm install --omit=dev
+# Copy compiled artifacts from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/src/data ./src/data
+COPY --from=builder /app/firebase-applet-config.json ./firebase-applet-config.json
 
 EXPOSE 3000
 

@@ -1,46 +1,54 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export interface TrafficLightLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  variant?: 'full' | 'green-only' | 'emblem' | 'realistic' | 'beacon-hero';
+  variant?: 'full' | 'green-only' | 'emblem' | 'realistic' | 'beacon-hero' | 'vector-beacon' | 'livery';
   className?: string;
-  usePhotoAsset?: boolean;
 }
 
+/**
+ * Official CivicDuty 3-Signal Sovereign Logo
+ * Adopted directly from the official SVG specifications:
+ * - Red Signal (Left): Crisp red ring with soft coral center dot (Citizen Speaks)
+ * - Amber Signal (Center): Crisp golden ring with soft gold center dot (Government Serves)
+ * - Green Signal (Right): Crisp emerald ring with deep pine green fill & bold white checkmark (Citizen Heard & Proof Uploaded)
+ */
 export const TrafficLightLogo: React.FC<TrafficLightLogoProps> = ({
   size = 'md',
-  variant = 'beacon-hero',
+  variant = 'full',
   className = '',
 }) => {
+  const [hoveredSignal, setHoveredSignal] = useState<'red' | 'amber' | 'green' | null>(null);
+
   if (variant === 'green-only') {
     return (
       <div
         className={`inline-flex items-center justify-center select-none ${className}`}
-        title="CivicDuty Sovereign Beacon — Active Service"
+        title="CivicDuty Sovereign Beacon — Citizen Heard & Proof Uploaded"
       >
         <div className="relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8">
-          <div className="absolute inset-0 rounded-full bg-emerald-400/40 animate-ping opacity-60" />
-          <img
-            src="/bulb_green_exact.png"
-            alt="CivicDuty Green Signal"
-            className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(16,185,129,0.7)] relative z-10"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              // Fallback to stylized circle if image fails
-              (e.currentTarget as HTMLElement).style.display = 'none';
-            }}
-          />
+          <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-sm">
+            <circle cx="50" cy="50" r="42" fill="#064E3B" stroke="#10B981" strokeWidth="8" />
+            <path
+              d="M 32 50.5 L 46 64.5 L 70 38.5"
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="8.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
       </div>
     );
   }
 
-  // Sizing for exact photographic logo image
+  // Sizing classes for the official 3-signal logo
   const sizeClasses = {
-    sm: 'max-w-[140px]',
-    md: 'max-w-[200px]',
-    lg: 'max-w-[280px]',
-    xl: 'max-w-[320px] sm:max-w-[360px]',
+    sm: 'max-w-[130px] h-10',
+    md: 'max-w-[190px] h-14',
+    lg: 'max-w-[260px] h-18',
+    xl: 'max-w-[320px] sm:max-w-[360px] h-24 sm:h-28',
   };
 
   const currentSizeClass = sizeClasses[size] || sizeClasses.xl;
@@ -48,26 +56,107 @@ export const TrafficLightLogo: React.FC<TrafficLightLogoProps> = ({
   return (
     <div
       className={`relative inline-flex flex-col items-center justify-center select-none bg-transparent w-full ${className}`}
-      title="CivicDuty Sovereign 3-Signal Engine: Red (Citizen Speaks), Amber (Government Serves), Green (Proof Uploaded / Citizen Heard)"
+      title="CivicDuty Sovereign 3-Signal Official Logo: Red (Citizen Speaks) · Amber (Government Serves) · Green (Citizen Heard & Proof Uploaded)"
     >
-      {/* Exact 1787650937605.png Logo Image */}
       <div className={`relative flex items-center justify-center w-full ${currentSizeClass} mx-auto bg-transparent`}>
-        <img
-          src="/1787650937605.png"
-          alt="CivicDuty Sovereign 3-Signal Beacon Logo"
-          className="w-full h-auto object-contain transition-transform hover:scale-[1.02] bg-transparent"
-          referrerPolicy="no-referrer"
-        />
-      </div>
+        {/* Subtle atmospheric ambient glow behind the green resolution beacon */}
+        <div className="absolute right-[8%] top-1/2 -translate-y-1/2 w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-emerald-500/15 dark:bg-emerald-400/20 blur-xl pointer-events-none -z-10" />
 
-      {size === 'xl' && (
-        <div className="flex items-center justify-between w-full max-w-[300px] sm:max-w-[330px] px-3 mt-1.5 text-[8.5px] mono font-black uppercase tracking-wider">
-          <span className="text-rose-700 dark:text-rose-400">Citizen Speaks</span>
-          <span className="text-amber-700 dark:text-amber-400">Government Serves</span>
-          <span className="text-emerald-700 dark:text-emerald-400">Citizen Heard ✓</span>
-        </div>
-      )}
+        {/* Official Vector Logo SVG */}
+        <svg
+          viewBox="0 0 360 120"
+          className="w-full h-full object-contain filter drop-shadow-md transition-all duration-300"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="CivicDuty Official Logo: Red Signal, Amber Signal, Green Signal with Checkmark"
+        >
+          {/* Signal 1: Red (Citizen Speaks) */}
+          <g
+            className={`transition-all duration-200 cursor-pointer origin-[70px_60px] ${
+              hoveredSignal === 'red'
+                ? 'scale-110 filter drop-shadow-[0_0_12px_rgba(239,68,68,0.75)]'
+                : hoveredSignal
+                ? 'opacity-50 scale-95'
+                : 'hover:scale-105'
+            }`}
+            onMouseEnter={() => setHoveredSignal('red')}
+            onMouseLeave={() => setHoveredSignal(null)}
+          >
+            <title>Signal 1 · Red: Citizen Speaks (Report Hazard, Service Defect or Corruption)</title>
+            <circle cx="70" cy="60" r="38" fill="none" stroke="#EF4444" strokeWidth="7" />
+            <circle cx="70" cy="60" r="11.5" fill="#F87171" />
+          </g>
+
+          {/* Signal 2: Amber (Government Serves) */}
+          <g
+            className={`transition-all duration-200 cursor-pointer origin-[180px_60px] ${
+              hoveredSignal === 'amber'
+                ? 'scale-110 filter drop-shadow-[0_0_12px_rgba(245,158,11,0.75)]'
+                : hoveredSignal
+                ? 'opacity-50 scale-95'
+                : 'hover:scale-105'
+            }`}
+            onMouseEnter={() => setHoveredSignal('amber')}
+            onMouseLeave={() => setHoveredSignal(null)}
+          >
+            <title>Signal 2 · Amber: Government Serves (Public SLA Clock · Dispatch & Investigation)</title>
+            <circle cx="180" cy="60" r="38" fill="none" stroke="#F59E0B" strokeWidth="7" />
+            <circle cx="180" cy="60" r="11.5" fill="#FDE047" />
+          </g>
+
+          {/* Signal 3: Green (Citizen Heard & Proof Uploaded) */}
+          <g
+            className={`transition-all duration-200 cursor-pointer origin-[290px_60px] ${
+              hoveredSignal === 'green'
+                ? 'scale-110 filter drop-shadow-[0_0_14px_rgba(16,185,129,0.85)]'
+                : hoveredSignal
+                ? 'opacity-50 scale-95'
+                : 'hover:scale-105'
+            }`}
+            onMouseEnter={() => setHoveredSignal('green')}
+            onMouseLeave={() => setHoveredSignal(null)}
+          >
+            <title>Signal 3 · Green: Citizen Heard & Proof Uploaded (Verified Resolution & Public Proof)</title>
+            <circle cx="290" cy="60" r="38" fill="#064E3B" stroke="#10B981" strokeWidth="7" />
+            <path
+              d="M 273 60.5 L 286 73.5 L 308 49.5"
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </g>
+        </svg>
+
+        {/* Dynamic Micro-Discovery Label on Hover */}
+        {hoveredSignal && (
+          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] mono font-black px-2.5 py-0.5 rounded-full bg-slate-950/95 text-white border border-slate-700/80 shadow-lg animate-in fade-in zoom-in-95 duration-150 z-20 pointer-events-none">
+            {hoveredSignal === 'red' && (
+              <span className="text-rose-400 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                <span>Signal 1 · Red: Citizen Speaks</span>
+              </span>
+            )}
+            {hoveredSignal === 'amber' && (
+              <span className="text-amber-400 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>Signal 2 · Amber: Government Serves</span>
+              </span>
+            )}
+            {hoveredSignal === 'green' && (
+              <span className="text-emerald-400 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Signal 3 · Green: Citizen Heard &amp; Proof Uploaded</span>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+
+
 

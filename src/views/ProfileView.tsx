@@ -28,11 +28,13 @@ import {
   FolderArchive,
   Code2,
   RefreshCw,
-  Edit3
+  Edit3,
+  Lock
 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
 import { exportLiveZip, triggerBlobDownload } from '../utils/zipExporter';
+import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from '../components/TrafficSignalHUD';
 
 export const ProfileView: React.FC = () => {
   const { user, ensureCitizenSession, profiles, posts, go, setActiveDept, setActiveDeptCountry, setUser, toast } = useApp();
@@ -97,21 +99,43 @@ export const ProfileView: React.FC = () => {
   ];
 
   return (
-    <div className="p-4 space-y-4 animate-fade-in pb-16 text-slate-800 dark:text-slate-100">
-      {/* Identity Card */}
-      <div className="card p-5 space-y-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm relative overflow-hidden rounded-2xl">
-        {/* Parish Champion Ribbon - Calm Warm Ochre */}
-        <div className="absolute top-0 right-0 bg-amber-600/15 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-b border-l border-amber-500/30 font-bold text-[9px] mono px-3 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1.5">
-          <Trophy size={12} className="text-amber-600 dark:text-amber-400" />
-          <span>Nakawa #1 Champion</span>
+    <div className="p-3 sm:p-4 space-y-4 animate-fade-in pb-16 text-slate-800 dark:text-slate-100 max-w-2xl mx-auto">
+      {/* BANK-GRADE SOVEREIGN CITIZEN IDENTIFICATION PASS */}
+      <div className="relative rounded-3xl overflow-hidden border border-slate-300 dark:border-slate-800 bg-gradient-to-b from-white via-slate-50/50 to-slate-100/90 dark:from-[#0d131f] dark:via-[#090d16] dark:to-[#05080f] shadow-xl p-5 sm:p-6 space-y-5">
+        {/* Top Bank Security Bar & Sovereign 3-Signal Chip */}
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/80 dark:border-slate-800/80">
+          <div className="flex items-center gap-2">
+            <span className="text-base">{countryInfo.flag}</span>
+            <div>
+              <div className="text-[9.5px] font-black mono tracking-[0.2em] uppercase text-slate-900 dark:text-slate-200 flex items-center gap-1.5 leading-tight">
+                <span>{countryInfo.name}</span>
+                <span className="text-slate-400">·</span>
+                <span>Citizen Pass</span>
+              </div>
+              <div className="text-[7.5px] mono text-slate-500 font-bold uppercase tracking-wider">
+                Sovereign Accountability Credential · Tier 1
+              </div>
+            </div>
+          </div>
+
+          {/* Official 3-Signal Holographic Chip */}
+          <div 
+            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 shadow-2xs cursor-pointer group"
+            title="CivicDuty Sovereign 3-Signal Security Chip: Speak · Serve · Be Heard"
+          >
+            <SignalGlyphRed className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+            <SignalGlyphAmber className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+            <SignalGlyphGreen className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+          </div>
         </div>
 
-        <div className="flex items-start gap-4 pt-2">
-          {/* Avatar Picture with Camera Upload Button Overlay */}
+        {/* Citizen Credentials Card Core */}
+        <div className="flex items-start gap-4">
+          {/* Avatar Picture with Chamfered Security Frame */}
           <div 
             onClick={() => setShowAvatarModal(true)}
-            className="w-18 h-18 rounded-2xl bg-amber-600/10 dark:bg-slate-950 border-2 border-amber-600/40 dark:border-amber-500/40 flex items-center justify-center flex-shrink-0 text-amber-700 dark:text-amber-400 relative shadow-md cursor-pointer group overflow-hidden transition-transform hover:scale-105"
-            title="Click to change profile picture"
+            className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-amber-600/10 dark:bg-slate-950 border-2 border-amber-500/50 dark:border-amber-400/40 flex items-center justify-center flex-shrink-0 text-amber-700 dark:text-amber-400 relative shadow-md cursor-pointer group overflow-hidden transition-transform hover:scale-105"
+            title="Click to edit profile photo"
           >
             {currentAvatar ? (
               <img
@@ -121,78 +145,111 @@ export const ProfileView: React.FC = () => {
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <Fingerprint size={34} strokeWidth={1.75} />
+              <Fingerprint size={38} strokeWidth={1.5} className="text-amber-600 dark:text-amber-400" />
             )}
 
             {/* Camera Overlay on Hover */}
-            <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+            <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
               <Camera size={18} className="text-amber-400" />
-              <span className="text-[7.5px] mono font-bold mt-0.5">Edit</span>
+              <span className="text-[7.5px] mono font-black mt-0.5 uppercase tracking-wider">Edit</span>
             </div>
 
-            <div className="absolute -bottom-1 -right-1 bg-amber-700 dark:bg-amber-500 text-white dark:text-slate-950 p-1 rounded-full text-[9px] font-bold shadow-sm" title="Gold Pin Map Highlight Active">
+            <div className="absolute -bottom-1 -right-1 bg-amber-600 text-white p-1 rounded-full text-[9px] font-bold shadow-sm" title="Gold Pin Map Highlight Active">
               <MapPin size={10} />
             </div>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 truncate">
+          {/* Identification Details */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="text-base sm:text-lg font-black text-slate-950 dark:text-white flex items-center gap-1.5 truncate">
                 <span>{prof.display_name || activeUser.name || 'Citizen'}</span>
-                <BadgeCheck size={18} className="text-teal-600 dark:text-teal-400 flex-shrink-0" />
+                <BadgeCheck size={18} className="text-teal-600 dark:text-teal-400 shrink-0" />
               </h3>
-              <button
-                type="button"
-                onClick={() => setShowAvatarModal(true)}
-                className="text-[9.5px] mono font-bold text-amber-700 dark:text-amber-400 hover:text-amber-600 flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-900/50 transition-colors flex-shrink-0"
-              >
-                <Edit3 size={11} />
-                <span>Edit Photo</span>
-              </button>
+
+              {/* Parish Champion Ribbon */}
+              <div className="bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-bold text-[8.5px] mono px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                <Trophy size={11} className="text-amber-600 dark:text-amber-400" />
+                <span>Nakawa #1 Champion</span>
+              </div>
             </div>
 
-            <p className="text-[10px] mono text-slate-500 dark:text-slate-400 mt-0.5">
-              {countryInfo.flag} {countryInfo.name} · Verified Citizen · NIN ···{prof.id_frag || '8841'}
-            </p>
+            <div className="font-mono text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
+              <div className="text-slate-900 dark:text-slate-200 font-bold tracking-wider">
+                PASS ID: UG-CIT-{prof.id_frag || '8841'}-KCCA · NODE-01
+              </div>
+              <div className="text-[9px] text-slate-500">
+                {activeUser.nodeTag || 'Nakawa Division · Bukoto Parish · Kampala'}
+              </div>
+            </div>
+
             {prof.bio && (
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-1 line-clamp-1 italic">
+              <p className="text-[10.5px] text-slate-600 dark:text-slate-300 italic pt-0.5 line-clamp-1">
                 "{prof.bio}"
               </p>
             )}
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="text-[10px] mono font-bold px-2 py-0.5 rounded-md bg-amber-600/15 text-amber-800 dark:text-amber-300 border border-amber-600/30 dark:border-amber-500/30 flex items-center gap-1">
-                <ShieldCheck size={12} />
+
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
+              <span className="text-[9px] mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                <ShieldCheck size={11} />
                 {rank.name}
               </span>
-              <span className="text-[9px] mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                {activeUser.nodeTag || 'Nakawa Division · Bukoto Parish'}
+              <button
+                type="button"
+                onClick={() => setShowAvatarModal(true)}
+                className="text-[9px] mono font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
+              >
+                <Edit3 size={10} />
+                <span>Edit Photo &amp; Bio</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* BANK-GRADE CIVIC STANDING BALANCE & PROGRESSION METER */}
+        <div className="p-3.5 rounded-2xl bg-slate-100/90 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800/80 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[8px] mono uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                Available Civic Standing Balance
+              </div>
+              <div className="text-xl sm:text-2xl font-black mono text-slate-950 dark:text-white flex items-baseline gap-1.5 leading-tight">
+                <span>{(prof.civic_score || 1240).toLocaleString()}</span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">PTS</span>
+              </div>
+            </div>
+
+            <div className="text-right text-[9px] mono">
+              <span className="text-slate-500">Next Milestone:</span>
+              <div className="font-bold text-amber-600 dark:text-amber-400">
+                {nextRank ? `${nextRank.min.toLocaleString()}pts → ${nextRank.name}` : 'Max Sentinel Rank'}
+              </div>
+            </div>
+          </div>
+
+          {/* 3-Signal Multi-Phase Progress Bar */}
+          <div className="space-y-1">
+            <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-300/80 dark:border-slate-800 p-0.5">
+              <div 
+                className="h-full rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 transition-all duration-500 shadow-xs" 
+                style={{ width: `${pct}%` }} 
+              />
+            </div>
+            <div className="flex justify-between items-center text-[8.5px] mono text-slate-500 dark:text-slate-400 pt-0.5">
+              <span>{pct}% progress to Sentinel Rank</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Gold Pin Map Avatar Enabled</span>
               </span>
             </div>
           </div>
         </div>
 
-        {/* Civic Score Progress */}
-        <div className="space-y-2 pt-1">
-          <div className="flex justify-between text-[9.5px] mono text-slate-600 dark:text-slate-300 font-bold">
-            <span className="text-amber-700 dark:text-amber-400 flex items-center gap-1">
-              <Sparkles size={12} className="text-amber-600 dark:text-amber-400" /> Civic Score: {prof.civic_score || 1240} pts
-            </span>
-            <span>{nextRank ? `${nextRank.min.toLocaleString()}pts → ${nextRank.name}` : 'Maximum Rank'}</span>
-          </div>
-          <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-950 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 p-0.5">
-            <div className="h-full rounded-full bg-gradient-to-r from-amber-600 via-amber-500 to-teal-500 transition-all duration-500" style={{ width: `${pct}%` }}></div>
-          </div>
-          <div className="flex justify-between items-center text-[8.5px] mono text-slate-500 dark:text-slate-400">
-            <span>{pct}% progress to Sentinel Rank</span>
-            <span className="text-teal-600 dark:text-teal-400 font-bold">Gold Pin Avatar Enabled on Map</span>
-          </div>
-        </div>
-
-        {/* Action Button: View Digital Certificate - Calm Dignified Style */}
-        <div className="pt-2">
+        {/* PRIMARY ACTION: VIEW DIGITAL CERTIFICATE */}
+        <div className="pt-1">
           <button
             onClick={() => setShowCertModal(true)}
-            className="w-full bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold py-2.5 px-4 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99]"
+            className="w-full bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white font-black py-2.5 px-4 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer"
           >
             <ScrollText size={15} />
             <span>View Digital Certificate of Civic Excellence</span>
@@ -200,29 +257,78 @@ export const ProfileView: React.FC = () => {
         </div>
       </div>
 
-      {/* Activity Metrics Grid */}
-      <div>
-        <p className="text-[9px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 font-bold">Civic Activity Ledger</p>
+      {/* BANK-GRADE CIVIC ACTIVITY LEDGER - 3-SIGNAL ALIGNED */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[9.5px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest font-black flex items-center gap-1.5">
+            <Layers size={13} className="text-emerald-500" />
+            <span>Civic Activity Ledger</span>
+          </p>
+          <span className="text-[8px] mono text-slate-400 uppercase font-bold">
+            Audited &amp; Cryptographically Sealed
+          </span>
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {[
-            [prof.posts || 12, 'Reports Filed', 'slate'],
-            [myResolved, 'Issues Resolved', 'teal'],
-            [myUpvotes, 'Community Upvotes', 'slate'],
-            [myCorrupt, 'Corruption Reports', 'rose'],
-            [8, 'Gov Responses', 'slate'],
-            [1, 'Parish Champion Awards', 'amber'],
-          ].map(([v, l, c]) => (
-            <div key={l as string} className="card p-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 rounded-xl shadow-xs">
-              <div
-                className={`text-xl font-black mono ${
-                  c === 'teal' ? 'text-teal-600 dark:text-teal-400' : c === 'amber' ? 'text-amber-700 dark:text-amber-400' : c === 'rose' ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-100'
-                }`}
-              >
-                {v}
-              </div>
-              <div className="text-[8px] mono text-slate-500 dark:text-slate-400 uppercase mt-0.5 leading-tight font-medium">{l}</div>
+          {/* Signal 1: Reports Filed */}
+          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-rose-400/60 transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <SignalGlyphRed className="w-4 h-4" />
+              <span className="text-xl font-black mono text-rose-600 dark:text-rose-400">{prof.posts || 12}</span>
             </div>
-          ))}
+            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">1. Citizen Speaks</div>
+            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Reports Filed</div>
+          </div>
+
+          {/* Signal 2: Gov Dispatches / In Progress */}
+          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-amber-400/60 transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <SignalGlyphAmber className="w-4 h-4" />
+              <span className="text-xl font-black mono text-amber-600 dark:text-amber-400">8</span>
+            </div>
+            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">2. Gov Dispatches</div>
+            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">SLA Active Repairs</div>
+          </div>
+
+          {/* Signal 3: Issues Resolved & Certified */}
+          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-emerald-400/60 transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <SignalGlyphGreen className="w-4 h-4" />
+              <span className="text-xl font-black mono text-emerald-600 dark:text-emerald-400">{myResolved}</span>
+            </div>
+            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">3. Citizen Heard</div>
+            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Certified Proofs</div>
+          </div>
+
+          {/* Anti-Corruption Disclosures */}
+          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-rose-400/60 transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <Lock size={15} className="text-rose-500" />
+              <span className="text-xl font-black mono text-rose-600 dark:text-rose-400">{myCorrupt}</span>
+            </div>
+            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">Anti-Corruption</div>
+            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Whistleblower Walls</div>
+          </div>
+
+          {/* Community Upvotes */}
+          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-teal-400/60 transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <Sparkles size={15} className="text-teal-500" />
+              <span className="text-xl font-black mono text-teal-600 dark:text-teal-400">{myUpvotes}</span>
+            </div>
+            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">Community Trust</div>
+            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Public Upvotes</div>
+          </div>
+
+          {/* Parish Champion Awards */}
+          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-amber-400/60 transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <Award size={15} className="text-amber-500" />
+              <span className="text-xl font-black mono text-amber-600 dark:text-amber-400">1</span>
+            </div>
+            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">Parish Honors</div>
+            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Champion Awards</div>
+          </div>
         </div>
       </div>
 
@@ -293,6 +399,30 @@ export const ProfileView: React.FC = () => {
         {/* Tab 1: Civic Perks (Real Value & Tangible Benefits) */}
         {activeTab === 'perks' && (
           <div className="space-y-3 animate-fade-in">
+            {/* Direct Link to Pre-Funded Perk Escrow Vault for Community Service / CSR */}
+            <div className="bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-teal-500/15 border border-amber-500/30 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-black uppercase mono text-amber-800 dark:text-amber-300">
+                    🎁 CSR &amp; Digital Utility Perk Escrow Vault
+                  </span>
+                  <span className="text-[8px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/30 font-mono">
+                    Open To All Categories
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-700 dark:text-slate-300 leading-snug">
+                  Practice community service: Individual citizens, diaspora patrons, private sector &amp; government can batch-deposit pre-funded airtime, data &amp; water vouchers for outstanding civic watchdogs.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => go('perk_vault')}
+                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs mono uppercase shrink-0 transition-all shadow-xs flex items-center justify-center gap-1"
+              >
+                <span>Escrow Vault →</span>
+              </button>
+            </div>
+
             <div className="bg-amber-600/10 dark:bg-amber-500/10 border border-amber-600/20 dark:border-amber-500/20 p-3.5 rounded-xl space-y-1">
               <span className="text-amber-800 dark:text-amber-300 font-bold text-xs uppercase mono flex items-center gap-1.5">
                 <Ticket size={14} className="text-amber-600 dark:text-amber-400" /> Tangible Value for Active Citizens
@@ -507,11 +637,11 @@ export const ProfileView: React.FC = () => {
             {(activeUser.followed || prof.followed || []).length === 0 ? (
               <p className="text-xs text-slate-500 mono">No walls followed yet.</p>
             ) : (
-              (activeUser.followed || prof.followed || ['kcca', 'umeme', 'nwsc']).map((did) => {
+              (activeUser.followed || prof.followed || ['kcca', 'umeme', 'nwsc']).map((did, idx) => {
                 const d = getDept(activeUser.country, did);
                 return (
                   <div
-                    key={did}
+                    key={`${did}-${idx}`}
                     onClick={() => {
                       setActiveDept(did);
                       setActiveDeptCountry(activeUser.country);
@@ -757,6 +887,7 @@ export const ProfileView: React.FC = () => {
       {/* Avatar & Profile Photo Upload Modal */}
       {showAvatarModal && (
         <AvatarUploadModal
+          isOpen={showAvatarModal}
           onClose={() => setShowAvatarModal(false)}
         />
       )}

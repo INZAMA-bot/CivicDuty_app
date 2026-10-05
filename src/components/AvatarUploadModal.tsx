@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 interface AvatarUploadModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   targetUserId?: string;
   initialAvatar?: string;
@@ -95,7 +95,7 @@ const GRADIENT_PALETTES = [
 ];
 
 export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   targetUserId,
   initialAvatar,
@@ -281,14 +281,17 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-fade-in">
+    <div 
+      className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
+    >
       <div 
-        className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] sm:max-h-[90vh] my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/50">
-          <div className="flex items-center gap-2">
+        {/* Sticky Modal Header */}
+        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/90 dark:bg-slate-950/80 shrink-0">
+          <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-700 dark:text-amber-400">
               <Camera size={16} />
             </div>
@@ -303,18 +306,18 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 space-y-5 overflow-y-auto flex-1 text-slate-800 dark:text-slate-100">
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain flex-1 text-slate-800 dark:text-slate-100">
           {/* Avatar Preview HUD */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
             <div className="relative group">
-              <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-amber-600/40 dark:border-amber-500/40 bg-slate-200 dark:bg-slate-800 shadow-md flex items-center justify-center relative">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-amber-600/40 dark:border-amber-500/40 bg-slate-200 dark:bg-slate-800 shadow-md flex items-center justify-center relative">
                 {selectedAvatar ? (
                   <img
                     src={selectedAvatar}
@@ -324,7 +327,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                   />
                 ) : (
                   <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 p-2 text-center">
-                    <User size={36} strokeWidth={1.5} />
+                    <User size={32} strokeWidth={1.5} />
                     <span className="text-[8px] mono mt-1 font-bold">No Photo</span>
                   </div>
                 )}
@@ -339,7 +342,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                 <button
                   type="button"
                   onClick={handleRemovePhoto}
-                  className="absolute -top-2 -right-2 p-1.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-md border border-white dark:border-slate-900 transition-all hover:scale-110"
+                  className="absolute -top-2 -right-2 p-1.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-md border border-white dark:border-slate-900 transition-all hover:scale-110 cursor-pointer"
                   title="Remove Photo"
                 >
                   <Trash2 size={12} />
@@ -357,9 +360,9 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
               <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
                 {bio || 'Verified Sovereign Citizen'}
               </p>
-              <div className="pt-1 flex items-center justify-center sm:justify-start gap-2">
-                <span className="text-[9px] mono px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/30">
-                  Active in Reports & Leaderboards
+              <div className="pt-0.5 flex items-center justify-center sm:justify-start gap-2">
+                <span className="text-[8.5px] mono px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/30">
+                  Active in Reports &amp; Leaderboards
                 </span>
               </div>
             </div>
@@ -370,7 +373,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('upload')}
-              className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'upload'
                   ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 shadow-sm border border-slate-200 dark:border-slate-700'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -382,7 +385,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('presets')}
-              className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'presets'
                   ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 shadow-sm border border-slate-200 dark:border-slate-700'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -394,14 +397,14 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('initials')}
-              className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+              className={`flex-1 py-2 px-2.5 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'initials'
                   ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 shadow-sm border border-slate-200 dark:border-slate-700'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <Palette size={13} />
-              <span>Initials Badge</span>
+              <span>Initials</span>
             </button>
           </div>
 
@@ -412,7 +415,7 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/jpeg,image/png,image/webp,image/gif"
+                accept="image/*"
                 className="hidden"
               />
 
@@ -424,28 +427,32 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center space-y-2 ${
+                className={`p-4 sm:p-5 border-2 border-dashed rounded-2xl cursor-pointer transition-all flex flex-col items-center justify-center text-center space-y-1.5 active:scale-[.99] ${
                   dragOver
                     ? 'border-amber-500 bg-amber-500/10'
                     : 'border-slate-300 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500/50 bg-slate-50/50 dark:bg-slate-950/40'
                 }`}
               >
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-700 dark:text-amber-400">
-                  <Camera size={24} />
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-700 dark:text-amber-400">
+                  <Camera size={20} />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Click to choose photo or take picture
+                    Click to choose photo or take camera picture
                   </p>
-                  <p className="text-[10px] mono text-slate-500 dark:text-slate-400 mt-0.5">
-                    Supports JPEG, PNG, WebP up to 10MB (Auto-cropped to high quality 256x256)
+                  <p className="text-[9.5px] mono text-slate-500 dark:text-slate-400 mt-0.5">
+                    Supports JPEG, PNG, WebP up to 10MB (Auto-cropped to 256x256)
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="mt-2 px-3 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 text-[10px] mono font-bold tracking-wider uppercase transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="mt-1 px-4 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 text-[10px] mono font-bold tracking-wider uppercase transition-colors shadow-xs active:scale-95 cursor-pointer"
                 >
-                  Browse Device Gallery
+                  Browse Device / Camera
                 </button>
               </div>
             </div>
@@ -568,19 +575,19 @@ export const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/50 flex items-center justify-end gap-2">
+        {/* Modal Footer - Always Fixed at the bottom of the card */}
+        <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-950/95 flex items-center justify-end gap-2 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs mono font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-xl transition-colors"
+            className="px-4 py-2 text-xs mono font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-xl transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-5 py-2 text-xs mono font-bold uppercase tracking-wider bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+            className="px-5 py-2 text-xs mono font-bold uppercase tracking-wider bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 rounded-xl flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             <Check size={15} />
             <span>Save Profile</span>

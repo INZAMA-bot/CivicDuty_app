@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept, pathStr, timeAgo } from '../utils/helpers';
 import { ChevronLeft, Lock, Upload, FileText } from 'lucide-react';
@@ -15,13 +15,13 @@ export const GovReplyView: React.FC = () => {
     { type: 'image' | 'video' | 'doc'; url: string; name: string; size: string }[]
   >([]);
 
-  if (!activePost || !user) {
-    go('gov_inbox');
-    return null;
-  }
+  useEffect(() => {
+    if (!activePost || !user || user.role === 'read_only') {
+      go('gov_inbox');
+    }
+  }, [activePost, user, go]);
 
-  if (user.role === 'read_only') {
-    go('gov_inbox');
+  if (!activePost || !user || user.role === 'read_only') {
     return null;
   }
 
@@ -68,7 +68,7 @@ export const GovReplyView: React.FC = () => {
     });
 
     const comment = {
-      id: 'c-' + Date.now(),
+      id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       sender: `${user.real_title_short || d.name} · ${user.scope_label || ''}`,
       role: 'gov' as const,
       body: replyText.trim(),

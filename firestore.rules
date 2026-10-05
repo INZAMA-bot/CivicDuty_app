@@ -1,0 +1,223 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Default Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Security helper primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'inzamarobin279@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Diagnostic connection test document
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list: if true;
+    }
+
+    // --- POSTS (Citizen Tickets & Dispatches) ---
+    function isValidPost(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.country is string && data.country.size() <= 8
+        && data.dept is string && data.dept.size() <= 128
+        && data.lane is string && (data.lane == 'civic' || data.lane == 'consumer')
+        && data.title is string && data.title.size() <= 256
+        && data.body is string && data.body.size() <= 4000
+        && data.source is string && (data.source == 'web' || data.source == 'sms' || data.source == 'ussd')
+        && data.status is string
+        && data.created_at is string && data.created_at.size() <= 64;
+    }
+
+    match /posts/{postId} {
+      allow get: if isValidId(postId);
+      allow list: if true;
+      allow create: if isValidId(postId) && isValidPost(incoming());
+      allow update: if isValidId(postId) && (
+        isAdmin() ||
+        // Action: Upvote
+        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes']) ||
+        // Action: Status update by official or citizen resolution feedback
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'gov_status', 'comments', 'citizen_satisfied']))
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- DEPARTMENTS (Ministries, Desks, Commercial Entities) ---
+    function isValidDepartment(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 128
+        && data.country is string && data.country.size() <= 8
+        && data.sla is number;
+    }
+
+    match /departments/{deptId} {
+      allow get: if isValidId(deptId);
+      allow list: if true;
+      allow create: if isAdmin() || (isValidId(deptId) && isValidDepartment(incoming()));
+      allow update: if isValidId(deptId) && (
+        isAdmin() ||
+        // Action: Claim desk verification
+        incoming().diff(existing()).affectedKeys().hasOnly(['isClaimed', 'claimedPlan', 'claimedBy', 'trustScore'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- CLAIMS (Commercial Desk Subscriptions) ---
+    function isValidClaim(data) {
+      return data.deptId is string && data.deptId.size() <= 128
+        && data.country is string && data.country.size() <= 8
+        && data.businessName is string && data.businessName.size() <= 128
+        && data.phone is string && data.phone.size() <= 32
+        && data.plan is string && data.plan.size() <= 64
+        && data.claimedAt is string && data.claimedAt.size() <= 64;
+    }
+
+    match /claims/{claimId} {
+      allow get: if isValidId(claimId);
+      allow list: if true;
+      allow create: if isValidId(claimId) && isValidClaim(incoming());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- USERS (Citizen Profiles) ---
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.country is string && data.country.size() <= 8
+        && data.display_name is string && data.display_name.size() <= 64
+        && data.civic_score is number;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if true;
+      allow create: if isValidId(userId) && isValidUser(incoming());
+      allow update: if isValidId(userId) && (
+        isAdmin() ||
+        (isSignedIn() && request.auth.uid == userId) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['civic_score', 'posts', 'resolved', 'rank'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- AUDIT LEDGER (Immutable Cryptographic Seals) ---
+    function isValidAudit(data) {
+      return data.ticketId is string && data.ticketId.size() <= 128
+        && data.hash is string && data.hash.size() <= 128
+        && data.country is string && data.country.size() <= 8
+        && data.timestamp is string && data.timestamp.size() <= 64;
+    }
+
+    match /audit_ledger/{receiptId} {
+      allow get: if isValidId(receiptId);
+      allow list: if true;
+      // Cryptographic seal receipt can be appended, but NEVER modified or deleted
+      allow create: if isValidId(receiptId) && isValidAudit(incoming());
+      allow update: if false; // IMMUTABLE
+      allow delete: if false; // IMMUTABLE
+    }
+
+    // --- PHASE 3: FISCAL VOUCHERS & DISBURSEMENTS ---
+    match /fiscal_vouchers/{voucherId} {
+      allow get: if isValidId(voucherId);
+      allow list: if true;
+      allow create: if isValidId(voucherId);
+      allow update: if isValidId(voucherId);
+      allow delete: if isAdmin();
+    }
+
+    // --- PHASE 4: PARISH CHIEF CIRCULAR NOTIFICATIONS ---
+    match /circular_notifications/{notifId} {
+      allow get: if isValidId(notifId);
+      allow list: if true;
+      allow create: if isValidId(notifId);
+      allow update: if isValidId(notifId);
+      allow delete: if isAdmin();
+    }
+
+    // --- PHASE 5: PAYMENT GATEWAY TRANSACTIONS ---
+    match /gateway_transactions/{txId} {
+      allow get: if isValidId(txId);
+      allow list: if true;
+      allow create: if isValidId(txId);
+      allow update: if isValidId(txId);
+      allow delete: if isAdmin();
+    }
+
+    // --- PHASE 6: DIGITAL UTILITY PERK VOUCHERS (ESCROW VAULT) ---
+    match /perk_vouchers/{voucherId} {
+      allow get: if isValidId(voucherId);
+      allow list: if true;
+      allow create: if isValidId(voucherId);
+      allow update: if isValidId(voucherId);
+      allow delete: if isAdmin();
+    }
+
+    // --- OFFICIAL ADMINISTRATIVE SUPERVISORY QUERIES ---
+    function isValidQuery(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.queryRef is string && data.queryRef.size() <= 64
+        && data.country is string && data.country.size() <= 8
+        && data.targetUnit is string && data.targetUnit.size() <= 128
+        && data.category is string && data.category.size() <= 64
+        && data.subject is string && data.subject.size() <= 256
+        && data.status is string;
+    }
+
+    match /official_queries/{queryId} {
+      allow get: if isValidId(queryId);
+      allow list: if true;
+      allow create: if isValidId(queryId) && isValidQuery(incoming());
+      allow update: if isValidId(queryId) && (
+        isAdmin() ||
+        // Officer submitting defense
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'defenseText', 'defenseSubmittedAt']) ||
+        // Supervisor determination
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'determinationDecision', 'determinationNotes', 'determinedAt', 'auditHash'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- STATION COMMAND ROSTERS & INVITES ACROSS TIERS ---
+    function isValidStationInvite(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.stationId is string && data.stationId.size() <= 128
+        && data.country is string && data.country.size() <= 8
+        && data.designation is string && data.designation.size() <= 128
+        && data.status is string;
+    }
+
+    match /station_invites/{inviteId} {
+      allow get: if isValidId(inviteId);
+      allow list: if true;
+      allow create: if isValidId(inviteId) && isValidStationInvite(incoming());
+      allow update: if isValidId(inviteId) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'officerName', 'phone', 'acceptedAt', 'designation'])
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}

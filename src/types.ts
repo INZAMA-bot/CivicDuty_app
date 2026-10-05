@@ -23,6 +23,36 @@ export interface NationalRolloutArrangement {
   totalTargetDesks: number;
   primaryUnitName: string;
   tiersDescription: string;
+  superadminMinistry?: string;
+  superadminTitle?: string;
+  superadminSubtitle?: string;
+  superadminShort?: string;
+  superadminDescription?: string;
+  superadminDeskButton?: string;
+  superadminRefCode?: string;
+  lowestOfficerTitle?: string;
+  lowestOfficerUnit?: string;
+  lowestOfficerTeamRoles?: Array<{ role: string; description: string; defaultName: string }>;
+  districts?: Array<{
+    id: string;
+    name: string;
+    region: string;
+    cao: string;
+    activeNodes: string;
+    status: string;
+    rollDate: string;
+    sla: string;
+    pdmParishes?: number;
+    risk: string;
+    uptime: string;
+    avgResponseHours: number;
+    casesLogged: number;
+    casesResolved: number;
+    csatScore: number;
+    ddegCompliance: string;
+    subCounties: string[];
+    chiefsRoster: Array<{ name: string; ward: string; status: string; ussdActive: boolean; teamSize?: number }>;
+  }>;
   targets: {
     l1Title: string;
     l1Target: number;
@@ -50,12 +80,43 @@ export type TicketCategory =
   | 'waste' 
   | 'police' 
   | 'education' 
+  | 'hospitality'
+  | 'transport'
+  | 'housing'
   | 'telecom' 
   | 'finance' 
   | 'praise' 
   | 'other';
 
 export type LaneType = 'civic' | 'consumer';
+
+export type EntityCategory = 
+  | 'government'
+  | 'education'
+  | 'health'
+  | 'food_dining'
+  | 'hospitality'
+  | 'retail_shops'
+  | 'nightlife_bars'
+  | 'pharmacy_chemists'
+  | 'artisans_garages'
+  | 'finance'
+  | 'banking_finance'
+  | 'transport'
+  | 'transport_cooperative'
+  | 'housing'
+  | 'utility'
+  | 'telecom'
+  | 'private_utility_telecom'
+  | 'contractor'
+  | 'private_contractor'
+  | 'cso'
+  | 'ngo_civil_society'
+  | 'faith_cbo'
+  | 'academic_research'
+  | 'commercial_corporate'
+  | 'other'
+  | string;
 
 export interface TerritoryNode {
   id: string;
@@ -64,16 +125,54 @@ export interface TerritoryNode {
   children?: TerritoryNode[];
 }
 
+export interface ClaimedEntityRecord {
+  deptId: string;
+  country: CountryCode;
+  businessName: string;
+  representativeName: string;
+  officialEmail: string;
+  phone: string;
+  role: string;
+  plan: 'free' | 'community' | 'cluster' | 'district' | 'regional' | 'national' | 'starter' | 'pro' | 'enterprise' | string;
+  claimedAt: string;
+  verified: boolean;
+  tinOrReg?: string;
+  monthlyFee: number;
+  billingInterval?: 'annual' | 'monthly';
+  territoryScope?: string;
+  unitsCovered?: number;
+  feeUsd?: number;
+  localCurrencyPrice?: string;
+}
+
 export interface Department {
   id: string;
   name: string;
   full: string;
   icon?: string;
   ministry?: string;
+  country?: CountryCode;
   sla: number; // in hours
   lane?: LaneType;
+  category?: EntityCategory;
+  sector?: string;
+  trustScore?: number; // 0-100%
+  verified?: boolean;
+  stakeholdersCount?: number;
+  location?: string;
+  qualityAudit?: string;
+  licenseNo?: string;
   registered?: boolean;
   reg?: string;
+  isClaimed?: boolean;
+  claimedPlan?: 'starter' | 'pro' | 'enterprise';
+  claimedBy?: string;
+  isEnterprise?: boolean;
+  deskType?: 'enterprise_sovereign' | 'grassroots_parish';
+  claimPrice?: number;
+  qrPlacardUrl?: string;
+  nudgeCount?: number;
+  unclaimedReason?: string;
 }
 
 export interface CountryInfo {
@@ -129,6 +228,23 @@ export interface PostTerritory {
   parish: string;
 }
 
+export interface EscalationRecord {
+  tier: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_ministry';
+  tierLabel: string;
+  promoted_at: string;
+  officer_responsible: string;
+  reason: string;
+}
+
+export interface BudgetAllocation {
+  source: string; // e.g. "MoFPED DDEG Capital Grant", "Road Maintenance Fund"
+  allocated_amount: number;
+  spent_amount: number;
+  currency: string;
+  contractor_name?: string;
+  milestone_progress?: number; // 0 - 100
+}
+
 export interface Post {
   id: string;
   country: CountryCode;
@@ -154,8 +270,16 @@ export interface Post {
   created_at: string;
   comments: Comment[];
   upvotes: number;
+  downvotes?: number;
+  author_profession?: string;
   citizen_satisfied?: boolean | null;
   escalated?: boolean;
+  escalation_tier?: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_ministry';
+  escalation_history?: EscalationRecord[];
+  citizen_dispute_status?: 'pending_citizen_confirmation' | 'confirmed_by_community' | 'disputed_with_counter_evidence';
+  dispute_evidence?: string;
+  budget_allocation?: BudgetAllocation;
+  crypto_seal_hash?: string;
   project?: string;
 }
 
@@ -176,6 +300,27 @@ export interface UserProfile {
   bio?: string;
 }
 
+export interface EntityRolePermissions {
+  can_reply: boolean; // Respond to customer/patron reviews & complaints
+  can_resolve: boolean; // Mark issues investigating / resolved with proof
+  can_broadcast: boolean; // Broadcast public announcements & advisories
+  can_view_billing: boolean; // View receipts, invoices & seat subscription
+  can_manage_staff: boolean; // Issue staff invites & manage shifts
+  is_readonly?: boolean; // Observer mode
+}
+
+export interface EntityCustomRole {
+  id: string;
+  dept: string;
+  title: string;
+  description: string;
+  color: string;
+  permissions: EntityRolePermissions;
+  is_default?: boolean;
+  is_custom?: boolean;
+  created_at?: string;
+}
+
 export interface UserSession {
   id: string;
   role: RoleType;
@@ -183,6 +328,7 @@ export interface UserSession {
   dept?: string;
   scope?: string;
   is_utility?: boolean;
+  is_admin?: boolean;
   role_label?: string;
   real_title_short?: string;
   scope_label?: string;
@@ -191,6 +337,24 @@ export interface UserSession {
   followed?: string[];
   name?: string;
   avatar_url?: string;
+  entity_type?: 'government' | 'non_government_entity';
+  entity_category?: EntityCategory;
+  custom_category_specify?: string;
+  organization_name?: string;
+  professional_identity?: string;
+  business_typology?: string;
+  custom_typology_specify?: string;
+  custom_title_specify?: string;
+  staff_role?: 'owner_admin' | 'duty_manager' | 'customer_rep' | 'field_technician' | 'auditor' | string;
+  seat_limit?: number;
+  assigned_role_id?: string;
+  assigned_role_title?: string;
+  duty_station?: string;
+  contact_phone?: string;
+  permissions?: EntityRolePermissions;
+  hierarchy_level?: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_agency' | 'tier5_perm_sec';
+  escalation_rank?: number;
+  officer_name?: string;
 }
 
 export interface GovCodeData {
@@ -199,6 +363,27 @@ export interface GovCodeData {
   scope: string;
   role: RoleType;
   is_utility: boolean;
+  is_admin?: boolean;
+  role_label?: string;
+  real_title_short?: string;
+  hierarchy_level?: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_agency' | 'tier5_perm_sec';
+  escalation_rank?: number; // 1 (Lowest: Parish) -> 2 (Sub-County/Town Clerk) -> 3 (District CAO) -> 4 (Agency) -> 5 (Permanent Secretary)
+  officer_name?: string;
+  entity_type?: 'government' | 'non_government_entity';
+  entity_category?: EntityCategory;
+  custom_category_specify?: string;
+  organization_name?: string;
+  professional_identity?: string;
+  business_typology?: string;
+  custom_typology_specify?: string;
+  custom_title_specify?: string;
+  staff_role?: 'owner_admin' | 'duty_manager' | 'customer_rep' | 'field_technician' | 'auditor' | string;
+  seat_limit?: number;
+  assigned_role_id?: string;
+  assigned_role_title?: string;
+  duty_station?: string;
+  contact_phone?: string;
+  permissions?: EntityRolePermissions;
 }
 
 export interface Invite {
@@ -211,6 +396,19 @@ export interface Invite {
   is_utility: boolean;
   used: boolean;
   country?: CountryCode;
+  professional_identity?: string;
+  staff_role?: string;
+  custom_title_specify?: string;
+  is_admin?: boolean;
+  assigned_role_id?: string;
+  assigned_role_title?: string;
+  duty_station?: string;
+  contact_phone?: string;
+  permissions?: EntityRolePermissions;
+  hierarchy_level?: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_agency' | 'tier5_perm_sec';
+  escalation_rank?: number;
+  invited_by?: string;
+  invited_at?: string;
 }
 
 export interface TeamMember {
@@ -227,6 +425,24 @@ export interface TeamMember {
   reason?: string | null;
   note?: string | null;
   country?: CountryCode;
+  professional_identity?: string;
+  staff_role?: string;
+  custom_title_specify?: string;
+  is_admin?: boolean;
+  assigned_role_id?: string;
+  assigned_role_title?: string;
+  duty_station?: string;
+  contact_phone?: string;
+  phone?: string;
+  invited_by?: string;
+  invite_code?: string;
+  permissions?: EntityRolePermissions;
+  deptName?: string;
+  points?: number;
+  badge?: string;
+  joinedAt?: string;
+  hierarchy_level?: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_agency' | 'tier5_perm_sec';
+  escalation_rank?: number;
 }
 
 export interface AuditEntry {
@@ -240,6 +456,70 @@ export interface AuditEntry {
   ts: string;
   country?: CountryCode;
   dept?: string;
+  hash?: string;
+  query_id?: string;
+  target_unit?: string;
+  tamper_seal?: string;
+}
+
+export type OfficialQueryCategory =
+  | 'sla_breach'
+  | 'pdm_irregularity'
+  | 'unattended_reports'
+  | 'desk_abandonment'
+  | 'procurement_audit'
+  | 'general_supervisory';
+
+export type OfficialQueryStatus =
+  | 'pending_response'
+  | 'under_review'
+  | 'resolved_exonerated'
+  | 'remedial_directive'
+  | 'escalated_igg';
+
+export interface OfficialQueryResponse {
+  officerName: string;
+  officerTitle: string;
+  respondedAt: string;
+  justification: string;
+  correctiveActionTaken: string;
+  attachmentNote?: string;
+}
+
+export interface OfficialQueryDetermination {
+  determinedBy: string;
+  determinedByTitle: string;
+  determinedAt: string;
+  verdict: 'resolved_exonerated' | 'remedial_directive' | 'escalated_igg';
+  comments: string;
+  disciplinaryPenalty?: string;
+}
+
+export interface OfficialQuery {
+  id: string;
+  queryRef: string;
+  country: CountryCode;
+  dept?: string;
+  issuerName: string;
+  issuerTitle: string;
+  issuerRole: string;
+  issuerRank?: number;
+  targetUnit: string;
+  targetScope: string;
+  targetOfficer: string;
+  targetTitle: string;
+  category: OfficialQueryCategory;
+  subject: string;
+  grounds: string;
+  evidenceDetails?: string;
+  slaScore?: string;
+  backlogCount?: number;
+  deadlineHours: number;
+  deadlineTimestamp: string;
+  issuedAt: string;
+  status: OfficialQueryStatus;
+  response?: OfficialQueryResponse;
+  determination?: OfficialQueryDetermination;
 }
 
 export interface ProjectMilestone {
@@ -308,13 +588,131 @@ export interface Invoice {
   dept?: string;
 }
 
-export type LanguageCode = 'EN' | 'LG' | 'SW' | 'RW';
+export type LanguageCode =
+  | 'EN' // English
+  | 'SW' // Kiswahili
+  | 'LG' // Oluganda
+  | 'RW' // Ikinyarwanda
+  | 'FR' // Français
+  | 'ES' // Español
+  | 'AR' // العربية
+  | 'PT' // Português
+  | 'DE' // Deutsch
+  | 'ZH' // 中文 (Simplified Chinese)
+  | 'HI' // हिन्दी (Hindi)
+  | 'RU' // Русский (Russian)
+  | 'JA' // 日本語 (Japanese)
+  | 'BN' // বাংলা (Bengali)
+  | 'NK' // Runyankore-Rukiga
+  | 'LU' // Dholuo / Leb-Lango
+  | 'HA' // Harshen Hausa
+  | 'YO' // Èdè Yorùbá
+  | 'AM' // አማርኛ (Amharic)
+  | 'ZU'; // isiZulu
 
 export interface OfflineQueueItem {
   id: string;
   post: Post;
   timestamp: string;
   retries: number;
+}
+
+// --- PHASE 3: FISCAL VOUCHER & DISBURSEMENT ---
+export interface FiscalVoucher {
+  id: string;
+  voucherNumber: string;
+  projectId: string;
+  projectTitle: string;
+  contractor: string;
+  dept?: string;
+  country: CountryCode;
+  milestoneId: string;
+  milestoneTitle: string;
+  grossAmount: number;
+  currency: string;
+  whtTaxRate: number; // e.g. 0.06 (6%)
+  whtTaxDeduction: number;
+  vatRate: number; // e.g. 0.18 (18%)
+  vatAmount: number;
+  netPayable: number;
+  awarderSigner: string;
+  contractorSigner: string;
+  treasurySigner: string;
+  issuedAt: string;
+  disbursementStatus: 'certified_pending_release' | 'disbursed_to_escrow' | 'completed_bank_transfer';
+  blockchainSeal: string;
+}
+
+// --- PHASE 4: CIRCULAR DISPATCH NOTIFICATION QUEUE ---
+export interface ParishChiefNotification {
+  id: string;
+  circularRef: string;
+  subject: string;
+  body: string;
+  channel: 'sms' | 'whatsapp' | 'ussd_push';
+  targetDistrict: string;
+  targetChiefName: string;
+  targetChiefPhone: string;
+  parishName: string;
+  status: 'queued' | 'dispatched' | 'delivered' | 'read_receipt_confirmed';
+  dispatchedAt: string;
+  readAt?: string;
+  deliveryLatencyMs?: number;
+}
+
+// --- PHASE 5: AFRICAN PAYMENT GATEWAY (MoMo & Cards) ---
+export interface GatewayTransaction {
+  id: string;
+  provider: 'mtn_momo' | 'airtel_money' | 'paystack' | 'flutterwave';
+  invoiceId?: string;
+  amount: number;
+  currency: string;
+  payerPhoneOrEmail: string;
+  reference: string;
+  status: 'pending' | 'success' | 'failed';
+  channel: 'mobile_money' | 'card' | 'bank_transfer';
+  timestamp: string;
+  receiptUrl?: string;
+}
+
+// --- PHASE 2: TELECOM SMS & USSD WEBHOOK INGESTION ---
+export interface TelecomWebhookPayload {
+  sessionId?: string;
+  serviceCode?: string;
+  phoneNumber: string;
+  text: string;
+  networkCode?: string; // MTN, AIRTEL, SAFARICOM
+}
+
+// --- PHASE 6: DIGITAL UTILITY PERK VOUCHERS & ESCROW VAULT ---
+export interface EscrowPerkVoucher {
+  id: string;
+  voucherCode: string;
+  pin?: string;
+  category: 'telco_data' | 'water_utility' | 'electricity' | 'transit_credit' | 'supermarket' | 'other';
+  brand: string;
+  title: string;
+  faceValue: number;
+  currency: string;
+  country: string;
+  sponsoredBy: string;
+  sponsorType: 'contractor' | 'authority' | 'corporate_csr';
+  projectId?: string;
+  projectName?: string;
+  batchId: string;
+  status: 'escrow_unassigned' | 'dispatched' | 'redeemed' | 'expired';
+  createdAt: string;
+  dispatchedTo?: {
+    recipientName: string;
+    recipientContact: string; // phone or email
+    dispatchedAt: string;
+    dispatchedBy: string;
+    citationNote?: string;
+    postOrProjectId?: string;
+    smsDeliveryStatus?: 'sent' | 'delivered';
+  };
+  redemptionUssdString?: string;
+  expiryDate: string;
 }
 
 export type ViewType =
@@ -342,4 +740,36 @@ export type ViewType =
   | 'project'
   | 'ussd'
   | 'docs'
-  | 'verify';
+  | 'verify'
+  | 'ps_opm_analytics'
+  | 'ps_molg_rollout'
+  | 'ps_executive_desk'
+  | 'company_management'
+  | 'transit_preview'
+  | 'livery'
+  | 'gov_partnership'
+  | 'perk_vault'
+  | 'cd_ops';
+
+export interface CdOpsPromotionalAd {
+  id: string;
+  title: string;
+  category: 'bodaboda' | 'bus' | 'train' | 'terminal' | 'radio' | 'noticeboard' | 'ussd';
+  categoryLabel: string;
+  tagline: string;
+  summary: string;
+  imageSrc: string;
+  callToAction: string;
+  ctaType: 'ussd' | 'specs' | 'report' | 'perks' | 'custom';
+  ctaValue?: string;
+  specs?: string;
+  sponsorName: string;
+  targetAudience: string;
+  published: boolean;
+  postedAt: string;
+  highlights?: string[];
+  impressions?: number;
+  clicks?: number;
+}
+
+

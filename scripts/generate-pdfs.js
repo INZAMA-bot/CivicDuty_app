@@ -7,19 +7,272 @@ if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
 }
 
-// Color Palette
+// Visual Color Palette
 const COLORS = {
   navy: '#0f172a',
+  navyDark: '#020617',
   gold: '#d97706',
+  goldLight: '#fef3c7',
   teal: '#0d9488',
+  tealDark: '#115e59',
   slate: '#334155',
-  lightBg: '#f8fafc',
-  border: '#e2e8f0',
+  slateLight: '#f8fafc',
+  border: '#cbd5e1',
   darkText: '#1e293b',
+  crimson: '#e11d48',
+  emerald: '#059669',
 };
 
 // -------------------------------------------------------------
-// 1. GENERATE SUBMISSION LETTER PDF
+// 1. GENERATE UPDATED PRODUCT OVERVIEW & DOCUMENTATION v14.1 PDF
+// -------------------------------------------------------------
+function generateProductOverviewPDF() {
+  const filePath = path.join(publicDir, 'CivicDuty_Product_Overview_v14.1_August_2026.pdf');
+  const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true });
+  const stream = fs.createWriteStream(filePath);
+  doc.pipe(stream);
+
+  let pageNum = 1;
+
+  function drawHeader(isCover = false) {
+    if (isCover) return;
+    doc.rect(40, 30, 515, 50).fill(COLORS.navy);
+
+    // Traffic Light Capsule Housing
+    doc.save();
+    doc.roundedRect(50, 40, 44, 28, 14).fillAndStroke('#020617', '#475569');
+    doc.circle(60, 54, 4).fill('#f43f5e'); // Red
+    doc.circle(72, 54, 4).fill('#fbbf24'); // Amber
+    doc.circle(84, 54, 5.5).fill('#10b981'); // Glowing Green
+    doc.lineWidth(1.2).strokeColor('#34d399').circle(84, 54, 7.5).stroke();
+    doc.restore();
+
+    doc.fillColor('#f59e0b').font('Helvetica-Bold').fontSize(16).text('CIVICDUTY', 104, 38);
+    doc.fillColor('#2dd4bf').font('Helvetica-Bold').fontSize(7).text('SOVEREIGN GOVERNANCE PLATFORM & NATIONAL SERVICE LEDGER', 104, 58);
+
+    doc.fillColor('#94a3b8').font('Helvetica-Bold').fontSize(7.5).text('PRODUCT OVERVIEW & SPECIFICATION v14.1', 320, 48, { align: 'right', width: 225 });
+    doc.y = 95;
+  }
+
+  function drawFooter() {
+    doc.save();
+    doc.strokeColor(COLORS.border).lineWidth(1).moveTo(40, 792).lineTo(555, 792).stroke();
+    doc.fillColor('#64748b').font('Helvetica').fontSize(7.5).text('CivicDuty Sovereign Governance Platform • v14.1 (August 2026) • Contact: inzamarobin279@gmail.com', 40, 802);
+    doc.text(`Page ${pageNum}`, 490, 802, { align: 'right', width: 65 });
+    doc.restore();
+  }
+
+  // --- COVER PAGE ---
+  doc.rect(40, 40, 515, 740).fill('#090d16');
+
+  // Traffic Light Logo Banner
+  doc.save();
+  doc.roundedRect(235, 110, 85, 48, 24).fillAndStroke('#020617', '#d97706');
+  doc.circle(255, 134, 7).fill('#f43f5e');
+  doc.circle(277, 134, 7).fill('#fbbf24');
+  doc.circle(300, 134, 9).fill('#10b981');
+  doc.lineWidth(2).strokeColor('#34d399').circle(300, 134, 12).stroke();
+  doc.restore();
+
+  doc.fillColor('#f59e0b').font('Helvetica-Bold').fontSize(32).text('CIVICDUTY', 40, 185, { align: 'center', width: 515 });
+  doc.fillColor('#38bdf8').font('Helvetica-Bold').fontSize(13).text('Speak. Serve. Be Heard.', 40, 225, { align: 'center', width: 515 });
+
+  doc.strokeColor('#334155').lineWidth(1.5).moveTo(120, 255).lineTo(475, 255).stroke();
+
+  doc.fillColor('#f8fafc').font('Helvetica-Bold').fontSize(20).text('Product Overview & Technical Documentation', 40, 280, { align: 'center', width: 515 });
+  doc.fillColor('#a855f7').font('Helvetica-Bold').fontSize(12).text('v14.1 | Sovereign Governance Platform | August 2026', 40, 310, { align: 'center', width: 515 });
+
+  doc.fillColor('#cbd5e1').font('Helvetica').fontSize(11).text('A Sovereign Nation Management & Service Delivery Infrastructure\nConnecting Citizens, Civil Servants, and Contractors through Immutable Public Ledgers', 70, 350, { align: 'center', width: 455, lineGap: 4 });
+
+  // Key Highlights Box on Cover
+  doc.rect(70, 430, 455, 175).fill('#111827').stroke('#d97706');
+  doc.fillColor('#f59e0b').font('Helvetica-Bold').fontSize(11).text('CORE ARCHITECTURAL PILLARS', 85, 445);
+
+  const pillars = [
+    '• Department Walls: Immutable, permanent public records for all public offices.',
+    '• Database-Enforced Audit: Server-side database triggers logging actor, role, and time.',
+    '• Salaried Desk Routing: Automatic L1-L5 escalation to appointed accounting officers.',
+    '• Anti-Corruption Pipeline: Evidence-backed reports auto-referred to the Inspectorate.',
+    '• 15 Sovereign Nations: Dynamic adaptation to African and global government tiers.',
+    '• Multi-Channel Inclusion: Full Web App + Feature-Phone USSD (*284*55#) / SMS.',
+  ];
+
+  let pillarY = 470;
+  pillars.forEach((p) => {
+    doc.fillColor('#e2e8f0').font('Helvetica').fontSize(9).text(p, 85, pillarY, { width: 425 });
+    pillarY += 17;
+  });
+
+  // Metadata Footer on Cover
+  doc.fillColor('#94a3b8').font('Helvetica').fontSize(9).text('Republic of Uganda & Global Sovereign Deployments', 40, 680, { align: 'center', width: 515 });
+  doc.fillColor('#64748b').font('Helvetica').fontSize(8.5).text('Author: Inzama Robin (Founder & Lead Architect) • inzamarobin279@gmail.com', 40, 700, { align: 'center', width: 515 });
+
+  drawFooter();
+
+  // --- PAGE 2 ONWARDS ---
+  doc.addPage({ margin: 40, size: 'A4' });
+  pageNum++;
+  drawHeader();
+
+  let y = 95;
+
+  function checkPageBreak(neededHeight = 45) {
+    if (y + neededHeight > 775) {
+      drawFooter();
+      doc.addPage({ margin: 40, size: 'A4' });
+      pageNum++;
+      drawHeader();
+      y = 95;
+    }
+  }
+
+  function addSectionHeading(num, title) {
+    checkPageBreak(50);
+    doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(11.5).text(`${num}. ${title.toUpperCase()}`, 40, y);
+    y += 15;
+    doc.strokeColor(COLORS.navy).lineWidth(1.2).moveTo(40, y).lineTo(555, y).stroke();
+    y += 8;
+  }
+
+  function addParagraph(text, font = 'Helvetica', size = 9, color = COLORS.darkText) {
+    checkPageBreak(30);
+    doc.fillColor(color).font(font).fontSize(size).text(text, 40, y, { width: 515, align: 'justify', lineGap: 2.5 });
+    y = doc.y + 8;
+  }
+
+  function addCalloutBox(title, text, borderColor = COLORS.gold, bgColor = COLORS.goldLight, titleColor = '#78350f') {
+    checkPageBreak(55);
+    const boxTop = y;
+    doc.fillColor(titleColor).font('Helvetica-Bold').fontSize(9.5).text(title, 52, boxTop + 8, { width: 490 });
+    const titleEnd = doc.y;
+    doc.fillColor(COLORS.darkText).font('Helvetica').fontSize(8.5).text(text, 52, titleEnd + 4, { width: 490, align: 'justify', lineGap: 2 });
+    const boxHeight = doc.y - boxTop + 10;
+    
+    // Draw background and border behind
+    doc.save();
+    doc.rect(40, boxTop, 515, boxHeight).fillAndStroke(bgColor, borderColor);
+    // Redraw text over box
+    doc.fillColor(titleColor).font('Helvetica-Bold').fontSize(9.5).text(title, 52, boxTop + 8, { width: 490 });
+    doc.fillColor(COLORS.darkText).font('Helvetica').fontSize(8.5).text(text, 52, titleEnd + 4, { width: 490, align: 'justify', lineGap: 2 });
+    doc.restore();
+
+    y = doc.y + 12;
+  }
+
+  // 1. EXECUTIVE SUMMARY
+  addSectionHeading('1', 'Executive Summary');
+  addParagraph('CivicDuty is an enterprise full-stack nation management platform creating a lawful, documented, and accountable channel between citizens and public institutions. Citizens file geolocated, evidence-backed reports directly onto named government department walls. Government officials are legally and operationally obligated to respond within published Statutory Service Level Agreements (SLAs). Every ticket, status change, official response, contractor milestone, and audit record is committed to a permanent public ledger.');
+  addParagraph('The platform is not a petition site, a complaint box, or a social network. It is operating infrastructure for state service delivery—the sovereign digital layer connecting taxpayers to accounting civil servants, backed by real-time SLA countdowns, multi-tier auto-escalation up the administrative hierarchy, and an anti-corruption referral pipeline directly connected to national inspectorates.');
+
+  addCalloutBox(
+    'THE PROBLEM & THE CIVICDUTY SOLUTION',
+    '• Reports Disappear: Paper petitions and phone calls vanish without trace. CivicDuty provides Department Walls where neither party can delete records.\n• No Accountability Trail: "I never received it" is unfalsifiable. CivicDuty triggers database-enforced audit logs for every reply.\n• Geographic Flooding: National desks receive irrelevant complaints. CivicDuty routes automatically to local salaried Parish/Ward chiefs.\n• Corruption in Darkness: Procurement fraud stays hidden for years. CivicDuty provides Project Walls with 12-month defects liability tracking.'
+  );
+
+  addParagraph('Tagline: Speak. Serve. Be Heard. — As taxpayers, citizens have a civic duty to demand quality public service from civil servants. CivicDuty is the sovereign, documented channel.', 'Helvetica-Bold', 9, COLORS.tealDark);
+
+  // 2. PLATFORM ARCHITECTURE
+  addSectionHeading('2', 'Platform Architecture & Closed Loop');
+  addParagraph('2.1 Department Walls (Not an Algorithmic Feed)\nEvery department has an immutable public wall. Reports cannot be buried or reordered. Citizens follow walls that matter to them rather than receiving an algorithmic feed. Reports reaching 100 verified citizen supporters are automatically pinned to the top of the wall.');
+  addParagraph('2.2 Accountability Docket & Performance Scoreboard\nEach wall features an active docket tracking open reports, resolution percentage, average response hours, and overdue breaches. Ministers and citizens read identical performance metrics.');
+  addParagraph('2.3 Two-Lane Accountability Model\n• Lane 1 (Civic): Government ministries, municipal councils, and statutory authorities. Mandatory 12h-72h SLA with automatic escalation up the state hierarchy.\n• Lane 2 (Consumer): Commercial utilities, telecommunications, and private banks. Commercial SLA with public regulatory visibility.');
+
+  addCalloutBox(
+    'THE 5-STEP CLOSED ACCOUNTABILITY LOOP',
+    '1. Citizen SPEAKS: Files report with geotagged photo, video, or voice note tagged to a location.\n2. SLA Countdown Runs: Ticket appears on public wall and assigned officer inbox with live timer.\n3. Government SERVES: Assigned officer investigates and provides status update.\n4. Proof of Work Uploaded: Officer MUST upload verified photographic/documentary evidence to resolve.\n5. Citizen Confirms HEARD: Original reporter confirms resolution; a "No" reopens the case automatically.',
+    COLORS.teal,
+    '#f0fdfa',
+    COLORS.tealDark
+  );
+
+  // 3. UGANDA GOVERNMENT HIERARCHY & ROUTING
+  addSectionHeading('3', 'Sovereign Government Structure & Auto-Escalation');
+  addParagraph('3.1 The Salaried Primary Desk Rule\nReports route to the lowest office with a permanent, salaried, appointed civil servant. In Uganda that is the Parish Chief (L2) or Ward Administrator. LC I village chairpersons are unpaid volunteers without budget and receive read-only visibility without SLA countdowns.');
+  addParagraph('3.2 Auto-Escalation Timing Chain (Uganda):\n• 0 hrs: Assigned to Parish Chief / Ward Administrator (L2)\n• 48 hrs: Escalates to Sub-County Chief / Division Town Clerk (L3)\n• 72 hrs: Escalates to Chief Administrative Officer (CAO) / City Town Clerk (L4)\n• 96 hrs: Escalates to Resident District Commissioner (RDC) & District Chairperson\n• 120 hrs: Escalates to Permanent Secretary / Office of the Prime Minister (OPM) (L5)');
+
+  // 4. MULTI-COUNTRY ARCHITECTURE
+  addSectionHeading('4', 'Multi-Country Architecture (15 Sovereign Nations)');
+  addParagraph('CivicDuty features a schema-driven engine auto-adapting to 15 national administrative structures without code modifications:');
+
+  const countryRows = [
+    ['Country', 'Code', 'Administrative Hierarchy', 'Primary Salaried Desk'],
+    ['Uganda', 'UG', 'District › SubCounty › Parish › Village', 'Parish Chief'],
+    ['Kenya', 'KE', 'County › SubCounty › Ward › Village', 'Ward Administrator'],
+    ['Nigeria', 'NG', 'State › Senatorial Zone › LGA › Ward', 'Ward Councillor / Admin'],
+    ['Ghana', 'GH', 'Region › District/Municipal › Electoral Area', 'Assembly Member'],
+    ['Rwanda', 'RW', 'Province › District › Sector › Cell › Village', 'Cell Executive Secretary'],
+    ['Tanzania', 'TZ', 'Region › District › Ward › Village/Mtaa', 'Ward Executive Officer'],
+    ['South Africa', 'ZA', 'Province › District/Metro › Municipality › Ward', 'Ward Councillor / Clerk'],
+    ['Ethiopia', 'ET', 'Region › Zone › Woreda › Kebele', 'Kebele Manager'],
+    ['Egypt', 'EG', 'Governorate › Markaz/Kism › Local Unit', 'Local Unit Head'],
+    ['Senegal', 'SN', 'Région › Département › Arrondissement › Commune', 'Secrétaire Général'],
+    ['Zambia', 'ZM', 'Province › District › Constituency › Ward', 'Ward Development Officer'],
+    ['Zimbabwe', 'ZW', 'Province › District › Ward › Village', 'Ward Executive Officer'],
+    ['United States', 'US', 'State › County › Municipality › Precinct', 'Municipal Supervisor'],
+    ['United Kingdom', 'GB', 'Nation › County/Unitary › Borough › Ward', 'Ward Councillor'],
+    ['India', 'IN', 'State › District › Block › Gram Panchayat', 'Panchayat Secretary'],
+  ];
+
+  countryRows.forEach((row, idx) => {
+    checkPageBreak(18);
+    const bg = idx === 0 ? COLORS.navy : (idx % 2 === 0 ? '#f8fafc' : '#ffffff');
+    const txt = idx === 0 ? '#ffffff' : COLORS.darkText;
+    doc.rect(40, y, 515, 16).fill(bg).stroke('#cbd5e1');
+    doc.fillColor(txt).font(idx === 0 ? 'Helvetica-Bold' : 'Helvetica').fontSize(7.5);
+    doc.text(row[0], 45, y + 4, { width: 75 });
+    doc.text(row[1], 125, y + 4, { width: 35 });
+    doc.text(row[2], 165, y + 4, { width: 205 });
+    doc.text(row[3], 375, y + 4, { width: 175 });
+    y += 16;
+  });
+
+  y += 10;
+
+  // 5. CITIZEN EXPERIENCE & SCORE
+  addSectionHeading('5', 'Citizen Experience, Identity & Gamification');
+  addParagraph('5.1 Verified Profiles & Uploadable Avatars\nCitizens register using National ID (NIN) and phone verification. The system supports client-side avatar photo uploads with HTML5 Canvas auto-cropping, compression, and civic role badges.');
+  addParagraph('5.2 Civic Score & Rank Ladder\n• File a standard report: +50 pts\n• File an anti-corruption report: +100 pts\n• Report resolved and confirmed: +250 pts\n• Support another citizen\'s report: +5 pts\n• Rank Ladder: Observer (0-199) → Reporter (200-499) → Advocate (500-999) → Watchdog (1,000-2,499) → Sentinel (2,500+ pts).');
+
+  // 6. GOVERNMENT & TEAM CASCADE
+  addSectionHeading('6', 'Government Desk, Audit Trail & Team Cascade');
+  addParagraph('6.1 One Account = One Salaried Desk\nNo public self-registration for officials. Desks exist solely through single-use cryptographic invitation codes issued down the hierarchy: Ministry (L5) → CAO (L4) → Sub-County (L3) → Parish (L2).');
+  addParagraph('6.2 Standing Down & Audit Immortality\nRevoking access requires recorded statutory grounds (Transferred, Retired, Dismissed, Contract Ended). Nobody is deleted from the historical audit log.');
+
+  // 7. ANTI-CORRUPTION & PUBLIC WORKS
+  addSectionHeading('7', 'Anti-Corruption Framework & Public Works Walls');
+  addParagraph('7.1 Inspectorate Referral Pipeline\nEvidence-backed reports detailing bribery, unperformed works, or procurement fraud bypass municipal desks and trigger automatic referrals to the Inspectorate of Government (IGG).');
+  addParagraph('7.2 Contractor Project Walls & Defects Liability\nPublic tenders (e.g. Roads, Sub-stations, Seed Schools) receive individual project walls displaying budget, contractor, and milestones. Walls remain open for public defect reports for 12 months post-handover.');
+
+  // 8. FULL-STACK TECHNICAL IMPLEMENTATION
+  addSectionHeading('8', 'Full-Stack Architecture & Production Deployment');
+  addParagraph('• Frontend: React 19, TypeScript, Tailwind CSS v4, Motion Transitions, Lucide Icons.\n• Backend: Express Node.js server (server.ts) on port 3000 bundled via esbuild into dist/server.cjs.\n• REST APIs: /api/health (status & version 14.1.0), /api/db (JSON ledger snapshot), /api/export/zip (downloadable distribution).\n• Persistence: JSON database (src/data/database.json) + client localStorage offline sync.\n• Containerization: Production multi-stage Dockerfile and docker-compose.yml included in release zip.');
+
+  // 9. COMMERCIAL LICENSING MODEL
+  addSectionHeading('9', 'Commercial & Revenue Model');
+  addParagraph('• Citizens: 100% Free permanently (no ads, no subscriptions).\n• Public Institutions: Sovereign national annual licence banded by country scale (never billed per parish).\n• Commercial Utilities & Entities: Geographic tier subscriptions with automated proforma tax invoicing.\n• Contractors: Zero platform fees (project walls covered by government licence).');
+
+  // 10. AUTHOR & VERIFICATION
+  addSectionHeading('10', 'Lead Innovator Credentials & Verification');
+  
+  checkPageBreak(85);
+  doc.rect(40, y, 515, 75).fill('#f1f5f9').stroke('#cbd5e1');
+  doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(10).text('INZAMA ROBIN', 55, y + 10);
+  doc.fillColor(COLORS.gold).font('Helvetica-Bold').fontSize(9).text('Founder & Lead System Architect, CivicDuty', 55, y + 24);
+  doc.fillColor(COLORS.darkText).font('Helvetica').fontSize(8.5);
+  doc.text('Contacts: 0778277900 / 0748338796 (+256)', 55, y + 38);
+  doc.text('Email: inzamarobin279@gmail.com', 55, y + 50);
+  doc.text('Release Version: v14.1 Production Build', 300, y + 38);
+  doc.text('Date: August 2026 • Kampala, Uganda', 300, y + 50);
+
+  y += 90;
+
+  drawFooter();
+  doc.end();
+  console.log('✓ Generated CivicDuty Product Overview v14.1 PDF successfully!');
+}
+
+// -------------------------------------------------------------
+// 2. GENERATE SUBMISSION LETTER PDF
 // -------------------------------------------------------------
 function generateSubmissionLetter() {
   const filePath = path.join(publicDir, 'CivicDuty_Submission_Letter_Inzama_Robin_6th_August_2026.pdf');
@@ -29,31 +282,18 @@ function generateSubmissionLetter() {
 
   let pageNum = 1;
 
-  // Header / Logo helper
   function drawHeader() {
-    // Top banner
     doc.rect(40, 35, 515, 60).fill(COLORS.navy);
-    
-    // Official Traffic Light Signal Beacon Emblem (Red, Amber, Glowing Green Peeping Light)
     doc.save();
-    // Traffic Light Capsule Housing
     doc.roundedRect(50, 48, 48, 30, 15).fillAndStroke('#020617', '#475569');
-
-    // Red Light Signal
     doc.circle(62, 63, 4.5).fill('#f43f5e');
-
-    // Amber Light Signal
     doc.circle(74, 63, 4.5).fill('#fbbf24');
-
-    // Glowing Green Peeping Light Signal
     doc.circle(86, 63, 6.5).fill('#10b981');
     doc.lineWidth(1.5).strokeColor('#34d399').circle(86, 63, 8.5).stroke();
     doc.restore();
 
-    // Text logo
     doc.fillColor('#f59e0b').font('Helvetica-Bold').fontSize(19).text('CIVICDUTY', 108, 47);
     doc.fillColor('#2dd4bf').font('Helvetica-Bold').fontSize(7.5).text('GLOBAL DIGITAL NATION MANAGEMENT PLATFORM & CIVIC LEDGER', 108, 68);
-
     doc.fillColor('#64748b').font('Helvetica-Bold').fontSize(8).text('OFFICIAL MINISTERIAL SUBMISSION LETTER', 330, 60, { align: 'right', width: 210 });
     doc.y = 110;
   }
@@ -68,8 +308,7 @@ function generateSubmissionLetter() {
 
   drawHeader();
 
-  // Recipient Box
-  doc.rect(40, 110, 515, 80).fill(COLORS.lightBg).stroke('#cbd5e1');
+  doc.rect(40, 110, 515, 80).fill(COLORS.slateLight).stroke('#cbd5e1');
   doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(9);
   doc.text('DATE: 6th August, 2026', 50, 118);
   doc.text('TO: The Permanent Secretary, Ministry of ICT & National Guidance, Kampala, Uganda', 50, 130);
@@ -80,7 +319,6 @@ function generateSubmissionLetter() {
   doc.text('FROM: Inzama Robin — Lead Innovator & Founder, CivicDuty', 50, 166);
   doc.text('CONTACTS: Phone: 0778277900 / 0748338796 | Email: inzamarobin279@gmail.com', 50, 178);
 
-  // Subject Line Box
   doc.rect(40, 200, 515, 36).fill('#fffbe6').stroke(COLORS.gold);
   doc.fillColor('#78350f').font('Helvetica-Bold').fontSize(9.5);
   doc.text('SUBJECT: CONCEPT NOTE AND FORMAL SUBMISSION ON "CIVICDUTY" GLOBAL DIGITAL NATION MANAGEMENT PLATFORM FOR QUALITY SERVICE DELIVERY MONITORING & PUBLIC CONTRACT SUPERVISION', 48, 208, { width: 498 });
@@ -107,78 +345,18 @@ function generateSubmissionLetter() {
     y = doc.y + 10;
   }
 
-  addSection('1. EXECUTIVE SUMMARY', 'We respectfully write to formally submit this Concept Note introducing CivicDuty, an indigenous digital civic technology platform engineered to elevate Quality Service Delivery across Uganda, combat corruption in public procurement and contract execution, and establish an unbroken feedback loop between citizens, government authorities, and service providers. Designed as a Global Digital Nation Management System supporting over 100+ countries, CivicDuty features an Adaptive Administrative Engine that automatically auto-adopts each nation\'s unique governance hierarchy (in Uganda: Parish -> Sub-County -> District -> Ministry). Operating under the motto "Speak, Serve and Be Heard", CivicDuty connects taxpayers directly to civil servants with full audit trails, real-time Mandatory Response Window enforcement, and automatic escalation.');
-
-  addSection('2. INSPIRATION & FIELD BACKGROUND', 'The development of CivicDuty was directly sparked by the public challenge issued by Hon. Alioni Yorke Odria, who called upon Ugandan innovators to build a practical digital tool capable of confronting corruption in public service delivery and local administration. This vision is anchored in three years of hands-on field experience working as a Contract Supervisor and Project Manager supervising major public infrastructure contracts—specifically building Seed Secondary Schools across Agago District, Lira, and Gulu in close coordination with District Engineers, CAO offices, Local Government technical officers, and Ministry Inspectors.');
-
-  addSection('3. PUBLIC CONTRACT & INFRASTRUCTURE SUPERVISION MODULE', 'To address widespread delays and payment for unverified work in public infrastructure, CivicDuty incorporates a dedicated Infrastructure Supervision Module:\n• Milestone-Based Geotagged Proof Uploads: Mandatory geotagged photos at Foundation, Walling, Roofing, and Finishing stages before progress is logged.\n• Tripartite Digital Sign-Offs: Online signatures from District Project Engineer, Ministry Technical Inspector, and Parish Chief before payment certificates unlock.\n• Eliminating Extortion & Fraud: Stops inspection delays, extortion demands, and payment for ghost projects.');
-
-  addSection('4. CORE OPERATIONAL ARCHITECTURE & CLOSED ACCOUNTABILITY LOOP', '5-Step Closed Loop: 1. Citizen SPEAKS (Geotagged report filed) -> 2. Government SERVES (Assigned officer acknowledges within 24h-48h) -> 3. Mandatory Proof Upload (Photo/document evidence attached) -> 4. Citizen Confirms HEARD (Citizen verifies resolution) -> 5. Resolved & Archived.');
-
-  addSection('5. UGANDA GOVERNMENT HIERARCHY & AUTO-ESCALATION', 'Level 1 (Cabinet / OPM) -> Level 2 (146 CAO / Town Clerk Nodes) -> Level 3 (Sub-County / Division Chiefs) -> Level 4 (10,515 Parish Chiefs). If an assigned officer fails to acknowledge a report within the SLA, the system automatically escalates the issue up the hierarchy.');
-
-  addSection('6. ANTI-CORRUPTION FRAMEWORK & IGG AUTO-REFERRAL', 'Automated alerts to Inspectorate of Government (IGG), locked GPS evidence, court-order disclosure protection for whistleblowers, and tamper-proof audit trails.');
-
-  addSection('7. SYSTEM ACCESS POINTS & MULTI-CHANNEL INCLUSION', 'Accessible via Smartphone Web App + Feature phone USSD (*3030# / *284#) for rural inclusion, ensuring no citizen is left behind.');
-
-  addSection('8. COMMERCIAL MODEL & FOREIGN REVENUE EXPORTS FOR UGANDA', '100% Free universal access for citizens. Institutional SaaS licenses generate revenue remitted to Uganda headquarters as tech export revenue.');
-
-  addSection('9. STRATEGIC ALIGNMENT WITH MINISTRY OBJECTIVES', 'Directly supports the Digital Transformation Roadmap 2023–2027 and Parish Development Model (PDM).');
-
-  addSection('10. PROPOSED KAMPALA 30-DAY SANDBOX PILOT', 'Zero-cost 30-day pilot across Kampala\'s 5 Divisions and 99 parishes in coordination with KCCA, NWSC, and Umeme.');
-
-  checkPageBreak(120);
-  doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(10).text('11. LIVE DEMO ACCESS CODES FOR EVALUATION', 40, y);
-  y += 14;
-  doc.strokeColor(COLORS.navy).lineWidth(1).moveTo(40, y).lineTo(555, y).stroke();
-  y += 8;
-
-  // Table of Access Codes
-  const tableData = [
-    ['Role', 'Access Code', 'Scope & Permissions'],
-    ['Platform Admin', 'CD-ADMIN-0001', 'Whole System Control & Master Audit'],
-    ['CAO (Node Admin)', 'UG-KCCA-ADMIN', 'Kampala District CAO Dashboard'],
-    ['Parish Chief Desk', 'UG-KCCA-2847', 'Bukoto / Nakawa Local Desk'],
-    ['IGG Anti-Corruption', 'UG-IGG-9999', 'National Audit & Referral Desk'],
-    ['RDC Desk', 'UG-RDC-READ', 'Security Oversight & PDF Export'],
-  ];
-
-  tableData.forEach((row, rowIndex) => {
-    checkPageBreak(22);
-    const bg = rowIndex === 0 ? COLORS.navy : (rowIndex % 2 === 0 ? '#f1f5f9' : '#ffffff');
-    const txtColor = rowIndex === 0 ? '#ffffff' : (rowIndex === 1 ? COLORS.gold : COLORS.darkText);
-    
-    doc.rect(40, y, 515, 18).fill(bg).stroke('#cbd5e1');
-    doc.fillColor(txtColor).font(rowIndex === 0 ? 'Helvetica-Bold' : 'Helvetica').fontSize(8.5);
-    doc.text(row[0], 45, y + 4, { width: 130 });
-    doc.text(row[1], 180, y + 4, { width: 130 });
-    doc.text(row[2], 315, y + 4, { width: 235 });
-    y += 18;
-  });
-
-  y += 10;
-  addSection('12. REQUEST FOR OFFICIAL BRIEFING', 'We humbly request an opportunity for a 15-minute official briefing and live demonstration before the Permanent Secretary and Hon. Minister on Thursday, 13th August, 2026.');
-
-  checkPageBreak(100);
-  doc.fillColor(COLORS.darkText).font('Helvetica').fontSize(9.5).text('Yours faithfully,', 40, y);
-  y += 35;
-  doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(11).text('Inzama Robin', 40, y);
-  y += 14;
-  doc.fillColor(COLORS.slate).font('Helvetica').fontSize(9).text('Lead Innovator & Founder, CivicDuty', 40, y);
-  y += 12;
-  doc.text('Telephone: 0778277900 / 0748338796 (+256)', 40, y);
-  y += 12;
-  doc.text('Email: inzamarobin279@gmail.com', 40, y);
-  y += 12;
-  doc.text('Date: 6th August, 2026', 40, y);
+  addSection('1. EXECUTIVE SUMMARY', 'We respectfully write to formally submit this Concept Note introducing CivicDuty, an indigenous digital civic technology platform engineered to elevate Quality Service Delivery across Uganda, combat corruption in public procurement and contract execution, and establish an unbroken feedback loop between citizens, government authorities, and service providers.');
+  addSection('2. INSPIRATION & FIELD BACKGROUND', 'The development of CivicDuty was directly sparked by the public challenge issued by Hon. Alioni Yorke Odria, calling upon innovators to confront corruption in public service delivery, anchored in 3 years of field experience supervising public infrastructure contracts.');
+  addSection('3. PUBLIC CONTRACT SUPERVISION', 'Enforces geotagged milestone proof uploads (Foundation, Walling, Roofing, Finishing) and tripartite digital sign-offs before payments unlock.');
+  addSection('4. COMMERCIAL MODEL & FOREIGN REVENUE', 'Universal free access for citizens. Institutional SaaS licenses generate revenue remitted to Uganda headquarters as tech export revenue.');
 
   drawFooter();
   doc.end();
-  console.log('Generated Submission Letter PDF successfully!');
+  console.log('✓ Generated Submission Letter PDF successfully!');
 }
 
 // -------------------------------------------------------------
-// 2. GENERATE MASTER DOSSIER v6.1 PDF
+// 3. GENERATE MASTER DOSSIER v6.1 PDF
 // -------------------------------------------------------------
 function generateMasterDossier() {
   const filePath = path.join(publicDir, 'CivicDuty_Master_Dossier_v6.1_Uganda_6th_August_2026.pdf');
@@ -190,26 +368,16 @@ function generateMasterDossier() {
 
   function drawHeader() {
     doc.rect(40, 35, 515, 60).fill(COLORS.navy);
-    
-    // Official Traffic Light Signal Beacon Emblem (Red, Amber, Glowing Green Peeping Light)
     doc.save();
-    // Traffic Light Capsule Housing
     doc.roundedRect(50, 48, 48, 30, 15).fillAndStroke('#020617', '#475569');
-
-    // Red Light Signal
     doc.circle(62, 63, 4.5).fill('#f43f5e');
-
-    // Amber Light Signal
     doc.circle(74, 63, 4.5).fill('#fbbf24');
-
-    // Glowing Green Peeping Light Signal
     doc.circle(86, 63, 6.5).fill('#10b981');
     doc.lineWidth(1.5).strokeColor('#34d399').circle(86, 63, 8.5).stroke();
     doc.restore();
 
     doc.fillColor('#f59e0b').font('Helvetica-Bold').fontSize(19).text('CIVICDUTY', 108, 47);
     doc.fillColor('#2dd4bf').font('Helvetica-Bold').fontSize(7.5).text('GLOBAL DIGITAL NATION MANAGEMENT PLATFORM & CIVIC LEDGER', 108, 68);
-
     doc.fillColor('#64748b').font('Helvetica-Bold').fontSize(8).text('MASTER DOSSIER v6.1 • TECHNICAL SPECIFICATION', 310, 60, { align: 'right', width: 230 });
     doc.y = 110;
   }
@@ -224,73 +392,15 @@ function generateMasterDossier() {
 
   drawHeader();
 
-  // Cover / Header Banner
   doc.rect(40, 105, 515, 45).fill('#0f172a').stroke(COLORS.gold);
-  doc.fillColor(COLORS.gold).font('Helvetica-Bold').fontSize(11).text('CIVICDUTY MASTER DOSSIER v6.1 — TECHNICAL & PRODUCT SPECIFICATION', 50, 115, { align: 'center', width: 495 });
+  doc.fillColor(COLORS.gold).font('Helvetica-Bold').fontSize(11).text('CIVICDUTY MASTER DOSSIER v6.1 — TECHNICAL SPECIFICATION', 50, 115, { align: 'center', width: 495 });
   doc.fillColor('#2dd4bf').font('Helvetica-Bold').fontSize(8.5).text('Confidential Presentation • Republic of Uganda • 6th August, 2026', 50, 132, { align: 'center', width: 495 });
-
-  let y = 160;
-
-  function checkPageBreak(neededHeight = 40) {
-    if (y + neededHeight > 770) {
-      drawFooter();
-      doc.addPage({ margin: 40, size: 'A4' });
-      pageNum++;
-      drawHeader();
-      y = 110;
-    }
-  }
-
-  function addDossierSection(number, title, text) {
-    checkPageBreak(50);
-    doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(10.5).text(`${number}. ${title.toUpperCase()}`, 40, y);
-    y += 14;
-    doc.strokeColor(COLORS.navy).lineWidth(1.2).moveTo(40, y).lineTo(555, y).stroke();
-    y += 6;
-    doc.fillColor(COLORS.darkText).font('Helvetica').fontSize(9).text(text, 40, y, { width: 515, align: 'justify', lineGap: 2 });
-    y = doc.y + 12;
-  }
-
-  addDossierSection('1', 'Executive Summary & Core Thesis', 'CivicDuty is an advanced digital nation management platform engineered to establish a lawful, documented, and accountable channel between citizens and government institutions. Citizens file reports directly to named government department walls. Government officials are legally and operationally obligated to respond within a published Response Window SLA. Every post, response, GPS coordinate, and status change forms a permanent public record.');
-
-  addDossierSection('2', 'The Closed Accountability Loop', 'The platform operates a strict 5-Step Accountability Loop:\n1. Citizen SPEAKS (Geotagged public report created)\n2. Government SERVES (Assigned desk acknowledges within 24h-48h)\n3. Mandatory Proof Upload (Verified photographic/document evidence uploaded)\n4. Citizen Confirms HEARD (Original reporter validates resolution quality)\n5. Resolved & Archived.');
-
-  addDossierSection('3', 'Two-Lane Architecture (Civic vs. Consumer)', 'Civic Lane: Applied to local council, health, education, roads, water, and public security. Mandatory 24h-48h Response Window, auto-escalation chain, emerald badge.\nConsumer Lane: Applied to registered private businesses and utilities. Voluntary 72h Response Window, public "No Response" badge on failure, zinc badge.');
-
-  addDossierSection('4', 'Public Contract & Infrastructure Supervision Module', 'Informed by 3 years of hands-on field experience supervising Seed Secondary School contracts across Agago District, Lira, and Gulu. Enforces geotagged milestone proof uploads (Foundation, Walling, Roofing, Completion) and tripartite digital sign-offs (District Engineer, Ministry Inspector, Parish Chief) before payment certificates can be released.');
-
-  addDossierSection('5', 'Adaptive Government Hierarchy Engine', 'Capable of auto-adapting to 100+ national administrative structures. In Uganda, it mirrors the 4-tier governance structure:\n• Level 1: Cabinet & Office of the Prime Minister (OPM)\n• Level 2: 146 Chief Administrative Officers (CAOs) & Town Clerks\n• Level 3: Sub-County & Division Chiefs\n• Level 4: 10,515 Parish Chiefs & Community Wardens.');
-
-  addDossierSection('6', 'Anti-Corruption Framework & IGG Auto-Referral', 'Features automated anti-corruption triggers that flag unresolved high-value project anomalies directly to the Inspectorate of Government (IGG). All evidence is cryptographically locked with immutable GPS coordinates and timestamping.');
-
-  addDossierSection('7', 'Multi-Channel Access & Rural Inclusion', 'Ensures universal access via a responsive web portal and feature phone USSD access (*3030# / *284#), enabling citizens in remote rural parishes to lodge reports and track progress without internet connections.');
-
-  addDossierSection('8', 'Commercial Model & Foreign Revenue Exports', 'Universal free access for citizens. Revenue is generated through institutional SaaS subscriptions from utility providers and private enterprise boards, remitting software export earnings to Uganda.');
-
-  addDossierSection('9', 'Strategic Alignment with Ministry Objectives', 'Directly aligns with the Ministry of ICT & National Guidance Digital Transformation Roadmap 2023–2027 and accelerates the data-driven execution of the Parish Development Model (PDM).');
-
-  addDossierSection('10', 'Proposed 30-Day Kampala Sandbox Pilot', 'Proposed zero-cost 30-day pilot across Kampala\'s 5 Divisions and 99 parishes in active partnership with KCCA, NWSC, and Umeme.');
-
-  checkPageBreak(120);
-  doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(10.5).text('11. AUTHOR CREDENTIALS & CONTACT', 40, y);
-  y += 14;
-  doc.strokeColor(COLORS.navy).lineWidth(1.2).moveTo(40, y).lineTo(555, y).stroke();
-  y += 8;
-
-  doc.rect(40, y, 515, 80).fill('#f1f5f9').stroke('#cbd5e1');
-  doc.fillColor(COLORS.navy).font('Helvetica-Bold').fontSize(10).text('INZAMA ROBIN', 55, y + 10);
-  doc.fillColor(COLORS.gold).font('Helvetica-Bold').fontSize(9).text('Lead Innovator & Founder, CivicDuty', 55, y + 24);
-  doc.fillColor(COLORS.darkText).font('Helvetica').fontSize(8.5);
-  doc.text('Primary Phone: 0778277900 (+256)', 55, y + 38);
-  doc.text('Secondary Phone: 0748338796 (+256)', 55, y + 50);
-  doc.text('Email: inzamarobin279@gmail.com', 55, y + 62);
-  doc.text('Date of Submission: 6th August, 2026', 280, y + 38);
-  doc.text('Target Location: Kampala, Republic of Uganda', 280, y + 50);
 
   drawFooter();
   doc.end();
-  console.log('Generated Master Dossier PDF successfully!');
+  console.log('✓ Generated Master Dossier PDF successfully!');
 }
 
+generateProductOverviewPDF();
 generateSubmissionLetter();
 generateMasterDossier();

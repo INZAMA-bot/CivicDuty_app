@@ -1,17 +1,7 @@
 import JSZip from 'jszip';
 
 export async function exportLiveZip(onProgress?: (pct: number, status: string) => void): Promise<Blob> {
-  if (onProgress) onProgress(10, 'Initializing ZIP archive...');
-
-  const zip = new JSZip();
-
-  // Create a structured folder layout
-  const srcFolder = zip.folder('src');
-  const serverFolder = zip.folder('server');
-  const dataFolder = zip.folder('data');
-  const docsFolder = zip.folder('docs');
-
-  if (onProgress) onProgress(30, 'Exporting database snapshots & state...');
+  if (onProgress) onProgress(10, 'Initializing ZIP archive & database snapshots...');
 
   // Capture current state from localStorage
   const currentPosts = localStorage.getItem('cd_posts') || '[]';
@@ -37,6 +27,35 @@ export async function exportLiveZip(onProgress?: (pct: number, status: string) =
     },
   };
 
+  try {
+    if (onProgress) onProgress(25, 'Fetching latest repository source archive...');
+    const res = await fetch('/civicduty-fullstack-build.zip');
+    if (res.ok) {
+      if (onProgress) onProgress(45, 'Loading and updating source files...');
+      const arrayBuffer = await res.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+
+      // Inject fresh live database snapshot
+      const dataFolder = zip.folder('data') || zip;
+      dataFolder.file('database.json', JSON.stringify(fullDatabaseSnapshot, null, 2));
+
+      if (onProgress) onProgress(85, 'Compressing complete full-stack distribution...');
+      const content = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      });
+
+      if (onProgress) onProgress(100, 'Build ZIP ready for download!');
+      return content;
+    }
+  } catch (e) {
+    console.warn('Could not fetch pre-packaged zip, generating dynamic archive...', e);
+  }
+
+  // Fallback if fetch fails
+  const zip = new JSZip();
+  const dataFolder = zip.folder('data');
   dataFolder?.file('database.json', JSON.stringify(fullDatabaseSnapshot, null, 2));
 
   if (onProgress) onProgress(50, 'Writing backend server & Docker configurations...');

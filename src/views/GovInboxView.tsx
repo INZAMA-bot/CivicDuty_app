@@ -61,7 +61,11 @@ export const GovInboxView: React.FC = () => {
 
   const d = getDept(user.country, user.dept || 'kcca');
   const queue = posts.filter(
-    (p) => p.country === user.country && (p.dept === user.dept || (user.scope && p.territory?.district === user.scope))
+    (p) =>
+      p.country === user.country &&
+      (p.dept === user.dept ||
+        (user.dept === 'mofped' && (p.category === 'finance' || p.dept === 'ura' || p.is_corruption)) ||
+        (user.scope && p.territory?.district === user.scope))
   );
 
   const isRO = user.role === 'read_only';
@@ -259,14 +263,14 @@ export const GovInboxView: React.FC = () => {
                 className="flex-1 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-amber-800 dark:text-amber-300 font-bold border border-amber-500/40 rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider mono flex items-center justify-center gap-1.5 transition-all"
               >
                 <UserPlus size={13} />
-                <span>Issue Officer Access Code</span>
+                <span>{user.entity_type === 'non_government_entity' ? 'Invite Duty Staff' : 'Issue Officer Access Code'}</span>
               </button>
               <button
                 onClick={() => go('gov_team')}
                 className="border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider mono flex items-center justify-center gap-1.5 transition-all"
               >
                 <Users size={13} />
-                <span>Manage Team ({myTeam.length})</span>
+                <span>{user.entity_type === 'non_government_entity' ? `Staff & Roles (${myTeam.length})` : `Manage Team (${myTeam.length})`}</span>
               </button>
             </div>
           </div>

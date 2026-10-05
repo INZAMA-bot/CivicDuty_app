@@ -23,6 +23,7 @@ import {
 import { PostCardComponent } from '../components/PostCardComponent';
 import { RewardModal } from '../components/RewardModal';
 import { ProjectMilestone, Post } from '../types';
+import { saveFiscalVoucherToCloud } from '../services/firestoreSync';
 import { getCountryCapacityPresets } from '../data/tiers';
 
 export const ProjectView: React.FC = () => {
@@ -184,6 +185,65 @@ export const ProjectView: React.FC = () => {
     addPost(memoPost);
     toast(`Site memo logged under capacity: ${roleTitle}`, 'emerald');
     setCommentText('');
+  };
+
+  const [activeVoucher, setActiveVoucher] = useState<any | null>(null);
+  const [isMintingVoucher, setIsMintingVoucher] = useState(false);
+
+  const handleGenerateDisbursementVoucher = async (milestone: ProjectMilestone) => {
+    setIsMintingVoucher(true);
+    try {
+      // Calculate estimated milestone tranche from project total
+      const totalNumeric = parseInt(proj.value.replace(/[^0-9]/g, '')) || 450000000;
+      const trancheGross = Math.round(totalNumeric / (milestones.length || 1));
+
+      const res = await fetch('/api/disbursements/generate-voucher', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: proj.id,
+          projectTitle: proj.title,
+          contractor: proj.contractor,
+          country: proj.country || 'UG',
+          milestoneId: milestone.id,
+          milestoneTitle: milestone.title,
+          grossAmount: trancheGross,
+          currency: proj.country === 'KE' ? 'KES' : proj.country === 'NG' ? 'NGN' : 'UGX',
+          awarderSigner: milestone.awarderSignedBy || user?.name || 'Supervising Engineer',
+          contractorSigner: milestone.contractorSignedBy || `${proj.contractor} Executive`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.voucher) {
+        setActiveVoucher(data.voucher);
+        // Persist to Cloud Firestore
+        saveFiscalVoucherToCloud(data.voucher).catch(() => {});
+        toast(`🎉 Fiscal Release Warrant #${data.voucher.voucherNumber} minted! Ready for MoFPED release.`, 'emerald');
+      }
+    } catch {
+      toast('Failed to reach automated treasury minting service.', 'amber');
+    } finally {
+      setIsMintingVoucher(false);
+    }
+  };
+
+  const handleReleaseEscrowFunds = async (voucherId: string) => {
+    try {
+      const res = await fetch('/api/disbursements/release-escrow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voucherId }),
+      });
+      const data = await res.json();
+      if (data.success && data.voucher) {
+        setActiveVoucher(data.voucher);
+        // Update voucher status in Cloud Firestore
+        saveFiscalVoucherToCloud(data.voucher).catch(() => {});
+        toast(data.message, 'emerald');
+      }
+    } catch {
+      toast('Error triggering automated escrow disbursement', 'amber');
+    }
   };
 
   const handleToggleAwarder = (id: string, e?: React.MouseEvent) => {
@@ -535,6 +595,18 @@ export const ProjectView: React.FC = () => {
                     ) : (
                       <span className="text-slate-400 dark:text-slate-500 italic">Exec: Pending</span>
                     )}
+
+                    {dualVerified && (
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateDisbursementVoucher(m)}
+                        disabled={isMintingVoucher}
+                        className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[9.5px] transition-colors shadow-xs flex items-center gap-1"
+                      >
+                        <ShieldCheck size={11} />
+                        <span>{isMintingVoucher ? 'Minting...' : 'Mint Fiscal Warrant'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -724,6 +796,89 @@ export const ProjectView: React.FC = () => {
         entityName={user?.dept_label || proj.dept.toUpperCase()}
         contextTitle={proj.title}
       />
+
+      {/* PHASE 3: FISCAL RELEASE WARRANT & DISBURSEMENT VOUCHER MODAL */}
+      {activeVoucher && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/70 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-3xl max-w-xl w-full p-5 sm:p-6 space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div>
+                <span className="text-[9px] mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-black block">
+                  MoFPED Public Works Electronic Warrant Authority
+                </span>
+                <h3 className="text-lg font-black text-slate-950 dark:text-white">
+                  Milestone Disbursement Warrant #{activeVoucher.voucherNumber}
+                </h3>
+              </div>
+              <button
+                onClick={() => setActiveVoucher(null)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs mono">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Project / Asset:</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{activeVoucher.projectTitle}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Contractor Recipient:</span>
+                <span className="font-bold text-amber-700 dark:text-amber-400">{activeVoucher.contractor}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Milestone Deliverable:</span>
+                <span className="font-bold text-slate-900 dark:text-slate-100">{activeVoucher.milestoneTitle}</span>
+              </div>
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Gross Milestone Value:</span>
+                  <span>{activeVoucher.currency} {activeVoucher.grossAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-rose-600 dark:text-rose-400">
+                  <span>6% Statutory WHT Deduction:</span>
+                  <span>- {activeVoucher.currency} {activeVoucher.whtTaxDeduction.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm font-black text-emerald-600 dark:text-emerald-400 pt-1 border-t border-slate-300 dark:border-slate-700">
+                  <span>Net Escrow Release Amount:</span>
+                  <span>{activeVoucher.currency} {activeVoucher.netPayable.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[10px] mono text-slate-500 dark:text-slate-400 space-y-1">
+              <div>• 🏛️ Procuring Signoff: {activeVoucher.awarderSigner}</div>
+              <div>• 🚜 Contractor Signoff: {activeVoucher.contractorSigner}</div>
+              <div>• 🛡️ Blockchain Audit Seal: <span className="text-teal-600 dark:text-teal-400 font-bold">{activeVoucher.blockchainSeal}</span></div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800">
+              <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase ${
+                activeVoucher.disbursementStatus === 'completed_bank_transfer'
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+              }`}>
+                {activeVoucher.disbursementStatus === 'completed_bank_transfer' ? 'Disbursed to Bank ✓' : 'Certified: Pending Release'}
+              </span>
+
+              {activeVoucher.disbursementStatus !== 'completed_bank_transfer' ? (
+                <button
+                  onClick={() => handleReleaseEscrowFunds(activeVoucher.id)}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                >
+                  <ShieldCheck size={14} />
+                  <span>Authorize Bank Disbursement Release →</span>
+                </button>
+              ) : (
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                  Warrant Settled via RTGS / Bank Escrow
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
