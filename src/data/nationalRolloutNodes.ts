@@ -293,7 +293,7 @@ export function getRolloutNodesForCountry(countryCode: CountryCode): RolloutDist
   if (code === 'DE') return DE_DISTRICTS;
 
   const rollout = getNationalRolloutArrangements(countryCode);
-  const countryObj = COUNTRIES[countryCode] || { name: 'Sovereign State', flag: '🏛️' };
+  const countryObj = COUNTRIES[countryCode] || { name: 'Sovereign State', flag: code };
 
   // Generate customized sovereign nodes matching the country's government structure
   const sampleRegions = ['CAPITAL', 'NORTHERN', 'SOUTHERN', 'EASTERN', 'WESTERN', 'COASTAL'];

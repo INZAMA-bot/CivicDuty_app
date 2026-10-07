@@ -19,12 +19,33 @@ import {
   Phone,
   Award,
   Globe,
+  Layers,
+  Radio,
+  Plus,
 } from 'lucide-react';
 import { tiersFor } from '../data/tiers';
 import { getCountryPerks } from '../data/countryPerks';
 
 export const GovInboxView: React.FC = () => {
-  const { user, posts, teamMembers, govTab, setGovTab, setActivePost, go, updatePostStatus, logAudit, toast, activeDeptCountry } = useApp();
+  const {
+    user,
+    posts,
+    teamMembers,
+    govTab,
+    setGovTab,
+    setActivePost,
+    go,
+    updatePostStatus,
+    logAudit,
+    toast,
+    activeDeptCountry,
+    mergeDuplicatePostsIntoDossier,
+    townHalls,
+    setActiveTownHall,
+    setHostBarazaModalOpen,
+  } = useApp();
+  const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+  const [selectedDupToMerge, setSelectedDupToMerge] = useState<string>('');
 
   const activeCountry = user?.country || activeDeptCountry || 'UG';
   const countryPerks = getCountryPerks(activeCountry);
@@ -37,7 +58,7 @@ export const GovInboxView: React.FC = () => {
   const [perkCode, setPerkCode] = useState(countryPerks.digitalPerks[0]?.code || 'CIVIC-VOUCHER-01');
   const [hqRoom, setHqRoom] = useState(countryPerks.hqRoom);
   const [officerName, setOfficerName] = useState('Parish Admin Desk Officer');
-  const [prizeType, setPrizeType] = useState('Parish Watchdog Trophy Plaque & Solar Lantern');
+  const [prizeType, setPrizeType] = useState('Parish Watchdog Honor Plaque & Solar Lantern');
   const [dispatchSuccess, setDispatchSuccess] = useState<{
     type: 'digital' | 'physical';
     code: string;
@@ -140,7 +161,9 @@ export const GovInboxView: React.FC = () => {
         <div className="mt-3 bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-teal-500/40 shadow-sm dark:shadow-lg space-y-2.5">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
             <div className="flex items-center gap-2">
-              <span className="text-teal-600 dark:text-teal-400 text-base">🎁</span>
+              <div className="w-7 h-7 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-teal-600 dark:text-teal-400">
+                <Gift size={14} strokeWidth={1.75} />
+              </div>
               <div>
                 <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono uppercase tracking-wide flex items-center gap-1.5">
                   <span>Entity Civic Perks & Rewards Dispatch Console</span>
@@ -160,8 +183,9 @@ export const GovInboxView: React.FC = () => {
             <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-amber-500/30 space-y-1.5">
               <div className="flex items-center justify-between">
                 <strong className="text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                  <span>⚡ Digital Item Dispatch</span>
-                  <span className="text-[9px] text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-1 py-0.2 rounded font-bold">{countryPerks.flag} {countryPerks.countryName}</span>
+                  <Zap size={11} strokeWidth={1.75} />
+                  <span>Digital Item Dispatch</span>
+                  <span className="text-[9px] text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-1 py-0.2 rounded font-bold">[{countryPerks.countryCode}] {countryPerks.countryName}</span>
                 </strong>
                 <span className="text-[8px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold">Instant PWA / SMS</span>
               </div>
@@ -173,7 +197,7 @@ export const GovInboxView: React.FC = () => {
                   setDispatchSuccess(null);
                   setDispatchModal('digital');
                 }}
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-2 rounded text-[9.5px] uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 rounded text-[9.5px] uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
               >
                 <Zap size={13} />
                 <span>1-Click Dispatch Digital Perks ({countryPerks.countryCode})</span>
@@ -183,7 +207,10 @@ export const GovInboxView: React.FC = () => {
             {/* Physical Prize HQ Collection Pass */}
             <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-teal-500/30 space-y-1.5">
               <div className="flex items-center justify-between">
-                <strong className="text-teal-800 dark:text-teal-300 font-mono">🏛️ Allocated HQ Pickup Pass</strong>
+                <strong className="text-teal-800 dark:text-teal-300 font-mono flex items-center gap-1">
+                  <MapPin size={11} strokeWidth={1.75} />
+                  <span>Allocated HQ Pickup Pass</span>
+                </strong>
                 <span className="text-[8px] bg-teal-500/20 text-teal-800 dark:text-teal-300 px-1.5 py-0.5 rounded font-bold">HQ Desk Pass</span>
               </div>
               <p className="text-slate-600 dark:text-slate-400 text-[9px] leading-snug">
@@ -194,12 +221,49 @@ export const GovInboxView: React.FC = () => {
                   setDispatchSuccess(null);
                   setDispatchModal('physical');
                 }}
-                className="w-full bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-500 dark:to-teal-600 hover:from-teal-500 hover:to-teal-600 text-white dark:text-slate-950 font-black py-2 rounded text-[9.5px] uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+                className="w-full bg-teal-600 dark:bg-teal-500 hover:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black py-2 rounded text-[9.5px] uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
               >
                 <MapPin size={13} />
                 <span>Issue Allocated HQ Pickup Pass</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Live Digital Baraza — Official Audio Town Hall Studio */}
+        <div className="mt-3 p-3 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[8.5px] font-mono font-bold uppercase flex items-center gap-1 shrink-0">
+                <Radio size={9} strokeWidth={2} />
+                <span>DIGITAL BARAZA</span>
+              </span>
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold truncate">
+                {townHalls && townHalls.length > 0 ? `${townHalls[0].listeners_count} citizens tuned in` : 'Statutory Audio Town Hall'}
+              </span>
+            </div>
+            <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate mt-0.5">
+              {townHalls && townHalls.length > 0 ? townHalls[0].title : 'Convene a Live Audio Hearing with Citizens'}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setHostBarazaModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer"
+            >
+              <Plus size={11} strokeWidth={2} />
+              <span>+ Host Baraza</span>
+            </button>
+            {townHalls && townHalls.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTownHall(townHalls[0])}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 cursor-pointer"
+              >
+                Join Room
+              </button>
+            )}
           </div>
         </div>
 
@@ -226,7 +290,9 @@ export const GovInboxView: React.FC = () => {
             <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-amber-500/30 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-amber-600 dark:text-amber-400 text-base">📜</span>
+                  <div className="w-7 h-7 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-amber-600 dark:text-amber-400">
+                    <Award size={14} strokeWidth={1.75} />
+                  </div>
                   <div>
                     <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono uppercase">Monthly Civic Awards Approval Queue</h5>
                     <p className="text-[9px] mono text-slate-500 dark:text-slate-400">
@@ -248,8 +314,15 @@ export const GovInboxView: React.FC = () => {
 
               <div className="flex gap-2 pt-1">
                 <button
-                  onClick={() => alert(`All ${countryPerks.countryName} Champion Certificates digitally signed and delivered to citizens via PWA & SMS! Audit hash logged to permanent audit trail.`)}
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider mono flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98]"
+                  onClick={() => {
+                    logAudit(
+                      'champion_certificates_signed',
+                      `CERT-${countryPerks.countryCode}`,
+                      `All ${countryPerks.countryName} Champion Certificates digitally signed and dispatched via PWA & SMS.`
+                    );
+                    toast(`All ${countryPerks.countryName} Champion Certificates digitally signed & dispatched via PWA & SMS!`, 'emerald');
+                  }}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider mono flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98]"
                 >
                   <UserPlus size={13} />
                   <span>1-Click Approve & Digitally Sign All ({countryPerks.countryCode})</span>
@@ -366,6 +439,11 @@ export const GovInboxView: React.FC = () => {
                           <AlertTriangle size={10} /> ESCALATED
                         </span>
                       )}
+                      {(p.is_master_dossier || (p.compiled_count && p.compiled_count > 1)) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 font-black">
+                          <Layers size={9} /> MASTER DOSSIER ({p.compiled_count || (p.compiled_reports ? p.compiled_reports.length + 1 : 2)} REPORTS)
+                        </span>
+                      )}
                     </div>
                     <h4 className={`text-[14px] font-bold ${isCorrupt ? 'text-rose-900 dark:text-rose-200' : 'text-slate-900 dark:text-slate-100'} leading-snug`}>
                       {p.title}
@@ -412,6 +490,24 @@ export const GovInboxView: React.FC = () => {
                       >
                         Active
                       </button>
+                      {queue.filter((other) => other.id !== p.id && other.status !== 'resolved').length > 0 && (
+                        <button
+                          onClick={() => {
+                            if (mergeTargetId === p.id) {
+                              setMergeTargetId(null);
+                            } else {
+                              setMergeTargetId(p.id);
+                              const firstOther = queue.find((other) => other.id !== p.id && other.status !== 'resolved');
+                              if (firstOther) setSelectedDupToMerge(firstOther.id);
+                            }
+                          }}
+                          className="px-3 py-2.5 rounded-xl text-xs mono font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 flex items-center gap-1 transition-colors"
+                          title="Compile & merge duplicate citizen ticket into this Master Dossier"
+                        >
+                          <Layers size={12} />
+                          <span className="hidden sm:inline">Compile</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setActivePost(p);
@@ -428,10 +524,49 @@ export const GovInboxView: React.FC = () => {
                     </>
                   ) : (
                     <div className={`flex-1 text-center text-[9px] mono ${isRO ? 'text-slate-400 dark:text-slate-500' : 'text-teal-700 dark:text-teal-400 font-bold'} flex items-center justify-center`}>
-                      {isRO ? 'View Only' : '✓ Closed'}
+                      {isRO ? 'View Only' : 'Closed'}
                     </div>
                   )}
                 </div>
+
+                {mergeTargetId === p.id && (
+                  <div className="mt-3 p-3 rounded-xl bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-800 space-y-2 animate-fade-in">
+                    <div className="flex items-center justify-between text-[10px] font-mono font-black text-indigo-900 dark:text-indigo-200">
+                      <span className="flex items-center gap-1.5">
+                        <Layers size={11} strokeWidth={1.75} />
+                        <span>Compile Duplicate Report Into Master Dossier #{p.id.slice(-6).toUpperCase()}</span>
+                      </span>
+                      <button onClick={() => setMergeTargetId(null)} className="text-slate-500 hover:text-slate-700">
+                        <X size={13} />
+                      </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <select
+                        value={selectedDupToMerge}
+                        onChange={(e) => setSelectedDupToMerge(e.target.value)}
+                        className="flex-1 text-xs font-bold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg p-2"
+                      >
+                        {queue
+                          .filter((other) => other.id !== p.id && other.status !== 'resolved')
+                          .map((other) => (
+                            <option key={other.id} value={other.id}>
+                              #{other.id.slice(-6).toUpperCase()} — {other.title} ({other.citizen_name})
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        onClick={() => {
+                          if (!selectedDupToMerge) return;
+                          mergeDuplicatePostsIntoDossier(p.id, [selectedDupToMerge]);
+                          setMergeTargetId(null);
+                        }}
+                        className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-mono font-black shrink-0"
+                      >
+                        Merge &amp; Compile
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
@@ -516,7 +651,7 @@ export const GovInboxView: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setDispatchModal('none')}
-                    className="flex-1 bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-500 dark:to-teal-600 hover:from-teal-500 hover:to-teal-600 text-white dark:text-slate-950 font-black py-2 px-3 rounded-xl text-xs mono uppercase tracking-wider"
+                    className="flex-1 bg-teal-600 dark:bg-teal-500 hover:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black py-2 px-3 rounded-xl text-xs mono uppercase tracking-wider"
                   >
                     Done & Close
                   </button>
@@ -549,7 +684,7 @@ export const GovInboxView: React.FC = () => {
                     <div className="space-y-1">
                       <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider flex items-center justify-between">
                         <span className="flex items-center gap-1">
-                          <Gift size={12} className="text-amber-600 dark:text-amber-400" /> {countryPerks.flag} {countryPerks.countryName} Partner Perk Vouchers
+                          <Gift size={12} className="text-amber-600 dark:text-amber-400" /> [{countryPerks.countryCode}] {countryPerks.countryName} Partner Perk Vouchers
                         </span>
                         <span className="text-[8.5px] text-teal-800 dark:text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/30">
                           Model A CSR Pilot (0% Platform Fee)
@@ -604,8 +739,8 @@ export const GovInboxView: React.FC = () => {
                         onChange={(e) => setPrizeType(e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 text-[11px] focus:outline-none focus:border-teal-500"
                       >
-                        <option value="Parish Watchdog Trophy Plaque & Solar Lantern">
-                          Parish Watchdog Trophy Plaque & Solar Lantern
+                        <option value="Parish Watchdog Honor Plaque & Solar Lantern">
+                          Parish Watchdog Honor Plaque &amp; Solar Lantern
                         </option>
                         <option value="Executive Civic Excellence Duty Medal">
                           Executive Civic Excellence Duty Medal
@@ -668,7 +803,7 @@ export const GovInboxView: React.FC = () => {
                         });
                       }
                     }}
-                    className="w-full bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-500 dark:to-teal-600 hover:from-teal-500 hover:to-teal-600 text-white dark:text-slate-950 font-black py-2.5 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all"
+                    className="w-full bg-teal-600 dark:bg-teal-500 hover:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black py-2.5 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all"
                   >
                     <Send size={14} />
                     <span>

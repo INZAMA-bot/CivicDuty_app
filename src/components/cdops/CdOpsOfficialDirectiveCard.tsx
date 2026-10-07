@@ -15,7 +15,7 @@ import {
   Check,
   ShieldCheck,
   ChevronDown,
-  Sparkles,
+  Lock,
 } from 'lucide-react';
 import { GovFeedbackMessage } from '../../data/partnerships';
 import { COUNTRIES } from '../../data/countries';
@@ -77,8 +77,11 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
       {/* Top Row: Country, Ticket ID, Status, Priority */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
-          <span className="text-xl" title={countryObj?.name || message.countryName}>
-            {countryObj?.flag || '🌐'}
+          <span
+            className="text-[10px] font-mono font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+            title={countryObj?.name || message.countryName}
+          >
+            {message.countryCode}
           </span>
           <div>
             <div className="flex items-center gap-1.5">
@@ -124,7 +127,7 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
                   }}
                   className="w-full px-2 py-1.5 text-left text-rose-600 dark:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5"
                 >
-                  🔴 Statutory Directive (PFMA)
+                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" /> Statutory Directive (PFMA)
                 </button>
                 <button
                   onClick={() => {
@@ -133,7 +136,7 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
                   }}
                   className="w-full px-2 py-1.5 text-left text-amber-600 dark:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5"
                 >
-                  🟡 Urgent Escalation
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> Urgent Escalation
                 </button>
                 <button
                   onClick={() => {
@@ -142,7 +145,7 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
                   }}
                   className="w-full px-2 py-1.5 text-left text-teal-600 dark:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5"
                 >
-                  🟢 Routine Operational Sync
+                  <span className="w-2 h-2 rounded-full bg-teal-500 inline-block" /> Routine Operational Sync
                 </button>
               </div>
             )}
@@ -247,8 +250,8 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
           {/* Internal Notes (Confidential) */}
           {message.internalNotes && (
             <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-dashed border-amber-500/40 text-[9.5px] mono text-amber-800 dark:text-amber-300">
-              <span className="font-bold block text-[8px] uppercase text-amber-600">
-                🔒 CD-Ops Confidential Internal Log:
+              <span className="font-bold flex items-center gap-1 text-[8px] uppercase text-amber-600">
+                <Lock size={10} /> CD-Ops Confidential Internal Log:
               </span>
               <span>{message.internalNotes}</span>
             </div>
@@ -295,7 +298,7 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
         /* Awaiting Response Action Bar */
         <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-amber-600 animate-pulse text-sm">⚠️</span>
+            <AlertTriangle size={15} className="text-amber-600 shrink-0" />
             <div>
               <span className="text-xs font-bold text-amber-900 dark:text-amber-300 block">
                 Official Response Required by CD-Ops Staff

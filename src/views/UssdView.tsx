@@ -12,13 +12,15 @@ import {
   Battery, 
   ShieldAlert,
   Clock,
-  Sparkles,
   ExternalLink
 } from 'lucide-react';
-import { Post } from '../types';
+import { Post, CountryCode } from '../types';
+import { COUNTRIES, allDepts } from '../data/countries';
 
 export const UssdView: React.FC = () => {
-  const { go, toast, addPost, posts, setActivePost } = useApp();
+  const { user, selectedCountry, setSelectedCountry, go, toast, addPost, posts, setActivePost } = useApp();
+  const activeCountry = (user?.country || selectedCountry || 'UG') as CountryCode;
+  const countryInfo = COUNTRIES[activeCountry] || COUNTRIES.UG;
   const [session, setSession] = useState<boolean>(false);
   const [screenText, setScreenText] = useState<string>('');
   const [inputVal, setInputVal] = useState<string>('');
@@ -53,7 +55,7 @@ export const UssdView: React.FC = () => {
     setSession(true);
     setStep(1);
     setScreenText(
-      'UGANDA CIVICDUTY USSD (*3030#)\n1. Report Infrastructure Issue\n2. Track Ticket Status\n3. PDM SACCO / Parish Grievance\n4. Confirm / Ratify Fix\n5. Anti-Corruption Whistleblower\n0. Exit'
+      `${countryInfo.name.toUpperCase()} CIVICDUTY USSD (*3030#)\n1. Report Infrastructure Issue\n2. Track Ticket Status\n3. Community Grant / Ward Grievance\n4. Confirm / Ratify Fix\n5. Anti-Corruption Whistleblower\n0. Exit`
     );
   };
 
@@ -118,15 +120,25 @@ export const UssdView: React.FC = () => {
       const newId = 'USSD-' + Math.floor(1000 + Math.random() * 9000);
       setCreatedTicketId(newId);
 
+      const countryDepts = allDepts(activeCountry);
+      const targetDept =
+        countryDepts.find((d) =>
+          ussdCategory === 'water'
+            ? d.id.includes('water') || d.id.includes('nwsc')
+            : ussdCategory === 'power'
+            ? d.id.includes('power') || d.id.includes('umeme') || d.id.includes('kplc')
+            : d.lane === 'civic'
+        )?.id || `${activeCountry.toLowerCase()}_gov`;
+
       const newPost: Post = {
         id: newId,
-        country: 'UG',
-        dept: ussdCategory === 'water' ? 'ug-nwsc' : ussdCategory === 'power' ? 'ug-umeme' : 'ug-unra',
+        country: activeCountry,
+        dept: targetDept,
         lane: 'civic',
         territory: {
-          district: 'Kampala / Wakiso',
-          subcounty: 'Division Desk',
-          parish: ussdParish || 'Parish Field Unit'
+          district: `${countryInfo.name} District`,
+          subcounty: 'Municipal Desk',
+          parish: ussdParish || 'Ward Field Unit'
         },
         citizen_id: 'usr-ussd-anon',
         citizen_name: 'USSD Feature Phone Reporter',
@@ -171,7 +183,7 @@ export const UssdView: React.FC = () => {
 
       setStep(5);
       setScreenText(
-        `✓ SUCCESS! Report Registered.\nTicket ID: ${newId}\nResponsible: Parish Chief & Works Desk\nTarget SLA: 48 Hours\nConfirmation SMS sent to your phone.`
+        `[OK] SUCCESS! Report Registered.\nTicket ID: ${newId}\nResponsible: Parish Chief & Works Desk\nTarget SLA: 48 Hours\nConfirmation SMS sent to your phone.`
       );
       toast(`USSD Ticket #${newId} Registered and Published!`, 'emerald');
     } else if (step === 10) {
@@ -180,7 +192,7 @@ export const UssdView: React.FC = () => {
       if (found) {
         setStep(11);
         setScreenText(
-          `STATUS FOR #${found.id}:\nTitle: ${found.title.slice(0, 30)}...\nStatus: ${found.status.toUpperCase()}\nResponses: ${found.comments.length} official updates.\nPress 0 to exit.`
+          `STATUS FOR #${found.id}:\nTitle: ${found.title.slice(0, 30)}...\nStatus: ${found.status.toUpperCase()}\nResponses: ${(found.comments || []).length} official updates.\nPress 0 to exit.`
         );
       } else {
         setScreenText(`Ticket #${val} not found.\nCheck reference code and retry.\nPress 0 to exit.`);
@@ -190,7 +202,7 @@ export const UssdView: React.FC = () => {
       // PDM Grievance
       const pId = 'PDM-' + Math.floor(1000 + Math.random() * 9000);
       setStep(21);
-      setScreenText(`✓ PDM Grievance #${pId} Logged.\nTransmitted to MoLG PDM Secretariat & District CAO.\nReference SMS sent.`);
+      setScreenText(`[OK] PDM Grievance #${pId} Logged.\nTransmitted to MoLG PDM Secretariat & District CAO.\nReference SMS sent.`);
       const newSms = {
         id: 'sms-' + Date.now(),
         sender: 'PDM-SECRETARIAT',
@@ -202,12 +214,12 @@ export const UssdView: React.FC = () => {
     } else if (step === 30) {
       // Ratification
       setStep(31);
-      setScreenText(`✓ Ratification Recorded for Ticket #${val}.\nSovereign crypto signature created.\nThank you for verifying your community!`);
+      setScreenText(`[OK] Ratification Recorded for Ticket #${val}.\nSovereign crypto signature created.\nThank you for verifying your community!`);
     } else if (step === 40) {
       // Anti-corruption
       const cId = 'IGG-SEC-' + Math.floor(1000 + Math.random() * 9000);
       setStep(41);
-      setScreenText(`🔒 Whistleblower Report #${cId} Sealed.\nEncrypted and transferred directly to Inspectorate of Government.\nIdentity strictly concealed.`);
+      setScreenText(`[SEALED] Whistleblower Report #${cId} Sealed.\nEncrypted and transferred directly to Inspectorate of Government.\nIdentity strictly concealed.`);
     } else {
       setSession(false);
       setStep(0);
@@ -224,18 +236,39 @@ export const UssdView: React.FC = () => {
         >
           <ChevronLeft size={14} /> Back to Dashboard
         </button>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base sm:text-lg font-black text-slate-950 dark:text-white tracking-tight leading-tight flex items-center gap-1.5">
-              <span>USSD *3030# & Offline SMS Gateway</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono font-bold">
+                {activeCountry}
+              </span>
+              <span>{countryInfo.name} USSD *3030# &amp; Offline SMS Gateway</span>
               <span className="text-[9px] mono font-black px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
                 ZERO-DATA
               </span>
             </h2>
             <p className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-0.5">
-              Inclusive access for 70%+ of rural citizens using standard GSM feature phones without internet.
+              Inclusive access for citizens across all {Object.keys(COUNTRIES).length} global nations using standard GSM feature phones without internet.
             </p>
           </div>
+          <select
+            value={activeCountry}
+            onChange={(e) => {
+              const c = e.target.value as CountryCode;
+              setSelectedCountry(c);
+              setSession(false);
+              setStep(0);
+              toast(`Switched USSD Telecom Gateway to ${COUNTRIES[c]?.name || c}`, 'emerald');
+            }}
+            aria-label="Select Country for USSD Simulator"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer"
+          >
+            {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
+              <option key={cCode} value={cCode}>
+                [{cCode}] {cInfo.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

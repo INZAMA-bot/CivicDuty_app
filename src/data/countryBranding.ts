@@ -78,7 +78,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
   KE: {
     countryCode: 'KE',
     countryName: 'Kenya',
-    flag: '🇰🇪',
+    flag: 'KE',
     currency: 'KES',
     culturalMotto: 'Uzalendo Halisi · Haki Yetu, Jukumu Letu · Paza Sauti',
     gazetteMasthead: 'THE KENYA CITIZEN GAZETTE & DEVOLUTION DISPATCH',
@@ -159,7 +159,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Burst Water Main & Dry Taps in Residential Ward',
           category: 'Public Utility',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'Nairobi City Water & Sewerage Company (NCWSC) / Athi Water',
           jurisdiction: 'Local Ward Reticulation Network',
           sla: '24 Hours Mandatory Turnaround',
@@ -169,7 +169,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Traffic Police Roadblock or County Askaris Extorting Bribes',
           category: 'Anti-Corruption & Ethics',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'Independent Policing Oversight Authority (IPOA) & EACC',
           jurisdiction: 'Traffic Patrol & Sub-County Enforcement',
           sla: '12 Hours Immediate Acknowledgment',
@@ -179,7 +179,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Private Hospital Demanding Exorbitant Upfront Cash Despite NHIF/SHIF',
           category: 'Private Consumer Provider',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Private Medical Provider Customer Care Desk',
           jurisdiction: 'Private Healthcare Facility Cluster',
           sla: '24 Hours Commercial SLA',
@@ -189,7 +189,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Impassable Rural Feeder Road & Broken Culvert',
           category: 'Infrastructure & Works',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'Kenya Rural Roads Authority (KeRRA) / County Works Dept',
           jurisdiction: 'Sub-County Road Maintenance Unit',
           sla: '72 Hours Milestone Inspection',
@@ -203,7 +203,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
   UG: {
     countryCode: 'UG',
     countryName: 'Uganda',
-    flag: '🇺🇬',
+    flag: 'UG',
     currency: 'UGX',
     culturalMotto: 'Obuvunaanyizibwa Bwo, Eddembe Lyo · For God and My Country',
     gazetteMasthead: 'THE UGANDA REPUBLICK GAZETTE & PARISH MONITOR',
@@ -284,7 +284,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Broken Borehole Handpump in Rural Parish',
           category: 'Public Utility',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'District Water Engineering Office / NWSC',
           jurisdiction: 'Grassroots Parish Water Point',
           sla: '24 Hours Dispatch Commitment',
@@ -294,7 +294,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Health Centre III Staff Demanding Cash for Free Government Medicine',
           category: 'Anti-Corruption & Ethics',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'District Health Officer / Inspectorate of Government (IGG)',
           jurisdiction: 'Sub-County Health Facility',
           sla: '12 Hours Emergency Acknowledgment',
@@ -304,7 +304,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Private Secondary School Demanding Unapproved Building Fund Fees',
           category: 'Private Consumer Provider',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Private Secondary School Board Desk',
           jurisdiction: 'Private Education Cluster',
           sla: '48 Hours Commercial SLA',
@@ -314,7 +314,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Collapsed Swamp Culvert Cutting Off Trading Centre Road',
           category: 'Infrastructure & Works',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'Uganda National Roads Authority (UNRA) / District Works',
           jurisdiction: 'Feeder Road Corridor',
           sla: '72 Hours Milestone Inspection',
@@ -328,7 +328,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
   TZ: {
     countryCode: 'TZ',
     countryName: 'Tanzania',
-    flag: '🇹🇿',
+    flag: 'TZ',
     currency: 'TZS',
     culturalMotto: 'Uhuru na Umoja · Haki na Wajibu · Kazi Iendelee Bila Rushwa',
     gazetteMasthead: 'GAZETI LA MWANANCHI NA UTENDAJI WA SERIKALI YA MTAA',
@@ -409,7 +409,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Bomba la Maji Kupasuka na Kukosa Maji Mtaani',
           category: 'Huduma za Maji',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'Mamlaka ya Maji Safi na Usafi wa Mazingira (DAWASA / RUWASA)',
           jurisdiction: 'Mtandao wa Maji wa Kata',
           sla: 'Saa 24 za Utekelezaji',
@@ -419,7 +419,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Mtendaji Kudai Rushwa Ili Kutoa Huduma ya Zahanati ya Umma',
           category: 'Kupinga Rushwa na Maadili',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'TAKUKURU Mkoa & Mganga Mkuu wa Wilaya (DMO)',
           jurisdiction: 'Kituo cha Afya cha Umma',
           sla: 'Saa 12 za Uthibitisho wa Haraka',
@@ -429,7 +429,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Shule Binafsi Kudai Malipo ya Ziada Yasiyoidhinishwa na Wizara',
           category: 'Mtoa Huduma Binafsi',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Bodi ya Shule Binafsi ya Sekondari',
           jurisdiction: 'Kanda ya Shule Binafsi',
           sla: 'Saa 48 za SLA ya Kibiashara',
@@ -439,7 +439,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Daraja la Mto Kubomoka na Kukata Mawasiliano ya Vijiji',
           category: 'Miundombinu na Ujenzi',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'Wakala wa Barabara Mijini na Vijijini (TARURA)',
           jurisdiction: 'Mtandao wa Barabara za Wilaya',
           sla: 'Saa 72 za Tathmini ya Kitaalamu',
@@ -453,7 +453,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
   RW: {
     countryCode: 'RW',
     countryName: 'Rwanda',
-    flag: '🇷🇼',
+    flag: 'RW',
     currency: 'RWF',
     culturalMotto: 'Uruhare Rwawe, Uburenganzira Bwawe · Imihigo n\'Iterambere',
     gazetteMasthead: 'IKINYAMAKURU CY\'UMUTURAGE N\'IMIHIGO Y\'INZEGO Z\'IBANZE',
@@ -534,7 +534,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Imiyoboro y\'Amazi Yangiritse mu Kagari',
           category: 'Amazi n\'Isukura',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'WASAC Group & Urwego rw\'Umurenge',
           jurisdiction: 'Umuyoboro w\'Amazi mu Kagari',
           sla: 'Amasaha 24 yo Gukemura Ikibazo',
@@ -544,7 +544,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Umukozi w\'Ibitaro Usaba Ruswa ku Buvuzi Bwishingiwe na Mutuelle de Santé',
           category: 'Kurwanya Ruswa',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'Urwego rw\'Umuvunyi & RIB',
           jurisdiction: 'Ibitaro by\'Akarere',
           sla: 'Amasaha 12 yo Gutangira Iperereza',
@@ -554,7 +554,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Ikigo cy\'Amashuri cyigenga Gihanitse Amafaranga Yisumbuye Bitunguranye',
           category: 'Ubucuruzi Bwigenga',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Ubuyobozi bw\'Ikigo cy\'Amashuri cyigenga',
           jurisdiction: 'Amashuri Yigenga',
           sla: 'Amasaha 48 y\'Ubucuruzi',
@@ -564,7 +564,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Umuhanda w\'Igitaka Wangiritse Bitewe n\'Imvura Nyinshi',
           category: 'Ibikorwa Remezo',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'RTDA & Ishami ry\'Ibikorwa Remezo mu Karere',
           jurisdiction: 'Umuhanda w\'Igitaka w\'Umurenge',
           sla: 'Amasaha 72 yo Gusuzuma no Gutegura Umushinga',
@@ -578,7 +578,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
   NG: {
     countryCode: 'NG',
     countryName: 'Nigeria',
-    flag: '🇳🇬',
+    flag: 'NG',
     currency: 'NGN',
     culturalMotto: 'Civic Vigilance, No Wahala · Shine Your Eye, Speak Your Truth',
     gazetteMasthead: 'THE NIGERIA CITIZEN OBSERVER & STATUTORY AUDIT DISPATCH',
@@ -659,7 +659,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Dry Water Taps & Burst Distribution Pipe',
           category: 'Public Utility',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'State Water Corporation / FCT Water Board',
           jurisdiction: 'Local Ward Distribution Grid',
           sla: '24 Hours Mandatory Response',
@@ -669,7 +669,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Public Hospital Nurse Demanding Illegal Extortion for Blood Transfusion',
           category: 'Anti-Corruption & Ethics',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'ICPC & State Hospital Management Board',
           jurisdiction: 'General Hospital Emergency Ward',
           sla: '12 Hours Emergency Acknowledgment',
@@ -679,7 +679,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Private Hospital Charging Extravagant Unexplained Fees on Emergency Admission',
           category: 'Private Consumer Provider',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Private Medical Center Customer Care Desk',
           jurisdiction: 'Private Healthcare Provider Cluster',
           sla: '24 Hours Commercial SLA',
@@ -689,7 +689,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Hazardous Potholes and Collapsed Culvert on Major Road',
           category: 'Infrastructure & Works',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'Federal Road Maintenance Agency (FERMA) / State Ministry of Works',
           jurisdiction: 'LGA Feeder / Arterial Road',
           sla: '72 Hours Milestone Inspection',
@@ -703,7 +703,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
   GH: {
     countryCode: 'GH',
     countryName: 'Ghana',
-    flag: '🇬🇭',
+    flag: 'GH',
     currency: 'GHS',
     culturalMotto: 'Freedom and Justice · Citizen Action Yentua · Good Governance',
     gazetteMasthead: 'THE GHANA CITIZEN DISPATCH & DISTRICT ASSEMBLY RECORD',
@@ -785,7 +785,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Damaged Water Distribution Pipe and Contaminated Supply',
           category: 'Public Utility',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'Ghana Water Limited (GWL)',
           jurisdiction: 'Local Electoral Area Network',
           sla: '24 Hours Technical Response',
@@ -795,7 +795,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Revenue Collector Demanding Cash Bribe to Waive Market Stall Levies',
           category: 'Anti-Corruption & Ethics',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'CHRAJ & District Internal Audit Unit',
           jurisdiction: 'District Assembly Market Facility',
           sla: '12 Hours Immediate Acknowledgment',
@@ -805,7 +805,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Private School Arbitrarily Increasing Term Fees Without Notice',
           category: 'Private Consumer Provider',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Private School Management Board',
           jurisdiction: 'Private Education Cluster',
           sla: '48 Hours Commercial SLA',
@@ -815,7 +815,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Severely Eroded Culvert & Impassable Community Road',
           category: 'Infrastructure & Works',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'Department of Feeder Roads / Urban Roads',
           jurisdiction: 'District Assembly Feeder Road',
           sla: '72 Hours Milestone Inspection',
@@ -829,7 +829,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
   ZA: {
     countryCode: 'ZA',
     countryName: 'South Africa',
-    flag: '🇿🇦',
+    flag: 'ZA',
     currency: 'ZAR',
     culturalMotto: 'Batho Pele (People First) · Asiphephe · Ke Nako, Citizen Oversight',
     gazetteMasthead: 'THE SOUTH AFRICA CITIZEN RECORD & MUNICIPAL DISPATCH',
@@ -910,7 +910,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Burst Municipal Water Pipe & Pressure Loss',
           category: 'Public Utility',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'Municipal Water & Sanitation Department / Rand Water',
           jurisdiction: 'Local Ward Water Reticulation Grid',
           sla: '24 Hours Rapid Response',
@@ -920,7 +920,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Municipal Official Demanding Kickback for Housing List Placement',
           category: 'Anti-Corruption & Ethics',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'Special Investigating Unit (SIU) & Public Protector',
           jurisdiction: 'Municipal Human Settlements Department',
           sla: '12 Hours Immediate Acknowledgment',
@@ -930,7 +930,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Private College Failing to Provide Contracted Tuition Modules',
           category: 'Private Consumer Provider',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Private College Management Board',
           jurisdiction: 'Private Higher Education Cluster',
           sla: '48 Hours Commercial SLA',
@@ -940,7 +940,7 @@ export const COUNTRY_BRANDING: Record<CountryCode, CountryBrandingProfile> = {
         {
           title: 'Critical Potholes Causing Vehicle Damage on Municipal Main Road',
           category: 'Infrastructure & Works',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'Municipal Roads Agency (JRA / Transport Dept)',
           jurisdiction: 'Municipal Arterial Corridor',
           sla: '72 Hours Milestone Inspection',
@@ -963,7 +963,7 @@ export const getCountryBranding = (countryCode: string): CountryBrandingProfile 
   return {
     countryCode: code,
     countryName: countryCode,
-    flag: '🌍',
+    flag: code || 'GL',
     currency: 'USD',
     culturalMotto: 'Public Integrity, Civic Dignity · Transparent Governance Everywhere',
     gazetteMasthead: `THE ${countryCode} CITIZEN GAZETTE & PUBLIC LEDGER`,
@@ -1044,7 +1044,7 @@ export const getCountryBranding = (countryCode: string): CountryBrandingProfile 
         {
           title: 'Water Supply Contamination or Burst Pipe',
           category: 'Public Utility',
-          type: '🟡 Amber Service Issue',
+          type: 'Amber Service Issue',
           targetAgency: 'National Water & Sewerage Utility',
           jurisdiction: 'Local Distribution Network',
           sla: '24 Hours Response SLA',
@@ -1054,7 +1054,7 @@ export const getCountryBranding = (countryCode: string): CountryBrandingProfile 
         {
           title: 'Public Officer Demanding Extortion Bribe',
           category: 'Anti-Corruption & Ethics',
-          type: '🔴 Red Sovereign Alert',
+          type: 'Red Sovereign Alert',
           targetAgency: 'National Anti-Corruption Commission',
           jurisdiction: 'Public Service Desk',
           sla: '12 Hours Immediate Acknowledgment',
@@ -1064,7 +1064,7 @@ export const getCountryBranding = (countryCode: string): CountryBrandingProfile 
         {
           title: 'Private Provider Overcharging or Refusing Refund',
           category: 'Private Consumer Provider',
-          type: '🏢 Commercial Provider Claim Desk',
+          type: 'Commercial Provider Claim Desk',
           targetAgency: 'Private Business Customer Care Desk',
           jurisdiction: 'Commercial Cluster',
           sla: '48 Hours Commercial SLA',
@@ -1074,7 +1074,7 @@ export const getCountryBranding = (countryCode: string): CountryBrandingProfile 
         {
           title: 'Damaged Community Feeder Road & Broken Culvert',
           category: 'Infrastructure & Works',
-          type: '🟡 Amber Inspection Issue',
+          type: 'Amber Inspection Issue',
           targetAgency: 'National Roads Authority',
           jurisdiction: 'Regional Road Corridor',
           sla: '72 Hours Milestone Inspection',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Copy, Check, Eye, Sparkles, ZoomIn, Info, ShieldCheck, Bus } from 'lucide-react';
+import { Download, Copy, Check, Eye, ZoomIn, Info, ShieldCheck, Bus } from 'lucide-react';
 
 interface KayoolaBusGraphicProps {
   className?: string;

@@ -4,10 +4,10 @@ import { CountryCode, MediaItem, Post, TicketCategory } from '../types';
 import { allDepts, TERRITORY } from '../data/countries';
 import { primaryUnit, tiersFor } from '../data/tiers';
 import { CATEGORIES } from '../utils/helpers';
-import { Upload, Mic, Lock, AlertTriangle, MapPin, Info, CheckCircle2, ShieldCheck, HelpCircle, Bike, Sparkles } from 'lucide-react';
+import { Upload, Mic, Lock, AlertTriangle, MapPin, Info, CheckCircle2, ShieldCheck, HelpCircle, Bike, Layers, Users, ArrowRight, BarChart3, Hash, Plus, X } from 'lucide-react';
 
 export const ComposeView: React.FC = () => {
-  const { user, go, addPost, toast, isOnline, queueOfflinePost, openGuide, activeDept } = useApp();
+  const { user, go, addPost, toast, isOnline, queueOfflinePost, openGuide, activeDept, posts, compileWitnessIntoPost, setActivePost } = useApp();
 
   const country = user?.country || 'UG';
   const depts = allDepts(country);
@@ -35,9 +35,97 @@ export const ComposeView: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [voiceSaved, setVoiceSaved] = useState(false);
   const [voiceDuration, setVoiceDuration] = useState('0:42');
+  const [voiceLanguage, setVoiceLanguage] = useState('Local Vernacular / English');
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+
+  // Optional Interactive Civic Poll Builder
+  const [includePoll, setIncludePoll] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOpt1, setPollOpt1] = useState('Urgent Repair Within 24h');
+  const [pollOpt2, setPollOpt2] = useState('Include in Q3 Parish Budget');
+  const [pollOpt3, setPollOpt3] = useState('Dispatch Inspector General Audit');
 
   const subcounties = district ? territory.find((d) => d.id === district)?.children || [] : [];
   const parishes = subcounty ? subcounties.find((s) => s.id === subcounty)?.children || [] : [];
+
+  // Live Pre-Submission Issue Clustering & Master Dossier Detection Radar
+  const similarOpenPosts = React.useMemo(() => {
+    const queryWords = `${title} ${body}`
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 4 && !['this', 'that', 'with', 'from', 'have', 'been', 'near', 'road', 'street'].includes(w));
+
+    if (!dept && !parish && queryWords.length === 0) return [];
+
+    return posts
+      .filter((p) => p.country === country && p.status !== 'resolved' && p.category !== 'praise')
+      .map((p) => {
+        let score = 0;
+        if (dept && p.dept === dept) score += 3;
+        if (parish && p.territory?.parish === parish) score += 4;
+        else if (district && p.territory?.district === district) score += 1;
+        if (category !== 'other' && p.category === category) score += 2;
+
+        if (queryWords.length > 0) {
+          const hay = `${p.title} ${p.body} ${p.location}`.toLowerCase();
+          queryWords.forEach((w) => {
+            if (hay.includes(w)) score += 3;
+          });
+        }
+        return { post: p, score };
+      })
+      .filter((item) => item.score >= 3)
+      .sort((a, b) => b.score - a.score || (b.post.compiled_count || 1) - (a.post.compiled_count || 1))
+      .slice(0, 3)
+      .map((item) => item.post);
+  }, [posts, country, dept, district, parish, category, title, body]);
+
+  const handleCompileIntoExisting = (targetPost: Post) => {
+    const testimonyText =
+      body.trim() ||
+      title.trim() ||
+      `Corroborating field report from ${parish || targetPost.location || 'local resident'}: issue remains active and requires urgent intervention.`;
+
+    const finalMedia: MediaItem[] = stagedMedia.map((m) => {
+      if (m.type === 'image') return { type: 'image', url: m.url, caption: '' };
+      if (m.type === 'video') return { type: 'video', url: m.url, thumb: m.url, duration: '0:30' };
+      return { type: 'doc', name: m.name, size: m.size };
+    });
+
+    compileWitnessIntoPost(targetPost.id, {
+      citizen_id: user?.id || 'usr-guest',
+      citizen_name: anonymous ? 'Verified Citizen' : user?.name || 'Citizen',
+      author_profession: profession,
+      anonymous,
+      body: title.trim() && body.trim() ? `${title.trim()} — ${body.trim()}` : testimonyText,
+      gps,
+      media: finalMedia.length > 0 ? finalMedia : undefined,
+      source: 'web',
+    });
+
+    setActivePost({
+      ...targetPost,
+      is_master_dossier: true,
+      compiled_count: (targetPost.compiled_count || (targetPost.compiled_reports?.length || 0) + 1) + 1,
+      upvotes: (targetPost.upvotes || 0) + 5,
+      compiled_reports: [
+        ...(targetPost.compiled_reports || []),
+        {
+          id: `wr-${Date.now()}`,
+          citizen_id: user?.id || 'usr-guest',
+          citizen_name: anonymous ? 'Verified Citizen' : user?.name || 'Citizen',
+          author_profession: profession,
+          anonymous,
+          body: title.trim() && body.trim() ? `${title.trim()} — ${body.trim()}` : testimonyText,
+          gps,
+          media: finalMedia.length > 0 ? finalMedia : undefined,
+          created_at: new Date().toISOString(),
+          source: 'web',
+        },
+      ],
+    });
+    go('post_detail');
+  };
 
   const handleAcquireGps = () => {
     if (!navigator.geolocation) {
@@ -148,6 +236,11 @@ export const ComposeView: React.FC = () => {
       });
     }
 
+    const extractedTags = body.match(/#[a-zA-Z0-9_]+/g) || [];
+    const pollOptionsClean = [pollOpt1, pollOpt2, pollOpt3]
+      .map((o) => o.trim())
+      .filter(Boolean);
+
     const post: Post = {
       id: 'p-' + Date.now(),
       country,
@@ -172,6 +265,30 @@ export const ComposeView: React.FC = () => {
       comments: [],
       upvotes: 0,
       downvotes: 0,
+      reposts: 0,
+      hashtags: extractedTags.length > 0 ? extractedTags : undefined,
+      voice_note: voiceSaved
+        ? {
+            duration: voiceDuration,
+            language: voiceLanguage,
+            transcript:
+              voiceTranscript.trim() ||
+              `“Verified citizen audio report from ${parish}: ${title.trim()}. Immediate field inspection requested.”`,
+          }
+        : undefined,
+      poll:
+        includePoll && pollQuestion.trim() && pollOptionsClean.length >= 2
+          ? {
+              question: pollQuestion.trim(),
+              total_votes: 1,
+              ends_at: '48h remaining',
+              options: pollOptionsClean.map((lbl, idx) => ({
+                id: `opt-${idx + 1}`,
+                label: lbl,
+                votes: idx === 0 ? 1 : 0,
+              })),
+            }
+          : undefined,
       author_profession: profession,
       citizen_satisfied: null,
       escalated: false,
@@ -182,7 +299,7 @@ export const ComposeView: React.FC = () => {
     } else {
       addPost(post);
       if (isCorrupt) {
-        toast('⚖ Corruption report filed — IGG notified', 'amber');
+        toast('Corruption report filed — IGG notified', 'amber');
       }
     }
     go('feed');
@@ -212,19 +329,19 @@ export const ComposeView: React.FC = () => {
           <div className={`p-1.5 rounded-xl border transition-all ${
             dept ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
           }`}>
-            <div className="text-[10px] font-black">{dept ? '✓' : '1'}</div>
+            <div className="text-[10px] font-black">{dept ? 'OK' : '1'}</div>
             <div className="text-[8.5px] font-bold truncate">1. Entity</div>
           </div>
           <div className={`p-1.5 rounded-xl border transition-all ${
             parish ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
           }`}>
-            <div className="text-[10px] font-black">{parish ? '✓' : '2'}</div>
+            <div className="text-[10px] font-black">{parish ? 'OK' : '2'}</div>
             <div className="text-[8.5px] font-bold truncate">2. Parish</div>
           </div>
           <div className={`p-1.5 rounded-xl border transition-all ${
             body ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
           }`}>
-            <div className="text-[10px] font-black">{body ? '✓' : '3'}</div>
+            <div className="text-[10px] font-black">{body ? 'OK' : '3'}</div>
             <div className="text-[8.5px] font-bold truncate">3. Evidence</div>
           </div>
           <div className={`p-1.5 rounded-xl border transition-all ${
@@ -253,97 +370,97 @@ export const ComposeView: React.FC = () => {
         >
           <option value="">Select institution, provider or desk...</option>
           
-          <optgroup label="── 🏛️ Government & Statutory Desks">
+          <optgroup label="── Government & Statutory Desks">
             {depts
               .filter((d) => d.lane === 'civic' || d.category === 'government')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🏛'} {d.name} — {d.ministry || d.full}
+                  {d.name} — {d.ministry || d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── 🏫 Schools & Education">
+          <optgroup label="── Schools & Education">
             {depts
               .filter((d) => d.category === 'education')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🏫'} {d.name} ({d.full})
+                  {d.name} ({d.full})
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── 🏥 Hospitals & Healthcare">
+          <optgroup label="── Hospitals & Healthcare">
             {depts
               .filter((d) => d.category === 'health')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🏥'} {d.name} — {d.full}
+                  {d.name} — {d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── 🍽️ Hospitality & Dining">
+          <optgroup label="── Hospitality & Dining">
             {depts
               .filter((d) => d.category === 'hospitality')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🍽️'} {d.name} — {d.full}
+                  {d.name} — {d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── 💳 Finance, Banks & SACCOs">
+          <optgroup label="── Finance, Banks & SACCOs">
             {depts
               .filter((d) => d.category === 'finance')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🏦'} {d.name} — {d.full}
+                  {d.name} — {d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── 🚌 Transport & Transit SACCOs">
+          <optgroup label="── Transport & Transit SACCOs">
             {depts
               .filter((d) => d.category === 'transport')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🚌'} {d.name} — {d.full}
+                  {d.name} — {d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── 🏢 Housing, Plazas & Markets">
+          <optgroup label="── Housing, Plazas & Markets">
             {depts
               .filter((d) => d.category === 'housing')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🏢'} {d.name} — {d.full}
+                  {d.name} — {d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── ⚡ Utilities & Telecom">
+          <optgroup label="── Utilities & Telecom">
             {depts
               .filter((d) => d.category === 'utility' || d.category === 'telecom')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '⚡'} {d.name} — {d.full}
+                  {d.name} — {d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── 🛡️ CSOs, NGOs & Contractors">
+          <optgroup label="── CSOs, NGOs & Contractors">
             {depts
               .filter((d) => d.category === 'cso' || d.category === 'contractor')
               .map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.icon || '🛡️'} {d.name} — {d.full}
+                  {d.name} — {d.full}
                 </option>
               ))}
           </optgroup>
 
-          <optgroup label="── ➕ Unlisted Entity">
+          <optgroup label="── Unlisted Entity">
             <option value="others">Others / Register & Report Unlisted Provider</option>
           </optgroup>
         </select>
@@ -385,36 +502,36 @@ export const ComposeView: React.FC = () => {
           className="w-full mt-1 font-bold text-xs bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/80 rounded-xl p-2.5 text-slate-900 dark:text-slate-100"
         >
           <option value="Bodaboda Rider / Cyclist">
-            🛵 Bodaboda Rider / Cyclist (Frontline Road Scout · MoMo Fuel &amp; Airtime Eligible)
+            Bodaboda Rider / Cyclist (Frontline Road Scout · MoMo Fuel &amp; Airtime Eligible)
           </option>
           <option value="Taxi / Matatu / Commercial Driver">
-            🚐 Taxi / Matatu / Commercial Driver (Public Transit &amp; Highway Corridor Scout)
+            Taxi / Matatu / Commercial Driver (Public Transit &amp; Highway Corridor Scout)
           </option>
           <option value="Market Vendor / Local Trader">
-            🥬 Market Vendor / Local Trader (Public Space &amp; Sanitation Scout)
+            Market Vendor / Local Trader (Public Space &amp; Sanitation Scout)
           </option>
           <option value="Healthcare Worker / Nurse / Clinical Staff">
-            🏥 Healthcare Worker / Nurse / Clinical Staff (Health Service Monitor)
+            Healthcare Worker / Nurse / Clinical Staff (Health Service Monitor)
           </option>
           <option value="Teacher / Student / Youth Leader">
-            🎓 Teacher / Student / Youth Leader (Education &amp; Community Watch)
+            Teacher / Student / Youth Leader (Education &amp; Community Watch)
           </option>
           <option value="Artisan / Builder / Field Technician">
-            🛠️ Artisan / Builder / Field Technician (Infrastructure Quality Inspector)
+            Artisan / Builder / Field Technician (Infrastructure Quality Inspector)
           </option>
           <option value="Civil Servant / Public Officer">
-            🏛️ Civil Servant / Public Officer (Internal Oversight &amp; Whistleblower)
+            Civil Servant / Public Officer (Internal Oversight &amp; Whistleblower)
           </option>
           <option value="General Resident / Commuter">
-            🚶 General Resident / Commuter (Community Citizen)
+            General Resident / Commuter (Community Citizen)
           </option>
         </select>
 
         {profession.toLowerCase().includes('boda') && (
           <div className="mt-2 text-[10px] font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 bg-amber-100/80 dark:bg-amber-900/40 p-2 rounded-lg border border-amber-300 dark:border-amber-700">
-            <Sparkles size={12} className="text-amber-600 shrink-0" />
+            <CheckCircle2 size={12} strokeWidth={1.75} className="text-amber-600 shrink-0" />
             <span>
-              Road Scout Status: Verified reports on potholes, open culverts, and blackspots earn Perk Vault bounty points redeemable for fuel and airtime!
+              Road Scout Status: Verified reports on potholes, open culverts, and blackspots earn Perk Vault bounty points redeemable for fuel and airtime.
             </span>
           </div>
         )}
@@ -525,15 +642,181 @@ export const ComposeView: React.FC = () => {
       </div>
 
       <div className="space-y-2">
-        <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">Details</label>
+        <div className="flex items-center justify-between">
+          <label className="text-[9.5px] mono text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest block">
+            Details (Supports #Hashtags &amp; @Mentions)
+          </label>
+          <span className="text-[9px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+            Tap tag below to insert
+          </span>
+        </div>
         <textarea
           rows={4}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Who is affected? How long? Specific dates, locations, names of officers where relevant."
+          placeholder="Who is affected? How long? Specific dates, locations, names of officers where relevant. Use #Hashtags or @Agency..."
           className="text-sm leading-relaxed resize-none"
         ></textarea>
+
+        {/* Quick Hashtag & Mention Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+          {[
+            '#FixOurRoads',
+            '#WaterRestored',
+            '#ServiceExcellence',
+            '#BudgetTransparency',
+            '#ZeroBribery',
+            '#UrgentSLA',
+          ].map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => {
+                if (!body.includes(tag)) {
+                  setBody((prev) => (prev ? `${prev.trim()} ${tag} ` : `${tag} `));
+                }
+              }}
+              className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[9.5px] font-mono font-bold hover:bg-emerald-100 cursor-pointer"
+            >
+              + {tag}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Optional Interactive Civic Referendum Poll Builder */}
+      <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 size={14} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="text-xs font-black text-slate-900 dark:text-white">
+              Attach Public Civic Poll / Community Referendum
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIncludePoll(!includePoll);
+              if (!pollQuestion && title) {
+                setPollQuestion(`How should ${dept ? dept.toUpperCase() : 'the authority'} prioritize "${title}"?`);
+              }
+            }}
+            className={`px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold cursor-pointer ${
+              includePoll
+                ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                : 'bg-emerald-600 text-white'
+            }`}
+          >
+            {includePoll ? 'Remove Poll' : '+ Add Civic Poll'}
+          </button>
+        </div>
+
+        {includePoll && (
+          <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800 animate-fade-in">
+            <input
+              type="text"
+              value={pollQuestion}
+              onChange={(e) => setPollQuestion(e.target.value)}
+              placeholder="Poll Question (e.g. Should parish DDEG grant prioritize this culvert first?)"
+              className="text-xs font-bold"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input
+                type="text"
+                value={pollOpt1}
+                onChange={(e) => setPollOpt1(e.target.value)}
+                placeholder="Option 1"
+                className="text-xs"
+              />
+              <input
+                type="text"
+                value={pollOpt2}
+                onChange={(e) => setPollOpt2(e.target.value)}
+                placeholder="Option 2"
+                className="text-xs"
+              />
+              <input
+                type="text"
+                value={pollOpt3}
+                onChange={(e) => setPollOpt3(e.target.value)}
+                placeholder="Option 3 (Optional)"
+                className="text-xs"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Live Pre-Submission Issue Clustering & Master Dossier Co-Signing Radar */}
+      {similarOpenPosts.length > 0 && (
+        <div className="p-4 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] border-l-4 border-l-indigo-500 space-y-3 animate-fade-in">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Layers size={16} />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded bg-indigo-600 text-white">
+                    Master Dossier Clustering Radar
+                  </span>
+                  <span className="text-[9px] font-mono font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700">
+                    +20 Civic Pts Co-Sign Bonus
+                  </span>
+                </div>
+                <h4 className="text-xs sm:text-sm font-black text-slate-950 dark:text-white mt-0.5">
+                  Similar Active Issue Detected on This Desk!
+                </h4>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+            Instead of creating a fragmented duplicate ticket, you can <strong>compile your report, GPS pin, and evidence directly into the existing Master Dossier</strong>. When a Master Dossier reaches <strong>5 compiled citizen witnesses</strong>, it automatically triggers a statutory escalation to the Chief Administrative Officer (CAO) / Executive Director!
+          </p>
+
+          <div className="space-y-2">
+            {similarOpenPosts.map((sim) => {
+              const count = sim.compiled_count || (sim.compiled_reports ? sim.compiled_reports.length + 1 : 1);
+              return (
+                <div
+                  key={sim.id}
+                  className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs"
+                >
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap text-[9px] font-mono">
+                      <span className="font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
+                        <Users size={10} /> {count} Compiled Report{count > 1 ? 's' : ''}
+                      </span>
+                      <span className="text-slate-500">#{sim.id.slice(-6).toUpperCase()}</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold">▲ {sim.upvotes} Votes</span>
+                      {count >= 4 && count < 5 && (
+                        <span className="text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-1.5 py-0.5 rounded font-black">
+                          1 More Witness to Auto-Escalate
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs font-black text-slate-900 dark:text-white truncate">{sim.title}</div>
+                    <div className="text-[10.5px] text-slate-600 dark:text-slate-400 line-clamp-1">{sim.body}</div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleCompileIntoExisting(sim)}
+                      className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-mono font-black flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Layers size={12} />
+                      <span>Compile Into Dossier (+20 pts)</span>
+                      <ArrowRight size={11} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* GPS & Location Policy Selection */}
       <div className="card p-4 space-y-3">
@@ -635,7 +918,7 @@ export const ComposeView: React.FC = () => {
                     onClick={() => removeStagedMedia(idx)}
                     className="text-slate-500 hover:text-rose-600 p-1 text-xs mono font-black"
                   >
-                    ✕
+                    Remove
                   </button>
                 </div>
               ))}
@@ -661,7 +944,7 @@ export const ComposeView: React.FC = () => {
             <Mic size={16} /> <span>{isRecording ? 'Stop Recording' : 'Record'}</span>
           </button>
           <span className={`text-[9.5px] mono font-bold ${voiceSaved ? 'text-emerald-700 dark:text-teal-400' : 'text-slate-600 dark:text-slate-400'}`}>
-            {isRecording ? 'Recording...' : voiceSaved ? 'Voice note attached ✓' : 'Tap to record'}
+            {isRecording ? 'Recording...' : voiceSaved ? 'Voice note attached' : 'Tap to record'}
           </span>
         </div>
       </div>

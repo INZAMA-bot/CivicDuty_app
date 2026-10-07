@@ -23,7 +23,6 @@ import {
   Award,
   ExternalLink,
   MessageSquare,
-  Sparkles,
   Bookmark,
   Globe,
   Landmark,
@@ -34,6 +33,7 @@ import {
   QrCode,
   Megaphone
 } from 'lucide-react';
+import { DeptIcon } from '../components/DeptIcon';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { RewardModal } from '../components/RewardModal';
@@ -59,6 +59,7 @@ export const DeptWallView: React.FC = () => {
     getClaimedEntity,
     nudgeCounts,
     nudgeEntity,
+    showDemos,
   } = useApp();
 
   const [rewardModalOpen, setRewardModalOpen] = useState(false);
@@ -76,7 +77,13 @@ export const DeptWallView: React.FC = () => {
   const did = activeDept || 'kcca';
   const d = getDept(country, did);
 
-  const deptPosts = posts.filter((p) => p.dept === did && p.country === country);
+  const rawDeptPosts = posts.filter((p) => p.dept === did && p.country === country);
+  const deptPosts = (showDemos ? rawDeptPosts : rawDeptPosts.filter((p) => !p.is_demo)).sort((a, b) => {
+    const aDemo = a.is_demo ? 1 : 0;
+    const bDemo = b.is_demo ? 1 : 0;
+    if (aDemo !== bDemo) return aDemo - bDemo;
+    return 0;
+  });
   const resolved = deptPosts.filter((p) => p.status === 'resolved').length;
   const overdue = deptPosts.filter((p) => p.status === 'overdue' || p.gov_status === 'overdue').length;
   const live = deptPosts.filter((p) => p.status !== 'resolved').length;
@@ -278,8 +285,8 @@ export const DeptWallView: React.FC = () => {
 
         <div className="flex items-start justify-between gap-3.5 mb-4">
           <div className="flex items-start gap-3.5 min-w-0 flex-1">
-            <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 flex items-center justify-center text-3xl flex-shrink-0 shadow-md">
-              {d.icon || '🏢'}
+            <div className="w-14 h-14 rounded-lg bg-slate-100 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 flex-shrink-0">
+              <DeptIcon dept={d} size={26} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -339,7 +346,7 @@ export const DeptWallView: React.FC = () => {
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-2xl mb-4 flex items-center justify-between flex-wrap gap-2.5 shadow-2xs">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="chip ch-resolved text-[9px] font-black flex items-center gap-1">
-                  <CheckCircle2 size={11} /> Verified Provider Subscriber · {claimRecord?.plan?.toUpperCase()} Plan
+                  <CheckCircle2 size={11} /> Verified Founding Partner · {claimRecord?.plan?.toUpperCase()} Plan (30-Day Free Trial)
                 </span>
                 <span className="text-xs text-emerald-950 dark:text-emerald-200 font-semibold">
                   Desk: {claimRecord?.representativeName} · Guaranteed {d.sla || 24}h SLA Active
@@ -363,7 +370,7 @@ export const DeptWallView: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-3 mb-4">
-              <div className="p-4 bg-gradient-to-r from-amber-50 via-rose-50/50 to-amber-50 dark:from-amber-950/40 dark:via-rose-950/20 dark:to-amber-950/40 border-2 border-amber-400 dark:border-amber-700 rounded-3xl space-y-3 shadow-md">
+              <div className="p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-700 rounded-lg space-y-3">
                 <div className="flex items-start justify-between flex-wrap gap-2.5">
                   <div className="space-y-1 max-w-xl">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -375,7 +382,7 @@ export const DeptWallView: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-                      <strong>{d.name}</strong> has not yet subscribed or activated their customer care response desk on CivicDuty. Reports submitted below remain 100% public, visible, and indexed across all citizen feeds.
+                      <strong>{d.name}</strong> has not yet activated their customer care response desk on CivicDuty. All private providers currently qualify for our <strong>100% Free 30-Day Founding Partner Trial ($0 Due Today)</strong>. Reports submitted below remain 100% public, visible, and indexed across all citizen feeds.
                     </p>
                   </div>
 
@@ -383,7 +390,7 @@ export const DeptWallView: React.FC = () => {
                     <button
                       onClick={() => {
                         nudgeEntity(did);
-                        const tweetText = `Dear @${d.id} leadership, citizens have filed ${deptPosts.length} complaints on CivicDuty. Claim your desk to resume public customer care: ${typeof window !== 'undefined' ? window.location.href : ''}`;
+                        const tweetText = `Dear @${d.id} leadership, citizens have filed ${deptPosts.length} complaints on CivicDuty. Claim your free 30-Day Founding Partner desk to resume public customer care: ${typeof window !== 'undefined' ? window.location.href : ''}`;
                         if (typeof window !== 'undefined') {
                           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
                         }
@@ -400,7 +407,7 @@ export const DeptWallView: React.FC = () => {
                       className="px-3.5 py-2 rounded-xl text-xs mono font-black bg-emerald-700 hover:bg-emerald-600 text-white shadow-2xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                     >
                       <ShieldCheck size={13} />
-                      <span>Claim &amp; Subscribe Desk</span>
+                      <span>Claim Free 30-Day Trial Desk</span>
                     </button>
                   </div>
                 </div>
@@ -440,7 +447,7 @@ export const DeptWallView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="p-4 bg-gradient-to-r from-amber-50 via-slate-50 to-amber-50 dark:from-amber-950/40 dark:via-slate-900/60 dark:to-amber-950/40 border-2 border-amber-400 dark:border-amber-700 rounded-3xl mb-4 space-y-3 shadow-md">
+          <div className="p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-700 rounded-lg mb-4 space-y-3">
             <div className="flex items-start justify-between flex-wrap gap-2.5">
               <div className="space-y-1 max-w-xl">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -757,7 +764,7 @@ export const DeptWallView: React.FC = () => {
             </p>
             <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-[9.5px] mono font-bold text-slate-600 dark:text-slate-400">
               <span>Authorized: {accountingOfficer.name}</span>
-              <span className="chip ch-gov text-[8px]">✓ Sovereign Signed</span>
+              <span className="chip ch-gov text-[8px]">Sovereign Signed</span>
             </div>
           </div>
         </div>
@@ -821,7 +828,7 @@ export const DeptWallView: React.FC = () => {
                 <span>Embed Code (HTML)</span>
                 <button
                   onClick={() => {
-                    const code = `<div class="civicduty-badge" data-entity="${d.id}" data-trust="${d.trustScore || 94}%">\n  <span class="shield">🛡️</span> Verified by CivicDuty · ${d.trustScore || 94}% Trust Index\n</div>`;
+                    const code = `<div class="civicduty-badge" data-entity="${d.id}" data-trust="${d.trustScore || 94}%">\n  <span class="shield">[VERIFIED]</span> Verified by CivicDuty · ${d.trustScore || 94}% Trust Index\n</div>`;
                     navigator.clipboard.writeText(code);
                     setCopiedBadge(true);
                     toast('Badge code copied to clipboard!', 'emerald');
@@ -835,7 +842,7 @@ export const DeptWallView: React.FC = () => {
               </div>
               <pre className="p-3 rounded-xl bg-slate-900 text-slate-200 text-[11px] font-mono overflow-x-auto border border-slate-800">
 {`<div class="civicduty-badge" data-entity="${d.id}" data-trust="${d.trustScore || 94}%">
-  <span class="shield">🛡️</span> Verified by CivicDuty · ${d.trustScore || 94}% Trust Index
+  <span class="shield">[VERIFIED]</span> Verified by CivicDuty · ${d.trustScore || 94}% Trust Index
 </div>`}
               </pre>
             </div>

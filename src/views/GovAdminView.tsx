@@ -100,7 +100,7 @@ export const GovAdminView: React.FC = () => {
   return (
     <div className="p-4 space-y-6 animate-fade-in pb-20 text-slate-800 dark:text-slate-100 max-w-6xl mx-auto">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-5 sm:p-6 rounded-3xl border border-teal-500/30 shadow-md relative overflow-hidden">
+      <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-3xl border border-teal-500/30 shadow-md relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 opacity-10 pointer-events-none">
           <Building2 size={200} />
         </div>

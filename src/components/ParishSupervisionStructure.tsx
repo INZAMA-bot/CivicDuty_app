@@ -22,7 +22,6 @@ import {
   Award,
   Filter,
   X,
-  Sparkles,
 } from 'lucide-react';
 
 interface ParishSupervisionStructureProps {
@@ -281,7 +280,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
     });
 
     toast(
-      `✓ Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
+      `Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
       'amber'
     );
 
@@ -292,7 +291,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
   const handleAcceptInvite = (inviteCode: string, officerNameStr: string, stationNameStr: string) => {
     const enlisted = acceptInvite(inviteCode);
     if (enlisted) {
-      toast(`✓ ${officerNameStr} accepted statutory appointment for ${stationNameStr}! Enlisted into ACTIVE section.`, 'emerald');
+      toast(`${officerNameStr} accepted statutory appointment for ${stationNameStr}! Enlisted into ACTIVE section.`, 'emerald');
     }
   };
 
@@ -491,7 +490,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                   <button
                     type="button"
                     onClick={() => {
-                      const memo = `🏛️ PARISH ADMINISTRATIVE NOTICE\nOffice: Parish Chief / Town Agent, ${currentParish?.name}\nTo: ${pendingInvite.name} (${pendingInvite.title})\nAccess Code: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                      const memo = `PARISH ADMINISTRATIVE NOTICE\nOffice: Parish Chief / Town Agent, ${currentParish?.name}\nTo: ${pendingInvite.name} (${pendingInvite.title})\nAccess Code: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                       navigator.clipboard.writeText(memo);
                       toast(`Copied dispatch memo for ${pendingInvite.title}!`, 'emerald');
                     }}

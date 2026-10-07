@@ -10,7 +10,6 @@ import {
   Building2,
   ShieldCheck,
   CheckCircle2,
-  Sparkles,
   CreditCard,
   Smartphone,
   FileText,
@@ -32,6 +31,7 @@ import {
   Shield,
   Search
 } from 'lucide-react';
+import { DeptIcon } from './DeptIcon';
 
 interface ProviderClaimModalProps {
   isOpen: boolean;
@@ -160,7 +160,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
     name: `${countryData.name} Service Provider`,
     full: `${countryData.name} Commercial & Customer Care Desk`,
     category: 'private_utility',
-    icon: '🏢',
+    icon: 'building',
     sla: 24,
     trustScore: 92,
   };
@@ -282,6 +282,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
     setIsSubmitting(true);
 
     setTimeout(() => {
+      const trialEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
       claimEntity({
         deptId: currentDept.id,
         country,
@@ -292,12 +293,14 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
         role: role.trim(),
         plan: planKey,
         tinOrReg: tinOrReg.trim() || undefined,
-        monthlyFee: effectiveMonthlyUsd,
+        monthlyFee: 0,
         billingInterval: interval,
         territoryScope: selectedPlanData.scopeLabel,
         unitsCovered: selectedPlanData.units,
-        feeUsd: activeFeeUsd,
-        localCurrencyPrice: formatPrice(activeFeeUsd, interval === 'annual'),
+        feeUsd: 0,
+        localCurrencyPrice: '$0 (30-Day Founding Partner Trial)',
+        trialStatus: 'founding_partner_trial',
+        trialEndsAt: trialEndIso,
       });
 
       setIsSubmitting(false);
@@ -305,12 +308,12 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
       if (onSuccessClaim) {
         onSuccessClaim(currentDept);
       }
-      toast(`Successfully activated ${currentDept.name} on ${selectedPlanData.name} (${interval})!`, 'emerald');
+      toast(`Activated ${currentDept.name} on 30-Day Founding Partner Free Trial (${selectedPlanData.name})!`, 'emerald');
     }, 600);
   };
 
   const badgeCode = `<div class="civicduty-verified-badge" data-entity="${currentDept?.id}" data-trust="${currentDept?.trustScore || 94}%">
-  <span class="badge-icon">🛡️</span>
+  <span class="badge-icon">VERIFIED</span>
   <span class="badge-text">CivicDuty Verified Service Provider · ${currentDept?.trustScore || 94}% Trust Index</span>
 </div>`;
 
@@ -506,7 +509,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                   }}
                   className="btn btn-primary flex items-center gap-1.5 text-xs font-bold px-5 py-2.5 shadow-md shadow-emerald-600/20"
                 >
-                  <Sparkles size={14} /> Open Provider Console
+                  <ShieldCheck size={14} /> Open Provider Console
                 </button>
                 <button
                   onClick={() => {
@@ -543,10 +546,12 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
               </div>
 
               {/* Entity Selector or Header Card */}
-              <div className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 sm:p-4">
+              <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-3.5 sm:p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{currentDept.icon || '🏢'}</span>
+                    <span className="w-9 h-9 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                      <DeptIcon dept={currentDept} size={18} />
+                    </span>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-black text-slate-900 dark:text-white">
@@ -680,7 +685,9 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                                     : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200'
                                 }`}
                               >
-                                <span className="text-base shrink-0">{d.icon || '🏢'}</span>
+                                <span className="w-7 h-7 rounded-md bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                                  <DeptIcon dept={d} size={13} />
+                                </span>
                                 <div className="min-w-0 flex-1">
                                   <div className="text-xs font-bold truncate">{d.name}</div>
                                   <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
@@ -706,12 +713,12 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                           {/* If current selection isn't in filtered list, keep it visible at top */}
                           {!filteredDepts.some((d) => d.id === selectedDeptId) && currentDept && (
                             <option value={currentDept.id}>
-                              ★ Currently Selected: {currentDept.name} ({currentDept.category?.toUpperCase() || 'COMMERCIAL'})
+                              Currently Selected: {currentDept.name} ({currentDept.category?.toUpperCase() || 'COMMERCIAL'})
                             </option>
                           )}
                           {filteredDepts.map((d) => (
                             <option key={d.id} value={d.id}>
-                              {d.name} ({d.category?.toUpperCase() || 'COMMERCIAL'}) {isEntityClaimed(d.id) ? '✓ Claimed' : '· Unclaimed'}
+                              {d.name} ({d.category?.toUpperCase() || 'COMMERCIAL'}) {isEntityClaimed(d.id) ? '[Claimed]' : '· Unclaimed'}
                             </option>
                           ))}
                         </select>
@@ -757,9 +764,9 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
               )}
 
               {/* Customer Care Reality Banner */}
-              <div className="p-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-rose-950/30 border border-amber-300 dark:border-amber-800/80 rounded-xl flex items-start gap-2.5 text-xs">
+              <div className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl flex items-start gap-2.5 text-xs">
                 <div className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
-                  <TrendingDown size={14} />
+                  <TrendingDown size={14} strokeWidth={1.75} />
                 </div>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -774,8 +781,8 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                     {branding.advertisingCampaign.body}
                   </p>
                   <div className="flex items-center gap-3 pt-0.5 text-[10px] mono text-slate-500 flex-wrap">
-                    <span>⚡ Defection risk: <strong>{branding.advertisingCampaign.churnStatistic}</strong></span>
-                    <span>🛡️ Protection: <strong>{branding.advertisingCampaign.retentionBenefit}</strong></span>
+                    <span>Defection risk: <strong>{branding.advertisingCampaign.churnStatistic}</strong></span>
+                    <span>Protection: <strong>{branding.advertisingCampaign.retentionBenefit}</strong></span>
                     <span className="italic text-emerald-700 dark:text-emerald-300">&ldquo;{branding.advertisingCampaign.localLanguagePunchline}&rdquo;</span>
                   </div>
                 </div>
@@ -888,18 +895,29 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                             </div>
 
                             <div className="mt-2.5">
-                              <div className="text-base font-black text-slate-900 dark:text-white">
-                                {displayPrice}
-                              </div>
-                              {interval === 'annual' && !tData.free && (
-                                <div className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                                  equiv. {formatPrice(Math.round(tData.annualUsd / 12), false)}
-                                </div>
-                              )}
-                              {tData.free && (
-                                <div className="text-[9.5px] text-slate-500 font-semibold">
-                                  Self-serve community desk
-                                </div>
+                              {tData.free ? (
+                                <>
+                                  <div className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                                    Free Forever
+                                  </div>
+                                  <div className="text-[9.5px] text-slate-500 font-semibold">
+                                    Self-serve community desk
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                                    <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
+                                      $0 Today
+                                    </span>
+                                    <span className="text-[10.5px] line-through text-slate-400 font-mono">
+                                      {displayPrice}
+                                    </span>
+                                  </div>
+                                  <div className="text-[9.5px] text-emerald-700 dark:text-emerald-400 font-bold">
+                                    30-Day Founding Partner Trial
+                                  </div>
+                                </>
                               )}
                             </div>
 
@@ -1002,111 +1020,46 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                 </div>
               </div>
 
-              {/* Payment Method (Only if non-free) */}
-              {!selectedPlanData.free ? (
-                <div className="space-y-2.5 pt-1">
-                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
-                    4. Payment Method ({formatPrice(activeFeeUsd, interval === 'annual')} - {interval.toUpperCase()})
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('momo')}
-                      className={`p-2.5 rounded-lg border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                        paymentMethod === 'momo'
-                          ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
-                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                      }`}
-                    >
-                      <Smartphone size={16} className="text-emerald-600 shrink-0" />
-                      <div>
-                        <div className="text-[11px] font-bold leading-tight">Mobile Money</div>
-                        <div className="text-[9px] text-slate-500">MTN / Airtel / M-Pesa</div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('card')}
-                      className={`p-2.5 rounded-lg border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                        paymentMethod === 'card'
-                          ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
-                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                      }`}
-                    >
-                      <CreditCard size={16} className="text-emerald-600 shrink-0" />
-                      <div>
-                        <div className="text-[11px] font-bold leading-tight">Card Checkout</div>
-                        <div className="text-[9px] text-slate-500">Visa / Mastercard</div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('invoice')}
-                      className={`p-2.5 rounded-lg border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                        paymentMethod === 'invoice'
-                          ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
-                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                      }`}
-                    >
-                      <FileText size={16} className="text-emerald-600 shrink-0" />
-                      <div>
-                        <div className="text-[11px] font-bold leading-tight">Corporate Invoice</div>
-                        <div className="text-[9px] text-slate-500">Bank Wire / EFT</div>
-                      </div>
-                    </button>
-                  </div>
-
-                  <div className="pt-1">
-                    <input
-                      type="text"
-                      placeholder={
-                        paymentMethod === 'momo'
-                          ? 'Enter Mobile Money number (e.g. 0772 123 456)'
-                          : paymentMethod === 'card'
-                          ? 'Cardholder Name or Reference'
-                          : 'Company Billing Entity Name'
-                      }
-                      value={paymentAccount}
-                      onChange={(e) => setPaymentAccount(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-300 flex items-center gap-2">
-                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                  <span>
-                    <strong>Zero Payment Required:</strong> The Single {primary} Community Tier is 100% free for local neighborhood service providers.
+              {/* Founding Partner Free Trial Banner (No Payment Required During Public Rollout) */}
+              <div className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    <ShieldCheck size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>FOUNDING PARTNER PUBLIC LAUNCH TRIAL · $0.00 DUE TODAY</span>
+                  </span>
+                  <span className="text-[9.5px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-200/80 dark:bg-emerald-900/70 text-emerald-950 dark:text-emerald-200">
+                    30 Days Full Access · No Card or MoMo Required
                   </span>
                 </div>
-              )}
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                  During CivicDuty&apos;s public launch phase, all private service providers are onboarded onto our <strong>30-Day Founding Partner Trial</strong> with zero upfront payment. You get immediate access to official SLA responses, staff responder seats, Counter QR Placards, and your Embeddable Trust Badge. Standard territory billing ({formatPrice(activeFeeUsd, interval === 'annual')}) only begins if you choose to renew after your 30-day trial.
+                </p>
+              </div>
 
               {/* Submit CTA */}
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full btn btn-primary py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 cursor-pointer"
+                  className="w-full btn btn-primary py-3.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Activating Territory Subscription...
+                      Activating Founding Partner Trial Desk...
                     </>
                   ) : (
                     <>
                       <ShieldCheck size={16} />
-                      {selectedPlanData.free
-                        ? `Claim & Activate Free ${primary} Desk`
-                        : `Activate Subscription · ${formatPrice(activeFeeUsd, interval === 'annual')} (${interval.toUpperCase()})`}
+                      <span>
+                        Claim &amp; Activate 30-Day Founding Partner Trial · $0 Due Today ({selectedPlanData.name})
+                      </span>
                     </>
                   )}
                 </button>
                 <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 mt-2">
                   <Lock size={10} />
-                  <span>Immediate credential issuance · Switch territory or interval anytime · Official Tax Receipt</span>
+                  <span>Immediate credential issuance · Zero payment required today · Full SLA &amp; Trust Badge unlocked</span>
                 </div>
               </div>
             </form>

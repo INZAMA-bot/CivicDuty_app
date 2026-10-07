@@ -119,7 +119,7 @@ export const CdOpsNewDirectiveModal: React.FC<CdOpsNewDirectiveModalProps> = ({
               >
                 {Object.entries(COUNTRIES).map(([code, c]) => (
                   <option key={code} value={code}>
-                    {c.flag} {c.name} ({code})
+                    [{code}] {c.name}
                   </option>
                 ))}
               </select>
@@ -219,7 +219,7 @@ export const CdOpsNewDirectiveModal: React.FC<CdOpsNewDirectiveModalProps> = ({
           {/* Operator Signature Preview */}
           <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-base">✍️</span>
+              <FileSignature size={16} className="text-teal-500 shrink-0" />
               <div>
                 <span className="text-[9px] mono text-slate-500 uppercase block">Dispatching Operator</span>
                 <span className="font-bold text-slate-800 dark:text-slate-200">

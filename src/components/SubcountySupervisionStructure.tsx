@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   Copy,
   FileText,
-  Sparkles,
+  BarChart3,
   Search,
   MapPin,
   ArrowUpRight,
@@ -127,7 +127,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
 
     navigator.clipboard.writeText(memo);
     setCopiedId(parishName);
-    toast(`✓ Official Transmittal Memo copied for ${parishName}! Ready for dispatch.`, 'emerald');
+    toast(`Official Transmittal Memo copied for ${parishName}! Ready for dispatch.`, 'emerald');
     setTimeout(() => setCopiedId(null), 3000);
   };
 
@@ -351,7 +351,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
 
     // 3. Inviter only gets notifications of active or pending
     toast(
-      `✓ Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
+      `Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
       'amber'
     );
 
@@ -364,7 +364,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
     const enlisted = acceptInvite(inviteCode);
     if (enlisted) {
       toast(
-        `✓ ${officerNameStr} accepted statutory invite for ${stationNameStr}! Enlisted into ACTIVE roster for direct supervision.`,
+        `${officerNameStr} accepted statutory invite for ${stationNameStr}! Enlisted into ACTIVE roster for direct supervision.`,
         'emerald'
       );
     }
@@ -479,7 +479,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
               : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
-          <Sparkles size={14} />
+          <BarChart3 size={14} />
           Executive Tier Analytics
         </button>
 
@@ -739,8 +739,8 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                     </div>
 
                     <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
-                      <span>🌾 PDM SACCO Unit</span>
-                      <span>⏱️ 24h Community SLA</span>
+                      <span>PDM SACCO Unit</span>
+                      <span>24h Community SLA</span>
                     </div>
                   </div>
 
@@ -889,8 +889,8 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                       </td>
                       <td className="py-2.5 px-3 text-[11px] text-slate-600 dark:text-slate-300">
                         {status === 'operational' ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                            ✓ 24h SLA Active &bull; PDM Verified
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                            <CheckCircle2 size={11} /> 24h SLA Active &bull; PDM Verified
                           </span>
                         ) : status === 'pending' ? (
                           <span className="text-amber-600 dark:text-amber-400 font-mono">

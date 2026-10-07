@@ -13,7 +13,6 @@ import {
   Briefcase,
   ChevronRight,
   Filter,
-  Sparkles,
   ExternalLink,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -78,7 +77,7 @@ export const CdOpsDispatchMatrix: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-100">
       {/* Header */}
-      <div className="card p-5 bg-gradient-to-r from-amber-500/10 via-teal-500/5 to-transparent border-amber-500/20 space-y-2">
+      <div className="card p-5 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
@@ -153,7 +152,7 @@ export const CdOpsDispatchMatrix: React.FC = () => {
                   </span>
                 </div>
                 <div className="text-[9px] mono text-amber-600 dark:text-amber-400 font-bold">
-                  {isSelected ? '✓ Filter Active (Click to Clear)' : 'Click to filter directives'}
+                  {isSelected ? 'Filter Active (Click to Clear)' : 'Click to filter directives'}
                 </div>
               </div>
             </div>
@@ -240,7 +239,9 @@ export const CdOpsDispatchMatrix: React.FC = () => {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">{country?.flag || '🌐'}</span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        {msg.countryCode}
+                      </span>
                       <span className="text-xs font-bold text-slate-900 dark:text-white">
                         {msg.senderOfficer}
                       </span>

@@ -507,6 +507,37 @@ Session ended.`;
   // =========================================================================
   // ITEM 5: PRE-FUNDED DIGITAL UTILITY PERK ESCROW VAULT (PHASE 6)
   // =========================================================================
+  const getReimbursementLabel = (cat: string) => {
+    switch (cat) {
+      case 'telco_data':
+        return '📡 Field Data Reimbursement (Replenishes Citizen Evidence Upload Data)';
+      case 'transit_credit':
+        return '🛵 Scout Transit Pass (Offsets Frontline Site Verification Fare)';
+      case 'water_utility':
+        return '💧 Water Utility Credit (Leak & Sanitation Whistleblower Recognition)';
+      case 'electricity':
+        return '⚡ Power Grid Credit (Transformer & Line Safety Audit Recognition)';
+      default:
+        return '🎁 Community Service Field Cost Reimbursement';
+    }
+  };
+
+  const buildCommissionBreakdown = (faceValue: number, isByovCsv: boolean = false) => {
+    const fv = Number(faceValue) || 10000;
+    const wholesaleDiscountPct = isByovCsv ? 0 : 6;
+    const wholesaleSpreadCommission = Math.round(fv * (wholesaleDiscountPct / 100));
+    const csrPlatformFeePct = isByovCsv ? 0 : 5;
+    const csrPlatformFee = Math.round(fv * (csrPlatformFeePct / 100));
+    return {
+      faceValueTotal: fv,
+      wholesaleDiscountPct,
+      wholesaleSpreadCommission,
+      csrPlatformFeePct,
+      csrPlatformFee,
+      totalCivicDutyRevenue: wholesaleSpreadCommission + csrPlatformFee,
+    };
+  };
+
   const inMemoryPerkVouchers: any[] = [
     {
       id: 'PV-UG-001',
@@ -527,6 +558,10 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
       redemptionUssdString: '*165*2*8841#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('telco_data'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(10000, false),
     },
     {
       id: 'PV-UG-002',
@@ -547,6 +582,10 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
       redemptionUssdString: '*165*2*9923#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('telco_data'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(10000, false),
     },
     {
       id: 'PV-UG-003',
@@ -565,6 +604,10 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
       redemptionUssdString: '*185*9*4491#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('telco_data'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(8000, false),
     },
     {
       id: 'PV-UG-004',
@@ -583,6 +626,10 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 72).toISOString(),
       redemptionUssdString: '*303*9902#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('water_utility'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(10000, false),
     },
     {
       id: 'PV-UG-005',
@@ -601,6 +648,10 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
       redemptionUssdString: '*185*4*1*3382#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('electricity'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(15000, false),
     },
     {
       id: 'PV-UG-006',
@@ -621,6 +672,10 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 96).toISOString(),
       redemptionUssdString: '*165*4*7712#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('transit_credit'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(5000, false),
     },
     {
       id: 'PV-KE-001',
@@ -639,6 +694,10 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 30).toISOString(),
       redemptionUssdString: '*141*7712#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('telco_data'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(500, false),
     },
     {
       id: 'PV-KE-002',
@@ -657,6 +716,76 @@ Session ended.`;
       createdAt: new Date(Date.now() - 3600000 * 40).toISOString(),
       redemptionUssdString: '*977*8831#',
       expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('electricity'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(1000, false),
+    },
+    {
+      id: 'PV-NG-001',
+      voucherCode: 'MTN-NG-3GB-5521',
+      pin: '5521',
+      category: 'telco_data',
+      brand: 'MTN Nigeria',
+      title: '3GB MTN Nigeria Civic Scout Data Pack',
+      faceValue: 2500,
+      currency: 'NGN',
+      country: 'NG',
+      sponsoredBy: 'Julius Berger Nigeria PLC (CSR Watchdog Pool)',
+      sponsorType: 'contractor',
+      batchId: 'BATCH-JBN-NG-01',
+      status: 'escrow_unassigned',
+      createdAt: new Date(Date.now() - 3600000 * 20).toISOString(),
+      redemptionUssdString: '*312*5521#',
+      expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('telco_data'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(2500, false),
+    },
+    {
+      id: 'PV-GH-001',
+      voucherCode: 'ECG-GH-50GHS-9012',
+      pin: '9012',
+      category: 'electricity',
+      brand: 'ECG Ghana',
+      title: '50 GHS ECG Prepaid Power Credit',
+      faceValue: 50,
+      currency: 'GHS',
+      country: 'GH',
+      sponsoredBy: 'Accra Metropolitan Assembly (Grid Safety Pool)',
+      sponsorType: 'authority',
+      batchId: 'BATCH-AMA-GH-01',
+      status: 'escrow_unassigned',
+      createdAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+      redemptionUssdString: '*226*9012#',
+      expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('electricity'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(50, false),
+    },
+    {
+      id: 'PV-ZA-001',
+      voucherCode: 'VODA-ZA-2GB-6619',
+      pin: '6619',
+      category: 'telco_data',
+      brand: 'Vodacom SA',
+      title: '2GB Vodacom Field Evidence Data Pack',
+      faceValue: 150,
+      currency: 'ZAR',
+      country: 'ZA',
+      sponsoredBy: 'OUTA & Johannesburg Civic Integrity Trust',
+      sponsorType: 'corporate_csr',
+      batchId: 'BATCH-ZA-CSR-01',
+      status: 'escrow_unassigned',
+      createdAt: new Date(Date.now() - 3600000 * 16).toISOString(),
+      redemptionUssdString: '*136*6619#',
+      expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('telco_data'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(150, false),
     },
   ];
 
@@ -717,6 +846,8 @@ Session ended.`;
       projectName,
       country,
       vouchers,
+      isDemo,
+      sourceMethod,
     } = req.body || {};
 
     if (!vouchers || !Array.isArray(vouchers) || vouchers.length === 0) {
@@ -728,6 +859,7 @@ Session ended.`;
     const targetCountry = country || 'UG';
     const targetSponsor = sponsorName || 'Contractor CSR Escrow';
     const targetSponsorType = sponsorType || 'contractor';
+    const isByov = sourceMethod === 'csv' || sourceMethod === 'manual';
 
     const uploadedRecords: any[] = [];
 
@@ -736,6 +868,7 @@ Session ended.`;
       const code = v.voucherCode || v.code || `VOUCH-${Math.floor(100000 + Math.random() * 900000)}`;
       const brand = v.brand || 'Utility Partner';
       const category = v.category || (brand.toLowerCase().includes('data') || brand.toLowerCase().includes('mtn') || brand.toLowerCase().includes('airtel') ? 'telco_data' : 'water_utility');
+      const fv = Number(v.faceValue) || 10000;
 
       const record = {
         id: 'PV-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
@@ -743,8 +876,8 @@ Session ended.`;
         pin: v.pin || code.split('-').pop() || '',
         category,
         brand,
-        title: v.title || `${v.faceValue || 10000} ${v.currency || 'UGX'} ${brand} Voucher`,
-        faceValue: Number(v.faceValue) || 10000,
+        title: v.title || `${fv} ${v.currency || 'UGX'} ${brand} Voucher`,
+        faceValue: fv,
         currency: v.currency || (targetCountry === 'KE' ? 'KES' : 'UGX'),
         country: targetCountry,
         sponsoredBy: targetSponsor,
@@ -754,6 +887,10 @@ Session ended.`;
         batchId: batchName ? `${batchName} (${batchId})` : batchId,
         status: 'escrow_unassigned',
         createdAt: createdDate,
+        isDemo: Boolean(isDemo),
+        reimbursementFraming: getReimbursementLabel(category),
+        ethicalPledgeSealed: true,
+        commissionBreakdown: buildCommissionBreakdown(fv, isByov),
         redemptionUssdString: v.redemptionUssdString || (targetCountry === 'KE' ? '*141*CODE#' : '*303*CODE#').replace('CODE', code),
         expiryDate: v.expiryDate || '2026-12-31',
       };
@@ -782,6 +919,8 @@ Session ended.`;
       note,
       dispatchedBy,
       projectId,
+      selfRedeem,
+      xpSpent,
     } = req.body || {};
 
     if (!recipientName || !recipientContact) {
@@ -817,13 +956,18 @@ Session ended.`;
 
     // Mark as dispatched
     targetVoucher.status = 'dispatched';
+    targetVoucher.selfRedeemedByCitizen = Boolean(selfRedeem);
+    if (xpSpent) {
+      targetVoucher.xpSpent = Number(xpSpent);
+    }
     targetVoucher.dispatchedTo = {
       recipientName,
       recipientContact,
       dispatchedAt: new Date().toISOString(),
-      dispatchedBy: dispatchedBy || 'CivicDuty Official',
-      citationNote: note || 'Civic engagement & watchdog audit contribution',
+      dispatchedBy: selfRedeem ? `Citizen Self-Redemption (${xpSpent || 500} XP)` : (dispatchedBy || 'CivicDuty Official'),
+      citationNote: note || 'Frontline Civic Field Cost Reimbursement · Non-Interference Covenant Sealed',
       smsDeliveryStatus: 'delivered',
+      ethicalNonInterferenceAck: true,
     };
 
     res.json({

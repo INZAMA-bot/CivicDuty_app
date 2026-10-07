@@ -59,7 +59,7 @@ export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProp
 }) => {
   const { user, issueOfficialQuery } = useApp();
   const countryCode = user?.country || 'UG';
-  const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: '🏛️' };
+  const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: countryCode };
 
   const [category, setCategory] = useState<OfficialQueryCategory>('sla_breach');
   const [targetUnit, setTargetUnit] = useState(initialTarget?.unitName || '');
@@ -124,7 +124,7 @@ export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProp
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
                   Statutory Administrative Query
                 </span>
-                <span className="text-[10px] mono text-slate-500">{countryObj.flag} {countryCode}</span>
+                <span className="text-[10px] mono text-slate-500">{countryCode}</span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
                 Issue Official Supervisory Query

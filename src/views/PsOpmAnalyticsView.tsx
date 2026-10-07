@@ -51,7 +51,7 @@ export const PsOpmAnalyticsView: React.FC = () => {
           >
             {Object.entries(COUNTRIES).map(([code, c]) => (
               <option key={code} value={code}>
-                {c.flag} {c.name}
+                [{code}] {c.name}
               </option>
             ))}
           </select>

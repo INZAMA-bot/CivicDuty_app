@@ -184,7 +184,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl text-left font-mono text-xs space-y-1 text-slate-800 dark:text-slate-300">
               <div className="flex items-center justify-between text-[11px] text-emerald-700 dark:text-emerald-400 font-bold border-b border-slate-200 dark:border-slate-800 pb-1.5 mb-2">
                 <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> TRANSMISSION AUDIT RECEIPT</span>
-                <span>STATUS: DELIVERED ✓</span>
+                <span>STATUS: DELIVERED</span>
               </div>
               <div>• Submission Letter: CivicDuty_Submission_Letter_Inzama_Robin_6th_August_2026.pdf</div>
               <div>• Master Dossier: CivicDuty_Master_Dossier_v6.1_Uganda_6th_August_2026.pdf</div>

@@ -15,7 +15,6 @@ import {
   Layers,
   Cpu,
   Clock,
-  Sparkles,
   Award
 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
@@ -216,7 +215,9 @@ export const VerifyView: React.FC = () => {
         {/* Header Ribbon */}
         <div className="flex items-center justify-between border-b border-emerald-300 dark:border-emerald-700 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">{country.flag}</span>
+            <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
+              {validation.country}
+            </span>
             <div>
               <div className="text-xs font-black mono uppercase tracking-wider text-slate-950 dark:text-white">
                 {country.name} · SOVEREIGN CIVIC REGISTRY

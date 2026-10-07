@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Search, Check, Globe2, X, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronDown, ChevronRight, Search, Check, Globe2, X, Compass } from 'lucide-react';
 import { CountryCode } from '../types';
 import { COUNTRIES } from '../data/countries';
 import { useApp } from '../context/AppContext';
@@ -7,9 +8,10 @@ import { useApp } from '../context/AppContext';
 interface CountrySelectorProps {
   value?: CountryCode;
   onChange?: (country: CountryCode) => void;
-  variant?: 'compact' | 'bar' | 'card' | 'inline_button';
+  variant?: 'compact' | 'bar' | 'card' | 'inline_button' | 'menu_item';
   label?: string;
   className?: string;
+  onModalClose?: () => void;
 }
 
 // Priority hubs displayed at top for 1-tap switching
@@ -31,19 +33,23 @@ const REGION_CODES: Record<Region, string[]> = {
   EUROPE: [
     'DE', 'GB', 'FR', 'IT', 'ES', 'PT', 'NL', 'BE', 'CH', 'AT', 'SE', 'NO',
     'DK', 'FI', 'IE', 'PL', 'CZ', 'GR', 'RO', 'HU', 'UA', 'HR', 'BG', 'SK',
-    'RS', 'EE', 'LV', 'LT', 'SI', 'LU', 'IS', 'AL', 'MD', 'BA', 'ME', 'MK'
+    'RS', 'EE', 'LV', 'LT', 'SI', 'LU', 'IS', 'AL', 'MD', 'BA', 'ME', 'MK',
+    'AD', 'AM', 'AZ', 'BY', 'CY', 'GE', 'XK', 'LI', 'MT', 'MC', 'SM', 'VA', 'RU'
   ],
   AMERICAS: [
     'US', 'CA', 'MX', 'BR', 'AR', 'CO', 'CL', 'PE', 'VE', 'EC', 'GT', 'CU',
     'BO', 'DO', 'HN', 'PY', 'SV', 'NI', 'CR', 'PA', 'UY', 'JM', 'TT', 'GY',
-    'SR', 'BS', 'BB', 'BZ', 'HT'
+    'SR', 'BS', 'BB', 'BZ', 'HT', 'AG', 'DM', 'GD', 'KN', 'LC', 'VC'
   ],
   ASIA_PACIFIC: [
     'IN', 'CN', 'JP', 'KR', 'ID', 'PK', 'BD', 'PH', 'VN', 'TH', 'MY', 'SG',
-    'AU', 'NZ', 'MM', 'LK', 'NP', 'KH', 'MN', 'TW', 'PG', 'FJ', 'UZ', 'KZ'
+    'AU', 'NZ', 'MM', 'LK', 'NP', 'KH', 'MN', 'TW', 'PG', 'FJ', 'UZ', 'KZ',
+    'AF', 'BT', 'BN', 'KG', 'LA', 'MV', 'KP', 'TJ', 'TL', 'TM', 'HK', 'KI',
+    'MH', 'FM', 'NR', 'PW', 'WS', 'SB', 'TO', 'TV', 'VU'
   ],
   MIDDLE_EAST: [
-    'AE', 'SA', 'QA', 'KW', 'OM', 'BH', 'IL', 'JO', 'LB', 'IQ', 'IR', 'YE', 'SY', 'TR'
+    'AE', 'SA', 'QA', 'KW', 'OM', 'BH', 'IL', 'JO', 'LB', 'IQ', 'IR', 'YE',
+    'SY', 'TR', 'PS'
   ]
 };
 
@@ -53,6 +59,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
   variant = 'compact',
   label = 'Select Country Jurisdiction',
   className = '',
+  onModalClose,
 }) => {
   const { selectedCountry: ctxCountry, setSelectedCountry: setCtxCountry } = useApp();
   const currentCode = (value || ctxCountry || 'UG').toUpperCase();
@@ -69,9 +76,9 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
     }
     setIsOpen(false);
     setSearchQuery('');
+    onModalClose?.();
   };
 
-  // Close on Esc key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -82,7 +89,6 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  // Focus search input on open
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => searchInputRef.current?.focus(), 60);
@@ -91,16 +97,13 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
 
   const currentCountryInfo = COUNTRIES[currentCode] || {
     name: currentCode,
-    flag: '🌐',
     currency: 'USD',
   };
 
-  // Process and filter countries list
   const allEntries = useMemo(() => {
     return Object.entries(COUNTRIES).map(([code, data]) => ({
       code: code as CountryCode,
       name: data.name,
-      flag: data.flag || '🌐',
       currency: data.currency || '',
     }));
   }, []);
@@ -108,13 +111,11 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
   const filteredEntries = useMemo(() => {
     let list = allEntries;
 
-    // Region filter
     if (selectedRegion !== 'ALL') {
       const allowedCodes = new Set(REGION_CODES[selectedRegion]);
       list = list.filter((item) => allowedCodes.has(item.code));
     }
 
-    // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((item) =>
@@ -133,104 +134,126 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
       {variant === 'card' ? (
         <div
           onClick={() => setIsOpen(true)}
-          className="cursor-pointer p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 shadow-sm transition-all flex items-center justify-between group"
+          className="cursor-pointer p-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 dark:hover:border-slate-600 transition-all flex items-center justify-between group"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl shadow-2xs border border-slate-200 dark:border-slate-700/60 shrink-0 group-hover:scale-105 transition-transform">
-              {currentCountryInfo.flag}
+            <div className="w-9 h-9 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] flex items-center justify-center text-xs font-mono font-bold text-slate-800 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36] shrink-0">
+              {currentCode}
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <Globe2 size={11} strokeWidth={1.75} />
                 <span>{label}</span>
-                <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-black px-1.5 py-0.5 rounded">
-                  {currentCode}
-                </span>
               </div>
-              <div className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-1.5 mt-0.5 truncate">
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 mt-0.5 truncate">
                 <span className="truncate">{currentCountryInfo.name}</span>
-                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 mono shrink-0">
+                <span className="text-xs font-normal text-slate-500 dark:text-slate-400 font-mono shrink-0">
                   ({currentCountryInfo.currency})
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0 ml-2">
-            <span className="text-[10.5px] mono font-bold hidden sm:inline">Switch</span>
-            <ChevronDown size={16} />
+          <div className="flex items-center gap-1.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors shrink-0 ml-2">
+            <span className="text-[11px] font-mono font-medium hidden sm:inline">Switch</span>
+            <ChevronDown size={15} strokeWidth={1.75} />
           </div>
         </div>
       ) : variant === 'bar' ? (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-xs">
-          <div className="flex items-center gap-3 text-emerald-950 dark:text-emerald-100">
-            <span className="text-2xl shrink-0 drop-shadow-xs">{currentCountryInfo.flag}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs">
+          <div className="flex items-center gap-2.5 text-slate-900 dark:text-slate-100">
+            <div className="w-8 h-8 rounded-md bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center font-mono text-[11px] font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
+              {currentCode}
+            </div>
             <div>
-              <span className="font-black text-xs block sm:inline mr-1.5">
-                Active Sovereign Jurisdiction: <strong className="text-emerald-700 dark:text-emerald-300 font-black">{currentCountryInfo.name}</strong> ({currentCode})
+              <span className="font-semibold text-xs block sm:inline mr-1.5">
+                Active Sovereign Jurisdiction: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{currentCountryInfo.name}</strong> ({currentCode})
               </span>
-              <span className="text-[10px] text-emerald-800/80 dark:text-emerald-300/80 block sm:inline">
-                · Central Superadmin & Grassroots Desks active
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 block sm:inline">
+                · National Ministry &amp; Grassroots Desks active
               </span>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setIsOpen(true)}
-            className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all shrink-0 cursor-pointer"
+            className="self-start sm:self-auto px-3 py-1.5 rounded-md bg-[#f1f3f4] hover:bg-[#e3e6ea] dark:bg-[#1e232d] dark:hover:bg-[#262b36] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-[11px] font-mono font-medium flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
           >
-            <Globe2 size={13} />
+            <Globe2 size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
             <span>Switch Country</span>
-            <ChevronDown size={13} />
+            <ChevronDown size={13} strokeWidth={1.75} />
           </button>
         </div>
       ) : variant === 'inline_button' ? (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs mono font-bold flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-medium flex items-center gap-2 transition-all cursor-pointer"
         >
-          <span className="text-base">{currentCountryInfo.flag}</span>
+          <Globe2 size={13} strokeWidth={1.75} />
           <span>{currentCountryInfo.name}</span>
-          <ChevronDown size={14} />
+          <span className="px-1.5 py-0.5 rounded bg-black/20 text-[10px] font-mono">{currentCode}</span>
+          <ChevronDown size={14} strokeWidth={1.75} />
+        </button>
+      ) : variant === 'menu_item' ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="w-full min-h-[44px] px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-left transition-colors cursor-pointer group"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center font-mono text-[10.5px] font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
+              {currentCode}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                Active Jurisdiction
+              </div>
+              <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                {currentCountryInfo.name} · {currentCode}
+              </div>
+            </div>
+          </div>
+          <ChevronRight size={14} strokeWidth={1.75} className="text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 shrink-0" />
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 text-slate-800 dark:text-slate-200 shadow-2xs transition-all text-xs font-bold cursor-pointer group"
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 dark:hover:border-slate-600 text-slate-800 dark:text-slate-200 transition-all text-xs font-medium cursor-pointer group"
         >
-          <span className="text-base group-hover:scale-110 transition-transform">{currentCountryInfo.flag}</span>
-          <span className="truncate max-w-[130px] sm:max-w-[180px] text-[11px]">{currentCountryInfo.name}</span>
-          <span className="text-[9px] mono px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+          <Globe2 size={13} strokeWidth={1.75} className="text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0" />
+          <span className="truncate max-w-[110px] sm:max-w-[150px] text-[11.5px] font-medium">{currentCountryInfo.name}</span>
+          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-semibold">
             {currentCode}
           </span>
-          <ChevronDown size={13} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+          <ChevronDown size={12} strokeWidth={1.75} className="text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
         </button>
       )}
 
-      {/* Full Centered Modal Dialog for Flawless UX & Viewport Fitting */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-md animate-fade-in">
-          {/* Backdrop Click Dismiss */}
-          <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
+      {/* Full Centered Modal Dialog via Portal */}
+      {isOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
+            <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
 
-          {/* Modal Container */}
-          <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden z-10 animate-scale-in">
+          <div className="relative w-full max-w-2xl max-h-[86vh] flex flex-col bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl shadow-2xl overflow-hidden z-10">
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+            <div className="p-4 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-                  <Globe2 size={20} />
+                <div className="w-9 h-9 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-200 flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
+                  <Globe2 size={18} strokeWidth={1.75} />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     <span>Select Sovereign Jurisdiction</span>
-                    <span className="text-[10px] mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                    <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                       {allEntries.length} Countries
                     </span>
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Select country to load its national superadmin ministry and grassroots desk
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Select country to mount its national statutory ministry and grassroots desks
                   </p>
                 </div>
               </div>
@@ -238,39 +261,38 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] hover:bg-[#e3e6ea] dark:hover:bg-[#262b36] text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors cursor-pointer"
                 title="Close dialog (Esc)"
               >
-                <X size={16} />
+                <X size={15} strokeWidth={1.75} />
               </button>
             </div>
 
             {/* Search and Filters Bar */}
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3 bg-white dark:bg-slate-900 shrink-0">
-              {/* Search Field */}
+            <div className="p-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] space-y-2.5 bg-white dark:bg-[#161a22] shrink-0">
               <div className="relative">
-                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <Search size={14} strokeWidth={1.75} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search countries, ISO codes or currencies (e.g. Uganda, Germany, US, EUR, KES)..."
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl pl-10 pr-9 py-2.5 text-xs sm:text-sm mono placeholder:text-slate-400 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-9 pr-8 py-2 text-xs font-mono placeholder:text-slate-400 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 transition-all"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   >
-                    <X size={14} />
+                    <X size={13} strokeWidth={1.75} />
                   </button>
                 )}
               </div>
 
               {/* Region Filter Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
                 {[
                   { id: 'ALL' as Region, label: 'All Global', count: allEntries.length },
                   { id: 'AFRICA' as Region, label: 'Africa', count: REGION_CODES.AFRICA.length },
@@ -285,14 +307,14 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
                       key={tab.id}
                       type="button"
                       onClick={() => setSelectedRegion(tab.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs mono font-bold shrink-0 transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-medium shrink-0 transition-all border cursor-pointer ${
                         isActive
-                          ? 'bg-slate-900 dark:bg-emerald-500 text-white dark:text-slate-950 shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800/70 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-950 border-slate-900 dark:border-slate-100'
+                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
                       }`}
                     >
                       <span>{tab.label}</span>
-                      <span className="ml-1.5 text-[10px] opacity-70">({tab.count})</span>
+                      <span className="ml-1 text-[10px] opacity-70">({tab.count})</span>
                     </button>
                   );
                 })}
@@ -300,10 +322,10 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
 
               {/* Popular Hubs Row */}
               {!searchQuery && selectedRegion === 'ALL' && (
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
-                  <span className="text-[9px] mono uppercase font-black tracking-wider text-slate-400 shrink-0 flex items-center gap-1">
-                    <Sparkles size={11} className="text-amber-500" />
-                    Quick Hubs:
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5">
+                  <span className="text-[10px] font-mono uppercase font-semibold tracking-wider text-slate-400 shrink-0 flex items-center gap-1">
+                    <Compass size={11} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Quick Hubs:</span>
                   </span>
                   {POPULAR_HUBS.map((code) => {
                     const info = COUNTRIES[code];
@@ -314,13 +336,15 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
                         key={code}
                         type="button"
                         onClick={() => handleSelect(code)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-all border cursor-pointer ${
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium shrink-0 transition-all border cursor-pointer ${
                           isCurrent
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400'
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
                         }`}
                       >
-                        <span className="text-sm">{info.flag}</span>
+                        <span className={`text-[9.5px] font-mono font-bold px-1 rounded ${isCurrent ? 'bg-black/20 text-white' : 'bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-600 dark:text-slate-400'}`}>
+                          {code}
+                        </span>
                         <span>{info.name.split(' ')[0]}</span>
                       </button>
                     );
@@ -330,13 +354,13 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
             </div>
 
             {/* Scrollable Country Grid */}
-            <div className="p-4 overflow-y-auto flex-1 max-h-[50vh] space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] mono uppercase font-bold text-slate-400 px-1 pb-1">
+            <div className="p-3.5 overflow-y-auto flex-1 max-h-[50vh] space-y-1.5 bg-[#f8f9fa] dark:bg-[#0e1116]">
+              <div className="flex items-center justify-between text-[10px] font-mono uppercase font-medium text-slate-500 px-1 pb-1">
                 <span>Displaying {filteredEntries.length} sovereign states</span>
                 <span>Active: {currentCode} ({currentCountryInfo.name})</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {filteredEntries.map((item) => {
                   const isSelected = item.code === currentCode;
                   return (
@@ -344,33 +368,34 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
                       key={item.code}
                       type="button"
                       onClick={() => handleSelect(item.code)}
-                      className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl text-left transition-all border cursor-pointer ${
+                      className={`flex items-center justify-between p-2.5 rounded-lg text-left transition-all border cursor-pointer ${
                         isSelected
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 border-emerald-400 dark:border-emerald-600 ring-1 ring-emerald-400 dark:ring-emerald-600 shadow-xs'
-                          : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'
+                          ? 'bg-emerald-500/10 text-slate-900 dark:text-slate-100 border-emerald-500/50'
+                          : 'bg-white dark:bg-[#161a22] hover:border-slate-400 dark:hover:border-slate-600 border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200'
                       }`}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-2xl shrink-0">{item.flag}</span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-md flex items-center justify-center font-mono text-[11px] font-bold shrink-0 border ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
+                        }`}>
+                          {item.code}
+                        </div>
                         <div className="min-w-0">
-                          <span className="font-bold block text-xs truncate leading-tight">
+                          <span className="font-semibold block text-xs truncate leading-tight">
                             {item.name}
                           </span>
-                          <span className="text-[10px] mono text-slate-500 dark:text-slate-400 block mt-0.5">
-                            <span className="font-bold text-slate-700 dark:text-slate-300">{item.code}</span>
-                            {item.currency ? ` · ${item.currency}` : ''}
+                          <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block mt-0.5">
+                            {item.code}{item.currency ? ` · ${item.currency}` : ''}
                           </span>
                         </div>
                       </div>
 
-                      {isSelected ? (
-                        <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                          <Check size={14} strokeWidth={3} />
+                      {isSelected && (
+                        <div className="w-5 h-5 rounded-md bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                          <Check size={12} strokeWidth={2} />
                         </div>
-                      ) : (
-                        <span className="text-[10px] mono text-slate-400 font-bold opacity-0 group-hover:opacity-100">
-                          Select
-                        </span>
                       )}
                     </button>
                   );
@@ -379,16 +404,13 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
 
               {filteredEntries.length === 0 && (
                 <div className="p-8 text-center space-y-2">
-                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
-                    No sovereign jurisdiction found matching "{searchQuery}"
-                  </p>
-                  <p className="text-xs text-slate-400 mono">
-                    Try searching by country name, ISO code (e.g. "DE", "UG"), or currency ("EUR").
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    No sovereign jurisdiction found matching &ldquo;{searchQuery}&rdquo;
                   </p>
                   <button
                     type="button"
                     onClick={() => { setSearchQuery(''); setSelectedRegion('ALL'); }}
-                    className="mt-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200"
+                    className="mt-2 px-3 py-1.5 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-700 dark:text-slate-300"
                   >
                     Clear Search Filters
                   </button>
@@ -397,16 +419,18 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3 sm:p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] mono text-slate-500 dark:text-slate-400 shrink-0">
+            <div className="p-3 border-t border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Multi-tier statutory hierarchy & SLAs auto-sync upon selection</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Multi-tier statutory hierarchy &amp; SLAs auto-sync upon selection</span>
               </div>
               <span className="text-slate-400">Press Esc or click outside to close</span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
 };
+

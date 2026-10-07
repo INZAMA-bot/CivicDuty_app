@@ -273,7 +273,7 @@ export const GovAuditView: React.FC = () => {
 ================================================================================
   CIVICDUTY PLATFORM · OFFICIAL NATIONAL AUDIT LEDGER & COMPLIANCE PROOF
 ================================================================================
-Nation Jurisdiction: ${countryObj.flag} ${countryObj.name}
+Nation Jurisdiction: [${countryCode}] ${countryObj.name}
 National Node ID:    ${countryObj.node}
 Department/Unit:     ${d.name} (${user.dept})
 Oversight Agency:    ${auditSpec.agency}
@@ -325,7 +325,7 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
         checkedCount: countryAudit.length,
         timestamp: new Date().toLocaleTimeString(),
       });
-      toast(`✓ Cryptographic chain verification complete: ${countryAudit.length} records 100% verified.`, 'emerald');
+      toast(`Cryptographic chain verification complete: ${countryAudit.length} records 100% verified.`, 'emerald');
     }, 1200);
   };
 
@@ -344,7 +344,7 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                   Cryptographic Non-Repudiation
                 </span>
                 <span className="text-xs mono text-slate-400">
-                  {countryObj.flag} {countryCode} · {countryObj.node}
+                  [{countryCode}] · {countryObj.node}
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black text-white mt-1">

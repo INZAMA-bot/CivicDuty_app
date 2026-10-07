@@ -12,7 +12,6 @@ import {
   Edit3,
   Briefcase,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { CdOpsStaffMember } from '../../data/partnerships';
@@ -48,7 +47,7 @@ export const CdOpsRosterPanel: React.FC = () => {
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Roster Header */}
-      <div className="card p-5 bg-gradient-to-r from-amber-500/10 via-teal-500/5 to-transparent border-amber-500/20 space-y-2">
+      <div className="card p-5 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
@@ -83,7 +82,7 @@ export const CdOpsRosterPanel: React.FC = () => {
       </div>
 
       {/* Active Operator Banner */}
-      <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-500/15 via-slate-900/10 to-transparent border-2 border-amber-500/40 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-amber-500/40 flex flex-wrap items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3.5">
           <img
             src={activeCdOpsOperator.avatar}
@@ -215,10 +214,10 @@ export const CdOpsRosterPanel: React.FC = () => {
                       return (
                         <span
                           key={`${code}-${rIdx}`}
-                          className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[8.5px] font-bold"
+                          className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[8.5px] font-bold font-mono"
                           title={c?.name || code}
                         >
-                          {code === 'ALL' ? '🌐 ALL' : `${c?.flag || '🌐'} ${code}`}
+                          {code === 'ALL' ? 'ALL' : code}
                         </span>
                       );
                     })}

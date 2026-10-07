@@ -10,12 +10,12 @@ import {
   TrendingDown,
   Building2,
   CheckCircle2,
-  Sparkles,
   ShieldCheck,
   ChevronRight,
   Star,
   ExternalLink
 } from 'lucide-react';
+import { DeptIcon } from './DeptIcon';
 
 interface CustomerDefectionNoticeProps {
   dept: Department;
@@ -59,9 +59,9 @@ export const CustomerDefectionNotice: React.FC<CustomerDefectionNoticeProps> = (
 
   if (variant === 'compact') {
     return (
-      <div className="p-2.5 rounded-2xl bg-gradient-to-r from-amber-50 to-rose-50 dark:from-amber-950/30 dark:to-rose-950/20 border border-amber-300 dark:border-amber-800/80 flex items-center justify-between gap-2 text-xs">
+      <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2 min-w-0">
-          <TrendingDown size={14} className="text-rose-600 shrink-0" />
+          <TrendingDown size={14} strokeWidth={1.75} className="text-rose-600 shrink-0" />
           <p className="text-[11px] text-slate-800 dark:text-slate-200 truncate">
             <span className="font-bold text-rose-800 dark:text-rose-300">Customer Care Alert:</span> Unresolved reports lead {dept.name} customers to switch to higher-rated providers ({competitors[0]?.name || 'competitors'}).
           </p>
@@ -79,12 +79,12 @@ export const CustomerDefectionNotice: React.FC<CustomerDefectionNoticeProps> = (
   }
 
   return (
-    <div className="rounded-2xl border border-amber-300 dark:border-amber-800/80 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-rose-50/50 dark:from-amber-950/30 dark:via-slate-900 dark:to-rose-950/20 p-4 shadow-2xs space-y-3">
+    <div className="rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] p-4 space-y-3">
       {/* Title & Customer Behavior Hook */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-amber-700 dark:text-amber-400 shrink-0 mt-0.5">
-            <TrendingDown size={16} />
+          <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-amber-700 dark:text-amber-400 shrink-0 mt-0.5">
+            <TrendingDown size={16} strokeWidth={1.75} />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -172,7 +172,9 @@ export const CustomerDefectionNotice: React.FC<CustomerDefectionNoticeProps> = (
                   className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all cursor-pointer flex flex-col justify-between space-y-1 shadow-2xs group"
                 >
                   <div className="flex items-start justify-between gap-1">
-                    <span className="text-base">{alt.icon || '🏢'}</span>
+                    <span className="w-6 h-6 rounded bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300">
+                      <DeptIcon dept={alt} size={12} />
+                    </span>
                     <span className="text-[9px] mono font-bold text-amber-700 dark:text-amber-400 flex items-center gap-0.5">
                       <Star size={10} className="fill-current" /> {alt.trustScore || 90}%
                     </span>

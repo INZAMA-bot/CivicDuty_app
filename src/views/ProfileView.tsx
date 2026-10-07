@@ -1,895 +1,704 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { CIVIC_RANKS, getRank, getRankPct, getDept } from '../utils/helpers';
-import { 
-  User, 
-  ChevronRight, 
-  Award, 
-  Zap, 
-  ShieldCheck, 
-  Gift, 
-  MapPin, 
-  Download, 
-  Share2, 
-  CheckCircle2, 
-  QrCode, 
-  FileCheck2, 
-  X, 
-  Trophy, 
-  Medal, 
-  Ticket, 
-  Layers, 
-  Building2, 
-  Fingerprint, 
-  Sparkles,
-  ScrollText,
-  BadgeCheck,
+import { getDept, pathStr } from '../utils/helpers';
+import { PostCardComponent } from '../components/PostCardComponent';
+import { DeptIcon } from '../components/DeptIcon';
+import {
+  ShieldCheck,
+  Award,
+  CheckCircle2,
   Camera,
-  FolderArchive,
-  Code2,
-  RefreshCw,
   Edit3,
-  Lock
+  MapPin,
+  Calendar,
+  Share2,
+  Bookmark,
+  Check,
+  X,
+  Building2,
+  QrCode,
+  Copy,
+  Download,
+  Lock,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  ArrowUpRight,
+  LogOut,
+  Globe,
 } from 'lucide-react';
-import { COUNTRIES } from '../data/countries';
+import { getCountryPerks } from '../data/countryPerks';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
-import { exportLiveZip, triggerBlobDownload } from '../utils/zipExporter';
-import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from '../components/TrafficSignalHUD';
 
 export const ProfileView: React.FC = () => {
-  const { user, ensureCitizenSession, profiles, posts, go, setActiveDept, setActiveDeptCountry, setUser, toast } = useApp();
-  const [showCertModal, setShowCertModal] = useState(false);
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'perks' | 'leaderboard' | 'ranks' | 'walls' | 'export'>('perks');
-  const [isExportingZip, setIsExportingZip] = useState(false);
-  const [exportProgress, setExportProgress] = useState<string>('');
+  const {
+    user,
+    ensureCitizenSession,
+    setUser,
+    profiles,
+    posts,
+    followedDepts,
+    go,
+    setActiveDept,
+    setActiveDeptCountry,
+    setActivePost,
+    toast,
+    updateCitizenProfile,
+    bookmarks,
+  } = useApp();
 
   const activeUser = user || ensureCitizenSession();
-
-  const prof = profiles[activeUser.id] || {
-    civic_score: 1240,
-    rank: 'Watchdog',
-    posts: 12,
-    resolved: 8,
-    corruption_reports: 2,
-    upvotes_received: 42,
-    followed: activeUser.followed || ['kcca', 'umeme', 'nwsc'],
-    id_frag: '8841',
-    display_name: 'Inzama Robin',
-    avatar_url: activeUser.avatar_url,
+  const profile = profiles[activeUser.id] || {
+    civic_score: 50,
+    badges: ['b_init'],
+    posts_count: 0,
+    helpful_count: 0,
+    flagged_count: 0,
   };
 
-  const currentAvatar = prof.avatar_url || activeUser.avatar_url;
+  const myPosts = posts.filter(
+    (p) => p.citizen_id === activeUser.id || p.citizen_name === activeUser.name
+  );
+  const myPraisePosts = myPosts.filter((p) => p.category === 'praise');
+  const myResolvedPosts = myPosts.filter((p) => p.status === 'resolved');
+  const savedPosts = posts.filter((p) => (bookmarks || []).includes(p.id));
+  const followed = followedDepts[activeUser.id] || [];
+  const score = profile.civic_score || 0;
 
-  const handleDownloadZip = async () => {
-    try {
-      setIsExportingZip(true);
-      setExportProgress('Packing frontend, Express backend, & database...');
-      const blob = await exportLiveZip((pct, status) => {
-        setExportProgress(`${pct}% · ${status}`);
-      });
-      triggerBlobDownload(blob, `civicduty-complete-fullstack-build-${Date.now()}.zip`);
-      toast('✓ Complete full-stack build ZIP exported successfully!', 'emerald');
-    } catch (err) {
-      toast('Failed to package build ZIP', 'red');
-    } finally {
-      setIsExportingZip(false);
-      setExportProgress('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(activeUser.name || '');
+  const [editBio, setEditBio] = useState(
+    profile.bio ||
+      'Verified Civic Watchdog monitoring public service delivery, infrastructure SLAs, and statutory accountability.'
+  );
+  const [editLocation, setEditLocation] = useState(
+    profile.location || pathStr(activeUser.country, activeUser.territory || {}) || 'National Jurisdiction'
+  );
+  const [isAnonMode, setIsAnonMode] = useState(activeUser.anon !== false);
+
+  const [activeTab, setActiveTab] = useState<'reports' | 'resolved' | 'praise' | 'saved'>('reports');
+  const [showCivicCardModal, setShowCivicCardModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showReputationRules, setShowReputationRules] = useState(false);
+
+  const activeCountry = activeUser.country || 'UG';
+  const countryPerks = getCountryPerks(activeCountry);
+
+  const tier =
+    score >= 300
+      ? { name: 'National Civic Guardian', short: 'Guardian', next: 500 }
+      : score >= 150
+      ? { name: 'Verified Civic Champion', short: 'Champion', next: 300 }
+      : score >= 50
+      ? { name: 'Trusted Parish Watchdog', short: 'Watchdog', next: 150 }
+      : { name: 'Citizen Observer', short: 'Observer', next: 50 };
+
+  const progressPct = Math.min(100, Math.round((score / tier.next) * 100));
+
+  const initials =
+    (activeUser.name || 'CD')
+      .replace(/^@/, '')
+      .split(/[\s_.-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase() || '')
+      .join('') || 'CD';
+
+  const currentAvatar = profile.avatar_url || activeUser.avatar_url;
+
+  const handleSaveProfile = () => {
+    const trimmed = editName.trim() || activeUser.name;
+    updateCitizenProfile({
+      name: trimmed,
+      bio: editBio.trim(),
+      location: editLocation.trim(),
+      anon: isAnonMode,
+    });
+    setIsEditing(false);
+    toast('Identity dossier updated', 'emerald');
+  };
+
+  const handleSaveAvatar = (newAvatarUrl: string) => {
+    updateCitizenProfile({ avatar_url: newAvatarUrl });
+    toast(newAvatarUrl ? 'Identity photo updated' : 'Reverted to default monogram', 'emerald');
+  };
+
+  const handleCopyPass = () => {
+    const shareText = `CivicDuty Watchdog Dossier: ${activeUser.name} · ${tier.name} (${score} pts) · ${myPosts.length} Dispatches Filed in ${countryPerks.countryName}.`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareText);
+      toast('Watchdog dossier summary copied to clipboard', 'emerald');
     }
   };
 
-  const rank = getRank(prof.civic_score || 0);
-  const pct = getRankPct(prof.civic_score || 0);
-  const nextRank = CIVIC_RANKS.find((r) => r.min > (prof.civic_score || 0));
+  const handleDownloadCertificate = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 675;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  const myPosts = posts.filter((p) => p.citizen_id === activeUser.id);
-  const myResolved = myPosts.filter((p) => p.status === 'resolved').length || prof.resolved || 8;
-  const myUpvotes = myPosts.reduce((acc, p) => acc + p.upvotes, 0) || prof.upvotes_received || 42;
-  const myCorrupt = myPosts.filter((p) => p.category === 'corruption').length || prof.corruption_reports || 2;
+    ctx.fillStyle = '#0e1116';
+    ctx.fillRect(0, 0, 1200, 675);
 
-  const countryInfo = COUNTRIES[activeUser.country] || COUNTRIES.UG;
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(36, 36, 1128, 603);
 
-  // Mock Parish Leaderboard Data for Bukoto Parish
-  const parishLeaderboard = [
-    { rank: 1, name: 'Inzama Robin', score: 1240, resolved: 8, badge: 'Parish Champion', isMe: true },
-    { rank: 2, name: 'Grace Akello', score: 980, resolved: 6, badge: 'Watchdog', isMe: false },
-    { rank: 3, name: 'David Mukasa', score: 850, resolved: 5, badge: 'Watchdog', isMe: false },
-    { rank: 4, name: 'Sarah Namubiru', score: 620, resolved: 4, badge: 'Advocate', isMe: false },
-    { rank: 5, name: 'Peter Okello', score: 490, resolved: 3, badge: 'Reporter', isMe: false },
-  ];
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText(`CIVICDUTY · SOVEREIGN WATCHDOG DOSSIER · ${countryPerks.countryName.toUpperCase()}`, 76, 96);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.fillText(activeUser.name, 76, 175);
+
+    ctx.fillStyle = '#34d399';
+    ctx.font = 'bold 26px monospace';
+    ctx.fillText(`${tier.name.toUpperCase()} · ${score} CIVIC POINTS`, 76, 225);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '22px sans-serif';
+    ctx.fillText(`Jurisdiction: ${editLocation}`, 76, 285);
+    ctx.fillText(
+      `Dispatches: ${myPosts.length}   |   Verified Resolved: ${myResolvedPosts.length}   |   Praise: ${myPraisePosts.length}`,
+      76,
+      330
+    );
+
+    const certHash = `SHA256-${activeCountry}-${activeUser.id.slice(-6).toUpperCase()}-${score}`;
+    ctx.fillStyle = '#64748b';
+    ctx.font = '18px monospace';
+    ctx.fillText(`Cryptographic Ledger Seal: ${certHash}`, 76, 575);
+
+    const link = document.createElement('a');
+    link.download = `CivicDuty-Dossier-${activeUser.name.replace(/[^a-zA-Z0-9]/g, '')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    toast('Watchdog Dossier PNG downloaded', 'emerald');
+  };
+
+  const displayedPosts =
+    activeTab === 'reports'
+      ? myPosts
+      : activeTab === 'resolved'
+      ? myResolvedPosts
+      : activeTab === 'praise'
+      ? myPraisePosts
+      : savedPosts;
 
   return (
-    <div className="p-3 sm:p-4 space-y-4 animate-fade-in pb-16 text-slate-800 dark:text-slate-100 max-w-2xl mx-auto">
-      {/* BANK-GRADE SOVEREIGN CITIZEN IDENTIFICATION PASS */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-300 dark:border-slate-800 bg-gradient-to-b from-white via-slate-50/50 to-slate-100/90 dark:from-[#0d131f] dark:via-[#090d16] dark:to-[#05080f] shadow-xl p-5 sm:p-6 space-y-5">
-        {/* Top Bank Security Bar & Sovereign 3-Signal Chip */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/80 dark:border-slate-800/80">
-          <div className="flex items-center gap-2">
-            <span className="text-base">{countryInfo.flag}</span>
-            <div>
-              <div className="text-[9.5px] font-black mono tracking-[0.2em] uppercase text-slate-900 dark:text-slate-200 flex items-center gap-1.5 leading-tight">
-                <span>{countryInfo.name}</span>
-                <span className="text-slate-400">·</span>
-                <span>Citizen Pass</span>
-              </div>
-              <div className="text-[7.5px] mono text-slate-500 font-bold uppercase tracking-wider">
-                Sovereign Accountability Credential · Tier 1
-              </div>
-            </div>
+    <div className="animate-fade-in pb-16 px-3.5 sm:px-5 pt-4 space-y-4 text-slate-900 dark:text-slate-100">
+      {/* 1. Primary Studio Identity Card */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+        {/* Top Metadata Strip */}
+        <div className="px-4 py-2.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+              Watchdog Identity Dossier · {countryPerks.countryName}
+            </span>
           </div>
-
-          {/* Official 3-Signal Holographic Chip */}
-          <div 
-            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 shadow-2xs cursor-pointer group"
-            title="CivicDuty Sovereign 3-Signal Security Chip: Speak · Serve · Be Heard"
-          >
-            <SignalGlyphRed className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-            <SignalGlyphAmber className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-            <SignalGlyphGreen className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
-          </div>
-        </div>
-
-        {/* Citizen Credentials Card Core */}
-        <div className="flex items-start gap-4">
-          {/* Avatar Picture with Chamfered Security Frame */}
-          <div 
-            onClick={() => setShowAvatarModal(true)}
-            className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-amber-600/10 dark:bg-slate-950 border-2 border-amber-500/50 dark:border-amber-400/40 flex items-center justify-center flex-shrink-0 text-amber-700 dark:text-amber-400 relative shadow-md cursor-pointer group overflow-hidden transition-transform hover:scale-105"
-            title="Click to edit profile photo"
-          >
-            {currentAvatar ? (
-              <img
-                src={currentAvatar}
-                alt={prof.display_name || 'Citizen Avatar'}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <Fingerprint size={38} strokeWidth={1.5} className="text-amber-600 dark:text-amber-400" />
-            )}
-
-            {/* Camera Overlay on Hover */}
-            <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
-              <Camera size={18} className="text-amber-400" />
-              <span className="text-[7.5px] mono font-black mt-0.5 uppercase tracking-wider">Edit</span>
-            </div>
-
-            <div className="absolute -bottom-1 -right-1 bg-amber-600 text-white p-1 rounded-full text-[9px] font-bold shadow-sm" title="Gold Pin Map Highlight Active">
-              <MapPin size={10} />
-            </div>
-          </div>
-
-          {/* Identification Details */}
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <h3 className="text-base sm:text-lg font-black text-slate-950 dark:text-white flex items-center gap-1.5 truncate">
-                <span>{prof.display_name || activeUser.name || 'Citizen'}</span>
-                <BadgeCheck size={18} className="text-teal-600 dark:text-teal-400 shrink-0" />
-              </h3>
-
-              {/* Parish Champion Ribbon */}
-              <div className="bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-bold text-[8.5px] mono px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                <Trophy size={11} className="text-amber-600 dark:text-amber-400" />
-                <span>Nakawa #1 Champion</span>
-              </div>
-            </div>
-
-            <div className="font-mono text-[9.5px] sm:text-[10px] text-slate-500 dark:text-slate-400 space-y-0.5">
-              <div className="text-slate-900 dark:text-slate-200 font-bold tracking-wider">
-                PASS ID: UG-CIT-{prof.id_frag || '8841'}-KCCA · NODE-01
-              </div>
-              <div className="text-[9px] text-slate-500">
-                {activeUser.nodeTag || 'Nakawa Division · Bukoto Parish · Kampala'}
-              </div>
-            </div>
-
-            {prof.bio && (
-              <p className="text-[10.5px] text-slate-600 dark:text-slate-300 italic pt-0.5 line-clamp-1">
-                "{prof.bio}"
-              </p>
-            )}
-
-            <div className="flex items-center gap-2 pt-1 flex-wrap">
-              <span className="text-[9px] mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                <ShieldCheck size={11} />
-                {rank.name}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAvatarModal(true)}
-                className="text-[9px] mono font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
-              >
-                <Edit3 size={10} />
-                <span>Edit Photo &amp; Bio</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* BANK-GRADE CIVIC STANDING BALANCE & PROGRESSION METER */}
-        <div className="p-3.5 rounded-2xl bg-slate-100/90 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800/80 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[8px] mono uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
-                Available Civic Standing Balance
-              </div>
-              <div className="text-xl sm:text-2xl font-black mono text-slate-950 dark:text-white flex items-baseline gap-1.5 leading-tight">
-                <span>{(prof.civic_score || 1240).toLocaleString()}</span>
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">PTS</span>
-              </div>
-            </div>
-
-            <div className="text-right text-[9px] mono">
-              <span className="text-slate-500">Next Milestone:</span>
-              <div className="font-bold text-amber-600 dark:text-amber-400">
-                {nextRank ? `${nextRank.min.toLocaleString()}pts → ${nextRank.name}` : 'Max Sentinel Rank'}
-              </div>
-            </div>
-          </div>
-
-          {/* 3-Signal Multi-Phase Progress Bar */}
-          <div className="space-y-1">
-            <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-300/80 dark:border-slate-800 p-0.5">
-              <div 
-                className="h-full rounded-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 transition-all duration-500 shadow-xs" 
-                style={{ width: `${pct}%` }} 
-              />
-            </div>
-            <div className="flex justify-between items-center text-[8.5px] mono text-slate-500 dark:text-slate-400 pt-0.5">
-              <span>{pct}% progress to Sentinel Rank</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Gold Pin Map Avatar Enabled</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* PRIMARY ACTION: VIEW DIGITAL CERTIFICATE */}
-        <div className="pt-1">
-          <button
-            onClick={() => setShowCertModal(true)}
-            className="w-full bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white font-black py-2.5 px-4 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] cursor-pointer"
-          >
-            <ScrollText size={15} />
-            <span>View Digital Certificate of Civic Excellence</span>
-          </button>
-        </div>
-      </div>
-
-      {/* BANK-GRADE CIVIC ACTIVITY LEDGER - 3-SIGNAL ALIGNED */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-[9.5px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest font-black flex items-center gap-1.5">
-            <Layers size={13} className="text-emerald-500" />
-            <span>Civic Activity Ledger</span>
-          </p>
-          <span className="text-[8px] mono text-slate-400 uppercase font-bold">
-            Audited &amp; Cryptographically Sealed
+          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+            {isAnonMode ? 'Shielded Handle' : 'Public Handle'}
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {/* Signal 1: Reports Filed */}
-          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-rose-400/60 transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <SignalGlyphRed className="w-4 h-4" />
-              <span className="text-xl font-black mono text-rose-600 dark:text-rose-400">{prof.posts || 12}</span>
-            </div>
-            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">1. Citizen Speaks</div>
-            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Reports Filed</div>
-          </div>
-
-          {/* Signal 2: Gov Dispatches / In Progress */}
-          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-amber-400/60 transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <SignalGlyphAmber className="w-4 h-4" />
-              <span className="text-xl font-black mono text-amber-600 dark:text-amber-400">8</span>
-            </div>
-            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">2. Gov Dispatches</div>
-            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">SLA Active Repairs</div>
-          </div>
-
-          {/* Signal 3: Issues Resolved & Certified */}
-          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-emerald-400/60 transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <SignalGlyphGreen className="w-4 h-4" />
-              <span className="text-xl font-black mono text-emerald-600 dark:text-emerald-400">{myResolved}</span>
-            </div>
-            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">3. Citizen Heard</div>
-            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Certified Proofs</div>
-          </div>
-
-          {/* Anti-Corruption Disclosures */}
-          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-rose-400/60 transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <Lock size={15} className="text-rose-500" />
-              <span className="text-xl font-black mono text-rose-600 dark:text-rose-400">{myCorrupt}</span>
-            </div>
-            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">Anti-Corruption</div>
-            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Whistleblower Walls</div>
-          </div>
-
-          {/* Community Upvotes */}
-          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-teal-400/60 transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <Sparkles size={15} className="text-teal-500" />
-              <span className="text-xl font-black mono text-teal-600 dark:text-teal-400">{myUpvotes}</span>
-            </div>
-            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">Community Trust</div>
-            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Public Upvotes</div>
-          </div>
-
-          {/* Parish Champion Awards */}
-          <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 shadow-xs hover:border-amber-400/60 transition-colors">
-            <div className="flex items-center justify-between mb-1">
-              <Award size={15} className="text-amber-500" />
-              <span className="text-xl font-black mono text-amber-600 dark:text-amber-400">1</span>
-            </div>
-            <div className="text-[10px] font-black text-slate-900 dark:text-slate-200">Parish Honors</div>
-            <div className="text-[8px] mono text-slate-500 dark:text-slate-400">Champion Awards</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4-Pillar Reward Navigation Tabs */}
-      <div className="space-y-3">
-        <div className="flex border border-slate-200 dark:border-slate-800 overflow-x-auto bg-slate-100 dark:bg-slate-950/80 rounded-xl p-1 gap-1">
-          <button
-            onClick={() => setActiveTab('perks')}
-            className={`flex-1 py-2 px-3 text-[9px] mono font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'perks' 
-                ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 shadow-sm border border-slate-200 dark:border-slate-700' 
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <Gift size={13} className={activeTab === 'perks' ? 'text-amber-600 dark:text-amber-400' : ''} />
-            <span>Civic Perks</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('leaderboard')}
-            className={`flex-1 py-2 px-3 text-[9px] mono font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'leaderboard' 
-                ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 shadow-sm border border-slate-200 dark:border-slate-700' 
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <Trophy size={13} className={activeTab === 'leaderboard' ? 'text-amber-600 dark:text-amber-400' : ''} />
-            <span>Parish Board</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('ranks')}
-            className={`flex-1 py-2 px-3 text-[9px] mono font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'ranks' 
-                ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 shadow-sm border border-slate-200 dark:border-slate-700' 
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <ShieldCheck size={13} className={activeTab === 'ranks' ? 'text-amber-600 dark:text-amber-400' : ''} />
-            <span>Ranks</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('walls')}
-            className={`flex-1 py-2 px-3 text-[9px] mono font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'walls' 
-                ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 shadow-sm border border-slate-200 dark:border-slate-700' 
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <Layers size={13} className={activeTab === 'walls' ? 'text-amber-600 dark:text-amber-400' : ''} />
-            <span>Following</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('export')}
-            className={`flex-1 py-2 px-3 text-[9px] mono font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'export' 
-                ? 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-300 shadow-sm border border-slate-200 dark:border-slate-700' 
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <FolderArchive size={13} className={activeTab === 'export' ? 'text-amber-600 dark:text-amber-400' : ''} />
-            <span>Export ZIP</span>
-          </button>
-        </div>
-
-        {/* Tab 1: Civic Perks (Real Value & Tangible Benefits) */}
-        {activeTab === 'perks' && (
-          <div className="space-y-3 animate-fade-in">
-            {/* Direct Link to Pre-Funded Perk Escrow Vault for Community Service / CSR */}
-            <div className="bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-teal-500/15 border border-amber-500/30 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] font-black uppercase mono text-amber-800 dark:text-amber-300">
-                    🎁 CSR &amp; Digital Utility Perk Escrow Vault
+        {/* Main Identity Body */}
+        <div className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+            <div className="flex items-center gap-3.5 min-w-0">
+              {/* Avatar Box (Tap to upload photo) */}
+              <div
+                onClick={() => setShowAvatarModal(true)}
+                title="Tap to update identity photo"
+                className="relative w-15 h-15 sm:w-16 sm:h-16 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center overflow-hidden cursor-pointer group shrink-0"
+              >
+                {currentAvatar ? (
+                  <img
+                    src={currentAvatar}
+                    alt={activeUser.name}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="text-base sm:text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {initials}
                   </span>
-                  <span className="text-[8px] font-bold bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/30 font-mono">
-                    Open To All Categories
+                )}
+                <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                  <Camera size={15} />
+                </div>
+              </div>
+
+              {/* Name, Tier & Jurisdiction */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                    {activeUser.name}
+                  </h1>
+                  <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                </div>
+                <div className="text-xs font-medium text-emerald-700 dark:text-emerald-400 mt-0.5">
+                  {tier.name}
+                </div>
+                <div className="flex items-center gap-3 text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin size={11} className="text-slate-400" />
+                    <span>{editLocation}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar size={11} className="text-slate-400" />
+                    <span>ID #{activeUser.id.slice(-5).toUpperCase()}</span>
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-700 dark:text-slate-300 leading-snug">
-                  Practice community service: Individual citizens, diaspora patrons, private sector &amp; government can batch-deposit pre-funded airtime, data &amp; water vouchers for outstanding civic watchdogs.
-                </p>
               </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => go('perk_vault')}
-                className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs mono uppercase shrink-0 transition-all shadow-xs flex items-center justify-center gap-1"
+                onClick={() => setIsEditing(!isEditing)}
+                className="px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
-                <span>Escrow Vault →</span>
+                <Edit3 size={12} />
+                <span>{isEditing ? 'Close' : 'Edit Identity'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCivicCardModal(true)}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <QrCode size={13} />
+                <span>Civic Pass</span>
               </button>
             </div>
+          </div>
 
-            <div className="bg-amber-600/10 dark:bg-amber-500/10 border border-amber-600/20 dark:border-amber-500/20 p-3.5 rounded-xl space-y-1">
-              <span className="text-amber-800 dark:text-amber-300 font-bold text-xs uppercase mono flex items-center gap-1.5">
-                <Ticket size={14} className="text-amber-600 dark:text-amber-400" /> Tangible Value for Active Citizens
-              </span>
-              <p className="text-[10.5px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                CivicScore converts community monitoring into real utility bill discounts, telecom data bundles, and official council recognition.
-              </p>
-            </div>
+          {/* Bio */}
+          {!isEditing && (
+            <p className="mt-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {editBio}
+            </p>
+          )}
 
-            <div className="grid grid-cols-1 gap-3">
-              {/* Category A: Digital Items Dispatched */}
-              <div className="space-y-2">
-                <span className="text-[10px] mono uppercase font-bold text-slate-600 dark:text-slate-400 tracking-wider flex items-center gap-1.5">
-                  <Zap size={13} className="text-amber-600 dark:text-amber-400" /> Digital Perks Dispatched (1-Click Redeem)
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="card p-3.5 border border-amber-600/20 dark:border-amber-500/20 bg-white dark:bg-slate-900/90 rounded-xl space-y-2.5 shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="chip ch-gov text-[9px]">NWSC Utility Waiver</span>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1">10% Water Bill Discount Voucher</h4>
-                        <p className="text-[9px] mono text-slate-500 dark:text-slate-400 mt-0.5">Dispatched for Watchdog Rank (1,000+ pts)</p>
-                      </div>
-                      <span className="text-amber-800 dark:text-amber-300 font-mono font-bold text-[10px] bg-amber-600/15 dark:bg-amber-500/15 px-2 py-0.5 rounded border border-amber-600/20">Active</span>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px] font-mono text-center text-amber-800 dark:text-amber-300 font-bold">
-                      Voucher Code: NWSC-CIVIC-8841
-                    </div>
-                    <button
-                      onClick={() => toast('Voucher NWSC-CIVIC-8841 copied to clipboard!', 'success')}
-                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-lg text-[10px] mono font-bold border border-slate-200 dark:border-slate-700 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <Ticket size={12} className="text-amber-600 dark:text-amber-400" />
-                      <span>Copy Voucher Code</span>
-                    </button>
-                  </div>
-
-                  <div className="card p-3.5 border border-teal-600/20 dark:border-teal-500/20 bg-white dark:bg-slate-900/90 rounded-xl space-y-2.5 shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="chip ch-private text-[9px]">MTN Telecom Perk</span>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1">1GB Free Civic Data Bundle</h4>
-                        <p className="text-[9px] mono text-slate-500 dark:text-slate-400 mt-0.5">Dispatched directly to line for Top 3 Parish Champion</p>
-                      </div>
-                      <span className="text-teal-700 dark:text-teal-400 font-mono font-bold text-[10px] bg-teal-50 dark:bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20">Credited</span>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px] font-mono text-center text-teal-700 dark:text-teal-300 font-bold">
-                      Sent to: +256 778 277 900 / +256 748 338 796
-                    </div>
-                    <button
-                      onClick={() => toast('1GB Civic Data bundle is active on your phone line!', 'info')}
-                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-teal-700 dark:text-teal-300 rounded-lg text-[10px] mono font-bold border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5"
-                    >
-                      <CheckCircle2 size={12} />
-                      <span>Active Monthly Airtime Perk</span>
-                    </button>
-                  </div>
+          {/* Inline Edit Identity Drawer */}
+          {isEditing && (
+            <div className="mt-4 pt-4 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-3 animate-fade-in">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                    Watchdog Handle
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    placeholder="@CitizenWatchdog"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                    Jurisdiction / Parish
+                  </label>
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    placeholder="e.g. Amsterdam · Noord-Holland"
+                  />
                 </div>
               </div>
 
-              {/* Category B: Physical Prize HQ Pickup Passes */}
-              <div className="space-y-2 pt-1">
-                <span className="text-[10px] mono uppercase font-bold text-slate-600 dark:text-slate-400 tracking-wider flex items-center gap-1.5">
-                  <Building2 size={13} className="text-amber-600 dark:text-amber-400" /> Physical Prize Collection Passes (HQ Desk Pickup)
-                </span>
+              <div>
+                <label className="block text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                  Civic Mandate Bio
+                </label>
+                <textarea
+                  rows={2}
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
 
-                <div className="card p-4 border border-amber-600/30 dark:border-amber-500/30 bg-white dark:bg-slate-900/90 rounded-xl space-y-3 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-600/10 dark:bg-amber-500/10 border border-amber-600/30 dark:border-amber-500/30 flex items-center justify-center text-amber-700 dark:text-amber-400 font-black text-base">
-                        <Trophy size={20} />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">Parish Champion Watchdog Plaque & Solar Lantern</h4>
-                        <p className="text-[9px] mono text-amber-700 dark:text-amber-400 font-semibold">Issued by KCCA Nakawa Urban Council</p>
-                      </div>
-                    </div>
-                    <span className="text-[9px] mono bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-bold">
-                      Ready for Pickup
-                    </span>
-                  </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+                <label className="inline-flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isAnonMode}
+                    onChange={(e) => setIsAnonMode(e.target.checked)}
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <Lock size={12} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Keep real identity shielded (Zero-PII cryptographic pseudonym)</span>
+                </label>
 
-                  <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 text-[10px] mono">
-                    <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                      <span className="text-slate-400 dark:text-slate-500">Allocated HQ:</span>
-                      <strong className="text-slate-900 dark:text-slate-100">KCCA Nakawa Division HQ (Block B, Room 12)</strong>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                      <span className="text-slate-400 dark:text-slate-500">Contact Officer:</span>
-                      <span className="text-amber-800 dark:text-amber-300 font-bold">Mr. Okello (Parish Admin Desk)</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-300">
-                      <span className="text-slate-400 dark:text-slate-500">Pickup Hours:</span>
-                      <span className="text-slate-700 dark:text-slate-300">Mon-Fri 8:00 AM – 4:00 PM</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-300 pt-1.5 border-t border-slate-200 dark:border-slate-800">
-                      <span className="text-slate-400 dark:text-slate-500">Collection Pass:</span>
-                      <span className="text-amber-700 dark:text-amber-400 font-bold font-mono">PASS-NKW-8841</span>
-                    </div>
-                  </div>
-
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toast('Collection Pass PASS-NKW-8841 ready! Present your NIN ID & QR at KCCA Nakawa HQ.', 'success')}
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold py-2.5 px-3 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                    type="button"
+                    onClick={() => setShowAvatarModal(true)}
+                    className="px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 cursor-pointer"
                   >
-                    <QrCode size={14} className="text-amber-400 dark:text-slate-950" />
-                    <span>Show Collection Pass QR for HQ Desk</span>
+                    <Camera size={12} />
+                    <span>Photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveProfile}
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Check size={13} />
+                    <span>Save</span>
                   </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Tab 2: Parish Champion Leaderboard */}
-        {activeTab === 'leaderboard' && (
-          <div className="card p-4 space-y-3 animate-fade-in border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 rounded-xl shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase mono flex items-center gap-1.5">
-                  <Trophy size={14} className="text-amber-600 dark:text-amber-400" />
-                  Nakawa Division · Bukoto Parish Leaderboard
-                </h4>
-                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Public recognition for top active reporters in your immediate parish</p>
+          {/* 4-Column Telemetry Strip */}
+          <div className="grid grid-cols-4 gap-2 mt-4 pt-3.5 border-t border-[#e3e6ea] dark:border-[#262b36]">
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-white tabular-nums">
+                {myPosts.length}
               </div>
-              <span className="text-[9px] mono text-amber-800 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-600/20">
-                August 2026 Cycle
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {parishLeaderboard.map((item) => (
-                <div
-                  key={item.rank}
-                  className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition-colors ${
-                    item.isMe
-                      ? 'bg-amber-600/10 dark:bg-amber-500/10 border-amber-600/30 dark:border-amber-500/40 text-slate-900 dark:text-slate-100 font-bold'
-                      : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-black ${
-                      item.rank === 1 ? 'bg-amber-700 dark:bg-amber-500 text-white dark:text-slate-950' : item.rank === 2 ? 'bg-slate-300 text-slate-950' : item.rank === 3 ? 'bg-amber-800 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                    }`}>
-                      #{item.rank}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">{item.name}</span>
-                        {item.isMe && <span className="text-[8px] mono bg-amber-700 dark:bg-amber-500 text-white dark:text-slate-950 px-1.5 py-0.5 rounded font-black">YOU</span>}
-                      </div>
-                      <p className="text-[9px] mono text-slate-500 dark:text-slate-400">{item.badge} · {item.resolved} Issues Resolved</p>
-                    </div>
-                  </div>
-                  <div className="text-right font-mono">
-                    <span className="text-amber-700 dark:text-amber-400 font-bold">{item.score.toLocaleString()}</span>
-                    <span className="text-[9px] text-slate-400 dark:text-slate-500 block">pts</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[9.5px] text-slate-600 dark:text-slate-400 space-y-1">
-              <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                <ShieldCheck size={12} className="text-teal-600 dark:text-teal-400" /> Anti-Gaming & Geo-Locking Rules:
-              </span>
-              <p>1. Geo-Locked to NIN Parish location. 2. Quality &gt; Quantity (+250 for verified resolution vs +50 for reporting). 3. Same-IP upvote ring protection active.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 3: Ranks & Influence Power */}
-        {activeTab === 'ranks' && (
-          <div className="card p-4 space-y-3 animate-fade-in border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 rounded-xl shadow-sm">
-            <p className="text-[9px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">Civic Rank & Influence Ladder</p>
-            <div className="space-y-2.5">
-              {CIVIC_RANKS.map((r) => {
-                const active = rank.name === r.name;
-                const earned = (prof.civic_score || 0) >= r.min;
-                return (
-                  <div key={r.name} className={`p-3 rounded-xl border transition-all ${active ? 'bg-amber-600/10 dark:bg-amber-500/10 border-amber-600/30 dark:border-amber-500/40' : earned ? 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800' : 'opacity-40 bg-slate-100 dark:bg-slate-950 border-slate-200 dark:border-slate-900'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[13px] mono font-bold ${active ? 'text-amber-800 dark:text-amber-400 font-black' : 'text-slate-800 dark:text-slate-300'}`}>
-                          {r.name}
-                        </span>
-                        {active && <span className="text-[8px] mono bg-amber-700 dark:bg-amber-500 text-white dark:text-slate-950 px-1.5 py-0.5 rounded font-bold">CURRENT RANK</span>}
-                      </div>
-                      <span className="text-[10px] mono font-bold text-slate-500 dark:text-slate-400">{r.min.toLocaleString()} pts</span>
-                    </div>
-                    <p className="text-[9.5px] text-slate-600 dark:text-slate-400 mt-1">{r.desc}</p>
-                    <div className="mt-2 text-[9px] mono text-teal-600 dark:text-teal-400 flex items-center gap-1 font-medium">
-                      <Zap size={11} /> Influence Power: {r.name === 'Sentinel' || r.name === 'Watchdog' ? 'Priority Inbox Placement + Direct Escalation Boost' : 'Standard Inbox Queue'}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 4: Followed Department Walls */}
-        {activeTab === 'walls' && (
-          <div className="card p-4 space-y-3 animate-fade-in border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 rounded-xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-[9px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">Walls Following</p>
-              <button onClick={() => go('depts')} className="text-[9px] mono text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-bold">
-                + Browse Walls
-              </button>
-            </div>
-            {(activeUser.followed || prof.followed || []).length === 0 ? (
-              <p className="text-xs text-slate-500 mono">No walls followed yet.</p>
-            ) : (
-              (activeUser.followed || prof.followed || ['kcca', 'umeme', 'nwsc']).map((did, idx) => {
-                const d = getDept(activeUser.country, did);
-                return (
-                  <div
-                    key={`${did}-${idx}`}
-                    onClick={() => {
-                      setActiveDept(did);
-                      setActiveDeptCountry(activeUser.country);
-                      go('dept_wall');
-                    }}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700 transition-all"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      {d.icon && <span className="text-base">{d.icon}</span>}
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{d.name}</span>
-                        <div className="text-[9px] mono text-slate-500 dark:text-slate-400 mt-0.5">SLA Target: {d.sla || 48}h Response Window</div>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="text-slate-400 dark:text-slate-500" />
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* Tab 5: Complete Build & Database ZIP Export */}
-        {activeTab === 'export' && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-              <div className="flex items-center gap-2">
-                <FolderArchive size={18} className="text-amber-600 dark:text-amber-400" />
-                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Full-Stack Build & Database Packager
-                </h4>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Download the complete deployable distribution package of CivicDuty, containing the React frontend, Express Node.js backend server (`server.ts`), and JSON ledger database with all uploaded photos, tickets, and citizen accounts. Ready to push to GitHub or deploy directly to Docker/Render/Cloud Run.
-              </p>
-            </div>
-
-            {/* Quick 1-Click Download Button */}
-            <div className="card p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 rounded-2xl space-y-4 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="text-[10px] mono uppercase font-bold text-amber-700 dark:text-amber-400">
-                    Production Release ZIP
-                  </span>
-                  <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
-                    civicduty-complete-fullstack-build.zip
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Includes frontend build, backend server (`server.ts`), Dockerfile, docker-compose, and full database JSON ledger.
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-amber-600/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0">
-                  <Code2 size={24} />
-                </div>
-              </div>
-
-              {exportProgress && (
-                <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs mono text-amber-700 dark:text-amber-400 flex items-center gap-2">
-                  <RefreshCw size={14} className="animate-spin" />
-                  <span>{exportProgress}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                <button
-                  type="button"
-                  disabled={isExportingZip}
-                  onClick={handleDownloadZip}
-                  className="w-full bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99]"
-                >
-                  <Download size={16} />
-                  <span>{isExportingZip ? 'Packaging...' : 'Download Live Build ZIP'}</span>
-                </button>
-
-                <a
-                  href="/api/export/zip"
-                  download="civicduty-fullstack-build.zip"
-                  className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-bold py-3 px-4 rounded-xl text-xs mono uppercase tracking-wider flex items-center justify-center gap-2 transition-all border border-slate-200 dark:border-slate-700"
-                >
-                  <Code2 size={16} />
-                  <span>Server-Side ZIP</span>
-                </a>
+              <div className="text-[9.5px] font-mono uppercase text-slate-500 dark:text-slate-400">
+                Dispatches
               </div>
             </div>
-
-            {/* GitHub & Deployment Guide */}
-            <div className="card p-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 mono">
-                🚀 How to Push to GitHub & Deploy
-              </h4>
-              <div className="bg-slate-950 text-slate-200 p-3 rounded-xl font-mono text-[11px] space-y-1.5 overflow-x-auto">
-                <p className="text-slate-500"># 1. Unzip and initialize GitHub repository</p>
-                <p><span className="text-emerald-400">git</span> init</p>
-                <p><span className="text-emerald-400">git</span> add .</p>
-                <p><span className="text-emerald-400">git</span> commit -m "feat: CivicDuty complete fullstack application"</p>
-                <p><span className="text-emerald-400">git</span> branch -M main</p>
-                <p><span className="text-emerald-400">git</span> remote add origin https://github.com/YOUR_USERNAME/civicduty.git</p>
-                <p><span className="text-emerald-400">git</span> push -u origin main</p>
-                <p className="text-slate-500 pt-2"># 2. Local execution or Docker deployment</p>
-                <p><span className="text-amber-400">npm</span> install && <span className="text-amber-400">npm</span> run dev</p>
-                <p><span className="text-sky-400">docker</span> compose up -d</p>
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="text-sm sm:text-base font-mono font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                {myResolvedPosts.length}
+              </div>
+              <div className="text-[9.5px] font-mono uppercase text-slate-500 dark:text-slate-400">
+                Resolved
               </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Disconnect Session */}
-      <button
-        onClick={() => {
-          setUser(null);
-          go('splash');
-        }}
-        className="w-full card py-3 text-xs mono text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors text-center rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
-      >
-        Disconnect Session
-      </button>
-
-      {/* ========================================================= */}
-      {/* DIGITAL CERTIFICATE OF CIVIC EXCELLENCE MODAL             */}
-      {/* ========================================================= */}
-      {showCertModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 overflow-y-auto animate-fade-in">
-          <div className="bg-white text-slate-950 w-full max-w-xl rounded-2xl p-6 sm:p-8 shadow-2xl border-4 border-amber-600 relative font-serif space-y-6">
-            {/* Close Button */}
-            <button
-              onClick={() => setShowCertModal(false)}
-              className="absolute top-3 right-3 text-slate-500 hover:text-slate-900 bg-slate-100 p-1.5 rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            {/* Header / Coat of Arms Header */}
-            <div className="text-center space-y-1.5 border-b-2 border-slate-900 pb-4">
-              <div className="flex justify-center mb-1">
-                <span className="text-3xl">🇺🇬</span>
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="text-sm sm:text-base font-mono font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                {myPraisePosts.length}
               </div>
-              <h2 className="text-xs sm:text-sm font-black tracking-widest text-slate-900 uppercase">
-                REPUBLIC OF UGANDA
-              </h2>
-              <p className="text-[10px] sm:text-xs font-bold text-amber-800 uppercase tracking-wide">
-                MINISTRY OF LOCAL GOVERNMENT / KCCA NAKAWA DIVISION
-              </p>
-              <div className="pt-2">
-                <span className="text-lg sm:text-2xl font-black text-slate-950 uppercase tracking-tight border-b-2 border-amber-600 pb-0.5 inline-block font-sans">
-                  CERTIFICATE OF CIVIC EXCELLENCE
-                </span>
+              <div className="text-[9.5px] font-mono uppercase text-slate-500 dark:text-slate-400">
+                Praise
               </div>
             </div>
-
-            {/* Main Certificate Text */}
-            <div className="text-center space-y-4 font-serif leading-relaxed text-xs sm:text-sm text-slate-800">
-              <p className="italic text-slate-600">This is to officially certify that</p>
-              
-              <div>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-950 uppercase font-sans tracking-wide">
-                  {prof.display_name || activeUser.name || 'Inzama Robin'}
-                </h3>
-                <p className="text-[11px] font-mono font-bold text-slate-600 mt-0.5">
-                  NIN: CM880411029482 · BUKOTO PARISH, NAKAWA DIVISION
-                </p>
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="text-sm sm:text-base font-mono font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">
+                {score}
               </div>
-
-              <p className="italic text-slate-600">is hereby recognized and awarded the title of</p>
-
-              <div className="bg-amber-50 border-2 border-amber-600 p-3 rounded-xl inline-block">
-                <span className="text-sm sm:text-base font-black text-amber-950 uppercase tracking-wider font-sans">
-                  "PARISH CHAMPION - BEST REPORTER"
-                </span>
-                <p className="text-[10px] font-mono text-amber-800 font-bold mt-0.5">AUGUST 2026 CYCLE</p>
+              <div className="text-[9.5px] font-mono uppercase text-slate-500 dark:text-slate-400">
+                Civic Score
               </div>
-
-              <p className="text-xs text-slate-700 max-w-md mx-auto">
-                For outstanding civic contribution to public service delivery monitoring, active citizenship, and transparent infrastructure reporting in Nakawa Division.
-              </p>
-
-              <div className="flex justify-center gap-6 text-xs font-mono bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <div>
-                  <span className="text-slate-500 text-[10px] block">CIVICSCORE</span>
-                  <strong className="text-amber-700 font-bold">{prof.civic_score || 1240} Pts</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] block">ISSUES RESOLVED</span>
-                  <strong className="text-teal-700 font-bold">{myResolved} Verified</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] block">COMMUNITY RANK</span>
-                  <strong className="text-slate-900 font-bold">#1 in Bukoto</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Digital Signatures & QR Seal */}
-            <div className="pt-4 border-t border-slate-300 flex flex-col sm:flex-row items-center justify-between gap-4 font-sans text-xs">
-              <div className="text-center sm:text-left space-y-1">
-                <div className="w-32 border-b border-slate-900 pb-1 font-serif italic text-slate-700 font-bold">
-                  E. Tumusiime
-                </div>
-                <p className="font-bold text-slate-950 text-[11px]">Town Clerk / Accounting Officer</p>
-                <p className="text-[9px] text-slate-500 font-mono">Nakawa Urban Council · Kampala</p>
-              </div>
-
-              {/* QR Verification Seal */}
-              <div className="flex items-center gap-2 bg-slate-100 p-2 rounded-xl border border-slate-300 text-left">
-                <div className="bg-white p-1.5 rounded border border-slate-300 text-slate-900">
-                  <QrCode size={36} />
-                </div>
-                <div className="text-[9px] font-mono leading-tight">
-                  <span className="font-bold text-slate-900 block">AUTHENTICATED</span>
-                  <span className="text-slate-600">Audit Hash: UG-CERT-8841</span>
-                  <span className="text-teal-700 font-bold block mt-0.5">civicduty.ug/verify/UG8841</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2 font-sans">
-              <button
-                onClick={() => {
-                  toast('Digital Certificate PDF downloaded!', 'success');
-                  setShowCertModal(false);
-                }}
-                className="flex-1 bg-amber-700 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
-              >
-                <Download size={14} />
-                <span>Download PDF</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  toast('Certificate link copied to share on WhatsApp/Twitter!', 'info');
-                }}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all"
-              >
-                <Share2 size={14} />
-                <span>Share</span>
-              </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Avatar & Profile Photo Upload Modal */}
-      {showAvatarModal && (
-        <AvatarUploadModal
-          isOpen={showAvatarModal}
-          onClose={() => setShowAvatarModal(false)}
-        />
+      {/* 2. Reputation Standing & Perk Escrow Shortcut */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldCheck size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+              Reputation Standing: {tier.short} ({score} / {tier.next} pts)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowReputationRules(!showReputationRules)}
+            className="text-[10.5px] font-mono font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 cursor-pointer shrink-0"
+          >
+            <span>Rules</span>
+            {showReputationRules ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </button>
+        </div>
+
+        {/* Clean Progress Bar */}
+        <div className="w-full h-1.5 bg-[#f1f3f4] dark:bg-[#0e1116] rounded-full overflow-hidden border border-[#e3e6ea] dark:border-[#262b36]">
+          <div
+            className="h-full bg-emerald-600 transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
+        {/* 4 Tier Milestones */}
+        <div className="grid grid-cols-4 gap-1.5 text-[9.5px] font-mono">
+          {[
+            { label: 'Observer', min: 0 },
+            { label: 'Watchdog', min: 50 },
+            { label: 'Champion', min: 150 },
+            { label: 'Guardian', min: 300 },
+          ].map((m) => {
+            const reached = score >= m.min;
+            return (
+              <div
+                key={m.label}
+                className={`px-2 py-1 rounded border text-center truncate ${
+                  reached
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-semibold'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-400'
+                }`}
+              >
+                {m.label} ({m.min}+)
+              </div>
+            );
+          })}
+        </div>
+
+        {showReputationRules && (
+          <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono animate-fade-in">
+            <div>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">+5 pts</span>
+              <p className="text-slate-500 dark:text-slate-400 mt-0.5">Verified GPS/Photo Dispatch</p>
+            </div>
+            <div>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">+10 pts</span>
+              <p className="text-slate-500 dark:text-slate-400 mt-0.5">Confirmed Resolution</p>
+            </div>
+            <div>
+              <span className="text-amber-600 dark:text-amber-400 font-bold">+5 pts</span>
+              <p className="text-slate-500 dark:text-slate-400 mt-0.5">Public Servant Commendation</p>
+            </div>
+            <div>
+              <span className="text-rose-600 dark:text-rose-400 font-bold">-15 pts</span>
+              <p className="text-slate-500 dark:text-slate-400 mt-0.5">Fabricated / Spam Report</p>
+            </div>
+          </div>
+        )}
+
+        {/* Single Concise Link to Honours & Perk Escrow Vault */}
+        <button
+          type="button"
+          onClick={() => go('perk_vault')}
+          className="w-full p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Award size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+              Redeem Utility Vouchers &amp; Honours in Perk Escrow Vault
+            </span>
+          </div>
+          <ArrowUpRight size={14} className="text-slate-400 shrink-0" />
+        </button>
+      </div>
+
+      {/* 3. Monitored Desks Strip */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-3.5">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <Building2 size={12} className="text-emerald-600 dark:text-emerald-400" />
+            <span>Monitored Service Desks ({followed.length})</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => go('depts')}
+            className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+          >
+            + Directory
+          </button>
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
+          {followed.map((did) => {
+            const d = getDept(activeUser.country, did);
+            return (
+              <button
+                key={did}
+                type="button"
+                onClick={() => {
+                  setActiveDept(did);
+                  setActiveDeptCountry(activeUser.country);
+                  go('dept_wall');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-[11px] font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+              >
+                <DeptIcon dept={d} size={11} className="text-slate-500 dark:text-slate-400" />
+                <span>{d.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4. Citizen Dispatch Timeline */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+        <div className="flex border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] overflow-x-auto scrollbar-none">
+          {[
+            { id: 'reports', label: `Dispatches (${myPosts.length})` },
+            { id: 'resolved', label: `Resolved (${myResolvedPosts.length})` },
+            { id: 'praise', label: `Praise (${myPraisePosts.length})` },
+            { id: 'saved', label: `Saved (${savedPosts.length})` },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex-1 py-2.5 px-3 text-[11px] font-mono font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                  isActive
+                    ? 'text-emerald-700 dark:text-emerald-400 border-b-2 border-emerald-600 bg-white dark:bg-[#161a22]'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
+          {displayedPosts.length === 0 ? (
+            <div className="p-8 text-center space-y-2.5">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                No dispatches in this view yet.
+              </p>
+              <button
+                type="button"
+                onClick={() => go('compose')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>File New Dispatch</span>
+              </button>
+            </div>
+          ) : (
+            displayedPosts.map((post) => (
+              <PostCardComponent
+                key={post.id}
+                p={post}
+                onSelect={() => {
+                  setActivePost(post.id);
+                  go('post_detail');
+                }}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 5. Jurisdiction & Session Controls */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+          Zero-PII Session · SHA-256 Ledger Linked
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => go('ob1')}
+            className="px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+          >
+            <Globe size={12} />
+            <span>Change Jurisdiction</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setUser(null);
+              go('splash');
+            }}
+            className="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/15 text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 cursor-pointer"
+          >
+            <LogOut size={12} />
+            <span>Exit Session</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Avatar Photo Upload Modal */}
+      <AvatarUploadModal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        currentAvatar={currentAvatar}
+        userName={activeUser.name}
+        onSave={handleSaveAvatar}
+      />
+
+      {/* Civic Pass Modal (Google AI Studio Styled) */}
+      {showCivicCardModal && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setShowCivicCardModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <QrCode size={14} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                  Sovereign Watchdog Credential
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCivicCardModal(false)}
+                className="w-7 h-7 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold">
+                    {countryPerks.countryName} · Watchdog Pass
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    #{activeUser.id.slice(-6).toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-base font-bold text-slate-900 dark:text-white">
+                  {activeUser.name}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  {tier.name} · {score} Civic Points
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] text-center font-mono">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-white">{myPosts.length}</div>
+                    <div className="text-[9px] text-slate-500">Dispatches</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      {myResolvedPosts.length}
+                    </div>
+                    <div className="text-[9px] text-slate-500">Resolved</div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                      {myPraisePosts.length}
+                    </div>
+                    <div className="text-[9px] text-slate-500">Praise</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyPass}
+                  className="flex-1 py-2 px-3 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Copy size={12} />
+                  <span>Copy Summary</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadCertificate}
+                  className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Download size={12} />
+                  <span>Download PNG</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

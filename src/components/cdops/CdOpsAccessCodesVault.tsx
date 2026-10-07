@@ -13,13 +13,13 @@ import {
   Send,
   Lock,
   Landmark,
-  Sparkles,
   Info,
   ChevronRight,
   Printer,
   Globe,
   Radio,
   UserCheck,
+  X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { GOV_CODES } from '../../data/tiers';
@@ -69,7 +69,7 @@ export const CdOpsAccessCodesVault: React.FC = () => {
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedCode(text);
-    toast(`✓ ${label} copied to clipboard!`, 'emerald');
+    toast(`${label} copied to clipboard.`, 'emerald');
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
@@ -107,12 +107,12 @@ export const CdOpsAccessCodesVault: React.FC = () => {
   // Target data for the Diplomatic Transmittal Memo
   const memoTargetCode = selectedMemoCode || 'PS-MOLG-2026';
   const memoTargetData = allCodesMap[memoTargetCode] || GOV_CODES['PS-MOLG-2026'];
-  const memoTargetCountry = COUNTRIES[memoTargetData?.country as any] || { name: 'Uganda', flag: '🇺🇬' };
+  const memoTargetCountry = COUNTRIES[memoTargetData?.country as any] || { name: 'Uganda', flag: 'UG' };
 
   return (
     <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-100">
       {/* Executive Header */}
-      <div className="card p-5 bg-gradient-to-r from-teal-500/10 via-amber-500/5 to-transparent border-teal-500/30 space-y-2">
+      <div className="card p-5 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400">
@@ -149,8 +149,8 @@ export const CdOpsAccessCodesVault: React.FC = () => {
 
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-xl font-black shadow-md border-2 border-teal-400">
-              🇺🇬
+            <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center text-sm font-mono font-bold border border-teal-500/30">
+              UG
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -368,10 +368,10 @@ CivicDuty Platform Operations (CD-Ops)`;
               onChange={(e) => setSelectedCountryFilter(e.target.value)}
               className="px-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
             >
-              <option value="ALL">🌐 All Countries</option>
+              <option value="ALL">All Countries (Global)</option>
               {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
                 <option key={cCode} value={cCode}>
-                  {cInfo.flag} {cInfo.name}
+                  [{cCode}] {cInfo.name}
                 </option>
               ))}
             </select>
@@ -407,7 +407,9 @@ CivicDuty Platform Operations (CD-Ops)`;
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-base">{country?.flag || '🌐'}</span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        {data.country}
+                      </span>
                       <code className="text-xs font-black mono text-teal-700 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-lg">
                         {code}
                       </code>
@@ -503,7 +505,7 @@ CivicDuty Platform Operations (CD-Ops)`;
                 onClick={() => setIsMintModalOpen(false)}
                 className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
@@ -534,7 +536,7 @@ CivicDuty Platform Operations (CD-Ops)`;
                   >
                     {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
                       <option key={cCode} value={cCode}>
-                        {cInfo.flag} {cInfo.name} ({cCode})
+                        [{cCode}] {cInfo.name}
                       </option>
                     ))}
                   </select>

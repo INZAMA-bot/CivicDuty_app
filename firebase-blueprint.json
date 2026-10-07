@@ -22,7 +22,11 @@
         "is_corruption": { "type": "boolean" },
         "created_at": { "type": "string", "maxLength": 64 },
         "upvotes": { "type": "number" },
-        "crypto_seal_hash": { "type": "string", "maxLength": 128 }
+        "crypto_seal_hash": { "type": "string", "maxLength": 128 },
+        "compiled_count": { "type": "number" },
+        "is_master_dossier": { "type": "boolean" },
+        "is_demo": { "type": "boolean" },
+        "demo_highlight": { "type": "string", "maxLength": 256 }
       },
       "required": ["id", "country", "dept", "lane", "title", "body", "source", "status", "created_at"]
     },
@@ -190,6 +194,29 @@
         "acceptedAt": { "type": "string", "maxLength": 64 }
       },
       "required": ["id", "stationId", "stationName", "tier", "country", "designation", "status"]
+    },
+    "PromotionalAd": {
+      "title": "PromotionalAd",
+      "description": "CD-Ops manufactured promotional advertisement and sensitization bulletin broadcast on the civic feed.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string", "maxLength": 64 },
+        "categoryLabel": { "type": "string", "maxLength": 128 },
+        "tagline": { "type": "string", "maxLength": 256 },
+        "summary": { "type": "string", "maxLength": 2000 },
+        "imageSrc": { "type": "string", "maxLength": 512 },
+        "callToAction": { "type": "string", "maxLength": 128 },
+        "ctaType": { "type": "string", "maxLength": 64 },
+        "sponsorName": { "type": "string", "maxLength": 128 },
+        "targetAudience": { "type": "string", "maxLength": 128 },
+        "published": { "type": "boolean" },
+        "postedAt": { "type": "string", "maxLength": 64 },
+        "impressions": { "type": "number" },
+        "clicks": { "type": "number" }
+      },
+      "required": ["id", "title", "category", "tagline", "summary", "published", "postedAt"]
     }
   },
   "firestore": {
@@ -232,6 +259,10 @@
     "/station_invites/{inviteId}": {
       "schema": "StationInvite",
       "description": "Statutory direct-report station invites and rosters across tiers."
+    },
+    "/promotional_ads/{adId}": {
+      "schema": "PromotionalAd",
+      "description": "CD-Ops manufactured promotional ads and sensitization campaigns broadcast on the civic feed."
     }
   }
 }

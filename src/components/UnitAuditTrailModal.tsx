@@ -19,7 +19,7 @@ export const UnitAuditTrailModal: React.FC<UnitAuditTrailModalProps> = ({
 }) => {
   const { audit, user, toast } = useApp();
   const countryCode = user?.country || 'UG';
-  const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: '🏛️' };
+  const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: countryCode };
 
   const [search, setSearch] = useState('');
   const [filterAction, setFilterAction] = useState('all');
@@ -99,7 +99,7 @@ export const UnitAuditTrailModal: React.FC<UnitAuditTrailModalProps> = ({
                 <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-800">
                   Cryptographic Unit Ledger
                 </span>
-                <span className="text-[10px] mono text-slate-500">{countryObj.flag} {unitName}</span>
+                <span className="text-[10px] mono text-slate-500">{countryCode} · {unitName}</span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
                 Supervisory Audit Trail · {unitName}

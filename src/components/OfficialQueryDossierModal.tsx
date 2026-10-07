@@ -34,7 +34,7 @@ export const OfficialQueryDossierModal: React.FC<OfficialQueryDossierModalProps>
 }) => {
   const { user, toast, respondToOfficialQuery, determineOfficialQuery } = useApp();
   const countryCode = query.country || user?.country || 'UG';
-  const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: '🏛️' };
+  const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: countryCode };
 
   // Response form state
   const [showResponseForm, setShowResponseForm] = useState(false);
@@ -329,7 +329,7 @@ Cryptographic Audit Hash: SHA256-CD-${countryCode}-${query.queryRef.slice(-6)}
                   onClick={handleQuickPrefillDefense}
                   className="text-[10px] font-bold text-teal-700 dark:text-teal-400 hover:underline"
                 >
-                  ⚡ Quick Pre-fill
+                  Quick Pre-fill
                 </button>
               </div>
 
@@ -466,9 +466,9 @@ Cryptographic Audit Hash: SHA256-CD-${countryCode}-${query.queryRef.slice(-6)}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
-                    { id: 'resolved_exonerated', label: '✓ Exonerate & Resolve', desc: 'Defense accepted; no negligence.' },
-                    { id: 'remedial_directive', label: '⚠️ Remedial Directive', desc: '14-day close watch mandated.' },
-                    { id: 'escalated_igg', label: '⚖️ Escalate to IGG', desc: 'Referral for interdiction.' },
+                    { id: 'resolved_exonerated', label: 'Exonerate & Resolve', desc: 'Defense accepted; no negligence.' },
+                    { id: 'remedial_directive', label: 'Remedial Directive', desc: '14-day close watch mandated.' },
+                    { id: 'escalated_igg', label: 'Escalate to IGG', desc: 'Referral for interdiction.' },
                   ].map((v) => (
                     <button
                       type="button"

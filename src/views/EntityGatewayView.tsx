@@ -23,7 +23,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
-  Sparkles,
+  Layers,
   Users,
   TrendingDown,
   UserCheck,
@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 
 export const EntityGatewayView: React.FC = () => {
-  const { go, execGovLoginByData, toast, selectedCountry, setSelectedCountry } = useApp();
+  const { go, execGovLoginByData, toast, selectedCountry, setSelectedCountry, openLegalCenter } = useApp();
 
   const [activeTab, setActiveTab] = useState<'signin' | 'register_info'>('signin');
   const [code, setCode] = useState('');
@@ -43,7 +43,7 @@ export const EntityGatewayView: React.FC = () => {
   const profile = getCountryDesksProfile(activeCountry);
 
   const categories = [
-    { id: 'all', label: 'All Providers', icon: Sparkles },
+    { id: 'all', label: 'All Providers', icon: Layers },
     { id: 'education', label: 'Schools & Universities', icon: GraduationCap },
     { id: 'health', label: 'Hospitals & Clinics', icon: HeartPulse },
     { id: 'food_dining', label: 'Restaurants & Dining', icon: UtensilsCrossed },
@@ -152,7 +152,7 @@ export const EntityGatewayView: React.FC = () => {
       <CountrySelector variant="bar" />
 
       {/* Customer Service & Market Competition Dynamics Banner */}
-      <div className="p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-rose-500/10 dark:from-emerald-950/40 dark:via-amber-950/20 dark:to-rose-950/30 border border-amber-500/30 space-y-2.5">
+      <div className="p-4 rounded-3xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-500/30 space-y-2.5">
         <div className="flex items-center justify-between text-[10px] font-black uppercase mono text-amber-900 dark:text-amber-300">
           <span className="flex items-center gap-1.5">
             <Building2 size={14} className="text-emerald-600" /> Market Competition & Customer Retention Architecture ({profile.countryName})
@@ -190,26 +190,56 @@ export const EntityGatewayView: React.FC = () => {
       <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('signin')}
-          className={`py-2.5 px-3 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+          className={`py-2.5 px-3 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'signin'
               ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <KeyRound size={14} />
-          <span>Mount Desk (Sign In)</span>
+          <span>Provider Login (Desk Code)</span>
         </button>
         <button
           onClick={() => setActiveTab('register_info')}
-          className={`py-2.5 px-3 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+          className={`py-2.5 px-3 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'register_info'
               ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           }`}
         >
           <Building2 size={14} />
-          <span>Register New Provider</span>
+          <span>New Sign Up (30d Free Trial)</span>
         </button>
+      </div>
+
+      {/* Quick Trust & Legal Charter Strip */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-400 flex-wrap">
+        <span>30-Day Founding Partner Trial ($0 Due Today)</span>
+        <div className="flex items-center gap-2 font-bold">
+          <button
+            type="button"
+            onClick={() => openLegalCenter('terms')}
+            className="text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+          >
+            Provider Terms
+          </button>
+          <span>·</span>
+          <button
+            type="button"
+            onClick={() => openLegalCenter('privacy')}
+            className="text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+          >
+            Privacy Charter
+          </button>
+          <span>·</span>
+          <button
+            type="button"
+            onClick={() => openLegalCenter('ethics')}
+            className="text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+          >
+            Ethics Covenant
+          </button>
+        </div>
       </div>
 
       {/* TAB 1: SIGN IN / MOUNT ACTIVE DESK */}
@@ -248,7 +278,7 @@ export const EntityGatewayView: React.FC = () => {
           <div className="space-y-3 pt-1">
             <div className="flex items-center justify-between">
               <span className="text-[10.5px] mono font-black uppercase text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                🏢 Quick-Mount Verified Providers ({profile.countryName})
+                <Building2 size={12} className="text-emerald-600" /> Quick-Mount Verified Providers ({profile.countryName})
               </span>
               <span className="text-[8px] mono bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded font-bold border border-emerald-300 dark:border-emerald-700/60">
                 {profile.countryCode} 1-Tap Presets
@@ -292,7 +322,6 @@ export const EntityGatewayView: React.FC = () => {
             {/* Entity Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
               {combinedProviders.map((item, idx) => {
-                const flag = COUNTRIES[activeCountry]?.flag || '🌐';
                 return (
                   <div
                     key={`${item.code}-${idx}`}
@@ -304,7 +333,7 @@ export const EntityGatewayView: React.FC = () => {
                           {item.code}
                         </span>
                         <span className="text-[7px] mono px-1.5 py-0.2 rounded bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800/60">
-                          {flag} {item.category.replace('_', ' ').toUpperCase()}
+                          [{activeCountry}] {item.category.replace('_', ' ').toUpperCase()}
                         </span>
                       </div>
                       <p className="text-[10.5px] font-bold text-slate-900 dark:text-slate-100 mt-1 leading-snug line-clamp-1">
@@ -312,7 +341,7 @@ export const EntityGatewayView: React.FC = () => {
                       </p>
                       {item.officerName && (
                         <p className="text-[8px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
-                          👤 {item.officerName} · SLA: {item.slaHours}h
+                          Officer: {item.officerName} · SLA: {item.slaHours}h
                         </p>
                       )}
                     </div>
@@ -321,7 +350,7 @@ export const EntityGatewayView: React.FC = () => {
                       onClick={() => handleMountCode(item.code)}
                       className="w-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 py-1.5 px-2 rounded-lg text-[8.5px] mono font-bold flex items-center justify-between transition-colors"
                     >
-                      <span>⚡ Mount Provider Desk</span>
+                      <span>Mount Provider Desk</span>
                       <span className="text-[7.5px]">→</span>
                     </button>
                   </div>

@@ -107,140 +107,143 @@ export const TrafficSignalHUD: React.FC<TrafficSignalHUDProps> = ({
 
   if (compact) {
     return (
-      <div className={`inline-flex items-center gap-2 select-none px-2 py-1 rounded-xl bg-slate-100/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 ${className}`}>
+      <div className={`inline-flex items-center gap-1.5 select-none px-2 py-1 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] ${className}`}>
         <button
           onClick={() => handleSignalClick(currentFilter === 'red' ? 'all' : 'red')}
-          className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg group cursor-pointer focus:outline-none transition-all ${
-            currentFilter === 'red' ? 'bg-rose-500/20 ring-1 ring-rose-500/40' : 'hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+          className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-md group cursor-pointer focus:outline-none transition-all ${
+            currentFilter === 'red' ? 'bg-rose-500/15 ring-1 ring-rose-500/40' : 'hover:bg-white dark:hover:bg-[#161a22]'
           }`}
           title={`Red Signal: ${redCount} Open / Citizen Speaks`}
         >
-          <SignalGlyphRed active={currentFilter === 'red' || currentFilter === 'all'} className="w-4 h-4" />
-          <span className="text-[9.5px] mono font-black text-rose-600 dark:text-rose-400">{redCount}</span>
+          <SignalGlyphRed active={currentFilter === 'red' || currentFilter === 'all'} className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400">{redCount}</span>
         </button>
 
         <button
           onClick={() => handleSignalClick(currentFilter === 'amber' ? 'all' : 'amber')}
-          className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg group cursor-pointer focus:outline-none transition-all ${
-            currentFilter === 'amber' ? 'bg-amber-500/20 ring-1 ring-amber-500/40' : 'hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+          className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-md group cursor-pointer focus:outline-none transition-all ${
+            currentFilter === 'amber' ? 'bg-amber-500/15 ring-1 ring-amber-500/40' : 'hover:bg-white dark:hover:bg-[#161a22]'
           }`}
           title={`Amber Signal: ${amberCount} In Progress / Government Serves`}
         >
-          <SignalGlyphAmber active={currentFilter === 'amber' || currentFilter === 'all'} className="w-4 h-4" />
-          <span className="text-[9.5px] mono font-black text-amber-600 dark:text-amber-400">{amberCount}</span>
+          <SignalGlyphAmber active={currentFilter === 'amber' || currentFilter === 'all'} className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">{amberCount}</span>
         </button>
 
         <button
           onClick={() => handleSignalClick(currentFilter === 'green' ? 'all' : 'green')}
-          className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg group cursor-pointer focus:outline-none transition-all ${
-            currentFilter === 'green' ? 'bg-emerald-500/20 ring-1 ring-emerald-500/40' : 'hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+          className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-md group cursor-pointer focus:outline-none transition-all ${
+            currentFilter === 'green' ? 'bg-emerald-500/15 ring-1 ring-emerald-500/40' : 'hover:bg-white dark:hover:bg-[#161a22]'
           }`}
           title={`Green Signal: ${greenCount} Resolved / Citizen Heard`}
         >
-          <SignalGlyphGreen active={currentFilter === 'green' || currentFilter === 'all'} className="w-4 h-4" />
-          <span className="text-[9.5px] mono font-black text-emerald-600 dark:text-emerald-400">{greenCount}</span>
+          <SignalGlyphGreen active={currentFilter === 'green' || currentFilter === 'all'} className="w-3.5 h-3.5" />
+          <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">{greenCount}</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className={`p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#0e1420] border border-slate-300 dark:border-slate-800 text-slate-950 dark:text-white shadow-xs transition-colors ${className}`}>
-      {/* HUD Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2 mb-2.5">
-        <div className="flex items-center gap-2.5">
-          {/* Mini 3-Signal Vector Mark */}
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <SignalGlyphRed className="w-3.5 h-3.5" />
-            <SignalGlyphAmber className="w-3.5 h-3.5" />
-            <SignalGlyphGreen className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <div className="text-[12px] font-black font-serif text-slate-950 dark:text-slate-100 flex items-center gap-1.5 tracking-tight">
-              <span>Traffic Light Sovereign Signal Board</span>
-              <span className="text-[7.5px] font-mono px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded border border-emerald-300 dark:border-emerald-700 uppercase font-bold">
-                Official Engine
-              </span>
+    <div className={`p-3 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-slate-100 transition-colors ${className}`}>
+      {/* Mobile-First Compact HUD Header */}
+      <div className="flex items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-2 mb-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <SignalGlyphGreen className="w-4 h-4 shrink-0" />
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight truncate">
+              Sovereign Signal Filter
             </div>
-            <p className="text-[8.5px] text-slate-600 dark:text-slate-400 font-mono font-medium">
-              3-Signal Civic Accountability Standard · Live Interactive Filter
+            <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-mono truncate">
+              Tap a signal stage to filter live dispatches
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => openGuide('signals')}
-            className="text-[9px] mono font-bold text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-200 px-2 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/70 border border-teal-300 dark:border-teal-700/60 transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
-            title="Field Manual: 3-Signal Protocol Explained"
-          >
-            <HelpCircle size={10} />
-            <span>Guide</span>
-          </button>
-
+        <div className="flex items-center gap-1.5 shrink-0">
           {currentFilter !== 'all' && (
             <button
               onClick={() => handleSignalClick('all')}
-              className="text-[9px] mono font-black text-emerald-800 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-200 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700/60 transition-colors shadow-2xs cursor-pointer"
+              className="text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 transition-colors cursor-pointer"
             >
-              Reset All
+              Reset
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => openGuide('signals')}
+            className="text-[10px] font-mono font-medium text-slate-700 dark:text-slate-300 hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] px-2 py-1 rounded-md bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] transition-colors flex items-center gap-1 cursor-pointer"
+            title="Field Manual: 3-Signal Protocol Explained"
+          >
+            <HelpCircle size={11} strokeWidth={1.75} />
+            <span>Guide</span>
+          </button>
         </div>
       </div>
 
-      {/* 3 Traffic Light Filter Buttons */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* 3 Traffic Light Filter Buttons — Mobile-First Grid */}
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
         {/* RED SIGNAL BUTTON */}
         <button
           onClick={() => handleSignalClick(currentFilter === 'red' ? 'all' : 'red')}
-          className={`p-2.5 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-between cursor-pointer ${
+          className={`p-2 sm:p-2.5 rounded-lg border text-left transition-all flex flex-col justify-between cursor-pointer ${
             currentFilter === 'red'
-              ? 'bg-rose-50 dark:bg-rose-950/80 border-rose-500 ring-2 ring-rose-500/40 shadow-xs'
-              : 'bg-slate-50/80 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800 hover:border-rose-400 hover:bg-rose-50/40 dark:hover:bg-rose-950/30'
+              ? 'bg-rose-500/10 border-rose-500/50 ring-1 ring-rose-500/30'
+              : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] hover:border-rose-400'
           }`}
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <SignalGlyphRed active={currentFilter === 'red' || currentFilter === 'all'} className="w-5 h-5" />
-            <span className="text-sm font-black mono text-rose-700 dark:text-rose-400">{redCount}</span>
+          <div className="flex items-center justify-between mb-1">
+            <SignalGlyphRed active={currentFilter === 'red' || currentFilter === 'all'} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-xs sm:text-sm font-bold font-mono text-rose-600 dark:text-rose-400 tabular-nums">{redCount}</span>
           </div>
-          <div className="text-[11px] font-black font-serif text-rose-950 dark:text-rose-200 leading-tight">1. Citizen Speaks</div>
-          <div className="text-[8px] mono text-slate-600 dark:text-slate-400 font-bold mt-0.5">Open / Overdue / Graft</div>
+          <div className="text-[10.5px] sm:text-[11.5px] font-semibold text-slate-900 dark:text-slate-100 leading-tight">
+            1. Speak
+          </div>
+          <div className="text-[8.5px] sm:text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            Open / Graft
+          </div>
         </button>
 
         {/* AMBER SIGNAL BUTTON */}
         <button
           onClick={() => handleSignalClick(currentFilter === 'amber' ? 'all' : 'amber')}
-          className={`p-2.5 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-between cursor-pointer ${
+          className={`p-2 sm:p-2.5 rounded-lg border text-left transition-all flex flex-col justify-between cursor-pointer ${
             currentFilter === 'amber'
-              ? 'bg-amber-50 dark:bg-amber-950/80 border-amber-500 ring-2 ring-amber-500/40 shadow-xs'
-              : 'bg-slate-50/80 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800 hover:border-amber-400 hover:bg-amber-50/40 dark:hover:bg-amber-950/30'
+              ? 'bg-amber-500/10 border-amber-500/50 ring-1 ring-amber-500/30'
+              : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-400'
           }`}
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <SignalGlyphAmber active={currentFilter === 'amber' || currentFilter === 'all'} className="w-5 h-5" />
-            <span className="text-sm font-black mono text-amber-700 dark:text-amber-400">{amberCount}</span>
+          <div className="flex items-center justify-between mb-1">
+            <SignalGlyphAmber active={currentFilter === 'amber' || currentFilter === 'all'} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-xs sm:text-sm font-bold font-mono text-amber-600 dark:text-amber-400 tabular-nums">{amberCount}</span>
           </div>
-          <div className="text-[11px] font-black font-serif text-amber-950 dark:text-amber-200 leading-tight">2. Gov Serves</div>
-          <div className="text-[8px] mono text-slate-600 dark:text-slate-400 font-bold mt-0.5">Underway / Budgeted</div>
+          <div className="text-[10.5px] sm:text-[11.5px] font-semibold text-slate-900 dark:text-slate-100 leading-tight">
+            2. Serve
+          </div>
+          <div className="text-[8.5px] sm:text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            In Progress
+          </div>
         </button>
 
         {/* GREEN SIGNAL BUTTON */}
         <button
           onClick={() => handleSignalClick(currentFilter === 'green' ? 'all' : 'green')}
-          className={`p-2.5 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-between cursor-pointer ${
+          className={`p-2 sm:p-2.5 rounded-lg border text-left transition-all flex flex-col justify-between cursor-pointer ${
             currentFilter === 'green'
-              ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-500 ring-2 ring-emerald-500/40 shadow-xs'
-              : 'bg-slate-50/80 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800 hover:border-emerald-400 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/30'
+              ? 'bg-emerald-500/10 border-emerald-500/50 ring-1 ring-emerald-500/30'
+              : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-400'
           }`}
         >
-          <div className="flex items-center justify-between mb-1.5">
-            <SignalGlyphGreen active={currentFilter === 'green' || currentFilter === 'all'} className="w-5 h-5" />
-            <span className="text-sm font-black mono text-emerald-700 dark:text-emerald-400">{greenCount}</span>
+          <div className="flex items-center justify-between mb-1">
+            <SignalGlyphGreen active={currentFilter === 'green' || currentFilter === 'all'} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">{greenCount}</span>
           </div>
-          <div className="text-[11px] font-black font-serif text-emerald-950 dark:text-emerald-200 leading-tight">3. Citizen Heard</div>
-          <div className="text-[8px] mono text-slate-600 dark:text-slate-400 font-bold mt-0.5">Proof Verified &amp; Sealed</div>
+          <div className="text-[10.5px] sm:text-[11.5px] font-semibold text-slate-900 dark:text-slate-100 leading-tight">
+            3. Be Heard
+          </div>
+          <div className="text-[8.5px] sm:text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            Proof Sealed
+          </div>
         </button>
       </div>
     </div>

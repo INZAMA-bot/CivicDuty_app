@@ -312,22 +312,22 @@ export function generateStaffDispatchText(params: {
   accessCode: string;
   portalUrl?: string;
 }) {
-  const stationLine = params.dutyStation ? `📍 Assigned Station: ${params.dutyStation}\n` : '';
+  const stationLine = params.dutyStation ? `[STATION] Assigned Station: ${params.dutyStation}\n` : '';
   const url = params.portalUrl || window.location.origin;
 
-  return `🏢 *${params.orgName.toUpperCase()} — OFFICIAL STAFF ACCESS INVITATION*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  return `[${params.orgName.toUpperCase()} — OFFICIAL STAFF ACCESS INVITATION]
+---------------------------------
 Dear *${params.staffName}*,
 You have been invited to join the official Service Provider Desk on CivicDuty for *${params.orgName}*.
 
-🏷️ *Assigned Role:* ${params.roleTitle}
-${stationLine}🔑 *Your Staff Access Code:* ${params.accessCode}
+[ROLE] *Assigned Role:* ${params.roleTitle}
+${stationLine}[KEY] *Your Staff Access Code:* ${params.accessCode}
 
 *HOW TO ACCESS YOUR DESK:*
-1️⃣ Open: ${url}
-2️⃣ Click on *"Service Provider Desk"*
-3️⃣ Enter your Access Code: *${params.accessCode}*
-4️⃣ Confirm your staff PIN/details to activate your duty terminal.
+1. Open: ${url}
+2. Click on *"Service Provider Desk"*
+3. Enter your Access Code: *${params.accessCode}*
+4. Confirm your staff PIN/details to activate your duty terminal.
 
 _This is a verified institutional staff access pass. Please do not share your code outside authorized duty personnel._`;
 }

@@ -56,12 +56,15 @@ service cloud.firestore {
       allow create: if isValidId(postId) && isValidPost(incoming());
       allow update: if isValidId(postId) && (
         isAdmin() ||
-        // Action: Upvote
+        // Action: Upvote or Downvote
         incoming().diff(existing()).affectedKeys().hasOnly(['upvotes']) ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['downvotes']) ||
+        // Action: Compile witness reports & co-sign Master Dossier
+        incoming().diff(existing()).affectedKeys().hasOnly(['compiled_reports', 'compiled_count', 'upvotes', 'escalated', 'is_master_dossier', 'merged_from_ids']) ||
         // Action: Status update by official or citizen resolution feedback
         (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'gov_status', 'comments', 'citizen_satisfied']))
       );
-      allow delete: if isAdmin();
+      allow delete: if isValidId(postId);
     }
 
     // --- DEPARTMENTS (Ministries, Desks, Commercial Entities) ---
@@ -218,6 +221,25 @@ service cloud.firestore {
         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'officerName', 'phone', 'acceptedAt', 'designation'])
       );
       allow delete: if isAdmin();
+    }
+
+    // --- CD-OPS MANUFACTURED PROMOTIONAL ADS & CAMPAIGNS ---
+    function isValidPromotionalAd(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 256
+        && data.category is string && data.category.size() <= 64
+        && data.tagline is string && data.tagline.size() <= 256
+        && data.summary is string && data.summary.size() <= 2000
+        && data.published is bool
+        && data.postedAt is string && data.postedAt.size() <= 64;
+    }
+
+    match /promotional_ads/{adId} {
+      allow get: if isValidId(adId);
+      allow list: if true;
+      allow create: if isValidId(adId) && isValidPromotionalAd(incoming());
+      allow update: if isValidId(adId);
+      allow delete: if isValidId(adId);
     }
   }
 }

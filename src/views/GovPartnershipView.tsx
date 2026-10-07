@@ -24,7 +24,6 @@ import {
   ArrowRight,
   Server,
   Lock,
-  Sparkles,
   AlertCircle,
   ExternalLink,
   MessageSquare,
@@ -194,10 +193,10 @@ export const GovPartnershipView: React.FC = () => {
 
       {/* ACTIVE PARTNERSHIP STATUS HERO BANNER */}
       {currentPartnership ? (
-        <div className="p-4 rounded-3xl bg-gradient-to-br from-teal-500/15 via-emerald-500/10 to-slate-900/5 dark:from-teal-950/50 dark:via-emerald-950/30 dark:to-slate-950 border border-teal-500/40 space-y-3 shadow-sm">
+        <div className="p-4 rounded-3xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-500/40 space-y-3 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-teal-500/20 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{currentPartnership.flag}</span>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/40 text-xs font-mono font-black text-teal-800 dark:text-teal-300">{currentPartnership.countryCode}</span>
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-black text-slate-900 dark:text-white mono uppercase">
@@ -261,10 +260,10 @@ export const GovPartnershipView: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="p-4 rounded-3xl bg-gradient-to-br from-amber-500/10 via-slate-900/5 to-transparent border border-amber-500/30 space-y-2.5">
+        <div className="p-4 rounded-3xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-500/30 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{countryObj?.flag || '🌐'}</span>
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-xs font-mono font-black text-amber-800 dark:text-amber-300">{activeCountry}</span>
               <div>
                 <span className="text-xs font-black text-slate-900 dark:text-white mono uppercase">
                   {countryObj?.name || activeCountry} Partnership Status

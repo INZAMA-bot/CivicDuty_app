@@ -186,7 +186,7 @@ services:
     `# CivicDuty — Sovereign National Governance Platform & Ledger
 Full-stack production distribution with frontend, backend server, database schemas, and multi-country civic routing.
 
-## 🚀 Quick Start (Local)
+## Quick Start (Local)
 
 1. **Install dependencies:**
    \`\`\`bash
@@ -205,14 +205,14 @@ Full-stack production distribution with frontend, backend server, database schem
    npm start
    \`\`\`
 
-## 🐳 Deploy with Docker
+## Deploy with Docker
 
 \`\`\`bash
 docker build -t civicduty .
 docker run -p 3000:3000 civicduty
 \`\`\`
 
-## 🌐 Deploy to GitHub / Cloud
+## Deploy to GitHub / Cloud
 
 1. Initialize git repository:
    \`\`\`bash

@@ -21,8 +21,13 @@ import {
   OfficialQueryResponse,
   OfficialQueryDetermination,
   CdOpsPromotionalAd,
+  CompiledWitnessReport,
+  CivicNotification,
+  CitizenDirectMessage,
+  TownHallSession,
 } from '../types';
 import { INITIAL_PROMOTIONAL_ADS } from '../data/promotionalAds';
+import { getDynamicCountryDemos } from '../data/countryDemos';
 import {
   INITIAL_AUDIT,
   INITIAL_INVOICES,
@@ -37,7 +42,7 @@ import { INITIAL_OFFICIAL_QUERIES } from '../data/initialQueries';
 import { GOV_CODES, resolveTitle, tiersFor, scopeName } from '../data/tiers';
 import { allDepts, getDept, COUNTRIES, DEPARTMENTS } from '../data/countries';
 import { addScoreToProfile } from '../utils/score';
-import { makeCode } from '../utils/helpers';
+import { makeCode, sanitizePostEmojis } from '../utils/helpers';
 import { TRANSLATIONS, Translations } from '../data/translations';
 import {
   savePostToCloud,
@@ -47,6 +52,13 @@ import {
   subscribeToPostsFromCloud,
   saveClaimToCloud,
   saveUserProfileToCloud,
+  saveOfficialQueryToCloud,
+  saveAuditEntryToCloud,
+  updatePostCompilationInCloud,
+  deletePostFromCloud,
+  savePromotionalAdToCloud,
+  deletePromotionalAdFromCloud,
+  subscribeToPromotionalAdsFromCloud,
 } from '../services/firestoreSync';
 import {
   GovFeedbackMessage,
@@ -177,6 +189,11 @@ interface AppContextType {
   guideInitialTab: string;
   openGuide: (tab?: string) => void;
   closeGuide: () => void;
+  // Legal, Privacy & About CivicDuty Trust Center Modal
+  legalModalOpen: boolean;
+  legalInitialTab: 'about' | 'privacy' | 'terms' | 'ethics';
+  openLegalCenter: (tab?: 'about' | 'privacy' | 'terms' | 'ethics') => void;
+  closeLegalCenter: () => void;
   // Private Provider Layer & Claiming
   claimedEntities: Record<string, ClaimedEntityRecord>;
   claimEntity: (data: Omit<ClaimedEntityRecord, 'claimedAt' | 'verified'>) => void;
@@ -246,6 +263,59 @@ interface AppContextType {
   togglePromotionalAdStatus: (id: string) => void;
   deletePromotionalAd: (id: string) => void;
   recordAdClick: (id: string) => void;
+  // Multi-Report Issue Clustering & Master Dossier Compilation Engine
+  compileWitnessIntoPost: (
+    targetPostId: string,
+    witnessReport: Omit<CompiledWitnessReport, 'id' | 'created_at'>
+  ) => void;
+  mergeDuplicatePostsIntoDossier: (masterPostId: string, duplicatePostIds: string[]) => void;
+  // Illustrative Demo Showcase Mode ("Boutique Mannequins")
+  showDemos: boolean;
+  setShowDemos: (show: boolean) => void;
+  // Global Social Media Platform Capabilities
+  notifications: CivicNotification[];
+  notifModalOpen: boolean;
+  setNotifModalOpen: (v: boolean) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  dmModalOpen: boolean;
+  setDmModalOpen: (v: boolean) => void;
+  dmThreads: CitizenDirectMessage[];
+  activeDmThreadId: string | null;
+  setActiveDmThreadId: (id: string | null) => void;
+  sendDirectMessage: (threadId: string, body: string) => void;
+  openDmWithCitizen: (name: string, role?: string, country?: CountryCode) => void;
+  publicProfileCitizen: { name: string; profession?: string; country?: CountryCode; score?: number } | null;
+  setPublicProfileCitizen: (c: { name: string; profession?: string; country?: CountryCode; score?: number } | null) => void;
+  followingCitizens: string[];
+  toggleFollowCitizen: (name: string) => void;
+  socialModalPost: Post | null;
+  setSocialModalPost: (p: Post | null) => void;
+  socialModalTab: 'share' | 'quote' | 'community_note' | 'safety';
+  setSocialModalTab: (t: 'share' | 'quote' | 'community_note' | 'safety') => void;
+  createQuoteDispatch: (originalPost: Post, quoteTitle: string, quoteBody: string) => void;
+  repostDispatch: (postId: string) => void;
+  addCommunityNote: (postId: string, body: string, sourceUrl?: string) => void;
+  voteCivicPoll: (postId: string, optionId: string) => void;
+  bookmarks: string[];
+  toggleBookmark: (postId: string) => void;
+  mutedAuthors: string[];
+  toggleMuteAuthor: (name: string) => void;
+  blockedAuthors: string[];
+  toggleBlockAuthor: (name: string) => void;
+  activeTownHall: TownHallSession | null;
+  setActiveTownHall: (th: TownHallSession | null) => void;
+  townHalls: TownHallSession[];
+  hostBarazaModalOpen: boolean;
+  setHostBarazaModalOpen: (open: boolean) => void;
+  createTownHall: (params: {
+    title: string;
+    topic_tag: string;
+    dept_name: string;
+    co_host_name?: string;
+  }) => void;
+  activeHashtagFilter: string | null;
+  setActiveHashtagFilter: (tag: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -356,23 +426,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const saved = localStorage.getItem('cd_posts');
       if (saved) {
-        const parsed: Post[] = JSON.parse(saved);
-        const hasPraise = parsed.some((p) => p.category === 'praise');
-        if (!hasPraise) {
-          const praiseSeeds = INITIAL_POSTS.filter((p) => p.category === 'praise');
-          const merged = [...praiseSeeds, ...parsed];
-          try {
-            localStorage.setItem('cd_posts', JSON.stringify(merged));
-          } catch {}
-          return merged;
+        let parsed: Post[] = JSON.parse(saved);
+        // Hydrate any Master Dossier & Demo Showcase seeds from INITIAL_POSTS
+        const seedMap = new Map(INITIAL_POSTS.map((sp) => [sp.id, sp]));
+        parsed = parsed.map((p) => {
+          const seed = seedMap.get(p.id);
+          const base = seed
+            ? {
+                ...p,
+                title: seed.title || p.title,
+                body: seed.body || p.body,
+                is_demo: true,
+                demo_highlight: seed.demo_highlight || p.demo_highlight,
+                is_master_dossier: seed.is_master_dossier ?? p.is_master_dossier,
+                compiled_count: seed.compiled_count ?? p.compiled_count,
+                compiled_reports:
+                  seed.compiled_reports && (!p.compiled_reports || p.compiled_reports.length === 0)
+                    ? seed.compiled_reports
+                    : p.compiled_reports,
+                merged_from_ids: seed.merged_from_ids ?? p.merged_from_ids,
+              }
+            : p;
+          return sanitizePostEmojis({
+            ...base,
+            comments: Array.isArray(base.comments) ? base.comments : seed?.comments || [],
+            media: Array.isArray(base.media) ? base.media : seed?.media || [],
+            territory: base.territory || seed?.territory || { district: '', subcounty: '', parish: '' },
+            poll: base.poll || seed?.poll,
+            community_notes: base.community_notes || seed?.community_notes,
+            before_after: base.before_after || seed?.before_after,
+            voice_note: base.voice_note || seed?.voice_note,
+            hashtags: base.hashtags || seed?.hashtags,
+            reposts: base.reposts ?? seed?.reposts ?? 0,
+          });
+        });
+        // Merge any new country demos from INITIAL_POSTS that aren't in localStorage yet
+        const existingIds = new Set(parsed.map((p) => p.id));
+        const missingSeeds = INITIAL_POSTS.filter((sp) => !existingIds.has(sp.id)).map(sanitizePostEmojis);
+        if (missingSeeds.length > 0) {
+          parsed = [...parsed, ...missingSeeds];
         }
+        try {
+          localStorage.setItem('cd_posts', JSON.stringify(parsed));
+        } catch {}
         return parsed;
       }
-      return INITIAL_POSTS;
+      return INITIAL_POSTS.map(sanitizePostEmojis);
     } catch {
-      return INITIAL_POSTS;
+      return INITIAL_POSTS.map(sanitizePostEmojis);
     }
   });
+
+  const [showDemos, setShowDemosState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('cd_show_demos_v1');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const setShowDemos = (show: boolean) => {
+    setShowDemosState(show);
+    try {
+      localStorage.setItem('cd_show_demos_v1', JSON.stringify(show));
+    } catch {}
+  };
 
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>(() => {
     try {
@@ -665,7 +784,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.removeItem('cd_offline_queue');
     } catch {}
-    toast(`✓ Successfully synced ${count} pending report${count > 1 ? 's' : ''} to National Civic Ledger!`, 'emerald');
+    toast(`Successfully synced ${count} pending report${count > 1 ? 's' : ''} to National Civic Ledger!`, 'emerald');
     logAudit('offline_sync', 'BATCH', `Synced ${count} offline reports to registry`);
   };
 
@@ -714,6 +833,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const closeGuide = () => {
     setGuideModalOpen(false);
   };
+
+  const [legalModalOpen, setLegalModalOpen] = useState<boolean>(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<'about' | 'privacy' | 'terms' | 'ethics'>('about');
+
+  const openLegalCenter = (tab: 'about' | 'privacy' | 'terms' | 'ethics' = 'about') => {
+    setLegalInitialTab(tab);
+    setLegalModalOpen(true);
+  };
+
+  const closeLegalCenter = () => {
+    setLegalModalOpen(false);
+  };
   const [selectedCountry, setSelectedCountryState] = useState<CountryCode>(() => {
     try {
       const saved = localStorage.getItem('cd_selected_country') as CountryCode | null;
@@ -727,6 +858,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setSelectedCountry = (c: CountryCode) => {
     setSelectedCountryState(c);
     setActiveDeptCountry(c);
+    setUser((prev) => {
+      if (prev && prev.role === 'citizen') {
+        return {
+          ...prev,
+          country: c,
+          nodeTag: COUNTRIES[c]?.node || `${c}_NODE_01`,
+        };
+      }
+      return prev;
+    });
     try {
       localStorage.setItem('cd_selected_country', c);
     } catch {}
@@ -753,19 +894,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   }, [posts]);
 
-  // Real-time Cloud Firestore subscription for the active territory
+  // Real-time Cloud Firestore subscription for the active territory + Dynamic Country Demo seeding
   useEffect(() => {
+    // Ensure any selected country has illustrative demo showcases if none exist yet
+    const activeCountry = user?.country || selectedCountry;
+    setPosts((prev) => {
+      const hasCountryDemos = prev.some((p) => p.country === activeCountry);
+      if (!hasCountryDemos) {
+        const dynamicDemos = getDynamicCountryDemos(activeCountry);
+        if (dynamicDemos.length > 0) {
+          return [...prev, ...dynamicDemos];
+        }
+      }
+      return prev;
+    });
+
     const unsubscribe = subscribeToPostsFromCloud(selectedCountry, (cloudPosts) => {
       if (!cloudPosts || cloudPosts.length === 0) return;
+      const seedMap = new Map(INITIAL_POSTS.map((sp) => [sp.id, sp]));
       setPosts((prev) => {
         const postMap = new Map<string, Post>();
         // Keep existing memory/local posts
         prev.forEach((p) => postMap.set(p.id, p));
-        // Merge cloud posts
+        // Merge cloud posts while preserving demo flags on seed IDs
         cloudPosts.forEach((cp) => {
           if (cp.id) {
             const existing = postMap.get(cp.id);
-            postMap.set(cp.id, { ...(existing || {}), ...(cp as Post) });
+            const seed = seedMap.get(cp.id);
+            postMap.set(cp.id, sanitizePostEmojis({
+              ...(existing || {}),
+              ...(cp as Post),
+              comments: Array.isArray(cp.comments)
+                ? cp.comments
+                : existing?.comments || seed?.comments || [],
+              media: Array.isArray(cp.media)
+                ? cp.media
+                : existing?.media || seed?.media || [],
+              territory:
+                cp.territory ||
+                existing?.territory ||
+                seed?.territory || { district: '', subcounty: '', parish: '' },
+              compiled_reports:
+                Array.isArray(cp.compiled_reports) && cp.compiled_reports.length > 0
+                  ? cp.compiled_reports
+                  : existing?.compiled_reports || seed?.compiled_reports || [],
+              merged_from_ids:
+                Array.isArray(cp.merged_from_ids) && cp.merged_from_ids.length > 0
+                  ? cp.merged_from_ids
+                  : existing?.merged_from_ids || seed?.merged_from_ids || [],
+              is_demo: seed ? true : (cp as Post).is_demo ?? existing?.is_demo ?? false,
+              demo_highlight: seed?.demo_highlight || (cp as Post).demo_highlight || existing?.demo_highlight,
+            }));
           }
         });
         return Array.from(postMap.values());
@@ -773,7 +952,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return () => unsubscribe();
-  }, [selectedCountry]);
+  }, [selectedCountry, user?.country]);
+
+  // Real-time Cloud Firestore subscription for CD-Ops Promotional Ads
+  useEffect(() => {
+    const unsubscribe = subscribeToPromotionalAdsFromCloud((cloudAds) => {
+      if (!cloudAds || cloudAds.length === 0) return;
+      setPromotionalAds((prev) => {
+        const adMap = new Map<string, CdOpsPromotionalAd>();
+        prev.forEach((a) => adMap.set(a.id, a));
+        cloudAds.forEach((ca) => {
+          if (ca.id) {
+            adMap.set(ca.id, { ...(adMap.get(ca.id) || {}), ...ca });
+          }
+        });
+        const merged = Array.from(adMap.values());
+        try {
+          localStorage.setItem('civicduty_promotional_ads', JSON.stringify(merged));
+        } catch {}
+        return merged;
+      });
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     try {
@@ -856,7 +1057,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const ensureCitizenSession = (): UserSession => {
     if (user) return user;
-    return DEFAULT_CITIZEN_USER;
+    return {
+      ...DEFAULT_CITIZEN_USER,
+      country: selectedCountry || DEFAULT_CITIZEN_USER.country,
+      nodeTag: COUNTRIES[selectedCountry]?.node || DEFAULT_CITIZEN_USER.nodeTag,
+    };
   };
 
   const go = (v: ViewType) => {
@@ -904,6 +1109,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const filtered = prev.filter((existing) => existing.id !== entry.id);
       return [entry, ...filtered];
     });
+    saveAuditEntryToCloud({
+      id: entry.id,
+      ticketId: entry.ticket_id || 'SYSTEM',
+      hash: entry.hash || 'SHA256-CD',
+      country: entry.country || 'UG',
+      dept: entry.dept || 'civic_desk',
+      timestamp: entry.ts,
+    }).catch(() => {});
   };
 
   const issueOfficialQuery = (data: {
@@ -950,6 +1163,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setOfficialQueries((prev) => [newQuery, ...prev]);
 
+    saveOfficialQueryToCloud({
+      id: newQuery.id,
+      queryRef: newQuery.queryRef,
+      country: newQuery.country,
+      targetUnit: newQuery.targetUnit,
+      targetOfficer: newQuery.targetOfficer,
+      targetOfficerTitle: newQuery.targetTitle,
+      issuerName: newQuery.issuerName,
+      issuerTitle: newQuery.issuerTitle,
+      category: newQuery.category,
+      subject: newQuery.subject,
+      grounds: newQuery.grounds,
+      deadlineHours: newQuery.deadlineHours,
+      issuedAt: newQuery.issuedAt,
+      deadlineAt: newQuery.deadlineTimestamp,
+      status: newQuery.status,
+    }).catch(() => {});
+
     logAudit(
       'official_query_issued',
       queryRef,
@@ -958,7 +1189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user?.dept
     );
 
-    toast(`✓ Official Query ${queryRef} dispatched to ${data.targetOfficer}. ${hrs}h response window active.`, 'amber');
+    toast(`Official Query ${queryRef} dispatched to ${data.targetOfficer}. ${hrs}h response window active.`, 'amber');
     return newQuery;
   };
 
@@ -998,7 +1229,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetQuery?.country || user?.country || 'UG'
     );
 
-    toast(`✓ Official defense and corrective action submitted for ${ref}. Under supervisory review.`, 'emerald');
+    toast(`Official defense and corrective action submitted for ${ref}. Under supervisory review.`, 'emerald');
   };
 
   const determineOfficialQuery = (
@@ -1046,7 +1277,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       targetQuery?.country || user?.country || 'UG'
     );
 
-    toast(`✓ Determination logged for ${ref}: ${verdictLabel}`, det.verdict === 'escalated_igg' ? 'red' : 'emerald');
+    toast(`Determination logged for ${ref}: ${verdictLabel}`, det.verdict === 'escalated_igg' ? 'red' : 'emerald');
   };
 
   const deleteOfficialQuery = (queryId: string) => {
@@ -1072,10 +1303,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addPost = (newPost: Post) => {
-    setPosts((prev) => [newPost, ...prev]);
+    const livePost: Post = { ...newPost, is_demo: false };
+    setPosts((prev) => [livePost, ...prev]);
 
     // Asynchronously synchronize to Cloud Firestore & ledger
-    savePostToCloud(newPost).catch((err) => {
+    savePostToCloud(livePost).catch((err) => {
       console.warn('Cloud sync deferred (offline or pending):', err);
     });
 
@@ -1214,7 +1446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const rateReply = (postId: string, commentIndex: number, helpful: boolean) => {
     setPosts((prev) =>
       prev.map((p) => {
-        if (p.id === postId && p.comments[commentIndex]) {
+        if (p.id === postId && p.comments && p.comments[commentIndex]) {
           const comments = [...p.comments];
           const target = { ...comments[commentIndex] };
           if (helpful) target.helpful = (target.helpful || 0) + 1;
@@ -1249,7 +1481,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!satisfied) {
       toast('Marked unsatisfied — issue stays open', 'amber');
     } else {
-      toast('✓ Confirmed resolved', 'emerald');
+      toast('Confirmed resolved', 'emerald');
     }
   };
 
@@ -1262,7 +1494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: `ratify-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             sender: user?.name || 'Verified Citizen',
             role: 'citizen' as const,
-            body: `✓ CITIZEN RATIFICATION SEALED: "${feedback || 'I confirm on-ground that this issue is satisfactorily resolved.'}" · Sovereign Certificate Hash: ${seal.slice(0, 18)}...`,
+            body: `[RATIFIED] CITIZEN RATIFICATION SEALED: "${feedback || 'I confirm on-ground that this issue is satisfactorily resolved.'}" · Sovereign Certificate Hash: ${seal.slice(0, 18)}...`,
             created_at: new Date().toISOString(),
             helpful: 3,
             not_helpful: 0,
@@ -1284,7 +1516,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addPoints(user.id, 25, '+25pts · Civic Ratification Sealed');
     }
     logAudit('citizen_ratification', postId, `Citizen ratified fix. Sealed with hash ${seal.slice(0, 14)}...`);
-    toast('✓ Civic Ratification Recorded! +25 Civic XP awarded.', 'emerald');
+    toast('Civic Ratification Recorded! +25 Civic XP awarded.', 'emerald');
   };
 
   const disputeResolution = (postId: string, evidenceText: string, evidenceMedia?: any[]) => {
@@ -1295,7 +1527,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: `disp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             sender: user?.name || 'Verified Citizen Observer',
             role: 'citizen' as const,
-            body: `⚠ CITIZEN RE-OPEN & DISPUTE: "${evidenceText}" · Counter-evidence submitted. Reverting status to Urgent / Overdue and auto-escalating directly to CAO Desk.`,
+            body: `[DISPUTE] CITIZEN RE-OPEN & DISPUTE: "${evidenceText}" · Counter-evidence submitted. Reverting status to Urgent / Overdue and auto-escalating directly to CAO Desk.`,
             media: evidenceMedia,
             created_at: new Date().toISOString(),
             helpful: 5,
@@ -1317,7 +1549,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
     logAudit('dispute_reopen', postId, `Citizen disputed resolution. Re-opened and escalated to Tier 3 CAO`);
-    toast('⚠ Issue re-opened with counter-evidence! Escalated to CAO.', 'amber');
+    toast('Issue re-opened with counter-evidence! Escalated to CAO.', 'amber');
   };
 
   const triggerManualEscalation = (postId: string) => {
@@ -1334,7 +1566,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: `esc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             sender: 'STATUTORY AUTOMATION ENGINE',
             role: 'gov' as const,
-            body: `⚡ STATUTORY 48-HOUR SLA BREACH DETECTED: Report has exceeded response window. Promoted jurisdiction responsibility to ${nextTier.toUpperCase()}. Relevant Chief Accounting Officer notified.`,
+            body: `STATUTORY 48-HOUR SLA BREACH DETECTED: Report has exceeded response window. Promoted jurisdiction responsibility to ${nextTier.toUpperCase()}. Relevant Chief Accounting Officer notified.`,
             created_at: new Date().toISOString(),
             status_tag: 'overdue' as const,
           };
@@ -1352,7 +1584,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
     logAudit('sla_auto_escalation', postId, `Statutory SLA breached. Promoted to higher administrative tier.`);
-    toast('⚡ Statutory Escalation Triggered! Promoted to next administrative tier.', 'amber');
+    toast('Statutory Escalation Triggered! Promoted to next administrative tier.', 'amber');
   };
 
   const updatePostStatus = (postId: string, newStatus: any) => {
@@ -1481,7 +1713,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Official desk handover: ${oldMember.name} replaced by ${successor.name} (${newMember.title}, ${scopeName(newMember.country, newMember.scope)})`
     );
 
-    toast(`✓ Desk transferred: ${oldMember.name} → ${successor.name}. Access code minted!`, 'emerald');
+    toast(`Desk transferred: ${oldMember.name} → ${successor.name}. Access code minted!`, 'emerald');
 
     return { code: newCode, newMember };
   };
@@ -1570,7 +1802,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `Statutory invite accepted: ${inv.name} (${inv.title}) is now ACTIVE on station ${inv.scope}`
     );
 
-    toast(`✓ Invite accepted! ${inv.name} is now ACTIVE on ${scopeName(inv.country, inv.scope)} and enlisted for supervision.`, 'emerald');
+    toast(`Invite accepted! ${inv.name} is now ACTIVE on ${scopeName(inv.country, inv.scope)} and enlisted for supervision.`, 'emerald');
 
     return member;
   };
@@ -1730,7 +1962,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id,
         name: data.name,
         full: data.name,
-        icon: '🏢',
+        icon: 'building-2',
         ministry: data.coveredUnits <= 1 ? 'Registered local entity' : 'Registered entity',
         sla: 48,
         registered: true,
@@ -1987,7 +2219,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       data.deptId,
       `${data.businessName} claimed & subscribed to ${data.plan.toUpperCase()} ($${data.monthlyFee}/mo) by ${data.representativeName}`
     );
-    toast(`✓ ${data.businessName} claimed successfully! Verified Provider status active.`, 'emerald');
+    toast(`${data.businessName} claimed successfully! Verified Provider status active.`, 'emerald');
   };
 
   const isEntityClaimed = (deptId: string): boolean => {
@@ -2003,7 +2235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { ...prev, [deptId]: updated };
     });
     const d = getDept(user?.country || 'UG', deptId);
-    toast(`📢 Public civic nudge logged for ${d.name}! Pressure index updated.`, 'amber');
+    toast(`Public civic nudge logged for ${d.name}! Pressure index updated.`, 'amber');
   };
 
   const getClaimedEntity = (deptId: string): ClaimedEntityRecord | undefined => {
@@ -2051,7 +2283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       `CD-Ops response dispatched to ${officialDesc} [Status: ${status}] by ${responderTitle}`
     );
     toast(
-      `✓ Official response dispatched to ${officialDesc} (${status === 'actioned' ? 'Actioned & Certified' : 'Under Technical Review'}).`,
+      `Official response dispatched to ${officialDesc} (${status === 'actioned' ? 'Actioned & Certified' : 'Under Technical Review'}).`,
       'emerald'
     );
   };
@@ -2089,7 +2321,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       staff.id,
       `Staff member added: ${staff.name} as ${staff.role} (${staff.dutyStation})`
     );
-    toast(`✓ Staff member ${staff.name} added to CD-Ops roster.`, 'emerald');
+    toast(`Staff member ${staff.name} added to CD-Ops roster.`, 'emerald');
   };
 
   const updateCdOpsStaff = (id: string, updates: Partial<CdOpsStaffMember>) => {
@@ -2145,7 +2377,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const target = cdOpsStaffList.find((s) => s.id === id);
     logAudit('cd_ops_role_reassigned', id, `Staff ${target?.name} reassigned to ${newRole}`);
-    toast(`✓ ${target?.name || id} role reassigned to "${newRole}".`, 'emerald');
+    toast(`${target?.name || id} role reassigned to "${newRole}".`, 'emerald');
   };
 
   const assignStaffToFeedback = (feedbackId: string, staffName: string) => {
@@ -2155,7 +2387,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('civicduty_feedback_messages', JSON.stringify(updated));
     } catch {}
     logAudit('cd_ops_task_dispatched', feedbackId, `Directive ${feedbackId} dispatched to ${staffName}`);
-    toast(`✓ Directive ${feedbackId} dispatched to ${staffName}.`, 'emerald');
+    toast(`Directive ${feedbackId} dispatched to ${staffName}.`, 'emerald');
   };
 
   const mintGovAccessCode = (code: string, data: GovCodeData) => {
@@ -2171,7 +2403,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cleanCode,
       `Access code minted: ${cleanCode} for ${data.officer_name || data.role_label} (${data.country})`
     );
-    toast(`✓ Sovereign Access Code "${cleanCode}" successfully minted and active on gateway.`, 'emerald');
+    toast(`Sovereign Access Code "${cleanCode}" successfully minted and active on gateway.`, 'emerald');
   };
 
   const revokeGovAccessCode = (code: string) => {
@@ -2225,8 +2457,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem('civicduty_promotional_ads', JSON.stringify(updated));
     } catch {}
+    savePromotionalAdToCloud(ad).catch(() => {});
     logAudit('cd_ops_promotional_ad_published', ad.id, `Promotional Ad manufactured & published: ${ad.title}`);
-    toast(`✓ Promotional ad "${ad.title}" manufactured and posted to Civic Feed!`, 'emerald');
+    toast(`Promotional ad "${ad.title}" manufactured and posted to Civic Feed!`, 'emerald');
   };
 
   const togglePromotionalAdStatus = (id: string) => {
@@ -2236,7 +2469,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('civicduty_promotional_ads', JSON.stringify(updated));
     } catch {}
     const target = updated.find((a) => a.id === id);
-    toast(target?.published ? `✓ "${target.title}" is now LIVE on Civic Feed.` : `⏸ "${target?.title}" paused from Civic Feed.`, 'emerald');
+    if (target) {
+      savePromotionalAdToCloud(target).catch(() => {});
+    }
+    toast(target?.published ? `"${target.title}" is now LIVE on Civic Feed.` : `"${target?.title}" paused from Civic Feed.`, 'emerald');
   };
 
   const deletePromotionalAd = (id: string) => {
@@ -2245,6 +2481,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem('civicduty_promotional_ads', JSON.stringify(updated));
     } catch {}
+    deletePromotionalAdFromCloud(id).catch(() => {});
     toast('Promotional ad removed from repository.', 'amber');
   };
 
@@ -2254,8 +2491,655 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         localStorage.setItem('civicduty_promotional_ads', JSON.stringify(updated));
       } catch {}
+      const target = updated.find((a) => a.id === id);
+      if (target) {
+        savePromotionalAdToCloud(target).catch(() => {});
+      }
       return updated;
     });
+  };
+
+  const compileWitnessIntoPost = (
+    targetPostId: string,
+    witnessReport: Omit<CompiledWitnessReport, 'id' | 'created_at'>
+  ) => {
+    const newWitness: CompiledWitnessReport = {
+      ...witnessReport,
+      id: `wr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      created_at: new Date().toISOString(),
+    };
+
+    let autoEscalatedNow = false;
+    let updatedTargetPost: Post | null = null;
+
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== targetPostId) return p;
+        const existingReports = p.compiled_reports || [];
+        const nextReports = [...existingReports, newWitness];
+        const nextCount = Math.max((p.compiled_count || existingReports.length + 1) + 1, nextReports.length + 1);
+        const nextUpvotes = (p.upvotes || 0) + 5;
+        const shouldEscalate = nextCount >= 5 && !p.escalated && p.status !== 'resolved' && p.category !== 'praise';
+
+        if (shouldEscalate) {
+          autoEscalatedNow = true;
+        }
+
+        const nextPost: Post = {
+          ...p,
+          is_master_dossier: true,
+          compiled_reports: nextReports,
+          compiled_count: nextCount,
+          upvotes: nextUpvotes,
+          escalated: shouldEscalate ? true : p.escalated,
+          escalation_tier: shouldEscalate ? 'tier3_district_cao' : p.escalation_tier,
+        };
+        updatedTargetPost = nextPost;
+        return nextPost;
+      })
+    );
+
+    if (updatedTargetPost) {
+      const postObj = updatedTargetPost as Post;
+      if (activePost?.id === targetPostId) {
+        setActivePost(postObj);
+      }
+      updatePostCompilationInCloud(
+        postObj.id,
+        postObj.compiled_reports || [],
+        postObj.compiled_count || 2,
+        postObj.upvotes,
+        Boolean(postObj.escalated),
+        postObj.merged_from_ids || []
+      ).catch(() => {});
+
+      const actorId = user?.id || 'usr-9028-UG';
+      addPoints(
+        actorId,
+        20,
+        autoEscalatedNow
+          ? `+20 Civic Pts! Dossier reached ${postObj.compiled_count} witnesses & AUTO-ESCALATED to Accounting Officer!`
+          : `+20 Civic Pts! Your testimony & evidence compiled into Master Dossier (${postObj.compiled_count} total reports).`
+      );
+
+      logAudit(
+        autoEscalatedNow ? 'master_dossier_critical_mass_escalation' : 'master_dossier_witness_compiled',
+        postObj.id,
+        `Witness report compiled into Master Dossier #${postObj.id.slice(-6).toUpperCase()} (${postObj.compiled_count} total reports). ${
+          autoEscalatedNow ? '5+ Witness Critical Mass reached — Auto-escalated to Tier 3 Accounting Officer.' : ''
+        }`,
+        postObj.country,
+        postObj.dept
+      );
+    }
+  };
+
+  const mergeDuplicatePostsIntoDossier = (masterPostId: string, duplicatePostIds: string[]) => {
+    const cleanDupIds = duplicatePostIds.filter((id) => id !== masterPostId);
+    if (cleanDupIds.length === 0) return;
+
+    const dupSet = new Set(cleanDupIds);
+    const dupPosts = posts.filter((p) => dupSet.has(p.id));
+    if (dupPosts.length === 0) return;
+
+    let updatedMaster: Post | null = null;
+
+    setPosts((prev) => {
+      const master = prev.find((p) => p.id === masterPostId);
+      if (!master) return prev;
+
+      const existingReports = [...(master.compiled_reports || [])];
+      let addedUpvotes = 0;
+
+      dupPosts.forEach((dp) => {
+        addedUpvotes += (dp.upvotes || 0) + 5;
+        existingReports.push({
+          id: `wr-merged-${dp.id}`,
+          citizen_id: dp.citizen_id,
+          citizen_name: dp.anonymous ? 'Verified Citizen' : dp.citizen_name,
+          author_profession: dp.author_profession,
+          anonymous: dp.anonymous,
+          body: `[Merged Ticket #${dp.id.slice(-6).toUpperCase()}: ${dp.title}] — ${dp.body}`,
+          gps: dp.gps,
+          media: dp.media,
+          created_at: dp.created_at,
+          source: dp.source,
+        });
+        if (dp.compiled_reports && dp.compiled_reports.length > 0) {
+          existingReports.push(...dp.compiled_reports);
+        }
+      });
+
+      const nextCount = existingReports.length + 1;
+      const nextMergedIds = Array.from(new Set([...(master.merged_from_ids || []), ...cleanDupIds]));
+      const shouldEscalate = nextCount >= 5 && !master.escalated && master.status !== 'resolved' && master.category !== 'praise';
+
+      const nextMaster: Post = {
+        ...master,
+        is_master_dossier: true,
+        compiled_reports: existingReports,
+        compiled_count: nextCount,
+        upvotes: (master.upvotes || 0) + addedUpvotes,
+        merged_from_ids: nextMergedIds,
+        escalated: shouldEscalate ? true : master.escalated,
+        escalation_tier: shouldEscalate ? 'tier3_district_cao' : master.escalation_tier,
+      };
+
+      updatedMaster = nextMaster;
+
+      return prev
+        .filter((p) => !dupSet.has(p.id))
+        .map((p) => (p.id === masterPostId ? nextMaster : p));
+    });
+
+    if (updatedMaster) {
+      const mObj = updatedMaster as Post;
+      if (activePost?.id === masterPostId || dupSet.has(activePost?.id || '')) {
+        setActivePost(mObj);
+      }
+
+      updatePostCompilationInCloud(
+        mObj.id,
+        mObj.compiled_reports || [],
+        mObj.compiled_count || 2,
+        mObj.upvotes,
+        Boolean(mObj.escalated),
+        mObj.merged_from_ids || []
+      ).catch(() => {});
+
+      cleanDupIds.forEach((dupId) => {
+        deletePostFromCloud(dupId).catch(() => {});
+      });
+
+      logAudit(
+        'master_dossier_tickets_merged',
+        mObj.id,
+        `Consolidated ${cleanDupIds.length} duplicate ticket(s) (${cleanDupIds.join(', ')}) into Master Dossier #${mObj.id.slice(-6).toUpperCase()} (${mObj.compiled_count} total compiled reports).`,
+        mObj.country,
+        mObj.dept
+      );
+
+      toast(
+        `Merged ${cleanDupIds.length} duplicate report(s) into Master Dossier #${mObj.id.slice(-6).toUpperCase()} (${mObj.compiled_count} total witnesses)!`,
+        'emerald'
+      );
+    }
+  };
+
+  // --- GLOBAL SOCIAL MEDIA PLATFORM CAPABILITIES ---
+  const [notifications, setNotifications] = useState<CivicNotification[]>(() => {
+    try {
+      const saved = localStorage.getItem('cd_social_notifications');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 'notif-1',
+        type: 'sla_update',
+        title: 'Official SLA Action: NWSC Dispatched Repair Crew',
+        body: 'NWSC Kampala Branch Manager updated Master Dossier #P-101 (Water Main Burst — Bukoto) to Investigating.',
+        post_id: 'p-101',
+        actor_name: 'NWSC Kampala Desk',
+        country: 'UG',
+        created_at: '14m ago',
+        read: false,
+      },
+      {
+        id: 'notif-2',
+        type: 'upvote',
+        title: '5+ Witness Critical Mass Reached!',
+        body: 'Ssemakula Ronald (Bukoto Stage Chairman) and 3 other watchdogs co-signed your parish infrastructure dossier.',
+        post_id: 'p-101',
+        actor_name: 'Bukoto Watchdog Network',
+        country: 'UG',
+        created_at: '1h ago',
+        read: false,
+      },
+      {
+        id: 'notif-3',
+        type: 'reply',
+        title: 'Treasury Circular Published on Your Petition',
+        body: 'Permanent Secretary / Secretary to the Treasury (MoFPED) posted warrant verification on #P-UG-MOFPED-1.',
+        post_id: 'p-ug-mofped-1',
+        actor_name: 'PS/ST Ministry of Finance',
+        country: 'UG',
+        created_at: '3h ago',
+        read: false,
+      },
+      {
+        id: 'notif-4',
+        type: 'perk',
+        title: 'CivicScore XP Milestone Unlocked (+50 XP)',
+        body: 'Your verified field reports earned 50 XP! Redeemable in the Sovereign Perk Escrow Vault for mobile data & utility tokens.',
+        actor_name: 'CivicDuty Perk Escrow Vault',
+        country: 'UG',
+        created_at: 'Yesterday',
+        read: true,
+      },
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cd_social_notifications', JSON.stringify(notifications));
+    } catch {}
+  }, [notifications]);
+
+  const [notifModalOpen, setNotifModalOpen] = useState(false);
+
+  const markNotificationRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    toast('All notifications marked as read', 'emerald');
+  };
+
+  const [dmModalOpen, setDmModalOpen] = useState(false);
+  const [dmThreads, setDmThreads] = useState<CitizenDirectMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem('cd_social_dm_threads');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 'dm-1',
+        thread_id: 'th-grace',
+        participant_name: 'Grace Akello',
+        participant_handle: '@grace_watchdog',
+        participant_role: 'Nakawa Parish Watchdog · 980 XP',
+        participant_verified: true,
+        country: 'UG',
+        unread: 1,
+        messages: [
+          {
+            id: 'm-1',
+            sender: 'them',
+            sender_name: 'Grace Akello',
+            body: 'Hello neighbor! Are you also seeing the low water pressure near Bukoto Market today? Let us co-sign Master Dossier #P-101 so it auto-escalates.',
+            created_at: '10:15 AM',
+          },
+        ],
+      },
+      {
+        id: 'dm-2',
+        thread_id: 'th-nwsc-care',
+        participant_name: 'NWSC Rapid Response Desk',
+        participant_handle: '@nwsc_official',
+        participant_role: 'Verified Public Utility Customer Care',
+        participant_verified: true,
+        country: 'UG',
+        unread: 0,
+        messages: [
+          {
+            id: 'm-2',
+            sender: 'them',
+            sender_name: 'NWSC Rapid Response Desk',
+            body: 'Thank you for your geotagged report. Our Kawempe standby engineer (Eng. Opio) has isolated the sub-main valve and will restore supply by 14:00hrs.',
+            created_at: 'Yesterday',
+          },
+        ],
+      },
+      {
+        id: 'dm-3',
+        thread_id: 'th-boda-scout',
+        participant_name: 'Ssemakula Ronald',
+        participant_handle: '@ronald_boda_scout',
+        participant_role: 'Bodaboda Frontline Road Scout',
+        participant_verified: true,
+        country: 'UG',
+        unread: 0,
+        messages: [
+          {
+            id: 'm-3',
+            sender: 'them',
+            sender_name: 'Ssemakula Ronald',
+            body: 'Just uploaded 2 photos of the open manhole on Kira Road. Watch out if driving through that junction this evening!',
+            created_at: '2d ago',
+          },
+        ],
+      },
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cd_social_dm_threads', JSON.stringify(dmThreads));
+    } catch {}
+  }, [dmThreads]);
+
+  const [activeDmThreadId, setActiveDmThreadId] = useState<string | null>('th-grace');
+
+  const sendDirectMessage = (threadId: string, body: string) => {
+    setDmThreads((prev) =>
+      prev.map((th) => {
+        if (th.thread_id !== threadId) return th;
+        return {
+          ...th,
+          unread: 0,
+          messages: [
+            ...th.messages,
+            {
+              id: `msg-${Date.now()}`,
+              sender: 'me',
+              sender_name: user?.name || 'Citizen Watchdog',
+              body,
+              created_at: 'Just now',
+            },
+          ],
+        };
+      })
+    );
+    toast('Direct message sent over encrypted civic channel', 'emerald');
+  };
+
+  const openDmWithCitizen = (name: string, role: string = 'Community Watchdog', country?: CountryCode) => {
+    const cleanHandle = `@${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    const existing = dmThreads.find((t) => t.participant_name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setActiveDmThreadId(existing.thread_id);
+      setDmModalOpen(true);
+      return;
+    }
+    const newThreadId = `th-${Date.now()}`;
+    const newThread: CitizenDirectMessage = {
+      id: `dm-${Date.now()}`,
+      thread_id: newThreadId,
+      participant_name: name,
+      participant_handle: cleanHandle,
+      participant_role: role,
+      participant_verified: true,
+      country: country || user?.country || 'UG',
+      messages: [
+        {
+          id: `m-init-${Date.now()}`,
+          sender: 'them',
+          sender_name: name,
+          body: `Direct civic coordination channel opened with ${name}.`,
+          created_at: 'Just now',
+        },
+      ],
+    };
+    setDmThreads((prev) => [newThread, ...prev]);
+    setActiveDmThreadId(newThreadId);
+    setDmModalOpen(true);
+  };
+
+  const [publicProfileCitizen, setPublicProfileCitizen] = useState<{
+    name: string;
+    profession?: string;
+    country?: CountryCode;
+    score?: number;
+  } | null>(null);
+
+  const [followingCitizens, setFollowingCitizens] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('cd_following_citizens');
+      return saved ? JSON.parse(saved) : ['Grace Nakimbugwe', 'David Musoke', 'CSO Budget Coalition'];
+    } catch {
+      return ['Grace Nakimbugwe', 'David Musoke', 'CSO Budget Coalition'];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cd_following_citizens', JSON.stringify(followingCitizens));
+    } catch {}
+  }, [followingCitizens]);
+
+  const toggleFollowCitizen = (name: string) => {
+    setFollowingCitizens((prev) => {
+      const exists = prev.includes(name);
+      const next = exists ? prev.filter((n) => n !== name) : [...prev, name];
+      toast(exists ? `Unfollowed ${name}` : `Following ${name} — their dispatches prioritized in your feed!`, 'emerald');
+      return next;
+    });
+  };
+
+  const [socialModalPost, setSocialModalPost] = useState<Post | null>(null);
+  const [socialModalTab, setSocialModalTab] = useState<'share' | 'quote' | 'community_note' | 'safety'>('share');
+
+  const repostDispatch = (postId: string) => {
+    setPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, reposts: (p.reposts || 0) + 1 } : p))
+    );
+    if (activePost?.id === postId) {
+      setActivePost({ ...activePost, reposts: (activePost.reposts || 0) + 1 });
+    }
+    addPoints(user?.id || 'usr-9028-UG', 10, '+10 Civic Pts · Dispatch Amplified & Reposted!');
+  };
+
+  const createQuoteDispatch = (originalPost: Post, quoteTitle: string, quoteBody: string) => {
+    const origDept = getDept(originalPost.country, originalPost.dept);
+    const extractedTags = quoteBody.match(/#[a-zA-Z0-9_]+/g) || [];
+    const newQuotePost: Post = {
+      id: `p-quote-${Date.now()}`,
+      country: originalPost.country,
+      dept: originalPost.dept,
+      lane: originalPost.lane,
+      territory: originalPost.territory,
+      citizen_id: user?.id || 'usr-9028-UG',
+      citizen_name: user?.name || 'Citizen Watchdog',
+      citizen_rank: 'Watchdog',
+      anonymous: false,
+      category: originalPost.category,
+      title: quoteTitle,
+      body: quoteBody,
+      location: originalPost.location,
+      gps: originalPost.gps,
+      source: 'web',
+      media: [],
+      status: 'pending',
+      gov_status: 'pending',
+      created_at: new Date().toISOString(),
+      comments: [],
+      upvotes: 1,
+      reposts: 0,
+      hashtags: extractedTags.length > 0 ? extractedTags : ['#CivicWatchdog'],
+      quote_of: {
+        id: originalPost.id,
+        title: originalPost.title,
+        citizen_name: originalPost.citizen_name,
+        dept_name: origDept.name,
+        snippet: originalPost.body.slice(0, 160),
+      },
+      is_demo: false,
+    };
+
+    setPosts((prev) => [
+      newQuotePost,
+      ...prev.map((p) => (p.id === originalPost.id ? { ...p, reposts: (p.reposts || 0) + 1 } : p)),
+    ]);
+    addPoints(user?.id || 'usr-9028-UG', 25, '+25 Civic Pts · Quote-Dispatch Published to Live Feed!');
+    go('feed');
+  };
+
+  const addCommunityNote = (postId: string, body: string, sourceUrl?: string) => {
+    const newNote = {
+      id: `cn-${Date.now()}`,
+      author_name: user?.name || 'Verified Watchdog',
+      author_rank: 'Watchdog',
+      body,
+      source_url: sourceUrl || undefined,
+      helpful_votes: 1,
+      created_at: 'Just now',
+      verified_consensus: true,
+    };
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? { ...p, community_notes: [...(p.community_notes || []), newNote] }
+          : p
+      )
+    );
+    if (activePost?.id === postId) {
+      setActivePost({
+        ...activePost,
+        community_notes: [...(activePost.community_notes || []), newNote],
+      });
+    }
+    addPoints(user?.id || 'usr-9028-UG', 15, '+15 Civic Pts · Verified Community Fact-Check Note Attached!');
+  };
+
+  const voteCivicPoll = (postId: string, optionId: string) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId || !p.poll || p.poll.voted_option_id) return p;
+        const updatedOptions = p.poll.options.map((o) =>
+          o.id === optionId ? { ...o, votes: o.votes + 1 } : o
+        );
+        return {
+          ...p,
+          poll: {
+            ...p.poll,
+            options: updatedOptions,
+            total_votes: p.poll.total_votes + 1,
+            voted_option_id: optionId,
+          },
+        };
+      })
+    );
+    if (activePost?.id === postId && activePost.poll && !activePost.poll.voted_option_id) {
+      setActivePost({
+        ...activePost,
+        poll: {
+          ...activePost.poll,
+          options: activePost.poll.options.map((o) =>
+            o.id === optionId ? { ...o, votes: o.votes + 1 } : o
+          ),
+          total_votes: activePost.poll.total_votes + 1,
+          voted_option_id: optionId,
+        },
+      });
+    }
+    addPoints(user?.id || 'usr-9028-UG', 10, '+10 Civic Pts · Vote Recorded in Public Referendum Poll!');
+  };
+
+  const [bookmarks, setBookmarks] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('cd_bookmarks');
+      return saved ? JSON.parse(saved) : ['p-ug-praise-1', 'p-ug-mofped-1'];
+    } catch {
+      return ['p-ug-praise-1', 'p-ug-mofped-1'];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cd_bookmarks', JSON.stringify(bookmarks));
+    } catch {}
+  }, [bookmarks]);
+
+  const toggleBookmark = (postId: string) => {
+    setBookmarks((prev) => {
+      const exists = prev.includes(postId);
+      const next = exists ? prev.filter((id) => id !== postId) : [postId, ...prev];
+      toast(exists ? 'Removed from Saved Bookmarks' : 'Saved to your Watchdog Bookmarks Vault!', 'emerald');
+      return next;
+    });
+  };
+
+  const [mutedAuthors, setMutedAuthors] = useState<string[]>([]);
+  const toggleMuteAuthor = (name: string) => {
+    setMutedAuthors((prev) => {
+      const exists = prev.includes(name);
+      const next = exists ? prev.filter((n) => n !== name) : [...prev, name];
+      toast(exists ? `Unmuted ${name}` : `Muted dispatches from ${name}`, 'amber');
+      return next;
+    });
+  };
+
+  const [blockedAuthors, setBlockedAuthors] = useState<string[]>([]);
+  const toggleBlockAuthor = (name: string) => {
+    setBlockedAuthors((prev) => {
+      const exists = prev.includes(name);
+      const next = exists ? prev.filter((n) => n !== name) : [...prev, name];
+      toast(exists ? `Unblocked ${name}` : `Blocked ${name}`, 'red');
+      return next;
+    });
+  };
+
+  const [activeTownHall, setActiveTownHall] = useState<TownHallSession | null>(null);
+  const [hostBarazaModalOpen, setHostBarazaModalOpen] = useState<boolean>(false);
+  const [customTownHalls, setCustomTownHalls] = useState<TownHallSession[]>([]);
+  const [activeHashtagFilter, setActiveHashtagFilter] = useState<string | null>(null);
+
+  const activeCountryCode = user?.country || selectedCountry || 'UG';
+  const activeCountryObj = COUNTRIES[activeCountryCode] || COUNTRIES.UG;
+
+  const defaultTownHall: TownHallSession = {
+    id: `th-live-${activeCountryCode}`,
+    title: `${activeCountryObj.name} National Service Delivery & Q3 Budget Accountability Baraza`,
+    host_name: 'Permanent Secretary & Municipal Engineering Corps',
+    host_title: 'Statutory Accounting Officers',
+    dept_name: 'Ministry of Local Government & Public Works',
+    country: activeCountryCode,
+    listeners_count: 348,
+    is_live: true,
+    topic_tag: '#QuarterlyAccountabilityBaraza',
+    speakers: [
+      { name: 'Permanent Secretary', role: 'Host · Accounting Officer', speaking: true },
+      { name: 'Chief Municipal Engineer', role: 'Co-Host · Roads & Water', speaking: false },
+      { name: 'Grace Akello', role: 'Citizen Watchdog Lead', speaking: false },
+    ],
+  };
+
+  const townHalls: TownHallSession[] = [
+    ...customTownHalls.filter((th) => th.country === activeCountryCode),
+    defaultTownHall,
+  ];
+
+  const createTownHall = ({
+    title,
+    topic_tag,
+    dept_name,
+    co_host_name,
+  }: {
+    title: string;
+    topic_tag: string;
+    dept_name: string;
+    co_host_name?: string;
+  }) => {
+    const activeU = user || DEFAULT_CITIZEN_USER;
+    const hostName =
+      activeU.officer_name ||
+      profiles[activeU.id]?.display_name ||
+      activeU.name ||
+      'Verified Civic Moderator';
+    const hostTitle =
+      activeU.real_title_short ||
+      activeU.role_label ||
+      (activeU.role === 'citizen' ? 'Parish Watchdog Convenor' : 'Statutory Accounting Officer');
+    const cleanTag = topic_tag.startsWith('#') ? topic_tag : `#${topic_tag.replace(/\s+/g, '') || 'CivicBaraza'}`;
+
+    const newSession: TownHallSession = {
+      id: `th-custom-${Date.now()}`,
+      title: title.trim(),
+      host_name: hostName,
+      host_title: hostTitle,
+      dept_name: dept_name.trim() || 'Municipal Accountability Desk',
+      country: activeCountryCode,
+      listeners_count: 14,
+      is_live: true,
+      topic_tag: cleanTag,
+      speakers: [
+        { name: hostName, role: `Host · ${hostTitle}`, speaking: true },
+        {
+          name: co_host_name?.trim() || 'Duty Desk Engineer',
+          role: 'Co-Host · Technical Liaison',
+          speaking: false,
+        },
+        { name: 'Community Floor', role: 'Open Citizen Mic', speaking: false },
+      ],
+    };
+
+    setCustomTownHalls((prev) => [newSession, ...prev]);
+    setHostBarazaModalOpen(false);
+    setActiveTownHall(newSession);
+    logAudit('HOST_BARAZA', newSession.id, `${hostName} launched Live Digital Baraza: "${newSession.title}" (${cleanTag})`);
+    toast('Live Digital Baraza audio room launched!', 'emerald');
   };
 
   return (
@@ -2349,6 +3233,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         guideInitialTab,
         openGuide,
         closeGuide,
+        legalModalOpen,
+        legalInitialTab,
+        openLegalCenter,
+        closeLegalCenter,
         claimedEntities,
         claimEntity,
         isEntityClaimed,
@@ -2379,6 +3267,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         togglePromotionalAdStatus,
         deletePromotionalAd,
         recordAdClick,
+        compileWitnessIntoPost,
+        mergeDuplicatePostsIntoDossier,
+        showDemos,
+        setShowDemos,
+        notifications,
+        notifModalOpen,
+        setNotifModalOpen,
+        markNotificationRead,
+        markAllNotificationsRead,
+        dmModalOpen,
+        setDmModalOpen,
+        dmThreads,
+        activeDmThreadId,
+        setActiveDmThreadId,
+        sendDirectMessage,
+        openDmWithCitizen,
+        publicProfileCitizen,
+        setPublicProfileCitizen,
+        followingCitizens,
+        toggleFollowCitizen,
+        socialModalPost,
+        setSocialModalPost,
+        socialModalTab,
+        setSocialModalTab,
+        createQuoteDispatch,
+        repostDispatch,
+        addCommunityNote,
+        voteCivicPoll,
+        bookmarks,
+        toggleBookmark,
+        mutedAuthors,
+        toggleMuteAuthor,
+        blockedAuthors,
+        toggleBlockAuthor,
+        activeTownHall,
+        setActiveTownHall,
+        townHalls,
+        hostBarazaModalOpen,
+        setHostBarazaModalOpen,
+        createTownHall,
+        activeHashtagFilter,
+        setActiveHashtagFilter,
       }}
     >
       {children}

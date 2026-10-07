@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CdOpsPromotionalAd } from '../../types';
 import {
-  Sparkles,
   Megaphone,
   Bus,
   Bike,
@@ -177,21 +176,21 @@ export const CdOpsCampaignStudio: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Studio Top Banner & Specs Deep-Link */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/70 border border-amber-500/30 text-white space-y-3 shadow-lg">
+      <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-white space-y-3 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-mono">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-mono">
                 CD-OPS AD MANUFACTURING STUDIO
               </span>
-              <span className="text-[9.5px] font-mono text-amber-300/90 flex items-center gap-1">
-                <Sparkles size={11} /> Multi-Channel Campaign Injection &amp; Feed Broadcasting
+              <span className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <Megaphone size={11} /> Multi-Channel Campaign Injection &amp; Feed Broadcasting
               </span>
             </div>
-            <h3 className="text-lg sm:text-xl font-black tracking-tight text-white">
+            <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Bodaboda Stage Posters &amp; Transit Promotional Ad Creator
             </h3>
-            <p className="text-xs text-slate-300 max-w-2xl mt-1 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl mt-1 leading-relaxed">
               Manufacture high-impact promotional advertisements between you and CD-Ops. Once created, publish them directly to the citizen Civic Feed as interactive promotional bulletins.
             </p>
           </div>
@@ -199,7 +198,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => go('transit_preview')}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black mono uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+              className="px-3.5 py-2 rounded-lg bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-bold mono uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer"
               title="Open full Kayoola bus engineering blueprints & high-res posters"
             >
               <Bus size={14} />
@@ -262,7 +261,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Bike size={13} />
-                <span>🛵 Bodaboda Stage Poster</span>
+                <span>Bodaboda Stage Poster</span>
               </button>
               <button
                 type="button"
@@ -270,7 +269,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 hover:bg-emerald-200 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Bus size={13} />
-                <span>🚌 Kayoola Bus Wrap</span>
+                <span>Kayoola Bus Wrap</span>
               </button>
               <button
                 type="button"
@@ -278,7 +277,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-cyan-100 dark:bg-cyan-950/60 hover:bg-cyan-200 text-cyan-900 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700/60 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Smartphone size={13} />
-                <span>📱 *3030# USSD Kabiriti</span>
+                <span>*3030# USSD Kabiriti</span>
               </button>
               <button
                 type="button"
@@ -286,7 +285,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-purple-100 dark:bg-purple-950/60 hover:bg-purple-200 text-purple-900 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Gift size={13} />
-                <span>🎁 Watchdog Perk Bounty</span>
+                <span>Watchdog Perk Bounty</span>
               </button>
             </div>
           </div>
@@ -328,13 +327,13 @@ export const CdOpsCampaignStudio: React.FC = () => {
                   }}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
-                  <option value="bodaboda">🛵 Bodaboda Community Stage Poster</option>
-                  <option value="bus">🚌 Kayoola Electric Bus Full Wrap</option>
-                  <option value="train">🚆 Commuter Railway Livery</option>
-                  <option value="terminal">🏢 Transit Terminal Digital Billboard</option>
-                  <option value="radio">📻 FM Radio Sensitization Jingle</option>
-                  <option value="noticeboard">📌 Community Noticeboard &amp; SACCO Poster</option>
-                  <option value="ussd">📱 *3030# Kabiriti Feature Phone Banner</option>
+                  <option value="bodaboda">Bodaboda Community Stage Poster</option>
+                  <option value="bus">Kayoola Electric Bus Full Wrap</option>
+                  <option value="train">Commuter Railway Livery</option>
+                  <option value="terminal">Transit Terminal Digital Billboard</option>
+                  <option value="radio">FM Radio Sensitization Jingle</option>
+                  <option value="noticeboard">Community Noticeboard &amp; SACCO Poster</option>
+                  <option value="ussd">*3030# Kabiriti Feature Phone Banner</option>
                 </select>
               </div>
             </div>
@@ -426,10 +425,10 @@ export const CdOpsCampaignStudio: React.FC = () => {
                   }}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
-                  <option value="ussd">📞 Zero-Data USSD (*3030#)</option>
-                  <option value="specs">🔍 Inspect Transit Blueprints</option>
-                  <option value="report">📝 File Sovereign Report</option>
-                  <option value="perks">🎁 Perk Escrow Vault</option>
+                  <option value="ussd">Zero-Data USSD (*3030#)</option>
+                  <option value="specs">Inspect Transit Blueprints</option>
+                  <option value="report">File Sovereign Report</option>
+                  <option value="perks">Perk Escrow Vault</option>
                 </select>
               </div>
 
@@ -489,9 +488,9 @@ export const CdOpsCampaignStudio: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-amber-600 via-amber-500 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider mono rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold text-xs uppercase tracking-wider mono rounded-lg shadow-xs transition-all active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Sparkles size={16} />
+              <Megaphone size={16} />
               <span>Manufacture &amp; Post to Civic Feed</span>
               <ArrowRight size={14} />
             </button>
@@ -511,7 +510,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
           </div>
 
           {/* Render Preview of How it appears on Feed */}
-          <div className="card-gov p-4 rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-b from-slate-900 to-slate-950 text-white shadow-xl space-y-3 relative overflow-hidden">
+          <div className="card-gov p-4 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#161a22] text-white shadow-xl space-y-3 relative overflow-hidden">
             <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
               <div className="flex items-center gap-2">
                 <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-mono">
@@ -534,8 +533,8 @@ export const CdOpsCampaignStudio: React.FC = () => {
                   (e.currentTarget as HTMLImageElement).src = '/campaign/boda_poster_ad_1790426299023.jpg';
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-2.5">
-                <span className="text-[10px] font-black uppercase text-amber-400 mono tracking-tight line-clamp-1">
+              <div className="absolute inset-0 bg-black/55 flex flex-col justify-end p-2.5">
+                <span className="text-[10px] font-bold uppercase text-amber-400 mono tracking-tight line-clamp-1">
                   {tagline}
                 </span>
               </div>
@@ -567,7 +566,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 onClick={() => {
                   toast(`Simulating Action: ${callToAction}`, 'emerald');
                 }}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black mono uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
+                className="flex-1 py-2.5 px-3 rounded-lg bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-bold mono uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer"
               >
                 {ctaType === 'ussd' && <PhoneCall size={13} />}
                 {ctaType === 'specs' && <Bus size={13} />}

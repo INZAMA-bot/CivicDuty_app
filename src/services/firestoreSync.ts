@@ -7,9 +7,21 @@ import {
   where,
   onSnapshot,
   updateDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { Post, ClaimedEntityRecord, UserProfile, CountryCode, FiscalVoucher, ParishChiefNotification, GatewayTransaction, EscrowPerkVoucher } from '../types';
+import {
+  Post,
+  ClaimedEntityRecord,
+  UserProfile,
+  CountryCode,
+  FiscalVoucher,
+  ParishChiefNotification,
+  GatewayTransaction,
+  EscrowPerkVoucher,
+  CdOpsPromotionalAd,
+  CompiledWitnessReport,
+} from '../types';
 
 /**
  * Persists a new or updated citizen post to Cloud Firestore,
@@ -39,6 +51,10 @@ export async function savePostToCloud(post: Post): Promise<void> {
       downvotes: Number(post.downvotes || 0),
       author_profession: post.author_profession || '',
       crypto_seal_hash: post.crypto_seal_hash || '',
+      compiled_reports: post.compiled_reports || [],
+      compiled_count: Number(post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1)),
+      is_master_dossier: Boolean(post.is_master_dossier),
+      merged_from_ids: post.merged_from_ids || [],
     };
 
     await setDoc(doc(db, 'posts', post.id), postPayload);
@@ -299,6 +315,121 @@ export async function fetchPerkVouchersFromCloud(): Promise<EscrowPerkVoucher[]>
     handleFirestoreError(error, OperationType.GET, 'perk_vouchers');
     return [];
   }
+}
+
+/**
+ * Updates a Master Dossier post with compiled witness reports and co-signers in Cloud Firestore
+ */
+export async function updatePostCompilationInCloud(
+  postId: string,
+  compiledReports: CompiledWitnessReport[],
+  compiledCount: number,
+  upvotes: number,
+  escalated: boolean,
+  mergedFromIds: string[] = []
+): Promise<void> {
+  const path = `posts/${postId}`;
+  try {
+    await updateDoc(doc(db, 'posts', postId), {
+      compiled_reports: compiledReports.slice(0, 50).map((r) => ({
+        id: r.id,
+        citizen_id: r.citizen_id,
+        citizen_name: r.anonymous ? 'Verified Citizen' : r.citizen_name.slice(0, 128),
+        author_profession: (r.author_profession || '').slice(0, 128),
+        anonymous: Boolean(r.anonymous),
+        body: r.body.slice(0, 2000),
+        gps: r.gps || null,
+        created_at: r.created_at,
+        source: r.source || 'web',
+      })),
+      compiled_count: Number(compiledCount),
+      upvotes: Number(upvotes),
+      escalated: Boolean(escalated),
+      is_master_dossier: true,
+      merged_from_ids: mergedFromIds.slice(0, 50),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+/**
+ * Deletes a merged duplicate post from Cloud Firestore
+ */
+export async function deletePostFromCloud(postId: string): Promise<void> {
+  const path = `posts/${postId}`;
+  try {
+    await deleteDoc(doc(db, 'posts', postId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+/**
+ * Persists a CD-Ops Promotional Ad to Cloud Firestore for real-time citizen feed broadcasting
+ */
+export async function savePromotionalAdToCloud(ad: CdOpsPromotionalAd): Promise<void> {
+  const path = `promotional_ads/${ad.id}`;
+  try {
+    const payload = {
+      id: ad.id.slice(0, 128),
+      title: ad.title.slice(0, 256),
+      category: ad.category,
+      categoryLabel: ad.categoryLabel.slice(0, 128),
+      tagline: ad.tagline.slice(0, 256),
+      summary: ad.summary.slice(0, 2000),
+      imageSrc: ad.imageSrc.slice(0, 512),
+      callToAction: ad.callToAction.slice(0, 128),
+      ctaType: ad.ctaType,
+      ctaValue: (ad.ctaValue || '').slice(0, 128),
+      specs: (ad.specs || '').slice(0, 512),
+      sponsorName: ad.sponsorName.slice(0, 128),
+      targetAudience: ad.targetAudience.slice(0, 128),
+      published: Boolean(ad.published),
+      postedAt: ad.postedAt.slice(0, 64),
+      highlights: (ad.highlights || []).slice(0, 10),
+      impressions: Number(ad.impressions || 0),
+      clicks: Number(ad.clicks || 0),
+    };
+    await setDoc(doc(db, 'promotional_ads', ad.id), payload, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Deletes a CD-Ops Promotional Ad from Cloud Firestore
+ */
+export async function deletePromotionalAdFromCloud(adId: string): Promise<void> {
+  const path = `promotional_ads/${adId}`;
+  try {
+    await deleteDoc(doc(db, 'promotional_ads', adId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+/**
+ * Subscribes to real-time updates for CD-Ops Promotional Ads across all connected devices
+ */
+export function subscribeToPromotionalAdsFromCloud(
+  onAdsReceived: (ads: CdOpsPromotionalAd[]) => void
+): () => void {
+  const collectionRef = collection(db, 'promotional_ads');
+  const unsubscribe = onSnapshot(
+    collectionRef,
+    (snapshot) => {
+      const cloudAds: CdOpsPromotionalAd[] = [];
+      snapshot.forEach((docSnap) => {
+        cloudAds.push(docSnap.data() as CdOpsPromotionalAd);
+      });
+      onAdsReceived(cloudAds);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.GET, 'promotional_ads');
+    }
+  );
+  return unsubscribe;
 }
 
 

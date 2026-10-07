@@ -26,7 +26,6 @@ import {
   Award,
   Filter,
   X,
-  Sparkles,
 } from 'lucide-react';
 
 interface DistrictSupervisionStructureProps {
@@ -342,7 +341,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
 
     // 3. Inviter only gets notification of active or pending
     toast(
-      `✓ Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
+      `Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
       'amber'
     );
 
@@ -353,7 +352,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
   const handleAcceptInvite = (inviteCode: string, officerNameStr: string, stationNameStr: string) => {
     const enlisted = acceptInvite(inviteCode);
     if (enlisted) {
-      toast(`✓ ${officerNameStr} accepted statutory appointment for ${stationNameStr}! Enlisted into ACTIVE section.`, 'emerald');
+      toast(`${officerNameStr} accepted statutory appointment for ${stationNameStr}! Enlisted into ACTIVE section.`, 'emerald');
     }
   };
 
@@ -572,8 +571,8 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                   </div>
 
                   <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
-                    <span>🏛️ {parishCount} Parishes</span>
-                    <span>⏱️ 48h SLA Target</span>
+                    <span>{parishCount} Parishes</span>
+                    <span>48h SLA Target</span>
                   </div>
                 </div>
 
@@ -612,7 +611,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                       <button
                         type="button"
                         onClick={() => {
-                          const memo = `🏛️ STATUTORY SUB-COUNTY APPOINTMENT & TRANSMITTAL MEMO\nStation: ${subcounty.name}\nAppointee: ${pendingInvite.name}\nTitle: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                          const memo = `STATUTORY SUB-COUNTY APPOINTMENT & TRANSMITTAL MEMO\nStation: ${subcounty.name}\nAppointee: ${pendingInvite.name}\nTitle: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                           navigator.clipboard.writeText(memo);
                           toast(`Copied dispatch memo for ${subcounty.name}!`, 'emerald');
                         }}

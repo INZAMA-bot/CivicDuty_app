@@ -18,7 +18,6 @@ import {
   Award,
   Zap,
   TrendingUp,
-  Sparkles,
   FileText,
   Layers,
   Send,
@@ -51,7 +50,7 @@ import {
 } from 'lucide-react';
 
 export const DocsView: React.FC = () => {
-  const { go, toast, user, logAudit } = useApp();
+  const { go, toast, user, logAudit, openLegalCenter } = useApp();
   const [activeTab, setActiveTab] = useState<'pitch' | 'overview' | 'partner' | 'journeys' | 'architecture'>('overview');
   const [journeyRole, setJourneyRole] = useState<'citizen' | 'government' | 'entity'>('citizen');
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -92,7 +91,7 @@ export const DocsView: React.FC = () => {
 
   // Map icons and visuals dynamically for slides
   const baseSlides = countryData.slides.map((s) => {
-    let icon = <Sparkles className="text-teal-400" size={28} />;
+    let icon = <ShieldCheck className="text-teal-400" size={28} />;
     let visual = null;
 
     if (s.id === 'problem') {
@@ -104,35 +103,35 @@ export const DocsView: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px] mono">
             <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-2.5 rounded-xl space-y-1">
-              <span className="text-red-600 dark:text-red-400 font-bold block text-[10px]">❌ TRADITIONAL</span>
+              <span className="text-red-600 dark:text-red-400 font-bold block text-[10px]">TRADITIONAL</span>
               <p className="text-slate-600 dark:text-slate-400 text-[10px]">Paper petitions, manual queuing, lost files, zero status updates, unmonitored delays.</p>
             </div>
             <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 p-2.5 rounded-xl space-y-1">
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold block text-[10px]">⚡ CIVICDUTY</span>
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold block text-[10px]">CIVICDUTY</span>
               <p className="text-slate-700 dark:text-slate-300 text-[10px]">Geotagged proof, auto-routed to {countryData.level3Title.split('&')[0]}, live SLA timer.</p>
             </div>
           </div>
         </div>
       );
     } else if (s.id === 'solution') {
-      icon = <Sparkles className="text-teal-600 dark:text-teal-400" size={28} />;
+      icon = <ShieldCheck className="text-teal-600 dark:text-teal-400" size={28} />;
       visual = (
         <div className="bg-white dark:bg-slate-950/80 border border-teal-200 dark:border-teal-500/30 rounded-2xl p-4 space-y-2.5 shadow-sm">
           <div className="flex items-center justify-between text-[10px] mono">
             <span className="text-teal-700 dark:text-teal-400 font-bold flex items-center gap-1"><Smartphone size={14} /> Multi-Channel Access</span>
-            <span className="text-slate-500 dark:text-slate-400">{countryData.flag} {countryData.name} Rollout</span>
+            <span className="text-slate-500 dark:text-slate-400">[{countryData.code}] {countryData.name} Rollout</span>
           </div>
           <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] mono">
             <div className="bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-800/60 p-2 rounded-xl text-teal-800 dark:text-teal-200">
-              <span className="font-bold block text-teal-700 dark:text-teal-300">📱 Web App</span>
+              <span className="font-bold block text-teal-700 dark:text-teal-300">Web App</span>
               <span className="text-[9px] text-slate-500 dark:text-slate-400">Photos, Voice, GPS</span>
             </div>
             <div className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/60 p-2 rounded-xl text-indigo-800 dark:text-indigo-200">
-              <span className="font-bold block text-indigo-700 dark:text-indigo-300">📞 USSD Layer</span>
+              <span className="font-bold block text-indigo-700 dark:text-indigo-300">USSD Layer</span>
               <span className="text-[9px] text-slate-500 dark:text-slate-400">Feature Phones</span>
             </div>
             <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 p-2 rounded-xl text-amber-800 dark:text-amber-200">
-              <span className="font-bold block text-amber-700 dark:text-amber-300">🏛️ Gov Desk</span>
+              <span className="font-bold block text-amber-700 dark:text-amber-300">Gov Desk</span>
               <span className="text-[9px] text-slate-500 dark:text-slate-400">Officer Portal</span>
             </div>
           </div>
@@ -143,7 +142,7 @@ export const DocsView: React.FC = () => {
       visual = (
         <div className="bg-white dark:bg-slate-950/90 border border-amber-200 dark:border-amber-500/30 rounded-2xl p-3.5 space-y-2 mono text-[10px] shadow-sm">
           <div className="flex items-center justify-between text-amber-800 dark:text-amber-400 font-bold border-b border-amber-200 dark:border-amber-500/20 pb-1.5">
-            <span>{countryData.flag} {countryData.name.toUpperCase()} HIERARCHY MAP</span>
+            <span>[{countryData.code}] {countryData.name.toUpperCase()} HIERARCHY MAP</span>
             <span className="text-[9px] bg-amber-100 dark:bg-amber-500/20 px-2 py-0.5 rounded text-amber-800 dark:text-amber-300">ADMIN NODES</span>
           </div>
           <div className="space-y-1.5 text-[10px]">
@@ -246,17 +245,17 @@ export const DocsView: React.FC = () => {
         </div>
         <div className="grid grid-cols-2 gap-2 text-[10px] mono">
           <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/50 p-2.5 rounded-xl space-y-1">
-            <span className="text-indigo-800 dark:text-indigo-300 font-bold block">🏛️ Ministerial Briefing</span>
+            <span className="text-indigo-800 dark:text-indigo-300 font-bold block">Ministerial Briefing</span>
             <span className="text-slate-600 dark:text-slate-400 text-[9px]">Custom executive presentation tailored for Cabinet & Local Gov Ministers</span>
           </div>
           <div className="bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/50 p-2.5 rounded-xl space-y-1">
-            <span className="text-teal-800 dark:text-teal-300 font-bold block">⚡ 30-Day Sandbox Pilot</span>
+            <span className="text-teal-800 dark:text-teal-300 font-bold block">30-Day Sandbox Pilot</span>
             <span className="text-slate-600 dark:text-slate-400 text-[9px]">Zero-cost trial across targeted district or city wards</span>
           </div>
         </div>
         <button
           onClick={() => setActiveTab('partner')}
-          className="w-full bg-gradient-to-r from-indigo-600 to-teal-600 hover:from-indigo-500 hover:to-teal-500 dark:from-indigo-500 dark:to-teal-500 dark:hover:from-indigo-400 dark:hover:to-teal-400 text-white dark:text-slate-950 font-black rounded-xl py-2.5 text-xs uppercase tracking-wider mono flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+          className="w-full bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold rounded-lg py-2.5 text-xs uppercase tracking-wider mono flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98]"
         >
           <Handshake size={15} />
           <span>Open Government Partnership Hub</span>
@@ -311,12 +310,45 @@ export const DocsView: React.FC = () => {
     <div className="p-4 space-y-5 animate-fade-in pb-16 text-slate-800 dark:text-slate-100">
       {/* Top Header */}
       <div>
-        <button
-          onClick={() => go('splash')}
-          className="flex items-center gap-1 text-[10px] mono text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 mb-3 transition-colors font-bold"
-        >
-          <ChevronLeft size={14} /> Back to Home
-        </button>
+        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+          <button
+            onClick={() => go('splash')}
+            className="flex items-center gap-1 text-[10px] mono text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors font-bold cursor-pointer"
+          >
+            <ChevronLeft size={14} /> Back to Home
+          </button>
+
+          <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold">
+            <button
+              type="button"
+              onClick={() => openLegalCenter('about')}
+              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 cursor-pointer"
+            >
+              About CivicDuty
+            </button>
+            <button
+              type="button"
+              onClick={() => openLegalCenter('privacy')}
+              className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/20 cursor-pointer"
+            >
+              Privacy Charter
+            </button>
+            <button
+              type="button"
+              onClick={() => openLegalCenter('terms')}
+              className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 cursor-pointer"
+            >
+              Terms of Use
+            </button>
+            <button
+              type="button"
+              onClick={() => openLegalCenter('ethics')}
+              className="px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 cursor-pointer"
+            >
+              Ethics Covenant
+            </button>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="tagline text-teal-700 dark:text-teal-400 mb-0.5 font-bold">National Civic Platform Pitch</div>
@@ -342,7 +374,7 @@ export const DocsView: React.FC = () => {
             >
               {Object.entries(COUNTRIES).map(([code, c]) => (
                 <option key={code} value={code} className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-                  {c.flag} {c.name} ({code})
+                  [{code}] {c.name}
                 </option>
               ))}
             </select>
@@ -350,9 +382,9 @@ export const DocsView: React.FC = () => {
         </div>
 
         {/* Selected Country Context Banner */}
-        <div className="mt-3 bg-gradient-to-r from-teal-50 dark:from-teal-950/50 via-slate-50 dark:via-slate-900 to-white dark:to-slate-950 border border-teal-200 dark:border-teal-500/30 p-3 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="mt-3 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] p-3 rounded-xl flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">
-            <span className="text-2xl">{countryData.flag}</span>
+            <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">{countryData.code}</span>
             <div>
               <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                 <span>Government of {countryData.name} Presentation</span>
@@ -417,7 +449,7 @@ export const DocsView: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
-          <Sparkles size={14} />
+          <Award size={14} />
           <span>Pitch Deck</span>
         </button>
         <button
@@ -518,7 +550,7 @@ export const DocsView: React.FC = () => {
         return (
           <div className="space-y-4">
             {/* Document Slide Carousel Header & Controller */}
-            <div className="card p-4 space-y-3 bg-gradient-to-br from-amber-500/10 via-slate-900/10 to-teal-500/10 dark:from-amber-950/40 dark:via-slate-950 dark:to-teal-950/30 border border-amber-300 dark:border-amber-500/40 rounded-2xl shadow-sm">
+            <div className="card p-4 space-y-3 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-500/20 pb-3">
                 <div>
                   <span className="text-[10px] mono text-amber-800 dark:text-amber-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
@@ -778,7 +810,7 @@ export const DocsView: React.FC = () => {
                           }`}
                         >
                           <span className="font-bold text-[11px] mono uppercase block">
-                            📌 {sec.callout.title}
+                            {sec.callout.title}
                           </span>
                           <p className="text-[11px] font-sans leading-relaxed">{sec.callout.text}</p>
                         </div>
@@ -912,7 +944,7 @@ export const DocsView: React.FC = () => {
           {/* Pitch Slide Controller */}
           <div className="flex items-center justify-between bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-2xl shadow-sm">
             <span className="text-[10px] mono text-teal-700 dark:text-teal-400 font-bold flex items-center gap-1.5">
-              <span>{countryData.flag} Slide {currentSlide + 1} of {pitchSlides.length}</span>
+              <span>[{countryData.code}] Slide {currentSlide + 1} of {pitchSlides.length}</span>
             </span>
             <div className="flex gap-1.5">
               <button
@@ -934,7 +966,7 @@ export const DocsView: React.FC = () => {
           {(() => {
             const slide = pitchSlides[currentSlide];
             return (
-              <div className={`card p-5 space-y-4 border bg-gradient-to-br ${slide.color} ${slide.borderColor} rounded-2xl shadow-sm transition-all`}>
+              <div className={`card p-5 space-y-4 border bg-white dark:bg-[#161a22] ${slide.borderColor} rounded-xl shadow-xs transition-all`}>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <span className="text-[9px] mono text-teal-800 dark:text-teal-300 font-bold uppercase tracking-widest bg-white/80 dark:bg-slate-950/60 px-2.5 py-1 rounded-full border border-teal-300 dark:border-teal-500/30">
@@ -997,7 +1029,7 @@ export const DocsView: React.FC = () => {
       {activeTab === 'partner' && (
         <div className="space-y-4 animate-fade-in">
           {/* Executive Value Proposition Header */}
-          <div className="card p-4 space-y-3 border-indigo-200 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-50 dark:from-indigo-950/40 via-white dark:via-slate-900 to-slate-50 dark:to-slate-950 rounded-2xl shadow-sm">
+          <div className="card p-4 space-y-3 border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] rounded-xl shadow-xs">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <span className="text-[9px] mono text-indigo-800 dark:text-indigo-300 font-bold uppercase tracking-widest bg-indigo-100 dark:bg-indigo-500/20 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-500/30 inline-flex items-center gap-1.5">
@@ -1007,7 +1039,7 @@ export const DocsView: React.FC = () => {
                   Partner With CivicDuty · Government of {countryData.name}
                 </h3>
               </div>
-              <span className="text-3xl">{countryData.flag}</span>
+              <span className="text-xs font-mono font-bold px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">{countryData.code}</span>
             </div>
 
             <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-mono">
@@ -1056,7 +1088,7 @@ export const DocsView: React.FC = () => {
                     <p className="text-[10px] mono text-emerald-700 dark:text-emerald-400 font-bold">Reference ID: {submittedInquiry.ref}</p>
                   </div>
                 </div>
-                <span className="chip ch-resolved">Pledged ✓</span>
+                <span className="chip ch-resolved">Pledged</span>
               </div>
 
               <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl space-y-2 font-mono text-[11px] shadow-sm">
@@ -1132,7 +1164,7 @@ export const DocsView: React.FC = () => {
                   </p>
                 </div>
                 <span className="text-[9px] mono bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-teal-800 dark:text-teal-300 font-bold px-2 py-0.5 rounded">
-                  {countryData.flag} {pitchCountry}
+                  [{pitchCountry}]
                 </span>
               </div>
 
@@ -1270,7 +1302,7 @@ export const DocsView: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 via-teal-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 dark:from-indigo-500 dark:via-teal-500 dark:to-emerald-500 dark:hover:from-indigo-400 dark:hover:to-emerald-400 text-white dark:text-slate-950 font-black rounded-xl py-3 text-xs uppercase tracking-wider mono flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98]"
+                className="w-full bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold rounded-lg py-3 text-xs uppercase tracking-wider mono flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98]"
               >
                 <Handshake size={16} />
                 <span>Submit Collaboration Interest & Request MOU Briefing</span>
@@ -1284,18 +1316,18 @@ export const DocsView: React.FC = () => {
               <span className="text-indigo-800 dark:text-indigo-400 font-bold uppercase flex items-center gap-1.5">
                 <Mail size={14} /> CivicDuty Government Relations Secretariat
               </span>
-              <span className="text-slate-500 dark:text-slate-400">{countryData.flag} Direct Channel</span>
+              <span className="text-slate-500 dark:text-slate-400">[{countryData.code}] Direct Channel</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] mono">
               <div className="bg-slate-50 dark:bg-slate-900/90 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-slate-900 dark:text-slate-200 font-bold block">✉️ Official Liaison Email</span>
+                <span className="text-slate-900 dark:text-slate-200 font-bold block">Official Liaison Email</span>
                 <span className="text-teal-700 dark:text-teal-300 font-bold block">gov-partnerships@civicduty.org</span>
                 <p className="text-[9px] text-slate-500 dark:text-slate-400">Direct inbox for Permanent Secretaries, Governors & Mayors.</p>
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-900/90 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-slate-900 dark:text-slate-200 font-bold block">📞 Senior Delegate Hotline</span>
+                <span className="text-slate-900 dark:text-slate-200 font-bold block">Senior Delegate Hotline</span>
                 <span className="text-indigo-700 dark:text-indigo-300 font-bold block">+256 (0) 414 550 100 / +250 788 123 456</span>
                 <p className="text-[9px] text-slate-500 dark:text-slate-400">Encrypted WhatsApp & telephone liaison for executive scheduling.</p>
               </div>
@@ -1600,7 +1632,7 @@ export const DocsView: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
               <div>
                 <span className="text-[9px] mono text-teal-700 dark:text-teal-400 font-bold uppercase tracking-widest">
-                  {countryData.flag} {countryData.name} Administrative Hierarchy
+                  [{countryData.code}] {countryData.name} Administrative Hierarchy
                 </span>
                 <h3 className="text-base font-black text-slate-900 dark:text-slate-100">{countryData.motto}</h3>
               </div>
@@ -1635,15 +1667,15 @@ export const DocsView: React.FC = () => {
 
           <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl space-y-2 shadow-sm">
             <p className="text-[10px] mono text-teal-700 dark:text-teal-400 font-bold uppercase tracking-wider">
-              {countryData.flag} Public Utilities & Civil Entities Integrated
+              [{countryData.code}] Public Utilities & Civil Entities Integrated
             </p>
             <div className="grid grid-cols-2 gap-2 text-[10px] mono">
               <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-slate-900 dark:text-slate-200 font-bold block">🏛️ Civil Authorities</span>
+                <span className="text-slate-900 dark:text-slate-200 font-bold block">Civil Authorities</span>
                 <span className="text-slate-600 dark:text-slate-400 text-[9px]">{countryData.agenciesCivic.join(', ')}</span>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-slate-900 dark:text-slate-200 font-bold block">💧 Essential Utilities</span>
+                <span className="text-slate-900 dark:text-slate-200 font-bold block">Essential Utilities</span>
                 <span className="text-slate-600 dark:text-slate-400 text-[9px]">{countryData.agenciesUtility.join(', ')}</span>
               </div>
             </div>
@@ -1652,7 +1684,7 @@ export const DocsView: React.FC = () => {
       )}
 
       {/* Share / Pitch Action Footer */}
-      <div className="bg-gradient-to-r from-slate-100 dark:from-slate-900 via-teal-50 dark:via-teal-950/40 to-slate-100 dark:to-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl space-y-3 shadow-sm">
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] p-4 rounded-xl space-y-3 shadow-xs">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-wide">

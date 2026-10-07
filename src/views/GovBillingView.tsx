@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept } from '../utils/helpers';
+import { COUNTRIES } from '../data/countries';
 import { NoteBox } from '../components/NoteBox';
 import {
   CreditCard,
@@ -23,7 +24,6 @@ import {
   Award,
   Target,
   TrendingUp,
-  Sparkles,
   Briefcase,
   Landmark,
   Lightbulb,
@@ -158,8 +158,8 @@ export const GovBillingView: React.FC = () => {
           ['status', 'Subscription'],
           ['invoices', `Invoices (${myInvoices.length})`],
           ['pay', 'Payment Rails & Terminal'],
-          ['integrations', '🔌 GitHub & API Guide'],
-          ['uganda_wealth', '🇺🇬 Uganda Registration & Wealth Engine'],
+          ['integrations', 'GitHub & API Guide'],
+          ['uganda_wealth', '[UG] Uganda Registration & Wealth Engine'],
         ].map(([t, l]) => (
           <button
             key={t}
@@ -188,7 +188,7 @@ export const GovBillingView: React.FC = () => {
                 <p className="text-xs text-slate-500 mt-0.5">Assigned Mandate: {d.name}</p>
               </div>
               <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
-                Active Tier ✓
+                Active Tier
               </span>
             </div>
 
@@ -245,7 +245,7 @@ export const GovBillingView: React.FC = () => {
                         : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                     }`}
                   >
-                    {inv.status === 'paid' ? 'Paid & Settled ✓' : 'Unpaid · Due in 30d'}
+                    {inv.status === 'paid' ? 'Paid & Settled' : 'Unpaid · Due in 30d'}
                   </span>
                 </div>
 
@@ -357,13 +357,25 @@ export const GovBillingView: React.FC = () => {
                   onChange={(e) => setCurrency(e.target.value as any)}
                   className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
                 >
-                  <option value="UGX">UGX — Uganda Shilling</option>
-                  <option value="KES">KES — Kenya Shilling</option>
-                  <option value="NGN">NGN — Nigeria Naira</option>
-                  <option value="GHS">GHS — Ghana Cedi</option>
-                  <option value="RWF">RWF — Rwanda Franc</option>
-                  <option value="ZAR">ZAR — South Africa Rand</option>
-                  <option value="USD">USD — US Dollar</option>
+                  <optgroup label="── Primary Settlement Currencies">
+                    <option value="UGX">[UG] UGX — Uganda Shilling</option>
+                    <option value="KES">[KE] KES — Kenya Shilling</option>
+                    <option value="NGN">[NG] NGN — Nigeria Naira</option>
+                    <option value="GHS">[GH] GHS — Ghana Cedi</option>
+                    <option value="RWF">[RW] RWF — Rwanda Franc</option>
+                    <option value="TZS">[TZ] TZS — Tanzania Shilling</option>
+                    <option value="ZAR">[ZA] ZAR — South Africa Rand</option>
+                    <option value="USD">[US] USD — US Dollar</option>
+                    <option value="EUR">[EU] EUR — Euro</option>
+                    <option value="GBP">[GB] GBP — British Pound</option>
+                  </optgroup>
+                  <optgroup label={`── All Global Sovereign Jurisdictions (${Object.keys(COUNTRIES).length} Nations)`}>
+                    {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
+                      <option key={cCode} value={cInfo.currency || 'USD'}>
+                        [{cCode}] {cInfo.currency || 'USD'} — {cInfo.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
@@ -593,11 +605,11 @@ export const GovBillingView: React.FC = () => {
       {activeTab === 'uganda_wealth' && (
         <div className="space-y-6">
           {/* Executive Banner */}
-          <div className="bg-gradient-to-br from-amber-500/10 via-emerald-500/10 to-slate-900 border border-amber-500/30 rounded-3xl p-6 relative overflow-hidden">
+          <div className="bg-amber-50/70 dark:bg-slate-900 border border-amber-500/30 rounded-3xl p-6 relative overflow-hidden">
             <div className="flex items-start justify-between relative z-10">
               <div className="space-y-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider">
-                  <Sparkles size={14} />
+                  <ShieldCheck size={14} />
                   <span>Uganda Corporate Registration &amp; Wealth Architecture</span>
                 </div>
                 <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
@@ -807,7 +819,7 @@ export const GovBillingView: React.FC = () => {
             </div>
 
             {/* Founder Wealth Mentorship Principles */}
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 to-amber-950 text-slate-200 space-y-3 mt-4 border border-amber-500/30">
+            <div className="p-5 rounded-2xl bg-slate-900 text-slate-200 space-y-3 mt-4 border border-amber-500/30">
               <div className="flex items-center gap-2 text-amber-400 font-black text-xs uppercase tracking-wider">
                 <Lightbulb size={16} />
                 <span>Founder Wealth Mentorship Principles</span>

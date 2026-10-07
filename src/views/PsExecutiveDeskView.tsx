@@ -27,7 +27,6 @@ import {
   AlertCircle,
   FileText,
   Sliders,
-  Sparkles,
   ExternalLink,
   ChevronRight,
   ShieldAlert,
@@ -205,8 +204,8 @@ export const PsExecutiveDeskView: React.FC = () => {
 
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                <span className="text-xl">
-                  {COUNTRIES[currentCountry]?.flag || '🇺🇬'}
+                <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-mono font-bold text-slate-800 dark:text-slate-200">
+                  {currentCountry}
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
                   Apex Line Ministry Desk
@@ -231,7 +230,7 @@ export const PsExecutiveDeskView: React.FC = () => {
             >
               {Object.entries(COUNTRIES).map(([cCode, c]) => (
                 <option key={cCode} value={cCode}>
-                  {c.flag} {c.name}
+                  [{cCode}] {c.name}
                 </option>
               ))}
             </select>
@@ -277,7 +276,7 @@ export const PsExecutiveDeskView: React.FC = () => {
         {/* EXECUTIVE PROFILE & STATUTORY MANDATE BANNER */}
         <div className="p-5 sm:p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-300 dark:border-slate-800 shadow-xs relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">
-            <TrafficLightLogo size="xl" />
+            <TrafficLightLogo size="xl" variant="green-only" />
           </div>
 
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
@@ -653,7 +652,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                               <td className="py-3 px-4">
                                 {isInspected ? (
                                   <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400">
-                                    ✓ SQUAD EN ROUTE
+                                    SQUAD EN ROUTE
                                   </span>
                                 ) : (
                                   <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
@@ -839,7 +838,7 @@ export const PsExecutiveDeskView: React.FC = () => {
 
                         <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                           <span className="text-[10px] font-bold text-slate-500">
-                            {isDispatched ? '✓ Mechanic En Route' : 'Status: Ready'}
+                            {isDispatched ? 'Mechanic En Route' : 'Status: Ready'}
                           </span>
                           <button
                             onClick={() => handleDispatchMechanic(b.pointId, b.subCounty)}

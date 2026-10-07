@@ -18,7 +18,6 @@ import {
   Copy,
   Download,
   Send,
-  Sparkles,
   FileText,
   AlertCircle,
   ExternalLink,
@@ -42,7 +41,7 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
   const { user, toast, mintGovAccessCode, addInvite, logAudit, directLoginWithGovCode } = useApp();
 
   const activeCountry: CountryCode = country || user?.country || 'UG';
-  const countryObj = COUNTRIES[activeCountry] || { name: activeCountry, flag: '🏛️' };
+  const countryObj = COUNTRIES[activeCountry] || { name: activeCountry, flag: activeCountry };
   const rollout = getNationalRolloutArrangements(activeCountry);
 
   const districtNodes = useMemo(() => getRolloutNodesForCountry(activeCountry), [activeCountry]);
@@ -233,7 +232,7 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
     );
 
     toast(
-      `✓ Sovereign Batch Commissioning executed: ${mintedList.length} statutory credentials minted & live on gateway!`,
+      `Sovereign Batch Commissioning executed: ${mintedList.length} statutory credentials minted & live on gateway.`,
       'emerald'
     );
   };
@@ -280,7 +279,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
 
     navigator.clipboard.writeText(memoText);
     setCopiedMemo(true);
-    toast('✓ Master Cabinet Transmittal Gazette copied to clipboard!', 'emerald');
+    toast('Master Cabinet Transmittal Gazette copied to clipboard.', 'emerald');
     setTimeout(() => setCopiedMemo(false), 3000);
   };
 
@@ -303,7 +302,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast('✓ Master Gazette CSV downloaded successfully.', 'emerald');
+    toast('Master Gazette CSV downloaded successfully.', 'emerald');
   };
 
   return (
@@ -319,8 +318,8 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
               <span className="px-2.5 py-0.5 rounded-full text-[10px] mono font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
                 Sovereign Batch Authority · PS MoLG Superadmin
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                {countryObj.flag} {countryObj.name}
+              <span className="px-2 py-0.5 rounded text-[10px] mono font-bold bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36]">
+                {activeCountry} · {countryObj.name}
               </span>
             </div>
             <h3 className="text-xl font-black text-slate-950 dark:text-white tracking-tight">
@@ -393,7 +392,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
           onClick={handleExecuteBatchCommissioning}
           className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs uppercase tracking-wider font-black transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
         >
-          <Sparkles size={16} />
+          <Key size={16} />
           <span>Mint Selected Sovereign Desks</span>
         </button>
       </div>
@@ -614,7 +613,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
                         }}
                         className="py-1 px-2.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] transition-all"
                       >
-                        Mount ⚡
+                        Mount Desk
                       </button>
                     </td>
                   </tr>

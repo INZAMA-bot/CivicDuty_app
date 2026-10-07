@@ -24,7 +24,8 @@ import {
   Lock,
   CheckCircle2,
   MapPin,
-  Sparkles,
+  BarChart2,
+  Zap,
   ChevronRight,
   UserCheck,
   AlertTriangle,
@@ -546,7 +547,7 @@ export const GovTeamView: React.FC = () => {
     setSelectedDesignationId('');
     setCustomTitleText('');
     setInvitePhone('');
-    toast('✓ Official Statutory Credential minted! Transmittal memo ready.', 'emerald');
+    toast('Official Statutory Credential minted! Transmittal memo ready.', 'emerald');
   };
 
   const handlePrefillManual = (data: {
@@ -688,7 +689,7 @@ export const GovTeamView: React.FC = () => {
 
     logAudit('code_reissued', m.id, `Replacement code ${newCode} minted for ${m.name} (${m.title})`);
     setReissueResult({ code: newCode, member: m });
-    toast(`✓ Replacement access code minted for ${m.name}`, 'emerald');
+    toast(`Replacement access code minted for ${m.name}`, 'emerald');
   };
 
   return (
@@ -803,7 +804,7 @@ export const GovTeamView: React.FC = () => {
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
-            <Sparkles size={14} />
+            <BarChart2 size={14} />
             <span>Executive Tier Analytics (Tier {tier})</span>
           </button>
         </div>
@@ -880,7 +881,7 @@ export const GovTeamView: React.FC = () => {
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
               }`}
             >
-              <Sparkles size={13} />
+              <Zap size={13} />
               1-Click Auto-Mint
             </button>
           </div>
@@ -1045,7 +1046,7 @@ export const GovTeamView: React.FC = () => {
                             )}
                             {selectedDesigObj.isUtility && (
                               <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded text-[9px] font-bold">
-                                ⚡ Works / Utility Desk
+                                Works / Utility Desk
                               </span>
                             )}
                           </div>
@@ -1201,7 +1202,7 @@ export const GovTeamView: React.FC = () => {
 
               {/* Statutory Credential & Transmittal Memo Dispatch CTA (Displayed strictly after an invitation is issued; disappears once dismissed or approved) */}
               {issuedCode && issuedInviteData && (
-                <div className="mt-4 bg-gradient-to-b from-teal-50/90 to-emerald-50/50 dark:from-slate-800 dark:to-slate-850 border-2 border-teal-500/80 rounded-2xl p-5 space-y-4 shadow-md animate-fade-in">
+                <div className="mt-4 bg-teal-50/90 dark:bg-slate-800 border-2 border-teal-500/80 rounded-2xl p-5 space-y-4 shadow-md animate-fade-in">
                   <div className="flex items-start justify-between gap-3 border-b border-teal-200 dark:border-teal-800/80 pb-3">
                     <div className="flex items-center gap-2.5">
                       <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
@@ -1279,7 +1280,7 @@ export const GovTeamView: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <a
                         href={`https://wa.me/${(issuedInviteData.phone || invitePhone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                          `🏛️ OFFICIAL STATUTORY APPOINTMENT & TRANSMITTAL MEMORANDUM\n` +
+                          `OFFICIAL STATUTORY APPOINTMENT & TRANSMITTAL MEMORANDUM\n` +
                           `--------------------------------------------------\n` +
                           `Designated Officer: ${issuedInviteData.name}\n` +
                           `Statutory Post: ${issuedInviteData.title}\n` +
@@ -1294,13 +1295,13 @@ export const GovTeamView: React.FC = () => {
                         className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-all"
                       >
                         <MessageCircle size={15} />
-                        <span>💬 Dispatch via WhatsApp</span>
+                        <span>Dispatch via WhatsApp</span>
                       </a>
 
                       <button
                         onClick={() => {
                           const msg =
-                            `🏛️ OFFICIAL STATUTORY APPOINTMENT & TRANSMITTAL MEMORANDUM\n` +
+                            `OFFICIAL STATUTORY APPOINTMENT & TRANSMITTAL MEMORANDUM\n` +
                             `--------------------------------------------------\n` +
                             `Designated Officer: ${issuedInviteData.name}\n` +
                             `Statutory Post: ${issuedInviteData.title}\n` +
@@ -1314,7 +1315,7 @@ export const GovTeamView: React.FC = () => {
                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all"
                       >
                         <FileText size={15} />
-                        <span>📋 Copy Full Transmittal Memo</span>
+                        <span>Copy Full Transmittal Memo</span>
                       </button>
                     </div>
 
@@ -1324,12 +1325,12 @@ export const GovTeamView: React.FC = () => {
                         onClick={() => {
                           setIssuedCode(null);
                           setIssuedInviteData(null);
-                          toast('✓ Invitation dispatched! Notice dismissed to keep workspace clean.', 'emerald');
+                          toast('Invitation dispatched! Notice dismissed to keep workspace clean.', 'emerald');
                         }}
                         className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 font-bold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5"
                       >
                         <CheckCircle2 size={14} className="text-emerald-400 dark:text-emerald-600" />
-                        <span>✓ Mark Dispatched &amp; Dismiss (Frees Space)</span>
+                        <span>Mark Dispatched &amp; Dismiss (Frees Space)</span>
                       </button>
 
                       <button
@@ -1337,7 +1338,7 @@ export const GovTeamView: React.FC = () => {
                         title="Mount desk immediately"
                         className="py-2.5 px-3 bg-teal-100 dark:bg-teal-950/80 hover:bg-teal-200 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 text-xs font-bold rounded-xl transition-all border border-teal-300 dark:border-teal-700 flex items-center gap-1 shrink-0"
                       >
-                        Mount ⚡
+                        Mount
                       </button>
                     </div>
                   </div>
@@ -1387,7 +1388,7 @@ export const GovTeamView: React.FC = () => {
                         });
                         count++;
                       });
-                      toast(`⚡ Minted ${count} codes for all sub-counties in ${districtObj.name}`, 'emerald');
+                      toast(`Minted ${count} codes for all sub-counties in ${districtObj.name}`, 'emerald');
                     } else if (tier === 2) {
                       parishes.forEach((p) => {
                         const pCode = makeCode(codePrefix);
@@ -1406,7 +1407,7 @@ export const GovTeamView: React.FC = () => {
                         });
                         count++;
                       });
-                      toast(`⚡ Minted ${count} codes for all parishes in ${subcountyObj?.name}`, 'emerald');
+                      toast(`Minted ${count} codes for all parishes in ${subcountyObj?.name}`, 'emerald');
                     } else {
                       dists.slice(0, 10).forEach((dist) => {
                         const distCode = makeCode(codePrefix);
@@ -1425,12 +1426,12 @@ export const GovTeamView: React.FC = () => {
                         });
                         count++;
                       });
-                      toast(`⚡ Minted ${count} district node codes`, 'emerald');
+                      toast(`Minted ${count} district node codes`, 'emerald');
                     }
                   }}
                   className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider mono transition-all shadow-sm"
                 >
-                  ⚡ Execute Batch Minting
+                  Execute Batch Minting
                 </button>
                 <button
                   onClick={() => go('gov_bulk')}
@@ -1487,7 +1488,7 @@ export const GovTeamView: React.FC = () => {
                     onClick={() => {
                       const enlisted = acceptInvite(c.code);
                       if (enlisted) {
-                        toast(`✓ ${c.name} accepted statutory invite! Enlisted into ACTIVE section.`, 'emerald');
+                        toast(`${c.name} accepted statutory invite! Enlisted into ACTIVE section.`, 'emerald');
                       }
                     }}
                     className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-colors"
@@ -1546,7 +1547,7 @@ export const GovTeamView: React.FC = () => {
                   </button>
                   <a
                     href={`https://wa.me/?text=${encodeURIComponent(
-                      `🏛️ Official Access Code for ${c.name} (${c.title}): ${c.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${c.code}`
+                      `Official Access Code for ${c.name} (${c.title}): ${c.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${c.code}`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
@@ -1963,24 +1964,25 @@ export const GovTeamView: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 onClick={() => {
-                  const memo = `🏛️ CIVICDUTY SUCCESSOR APPOINTMENT\nStation: ${scopeName(user.country, handoverSuccessResult.newMember.scope)}\nNew Officer: ${handoverSuccessResult.newMember.name}\nAccess Code: ${handoverSuccessResult.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${handoverSuccessResult.code}\n\nPrevious desk holder (${handoverSuccessResult.oldMemberName}) stood down.`;
+                  const memo = `CIVICDUTY SUCCESSOR APPOINTMENT\nStation: ${scopeName(user.country, handoverSuccessResult.newMember.scope)}\nNew Officer: ${handoverSuccessResult.newMember.name}\nAccess Code: ${handoverSuccessResult.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${handoverSuccessResult.code}\n\nPrevious desk holder (${handoverSuccessResult.oldMemberName}) stood down.`;
                   copyToClipboard(memo, 'Handover Dispatch Memo', (m) => toast(m));
                 }}
                 className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5"
               >
-                <span>📋 Copy Dispatch Memo</span>
+                <FileText size={14} />
+                <span>Copy Dispatch Memo</span>
               </button>
 
               <a
                 href={`https://wa.me/${(handoverSuccessResult.newMember.contact_phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                  `🏛️ CIVICDUTY SUCCESSOR APPOINTMENT\nStation: ${scopeName(user.country, handoverSuccessResult.newMember.scope)}\nOfficer: ${handoverSuccessResult.newMember.name}\nAccess Code: ${handoverSuccessResult.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${handoverSuccessResult.code}`
+                  `CIVICDUTY SUCCESSOR APPOINTMENT\nStation: ${scopeName(user.country, handoverSuccessResult.newMember.scope)}\nOfficer: ${handoverSuccessResult.newMember.name}\nAccess Code: ${handoverSuccessResult.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${handoverSuccessResult.code}`
                 )}`}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5"
               >
                 <MessageCircle size={14} />
-                <span>💬 WhatsApp Successor</span>
+                <span>WhatsApp Successor</span>
               </a>
             </div>
 
@@ -2110,7 +2112,7 @@ export const GovTeamView: React.FC = () => {
             <div className="flex gap-2">
               <a
                 href={`https://wa.me/${(reissueResult.member.contact_phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                  `🏛️ CIVICDUTY REPLACEMENT ACCESS CODE\nHello ${reissueResult.member.name}, your new official access code is: ${reissueResult.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${reissueResult.code}`
+                  `CIVICDUTY REPLACEMENT ACCESS CODE\nHello ${reissueResult.member.name}, your new official access code is: ${reissueResult.code}\nLink: ${window.location.origin}${window.location.pathname}?gov_code=${reissueResult.code}`
                 )}`}
                 target="_blank"
                 rel="noreferrer"

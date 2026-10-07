@@ -25,7 +25,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   UG: {
     countryCode: 'UG',
     countryName: 'Uganda',
-    flag: '🇺🇬',
+    flag: 'UG',
     currency: 'UGX',
     digitalPerks: [
       {
@@ -75,7 +75,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   KE: {
     countryCode: 'KE',
     countryName: 'Kenya',
-    flag: '🇰🇪',
+    flag: 'KE',
     currency: 'KES',
     digitalPerks: [
       {
@@ -125,7 +125,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   NG: {
     countryCode: 'NG',
     countryName: 'Nigeria',
-    flag: '🇳🇬',
+    flag: 'NG',
     currency: 'NGN',
     digitalPerks: [
       {
@@ -175,7 +175,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   GH: {
     countryCode: 'GH',
     countryName: 'Ghana',
-    flag: '🇬🇭',
+    flag: 'GH',
     currency: 'GHS',
     digitalPerks: [
       {
@@ -225,7 +225,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   RW: {
     countryCode: 'RW',
     countryName: 'Rwanda',
-    flag: '🇷🇼',
+    flag: 'RW',
     currency: 'RWF',
     digitalPerks: [
       {
@@ -275,7 +275,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   TZ: {
     countryCode: 'TZ',
     countryName: 'Tanzania',
-    flag: '🇹🇿',
+    flag: 'TZ',
     currency: 'TZS',
     digitalPerks: [
       {
@@ -325,7 +325,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   ZA: {
     countryCode: 'ZA',
     countryName: 'South Africa',
-    flag: '🇿🇦',
+    flag: 'ZA',
     currency: 'ZAR',
     digitalPerks: [
       {
@@ -375,7 +375,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   GB: {
     countryCode: 'GB',
     countryName: 'United Kingdom',
-    flag: '🇬🇧',
+    flag: 'GB',
     currency: 'GBP',
     digitalPerks: [
       {
@@ -425,7 +425,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   US: {
     countryCode: 'US',
     countryName: 'United States',
-    flag: '🇺🇸',
+    flag: 'US',
     currency: 'USD',
     digitalPerks: [
       {
@@ -475,7 +475,7 @@ export const COUNTRY_PERKS: Record<string, CountryPerkConfig> = {
   IN: {
     countryCode: 'IN',
     countryName: 'India',
-    flag: '🇮🇳',
+    flag: 'IN',
     currency: 'INR',
     digitalPerks: [
       {
@@ -530,13 +530,13 @@ export function getCountryPerks(countryCode?: string): CountryPerkConfig {
     return COUNTRY_PERKS[code];
   }
 
-  const meta = COUNTRIES[code] || { name: code, flag: '🌍', currency: 'USD' };
+  const meta = COUNTRIES[code] || { name: code, flag: code, currency: 'USD' };
   const currency = meta.currency || 'USD';
 
   return {
     countryCode: code as CountryCode,
     countryName: meta.name || 'National Jurisdiction',
-    flag: meta.flag || '🌍',
+    flag: code,
     currency,
     digitalPerks: [
       {

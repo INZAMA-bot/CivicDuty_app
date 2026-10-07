@@ -143,6 +143,8 @@ export interface ClaimedEntityRecord {
   unitsCovered?: number;
   feeUsd?: number;
   localCurrencyPrice?: string;
+  trialStatus?: 'founding_partner_trial' | 'active_paid' | 'expired';
+  trialEndsAt?: string;
 }
 
 export interface Department {
@@ -209,6 +211,7 @@ export interface MediaItem {
 export interface Comment {
   id: string;
   sender: string;
+  sender_id?: string;
   role: 'citizen' | 'gov';
   body: string;
   status_tag?: TicketStatus;
@@ -220,6 +223,34 @@ export interface Comment {
   location_badge?: string;
   gps?: { lat: string; lng: string } | null;
   avatar_url?: string;
+  parent_id?: string;
+  reply_to_sender?: string;
+  upvotes?: number;
+}
+
+export interface CivicPollOption {
+  id: string;
+  label: string;
+  votes: number;
+}
+
+export interface CivicPoll {
+  question: string;
+  options: CivicPollOption[];
+  total_votes: number;
+  ends_at?: string;
+  voted_option_id?: string;
+}
+
+export interface CommunityNote {
+  id: string;
+  author_name: string;
+  author_rank: string;
+  body: string;
+  source_url?: string;
+  helpful_votes: number;
+  created_at: string;
+  verified_consensus?: boolean;
 }
 
 export interface PostTerritory {
@@ -243,6 +274,19 @@ export interface BudgetAllocation {
   currency: string;
   contractor_name?: string;
   milestone_progress?: number; // 0 - 100
+}
+
+export interface CompiledWitnessReport {
+  id: string;
+  citizen_id: string;
+  citizen_name: string;
+  author_profession?: string;
+  anonymous: boolean;
+  body: string;
+  gps?: { lat: string; lng: string } | null;
+  media?: MediaItem[];
+  created_at: string;
+  source: 'web' | 'sms' | 'ussd';
 }
 
 export interface Post {
@@ -281,6 +325,35 @@ export interface Post {
   budget_allocation?: BudgetAllocation;
   crypto_seal_hash?: string;
   project?: string;
+  compiled_reports?: CompiledWitnessReport[];
+  compiled_count?: number;
+  is_master_dossier?: boolean;
+  merged_from_ids?: string[];
+  is_demo?: boolean;
+  demo_highlight?: string;
+  reposts?: number;
+  quote_of?: {
+    id: string;
+    title: string;
+    citizen_name: string;
+    dept_name: string;
+    snippet: string;
+  };
+  poll?: CivicPoll;
+  community_notes?: CommunityNote[];
+  before_after?: {
+    before_url: string;
+    after_url: string;
+    before_label?: string;
+    after_label?: string;
+  };
+  voice_note?: {
+    duration: string;
+    transcript?: string;
+    language?: string;
+    audio_url?: string;
+  };
+  hashtags?: string[];
 }
 
 export interface UserProfile {
@@ -696,12 +769,25 @@ export interface EscrowPerkVoucher {
   currency: string;
   country: string;
   sponsoredBy: string;
-  sponsorType: 'contractor' | 'authority' | 'corporate_csr';
+  sponsorType: 'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron';
   projectId?: string;
   projectName?: string;
   batchId: string;
   status: 'escrow_unassigned' | 'dispatched' | 'redeemed' | 'expired';
   createdAt: string;
+  isDemo?: boolean;
+  reimbursementFraming?: string;
+  ethicalPledgeSealed?: boolean;
+  selfRedeemedByCitizen?: boolean;
+  xpSpent?: number;
+  commissionBreakdown?: {
+    faceValueTotal: number;
+    wholesaleDiscountPct: number;
+    wholesaleSpreadCommission: number;
+    csrPlatformFeePct: number;
+    csrPlatformFee: number;
+    totalCivicDutyRevenue: number;
+  };
   dispatchedTo?: {
     recipientName: string;
     recipientContact: string; // phone or email
@@ -710,6 +796,7 @@ export interface EscrowPerkVoucher {
     citationNote?: string;
     postOrProjectId?: string;
     smsDeliveryStatus?: 'sent' | 'delivered';
+    ethicalNonInterferenceAck?: boolean;
   };
   redemptionUssdString?: string;
   expiryDate: string;
@@ -771,5 +858,53 @@ export interface CdOpsPromotionalAd {
   impressions?: number;
   clicks?: number;
 }
+
+export interface CivicNotification {
+  id: string;
+  type: 'sla_update' | 'upvote' | 'reply' | 'quote' | 'mention' | 'perk' | 'follow' | 'town_hall';
+  title: string;
+  body: string;
+  post_id?: string;
+  actor_name: string;
+  country: CountryCode;
+  created_at: string;
+  read: boolean;
+}
+
+export interface CitizenDirectMessage {
+  id: string;
+  thread_id: string;
+  participant_name: string;
+  participant_handle: string;
+  participant_role: string;
+  participant_verified?: boolean;
+  country: CountryCode;
+  messages: Array<{
+    id: string;
+    sender: 'me' | 'them';
+    sender_name: string;
+    body: string;
+    created_at: string;
+  }>;
+  unread?: number;
+}
+
+export interface TownHallSession {
+  id: string;
+  title: string;
+  host_name: string;
+  host_title: string;
+  dept_name: string;
+  country: CountryCode;
+  listeners_count: number;
+  is_live: boolean;
+  topic_tag: string;
+  speakers: Array<{
+    name: string;
+    role: string;
+    speaking?: boolean;
+  }>;
+}
+
 
 

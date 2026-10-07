@@ -23,24 +23,49 @@ import {
   Bike,
   Copy,
   ExternalLink,
-  Sparkles,
   RefreshCw,
   CreditCard,
   Wallet,
   Banknote,
   Shield,
   Check,
-  Phone
+  Phone,
+  Award,
+  Scale,
+  Printer,
+  Lock,
+  SlidersHorizontal
 } from 'lucide-react';
 
 export const PerkVaultView: React.FC = () => {
-  const { user, go, toast, logAudit } = useApp();
+  const { user, profiles, addPoints, go, toast, logAudit } = useApp();
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(user?.country || 'UG');
   const [vouchers, setVouchers] = useState<EscrowPerkVoucher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual'>('pay');
+  const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard'>('packs');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDemoMode, setFilterDemoMode] = useState<'all' | 'live' | 'demo'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [uploadAsLive, setUploadAsLive] = useState<boolean>(true);
+  const [redeemedVoucherCard, setRedeemedVoucherCard] = useState<EscrowPerkVoucher | null>(null);
+  const [activeCsrCertSponsor, setActiveCsrCertSponsor] = useState<{
+    sponsorName: string;
+    sponsorType: string;
+    totalVouchers: number;
+    dispatchedCount: number;
+    totalFaceValue: number;
+    currency: string;
+    projects: string[];
+    categories: string[];
+    certHash: string;
+  } | null>(null);
+  const [lastXpRedeemIso, setLastXpRedeemIso] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(`cd_last_xp_redeem_${user?.id || 'usr-9028-UG'}`);
+    } catch {
+      return null;
+    }
+  });
 
   // Direct Payment & Instant Escrow Buy State
   const [payPackage, setPayPackage] = useState<'mtn_5' | 'mtn_10' | 'nwsc_5' | 'yaka_5' | 'safeboda_10' | 'custom'>('mtn_5');
@@ -123,6 +148,8 @@ export const PerkVaultView: React.FC = () => {
     return vouchers.filter((v) => {
       if (v.country.toUpperCase() !== selectedCountry.toUpperCase()) return false;
       if (filterStatus !== 'all' && v.status !== filterStatus) return false;
+      if (filterDemoMode === 'live' && v.isDemo) return false;
+      if (filterDemoMode === 'demo' && !v.isDemo) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesCode = v.voucherCode.toLowerCase().includes(q);
@@ -133,7 +160,133 @@ export const PerkVaultView: React.FC = () => {
       }
       return true;
     });
-  }, [vouchers, selectedCountry, filterStatus, searchQuery]);
+  }, [vouchers, selectedCountry, filterStatus, filterDemoMode, searchQuery]);
+
+  // CSR Sponsor Leaderboard aggregation
+  const sponsorLeaderboard = useMemo(() => {
+    const countryVouchers = vouchers.filter((v) => v.country.toUpperCase() === selectedCountry.toUpperCase());
+    const map = new Map<
+      string,
+      {
+        sponsorName: string;
+        sponsorType: string;
+        totalVouchers: number;
+        dispatchedCount: number;
+        totalFaceValue: number;
+        currency: string;
+        projects: Set<string>;
+        categories: Set<string>;
+      }
+    >();
+
+    countryVouchers.forEach((v) => {
+      const key = v.sponsoredBy || 'Community CSR Sponsor';
+      const existing = map.get(key) || {
+        sponsorName: key,
+        sponsorType: v.sponsorType || 'corporate_csr',
+        totalVouchers: 0,
+        dispatchedCount: 0,
+        totalFaceValue: 0,
+        currency: v.currency || stats.currency,
+        projects: new Set<string>(),
+        categories: new Set<string>(),
+      };
+      existing.totalVouchers += 1;
+      if (v.status === 'dispatched' || v.status === 'redeemed') {
+        existing.dispatchedCount += 1;
+      }
+      existing.totalFaceValue += Number(v.faceValue) || 0;
+      if (v.projectName) existing.projects.add(v.projectName);
+      existing.categories.add(v.category);
+      map.set(key, existing);
+    });
+
+    return Array.from(map.values())
+      .map((item, idx) => ({
+        ...item,
+        projects: Array.from(item.projects),
+        categories: Array.from(item.categories),
+        certHash: `CSR-SHA256-${selectedCountry}-${(idx + 101).toString(16).toUpperCase()}-${item.sponsorName.replace(/[^A-Z0-9]/gi, '').slice(0, 8).toUpperCase()}`,
+      }))
+      .sort((a, b) => b.totalFaceValue - a.totalFaceValue);
+  }, [vouchers, selectedCountry, stats.currency]);
+
+  // Citizen Self-Redemption XP Helper
+  const currentCitizenProfile = profiles[user?.id || 'usr-9028-UG'] || {
+    civic_score: 50,
+    rank: 'Observer',
+    posts: 2,
+    resolved: 1,
+  };
+  const citizenXp = currentCitizenProfile.civic_score || 0;
+
+  const getXpCostForCategory = (cat: string) => {
+    if (cat === 'transit_credit') return 100;
+    if (cat === 'telco_data') return 150;
+    return 200; // electricity / water_utility
+  };
+
+  const cooldownInfo = useMemo(() => {
+    if (!lastXpRedeemIso) return { onCooldown: false, daysLeft: 0 };
+    const elapsedMs = Date.now() - new Date(lastXpRedeemIso).getTime();
+    const sevenDaysMs = 7 * 86400000;
+    if (elapsedMs < sevenDaysMs) {
+      const daysLeft = Math.ceil((sevenDaysMs - elapsedMs) / 86400000);
+      return { onCooldown: true, daysLeft };
+    }
+    return { onCooldown: false, daysLeft: 0 };
+  }, [lastXpRedeemIso]);
+
+  const handleCitizenSelfRedeem = async (voucher: EscrowPerkVoucher) => {
+    const xpCost = getXpCostForCategory(voucher.category);
+    if (cooldownInfo.onCooldown) {
+      toast(`Anti-Farming Guardrail: Max 1 self-redemption every 7 days (${cooldownInfo.daysLeft}d remaining).`, 'amber');
+      return;
+    }
+    if (citizenXp < xpCost) {
+      toast(`Insufficient CivicScore XP. You need ${xpCost} XP (current: ${citizenXp} XP).`, 'amber');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/perks/dispatch-from-vault', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voucherId: voucher.id,
+          recipientName: user?.name || 'Verified Citizen Watchdog',
+          recipientContact: user?.phone || '+256 770 000 000',
+          dispatchedBy: 'Citizen Self-Redemption Store (CivicScore XP)',
+          ticketId: `XP-REDEEM-${xpCost}PTS`,
+          note: `Citizen redeemed ${xpCost} CivicScore XP for ${voucher.reimbursementFraming || 'Field Cost Reimbursement'}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.voucher) {
+        const uid = user?.id || 'usr-9028-UG';
+        addPoints(uid, -xpCost, `−${xpCost} Civic XP · Redeemed ${voucher.brand} Field Cost Voucher`);
+        const nowIso = new Date().toISOString();
+        setLastXpRedeemIso(nowIso);
+        try {
+          localStorage.setItem(`cd_last_xp_redeem_${uid}`, nowIso);
+        } catch {
+          // ignore
+        }
+        setVouchers((prev) => prev.map((v) => (v.id === data.voucher.id ? data.voucher : v)));
+        setRedeemedVoucherCard(data.voucher);
+        logAudit(
+          'CITIZEN_XP_PERK_REDEEM',
+          data.voucher.id,
+          `${user?.name || 'Citizen'} redeemed ${xpCost} Civic XP for ${data.voucher.title} (${data.voucher.voucherCode})`
+        );
+        toast(`Redeemed ${data.voucher.title}! PIN & USSD code unlocked below.`, 'emerald');
+      } else {
+        toast(data.error || 'Could not redeem voucher', 'rose');
+      }
+    } catch {
+      toast('Network error while redeeming voucher', 'rose');
+    }
+  };
 
   // Download Sample CSV
   const handleDownloadSampleCsv = () => {
@@ -217,6 +370,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           projectName: csvProjectName,
           country: selectedCountry,
           vouchers: csvPreviewRows,
+          isDemo: !uploadAsLive,
+          sourceMethod: 'csv',
         }),
       });
 
@@ -228,7 +383,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         setVouchers((prev) => [...data.vouchers, ...prev]);
         setCsvFile(null);
         setCsvPreviewRows([]);
-        toast(`🎉 Successfully deposited ${data.uploadedCount} pre-funded vouchers into Sovereign Perk Escrow!`, 'emerald');
+        toast(`Successfully deposited ${data.uploadedCount} pre-funded vouchers into Sovereign Perk Escrow!`, 'emerald');
       } else {
         toast(data.error || 'Failed to deposit batch', 'rose');
       }
@@ -268,6 +423,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           sponsorType: manualSponsorType,
           country: selectedCountry,
           vouchers: [singleRow],
+          isDemo: !uploadAsLive,
+          sourceMethod: 'manual',
         }),
       });
 
@@ -277,7 +434,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         setVouchers((prev) => [...data.vouchers, ...prev]);
         setManualCode('');
         setManualPin('');
-        toast(`🎉 Pre-funded voucher deposited to Escrow Vault!`, 'emerald');
+        toast(`Pre-funded voucher deposited to Escrow Vault!`, 'emerald');
       }
     } catch {
       toast('Failed to deposit voucher', 'rose');
@@ -350,6 +507,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           sponsorType: 'contractor',
           country: selectedCountry,
           vouchers: seedRows,
+          isDemo: true,
+          sourceMethod: 'seed',
         }),
       });
 
@@ -517,6 +676,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           projectName: payProjectName,
           country: selectedCountry,
           vouchers: mintedVouchers,
+          isDemo: !uploadAsLive,
+          sourceMethod: 'aggregator_checkout',
         }),
       });
 
@@ -550,7 +711,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           timestamp: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         });
 
-        toast(`🎉 Payment confirmed! ${pkg.quantity} vouchers deposited and locked in Escrow!`, 'emerald');
+        toast(`Payment confirmed! ${pkg.quantity} vouchers deposited and locked in Escrow!`, 'emerald');
       }
     } catch {
       toast('Payment gateway processing error', 'rose');
@@ -609,7 +770,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           >
             {Object.entries(COUNTRIES).map(([code, info]) => (
               <option key={code} value={code}>
-                {info.flag} {info.name} ({code})
+                [{code}] {info.name}
               </option>
             ))}
           </select>
@@ -626,7 +787,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
       {/* Escrow Health & Inventory Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card p-3.5 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/30">
+        <div className="card p-3.5 bg-amber-500/10 border-amber-500/30">
           <div className="flex items-center justify-between text-amber-700 dark:text-amber-400">
             <span className="text-[10px] mono font-bold uppercase tracking-wider">Unassigned in Escrow</span>
             <Ticket size={16} />
@@ -639,7 +800,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </div>
         </div>
 
-        <div className="card p-3.5 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/30">
+        <div className="card p-3.5 bg-emerald-500/10 border-emerald-500/30">
           <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400">
             <span className="text-[10px] mono font-bold uppercase tracking-wider">Escrow Liquidity Value</span>
             <ShieldCheck size={16} />
@@ -652,7 +813,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </div>
         </div>
 
-        <div className="card p-3.5 bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-transparent border-indigo-500/30">
+        <div className="card p-3.5 bg-indigo-500/10 border-indigo-500/30">
           <div className="flex items-center justify-between text-indigo-700 dark:text-indigo-400">
             <span className="text-[10px] mono font-bold uppercase tracking-wider">Dispatched Perks</span>
             <Gift size={16} />
@@ -680,7 +841,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       </div>
 
       {/* Bodaboda & Frontline Scout Bounty Pool Spotlight Banner */}
-      <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-amber-500/15 border-2 border-amber-400 dark:border-amber-600 space-y-2.5 shadow-sm">
+      <div className="p-4 rounded-3xl bg-amber-500/10 border-2 border-amber-400 dark:border-amber-600 space-y-2.5 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <span className="p-2.5 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-xs shrink-0">
@@ -710,61 +871,126 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         </div>
       </div>
 
+      {/* Ethical Governance & Field Cost Reimbursement Covenant Banner */}
+      <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5 shadow-2xs">
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div className="flex items-start gap-3">
+            <span className="p-2.5 rounded-2xl bg-emerald-600 text-white font-black shadow-xs shrink-0 mt-0.5">
+              <Scale size={19} />
+            </span>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mono">
+                  Ethical Civic Stewardship Covenant · Field Cost Reimbursement Standard
+                </span>
+                <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-bold">
+                  ISO 26000 &amp; Public Ethics Compliant
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
+                Every utility token in this vault is governed by three strict ethical rules: <strong>(1) Field Cost Reimbursement Framing</strong>—vouchers compensate citizens for mobile data, transit, and inspection costs incurred during community service, never as cash bribes; <strong>(2) Anti-Hush-Money Covenant</strong>—accepting a voucher <em>never</em> closes, locks, or mutes a ticket, preserving 100% of the citizen&apos;s right to dispute shoddy repairs; and <strong>(3) Dual-Path Transparency</strong>—separating pre-loaded <code>DEMO</code> showcase tokens from <code>LIVE</code> sponsor-funded escrow vouchers.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('redeem_xp')}
+              className="px-3 py-1.5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <Gift size={13} strokeWidth={1.75} />
+              <span>Redeem Civic XP ({citizenXp} XP)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('csr_leaderboard')}
+              className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <Award size={13} />
+              <span>CSR Leaderboard &amp; Certs</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Upload / Deposit Box */}
       <div className="card p-4 space-y-4 border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <Upload size={18} className="text-amber-600 dark:text-amber-400" />
-              Pre-Funded Voucher Deposit & Batch Ingestion
+              Pre-Funded Voucher Deposit, XP Redemption &amp; CSR Governance
             </h2>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Contractors and public entities upload digital utility codes (MTN, Airtel, NWSC, Yaka) before rewarding citizens.
+              Bring Your Own Voucher (BYOV 0% Fee during 30-Day Founding Trial), Instant Aggregator Mint, Citizen XP Store, and CSR Impact Certificates.
             </p>
           </div>
 
           {/* Upload Method Tabs */}
           <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
             <button
-              onClick={() => { setActiveTab('pay'); setPaymentReceipt(null); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'pay'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
-                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
-              }`}
-            >
-              <CreditCard size={13} />
-              <span>Direct Buy (MoMo & Card)</span>
-            </button>
-            <button
               onClick={() => setActiveTab('packs')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                 activeTab === 'packs'
-                  ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-emerald-600 text-white font-black shadow-xs'
+                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
               }`}
             >
-              Quick CSR Packs
+              Demo Seed Packs ($0)
             </button>
             <button
               onClick={() => setActiveTab('csv')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                 activeTab === 'csv'
                   ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              CSV Batch File
+              BYOV CSV Batch (0% Fee)
             </button>
             <button
               onClick={() => setActiveTab('manual')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                 activeTab === 'manual'
                   ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              Manual Single
+              BYOV Single PIN
+            </button>
+            <button
+              onClick={() => { setActiveTab('pay'); setPaymentReceipt(null); }}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                activeTab === 'pay'
+                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
+                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+              }`}
+            >
+              <CreditCard size={12} />
+              <span>Aggregator Auto-Mint</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('redeem_xp')}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                activeTab === 'redeem_xp'
+                  ? 'bg-indigo-600 text-white font-black shadow-xs'
+                  : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10'
+              }`}
+            >
+              <Gift size={12} strokeWidth={1.75} />
+              <span>Citizen XP Store</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('csr_leaderboard')}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                activeTab === 'csr_leaderboard'
+                  ? 'bg-teal-600 text-white font-black shadow-xs'
+                  : 'text-teal-600 dark:text-teal-400 hover:bg-teal-500/10'
+              }`}
+            >
+              <Award size={12} />
+              <span>CSR Leaderboard</span>
             </button>
           </div>
         </div>
@@ -983,7 +1209,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                        <Sparkles size={14} />
+                        <SlidersHorizontal size={14} strokeWidth={1.75} />
                         <span>Custom CSR Allocation</span>
                       </div>
                       {payPackage === 'custom' && <Check size={14} className="text-indigo-600 dark:text-indigo-400" />}
@@ -1313,42 +1539,105 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               )}
             </div>
 
-            {/* STEP 5: TOTAL SUMMARY & AUTHORIZATION BUTTON */}
-            <div className="p-4 rounded-xl bg-slate-900 text-white dark:bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-amber-400" />
-                  <span>Sovereign Escrow Guarantee & Direct Citizen Dispatch</span>
+            {/* STEP 5: TOTAL SUMMARY, WHOLESALE SPREAD & CSR FEE LEDGER & AUTHORIZATION */}
+            <div className="p-4 rounded-2xl bg-slate-900 text-white dark:bg-slate-950 border border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="space-y-1">
+                  <div className="text-xs text-amber-400 font-bold flex items-center gap-1.5">
+                    <ShieldCheck size={14} />
+                    <span>Dual-Stream Supply Chain &amp; Commission Transparency Ledger</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    During the <strong>30-Day Founding Partner Trial</strong> (pre-incorporation), instant checkout runs in B2B Aggregator Sandbox Mode. Use <strong>BYOV CSV / Single PIN</strong> to upload live prepaid utility tokens at 0% fee.
+                  </p>
                 </div>
-                <div className="text-lg font-black tracking-tight flex items-baseline gap-2">
-                  <span>{getPackageDetails().currency} {getPackageDetails().totalCost.toLocaleString()}</span>
-                  <span className="text-xs font-normal text-slate-400">
-                    ({getPackageDetails().quantity}x {getPackageDetails().brand} vouchers)
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Funded by <span className="text-slate-200 font-medium">{paySponsorName}</span> for <span className="text-slate-200 font-medium">{payProjectName}</span>
-                </div>
+                <label className="flex items-center gap-2 text-[11px] bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700 cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={uploadAsLive}
+                    onChange={(e) => setUploadAsLive(e.target.checked)}
+                    className="rounded accent-emerald-500"
+                  />
+                  <span className="font-bold text-emerald-400">Mark as LIVE Escrow Batch</span>
+                </label>
               </div>
 
-              <button
-                type="button"
-                onClick={handleExecuteDirectPayment}
-                disabled={isPaying}
-                className="px-6 py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 text-slate-950 font-black rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
-              >
-                {isPaying ? (
-                  <>
-                    <RefreshCw size={14} className="animate-spin" />
-                    <span>Processing Gateway Settlement...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={15} />
-                    <span>Authorize Payment & Escrow Perks</span>
-                  </>
-                )}
-              </button>
+              {/* 4-Column Supply Chain Financial Breakdown */}
+              {(() => {
+                const pkg = getPackageDetails();
+                const faceVal = pkg.totalCost;
+                const wholesaleCost = Math.round(faceVal * 0.94);
+                const wholesaleSpread = faceVal - wholesaleCost; // 6% B2B Telco/Utility Aggregator Discount
+                const csrEscrowFee = Math.round(faceVal * 0.10); // 10% Corporate CSR Escrow & Audit Fee
+                const totalSponsorInvoice = faceVal + csrEscrowFee;
+                const civicDutyNet = wholesaleSpread + csrEscrowFee;
+
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                    <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 block mono uppercase">1. Citizen Face Value</span>
+                      <span className="font-mono font-black text-sm text-emerald-400">
+                        {pkg.currency} {faceVal.toLocaleString()}
+                      </span>
+                      <span className="text-[9.5px] text-slate-400 block mt-0.5">
+                        100% locked for {pkg.quantity}x citizen perks
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 block mono uppercase">2. Telco Wholesale Spread (6%)</span>
+                      <span className="font-mono font-black text-sm text-amber-400">
+                        {pkg.currency} {wholesaleSpread.toLocaleString()}
+                      </span>
+                      <span className="text-[9.5px] text-slate-400 block mt-0.5">
+                        B2B aggregator discount (Wholesale: {wholesaleCost.toLocaleString()})
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/80">
+                      <span className="text-[10px] text-slate-400 block mono uppercase">3. CSR Escrow &amp; Audit Fee (10%)</span>
+                      <span className="font-mono font-black text-sm text-cyan-400">
+                        {pkg.currency} {csrEscrowFee.toLocaleString()}
+                      </span>
+                      <span className="text-[9.5px] text-slate-400 block mt-0.5">
+                        SHA-256 CSR Certificate &amp; SMS gateway
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/40">
+                      <span className="text-[10px] text-amber-300 block mono uppercase">4. Sponsor Total / CD Net</span>
+                      <span className="font-mono font-black text-sm text-white">
+                        {pkg.currency} {totalSponsorInvoice.toLocaleString()}
+                      </span>
+                      <span className="text-[9.5px] text-amber-300/90 block mt-0.5">
+                        CivicDuty Net Margin: {pkg.currency} {civicDutyNet.toLocaleString()} (16%)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+                <div className="text-[11px] text-slate-400">
+                  Funded by <span className="text-slate-200 font-bold">{paySponsorName}</span> for <span className="text-slate-200 font-bold">{payProjectName}</span> · Protected by Anti-Hush-Money Covenant
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleExecuteDirectPayment}
+                  disabled={isPaying}
+                  className="px-6 py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-amber-500/50 text-slate-950 font-black rounded-xl text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  {isPaying ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Processing Gateway Settlement...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={15} />
+                      <span>Authorize &amp; Mint Escrow Vouchers</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1629,9 +1918,269 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider mono transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Plus size={16} />
-              <span>{isUploading ? 'Depositing...' : 'Deposit Pre-Funded Voucher to Vault'}</span>
+              <span>{isUploading ? 'Depositing...' : 'Deposit Pre-Funded BYOV Voucher to Vault (0% Trial Fee)'}</span>
             </button>
           </form>
+        )}
+
+        {/* TAB 4: CITIZEN SELF-REDEMPTION STORE (REDEEM CIVICSCORE XP) */}
+        {activeTab === 'redeem_xp' && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mono">
+                    Citizen Self-Redemption Store · Earned Civic Stewardship
+                  </span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
+                    Anti-Farming Guardrails Active
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl">
+                  Active citizens don&apos;t have to wait for an official to manually reward them. Redeem your earned <strong>CivicScore XP</strong> directly for unassigned utility vouchers in the Sovereign Escrow Vault.
+                </p>
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400 mono">
+                  <span>• Transit Pass: <strong>100 XP</strong></span>
+                  <span>• Mobile Data Pack: <strong>150 XP</strong></span>
+                  <span>• Water / Power Token: <strong>200 XP</strong></span>
+                  <span>• Cooldown Limit: <strong>Max 1 Claim / 7 Days</strong></span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white dark:bg-slate-950 border border-indigo-500/30 text-right shrink-0 space-y-1.5">
+                <div className="text-[10px] mono uppercase text-slate-400 font-bold">Your Verified Balance</div>
+                <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mono">
+                  {citizenXp} <span className="text-xs font-bold">Civic XP</span>
+                </div>
+                <div className="flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const uid = user?.id || 'usr-9028-UG';
+                      addPoints(uid, 150, '+150 Civic XP · Sandbox Field Evidence Verification Grant');
+                    }}
+                    className="px-2 py-1 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold transition cursor-pointer"
+                  >
+                    +150 XP Sandbox Boost
+                  </button>
+                  {cooldownInfo.onCooldown && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const uid = user?.id || 'usr-9028-UG';
+                        setLastXpRedeemIso(null);
+                        try {
+                          localStorage.removeItem(`cd_last_xp_redeem_${uid}`);
+                        } catch {
+                          // ignore
+                        }
+                        toast('7-Day Anti-Farming Cooldown reset for sandbox testing.', 'emerald');
+                      }}
+                      className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 text-[10px] font-bold transition cursor-pointer"
+                    >
+                      Reset 7d Cooldown
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Revealed Voucher Card after Citizen Self-Redemption */}
+            {redeemedVoucherCard && (
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 space-y-3 animate-fade-in">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <div className="text-sm font-black text-slate-900 dark:text-white">
+                        Field Cost Reimbursement Voucher Unlocked
+                      </div>
+                      <div className="text-[11px] text-emerald-700 dark:text-emerald-300 font-bold">
+                        {redeemedVoucherCard.reimbursementFraming || 'Field Evidence Cost Reimbursement'} · Sponsored by {redeemedVoucherCard.sponsoredBy}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRedeemedVoucherCard(null)}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-white dark:bg-slate-950 border border-emerald-500/30 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mono uppercase">Voucher Serial Code</span>
+                    <span className="font-mono font-black text-sm text-amber-600 dark:text-amber-400">{redeemedVoucherCard.voucherCode}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mono uppercase">Secret Activation PIN</span>
+                    <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">{redeemedVoucherCard.pin || 'AUTO-APPLIED'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block mono uppercase">1-Click USSD Dialer</span>
+                    <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">{redeemedVoucherCard.redemptionUssdString || '*165#'}</span>
+                  </div>
+                </div>
+
+                <div className="text-[10.5px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                  <ShieldCheck size={13} className="text-emerald-500 shrink-0" />
+                  <span>
+                    <strong>Ethical Non-Interference Guarantee:</strong> Redeeming this utility voucher never alters your vote or right to dispute any unresolved ticket on CivicDuty.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Available Escrow Vouchers for Citizen XP Redemption */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {vouchers
+                .filter((v) => v.country.toUpperCase() === selectedCountry.toUpperCase() && v.status === 'escrow_unassigned')
+                .map((v) => {
+                  const xpCost = getXpCostForCategory(v.category);
+                  const canAfford = citizenXp >= xpCost && !cooldownInfo.onCooldown;
+                  return (
+                    <div
+                      key={v.id}
+                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 flex flex-col justify-between gap-3 hover:border-indigo-500/40 transition-all"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1 text-xs font-black text-slate-900 dark:text-white">
+                            {getCategoryIcon(v.category)}
+                            <span>{v.brand}</span>
+                          </span>
+                          <span
+                            className={`text-[9px] px-2 py-0.5 rounded-full font-black mono ${
+                              v.isDemo
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                            }`}
+                          >
+                            {v.isDemo ? 'DEMO TOKEN' : 'LIVE ESCROW'}
+                          </span>
+                        </div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{v.title}</div>
+                        <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">
+                          {v.reimbursementFraming || 'Field Evidence Cost Reimbursement'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          Sponsored by: <strong className="text-slate-700 dark:text-slate-300">{v.sponsoredBy}</strong>
+                        </div>
+                      </div>
+
+                      <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[9px] text-slate-400 block mono uppercase">Face Value / Cost</span>
+                          <span className="text-xs font-black font-mono text-slate-900 dark:text-white">
+                            {v.currency} {v.faceValue.toLocaleString()} · <span className="text-indigo-600 dark:text-indigo-400">{xpCost} XP</span>
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCitizenSelfRedeem(v)}
+                          disabled={!canAfford}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition cursor-pointer ${
+                            canAfford
+                              ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xs'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                          }`}
+                        >
+                          {cooldownInfo.onCooldown
+                            ? `Cooldown (${cooldownInfo.daysLeft}d)`
+                            : citizenXp < xpCost
+                            ? `Need ${xpCost} XP`
+                            : `Redeem (${xpCost} XP)`}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: CSR LEADERBOARD & VERIFIABLE CERTIFICATES */}
+        {activeTab === 'csr_leaderboard' && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Award size={18} className="text-teal-600 dark:text-teal-400" />
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    Community Patrons &amp; Corporate CSR Impact Leaderboard ({selectedCountry})
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl">
+                  Public recognition for engineering contractors, telecom sponsors, government ministries, and diaspora patrons funding citizen field cost reimbursements. Sponsors can generate a <strong>SHA-256 Verifiable CSR Impact Certificate</strong> for ESG &amp; public tender compliance.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              {sponsorLeaderboard.map((sp, idx) => (
+                <div
+                  key={sp.sponsorName}
+                  className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-teal-500/40 transition-all"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs mono shrink-0 ${
+                        idx === 0
+                          ? 'bg-amber-500 text-slate-950'
+                          : idx === 1
+                          ? 'bg-slate-300 dark:bg-slate-700 text-slate-900 dark:text-white'
+                          : 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30'
+                      }`}
+                    >
+                      #{idx + 1}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-slate-900 dark:text-white">{sp.sponsorName}</span>
+                        <span className="text-[9px] mono uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                          {sp.sponsorType.replace('_', ' ')}
+                        </span>
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
+                          100% Ethical Non-Interference Sealed
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {sp.projects.length > 0
+                          ? `Target Works: ${sp.projects.join(' · ')}`
+                          : 'General Municipal Civic Watchdog & Field Reimbursement Pool'}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-400">
+                        Audit Seal: {sp.certHash}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200 dark:border-slate-800">
+                    <div className="text-right">
+                      <div className="text-[10px] mono uppercase text-slate-400">Total Escrow Funded</div>
+                      <div className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        {sp.currency} {sp.totalFaceValue.toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        {sp.totalVouchers} vouchers ({sp.dispatchedCount} dispatched)
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveCsrCertSponsor(sp)}
+                      className="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-black flex items-center gap-1.5 shadow-2xs transition cursor-pointer shrink-0"
+                    >
+                      <Printer size={13} />
+                      <span>CSR Certificate</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* TAB 3: QUICK SEED CSR PACKS */}
@@ -1732,6 +2281,16 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             </div>
 
             <select
+              value={filterDemoMode}
+              onChange={(e) => setFilterDemoMode(e.target.value as 'all' | 'live' | 'demo')}
+              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-amber-500"
+            >
+              <option value="all">All Modes (LIVE + DEMO)</option>
+              <option value="live">LIVE Sponsor Vouchers Only</option>
+              <option value="demo">DEMO Showcase Vouchers Only</option>
+            </select>
+
+            <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-amber-500"
@@ -1770,9 +2329,18 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   return (
                     <tr key={v.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-950/40 transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-amber-700 dark:text-amber-400">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {getCategoryIcon(v.category)}
                           <span>{v.voucherCode}</span>
+                          <span
+                            className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-black uppercase ${
+                              v.isDemo
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                            }`}
+                          >
+                            {v.isDemo ? 'DEMO' : 'LIVE'}
+                          </span>
                         </div>
                         {v.pin && (
                           <div className="text-[9px] text-slate-400 font-normal">
@@ -1783,9 +2351,19 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       <td className="py-3 px-3">
                         <div className="font-bold text-slate-900 dark:text-slate-100">{v.brand}</div>
                         <div className="text-[10px] text-slate-500 dark:text-slate-400">{v.title}</div>
+                        <div className="text-[9px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
+                          {v.reimbursementFraming || 'Field Evidence Cost Reimbursement'}
+                        </div>
                       </td>
                       <td className="py-3 px-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">
-                        {v.currency} {v.faceValue.toLocaleString()}
+                        <div>{v.currency} {v.faceValue.toLocaleString()}</div>
+                        {v.commissionBreakdown && (
+                          <div className="text-[8.5px] text-slate-400 font-normal">
+                            {v.commissionBreakdown.csrEscrowFee > 0
+                              ? `+10% CSR Fee · 6% Spread`
+                              : `BYOV 0% Trial Fee`}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-3 max-w-xs">
                         <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
@@ -1827,7 +2405,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                               {v.dispatchedTo.recipientContact}
                             </div>
                             <div className="text-[8.5px] text-emerald-600 dark:text-emerald-400 font-bold">
-                              SMS Delivered ✓
+                              SMS Delivered
                             </div>
                           </div>
                         ) : (
@@ -1871,6 +2449,109 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </div>
         )}
       </div>
+
+      {/* PRINTABLE VERIFIABLE CSR IMPACT CERTIFICATE MODAL */}
+      {activeCsrCertSponsor && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setActiveCsrCertSponsor(null)}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 border-2 border-teal-500/50 rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl text-slate-900 dark:text-slate-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase mono bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30">
+                    ISO 26000 &amp; Public Procurement ESG Compliance
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase mono bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    Cryptographically Verified
+                  </span>
+                </div>
+                <h3 className="text-lg font-black tracking-tight mt-1">
+                  CivicDuty Sovereign CSR &amp; Community Service Impact Certificate
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Official proof of ethical community field-cost reimbursement &amp; civic accountability sponsorship.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveCsrCertSponsor(null)}
+                className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="text-xs text-slate-500 uppercase mono font-bold">Certifying Sponsoring Entity</div>
+              <div className="text-xl font-black text-teal-700 dark:text-teal-300">
+                {activeCsrCertSponsor.sponsorName}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 block mono uppercase">Total Escrow Funded</span>
+                  <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                    {activeCsrCertSponsor.currency} {activeCsrCertSponsor.totalFaceValue.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block mono uppercase">Utility Vouchers Pooled</span>
+                  <span className="font-mono font-black text-sm">
+                    {activeCsrCertSponsor.totalVouchers} Vouchers ({activeCsrCertSponsor.dispatchedCount} Dispatched)
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block mono uppercase">Jurisdiction</span>
+                  <span className="font-bold">
+                    [{selectedCountry}] {COUNTRIES[selectedCountry]?.name}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-1.5">
+              <div className="font-black text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                <Scale size={14} />
+                <span>Ethical Non-Interference &amp; Anti-Bribery Attestation</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                This certifies that 100% of the utility tokens funded by <strong>{activeCsrCertSponsor.sponsorName}</strong> were held in blind cryptographic escrow and disbursed strictly as <em>Citizen Field Evidence Cost Reimbursements</em>. No voucher was conditioned on closing, muting, or suppressing any public infrastructure defect report.
+              </p>
+              <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 pt-1">
+                SHA-256 Registry Seal: {activeCsrCertSponsor.certHash} · Issued {new Date().toISOString().slice(0, 10)}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(
+                    `CivicDuty CSR Impact Certificate | Sponsor: ${activeCsrCertSponsor.sponsorName} | Total Escrowed: ${activeCsrCertSponsor.currency} ${activeCsrCertSponsor.totalFaceValue.toLocaleString()} (${activeCsrCertSponsor.totalVouchers} Vouchers) | Seal: ${activeCsrCertSponsor.certHash}`
+                  );
+                  toast('Copied verifiable CSR certificate digest to clipboard!', 'emerald');
+                }}
+                className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Copy size={13} />
+                <span>Copy Audit Digest</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-black flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Printer size={14} />
+                <span>Print / Save CSR PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

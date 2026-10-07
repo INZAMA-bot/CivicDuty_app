@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Building2,
-  Sparkles,
   Copy,
   Check,
   CheckCircle2,
@@ -65,7 +64,7 @@ const SECTOR_ICONS: Record<string, any> = {
   private_utility_telecom: Zap,
   private_contractor: Building2,
   ngo_civil_society: Users,
-  other: Sparkles,
+  other: Layers,
 };
 
 export const EntityTeamView: React.FC = () => {
@@ -606,7 +605,7 @@ export const EntityTeamView: React.FC = () => {
           {/* Right Column: Issued Code Preview or Onboarding Instructions */}
           <div className="lg:col-span-5 space-y-4">
             {issuedCodeData ? (
-              <div className="p-5 rounded-2xl bg-gradient-to-b from-purple-500/10 to-indigo-500/10 border-2 border-purple-500/40 shadow-xl space-y-4 animate-scale-up">
+              <div className="p-5 rounded-2xl bg-purple-500/10 border-2 border-purple-500/40 shadow-xl space-y-4 animate-scale-up">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase mono text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/80 px-2.5 py-0.5 rounded-full border border-purple-300 dark:border-purple-800">
                     Pass Generated
@@ -670,7 +669,7 @@ export const EntityTeamView: React.FC = () => {
             ) : (
               <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
-                  <Sparkles size={16} className="text-purple-600 dark:text-purple-400" />
+                  <ShieldCheck size={16} className="text-purple-600 dark:text-purple-400" />
                   Staff Account Verification Protocol
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">

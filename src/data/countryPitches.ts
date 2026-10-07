@@ -39,7 +39,7 @@ export const PITCH_PROFILES: Record<string, CountryPitchData> = {
   UG: {
     code: 'UG',
     name: 'Uganda',
-    flag: '🇺🇬',
+    flag: 'UG',
     idLabel: 'NIN (National ID Number)',
     motto: 'Parish Development Model (PDM) Digital Accountability Canvas',
     leadMinistry: 'Office of the Prime Minister (OPM) & Ministry of Local Government',
@@ -111,7 +111,7 @@ export const PITCH_PROFILES: Record<string, CountryPitchData> = {
       { level: 'LEVEL 3', title: '1,438 Sub-Counties & 10,515 Parish Chiefs', badge: 'Grassroots Executive', desc: 'Sub-County & Parish Chiefs receive geotagged field tickets and manage resolution proof.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: 'Universal Citizens & USSD *3030# Users', badge: 'Public Access', desc: 'Verified citizens across all 10,515 parishes lodge geotagged reports or dial USSD.', borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF UGANDA
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF UGANDA
 ------------------------------------------------------------
 Target Body: Ministry of ICT & National Guidance / Office of the Prime Minister
 Core Objective: Parish Development Model (PDM) Digital Service & Sovereign Tech Export Engine
@@ -129,7 +129,7 @@ Key Capabilities & Economic Revenue Model:
   KE: {
     code: 'KE',
     name: 'Kenya',
-    flag: '🇰🇪',
+    flag: 'KE',
     idLabel: 'National ID / Huduma Namba',
     motto: '47 Counties Devolved Governance & Citizen Service Engine',
     leadMinistry: 'Council of Governors & Ministry of Interior & National Administration',
@@ -201,7 +201,7 @@ Key Capabilities & Economic Revenue Model:
       { level: 'LEVEL 3', title: '290 Sub-Counties & 1,450 Ward Administrators', badge: 'Ward Executive', desc: 'Ward Administrators receive geotagged reports, dispatch field crews, upload resolution photos.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: 'Verified Citizens & Huduma USSD Users', badge: 'Public Access', desc: 'Citizens across all 47 counties submit geotagged issues via Web App or feature phone USSD.', borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF KENYA
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF KENYA
 ------------------------------------------------------------
 Target Body: Council of Governors & County Executive Committee Members (CECMs)
 Core Objective: 47 Counties Devolved Service & Ward Accountability Engine
@@ -218,7 +218,7 @@ Key Capabilities:
   NG: {
     code: 'NG',
     name: 'Nigeria',
-    flag: '🇳🇬',
+    flag: 'NG',
     idLabel: 'NIN (National Identification Number)',
     motto: '774 LGAs Digital Governance & Public Service Engine',
     leadMinistry: 'Federal Ministry of Special Duties & Inter-Governmental Affairs / State Executive Councils',
@@ -290,7 +290,7 @@ Key Capabilities:
       { level: 'LEVEL 3', title: 'Ward Executive Officers & Municipal Field Chiefs', badge: 'Ward Executive', desc: 'Ward officers oversee localized field works, waste collection, road repairs.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: 'Verified Citizens & NIN USSD Users', badge: 'Public Access', desc: 'Citizens across all 774 LGAs lodge verified reports via Web App or USSD.', borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: FEDERAL REPUBLIC OF NIGERIA
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: FEDERAL REPUBLIC OF NIGERIA
 ------------------------------------------------------------
 Target Body: State Executive Councils & 774 Local Government Area (LGA) Chairmen
 Core Objective: 774 LGAs Digital Service Delivery & Accountability Engine
@@ -307,7 +307,7 @@ Key Capabilities:
   GH: {
     code: 'GH',
     name: 'Ghana',
-    flag: '🇬🇭',
+    flag: 'GH',
     idLabel: 'Ghana Card Number',
     motto: '261 MMDAs Digital Governance & Decentralization Engine',
     leadMinistry: 'Ministry of Local Government, Decentralisation and Rural Development (MLGDRD)',
@@ -379,7 +379,7 @@ Key Capabilities:
       { level: 'LEVEL 3', title: 'Sub-Metros, Zonal Councils & Electoral Area Units', badge: 'Unit Executive', desc: 'Unit Committees receive geotagged field issues and supervise repair completion.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: 'Verified Citizens & Ghana Card Holders', badge: 'Public Access', desc: 'Citizens across all 16 regions log geotagged reports via Web App or USSD.', borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF GHANA
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF GHANA
 ------------------------------------------------------------
 Target Body: Ministry of Local Government (MLGDRD) & 261 MMDAs
 Core Objective: 261 MMDAs Digital Governance & Public Service Delivery Canvas
@@ -396,7 +396,7 @@ Key Capabilities:
   RW: {
     code: 'RW',
     name: 'Rwanda',
-    flag: '🇷🇼',
+    flag: 'RW',
     idLabel: 'NIDA National ID',
     motto: 'Imihigo Digital Accountability & Citizen Satisfaction Engine',
     leadMinistry: 'Ministry of Local Government (MINALOC) & MINICT',
@@ -468,7 +468,7 @@ Key Capabilities:
       { level: 'LEVEL 3', title: '416 Sectors (Umurenge) & 2,148 Cells (Akagari)', badge: 'Grassroots Executive', desc: 'Executive Secretaries receive geotagged reports and manage resolution proof.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: 'Verified Citizens & NIDA Card Holders', badge: 'Public Access', desc: 'Citizens across 14,837 villages submit geotagged issues via Web App or USSD.', borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF RWANDA
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF RWANDA
 ------------------------------------------------------------
 Target Body: Ministry of Local Government (MINALOC) & 30 District Mayors
 Core Objective: Digital Imihigo Service Delivery & Akagari Accountability Engine
@@ -485,7 +485,7 @@ Key Capabilities:
   TZ: {
     code: 'TZ',
     name: 'Tanzania',
-    flag: '🇹🇿',
+    flag: 'TZ',
     idLabel: 'NIDA Card Number',
     motto: 'TAMISEMI Local Councils & Citizen Accountability Canvas',
     leadMinistry: "President's Office - Regional Administration and Local Government (PO-RALG / TAMISEMI)",
@@ -557,7 +557,7 @@ Key Capabilities:
       { level: 'LEVEL 3', title: 'Ward Executive Officers (WEOs) & Mtaa Leaders', badge: 'Ward Executive', desc: 'WEOs receive geotagged field issues and supervise localized work execution.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: 'Verified Citizens & NIDA Card Holders', badge: 'Public Access', desc: 'Citizens across all 26 regions log geotagged reports via Web App or USSD.', borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: UNITED REPUBLIC OF TANZANIA
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: UNITED REPUBLIC OF TANZANIA
 ------------------------------------------------------------
 Target Body: PO-RALG (TAMISEMI) & 184 District Councils
 Core Objective: TAMISEMI Digital Service & Ward Accountability Engine
@@ -574,7 +574,7 @@ Key Capabilities:
   ZA: {
     code: 'ZA',
     name: 'South Africa',
-    flag: '🇿🇦',
+    flag: 'ZA',
     idLabel: 'SA ID Number (13 digits)',
     motto: 'COGTA Municipal Service Delivery & Ward Councillor Engine',
     leadMinistry: 'Department of Cooperative Governance and Traditional Affairs (COGTA)',
@@ -646,7 +646,7 @@ Key Capabilities:
       { level: 'LEVEL 3', title: '4,392 Ward Councillors & Sub-Council Desks', badge: 'Ward Executive', desc: 'Ward Councillors oversee constituent ticket dispatch and verify repair completion.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: 'Verified Citizens & 13-Digit SA ID Holders', badge: 'Public Access', desc: 'Residents across all 9 provinces submit geotagged issues via Web App or USSD.', borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF SOUTH AFRICA
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: REPUBLIC OF SOUTH AFRICA
 ------------------------------------------------------------
 Target Body: Department of Cooperative Governance (COGTA) & Municipalities
 Core Objective: Municipal Service Delivery & 4,392 Ward Councillor Accountability Engine
@@ -667,7 +667,7 @@ export function getCountryPitch(code: string): CountryPitchData {
     return PITCH_PROFILES[code];
   }
 
-  const country = COUNTRIES[code] || { name: 'Government', flag: '🏛️', id_label: 'National Identity Card', node: 'NODE_01' };
+  const country = COUNTRIES[code] || { name: 'Government', flag: code, id_label: 'National Identity Card', node: 'NODE_01' };
 
   return {
     code,
@@ -744,7 +744,7 @@ export function getCountryPitch(code: string): CountryPitchData {
       { level: 'LEVEL 3', title: 'Local Ward Officers & Municipal Field Desks', badge: 'Field Executive', desc: 'Field officers receive geotagged reports, dispatch crews, and upload proof of work.', borderColor: 'border-amber-500/40', textColor: 'text-amber-300' },
       { level: 'LEVEL 4', title: `Verified Citizens & ${country.id_label} Holders`, badge: 'Public Access', desc: `Residents submit geotagged issues via Web App or USSD.`, borderColor: 'border-emerald-500/40', textColor: 'text-emerald-300' },
     ],
-    proposalText: `🏛️ CIVICDUTY GOVERNMENT PROPOSAL: ${country.name.toUpperCase()}
+    proposalText: `[OFFICIAL] CIVICDUTY GOVERNMENT PROPOSAL: ${country.name.toUpperCase()}
 ------------------------------------------------------------
 Target Body: Ministry of Local Government & Executive Authorities of ${country.name}
 Core Objective: National Civic Accountability & Municipal Field Operations Engine

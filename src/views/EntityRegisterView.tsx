@@ -4,7 +4,7 @@ import { CountryCode } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { primaryNodes, primaryTier, primaryUnit, tiersFor, GOV_CODES, getBusinessTitlePresets } from '../data/tiers';
 import { copyToClipboard } from '../utils/helpers';
-import { ChevronLeft, Search, Check, Copy, CreditCard, Smartphone, Building2, ShieldCheck, ArrowRight, Zap, CheckCircle2, Printer, Download, FileText, User, Briefcase, Users, Store, Beer, Pill, Wrench, Utensils, GraduationCap, HeartPulse, Landmark, Bus, Sparkles, PlusCircle } from 'lucide-react';
+import { ChevronLeft, Search, Check, Copy, CreditCard, Smartphone, Building2, ShieldCheck, ArrowRight, Zap, CheckCircle2, Printer, Download, FileText, User, Briefcase, Users, Store, Beer, Pill, Wrench, Utensils, GraduationCap, HeartPulse, Landmark, Bus, Layers, PlusCircle } from 'lucide-react';
 import { NoteBox } from '../components/NoteBox';
 
 export interface EntityTierDef {
@@ -30,7 +30,7 @@ export const ENTITY_SECTORS = [
   { id: 'private_utility_telecom', label: 'Private Utilities & Solar Grid', icon: Zap, desc: 'Solar minigrid, private borehole, ISP network' },
   { id: 'private_contractor', label: 'Construction & Contractors', icon: Building2, desc: 'Civil engineering, roadworks, site contractors' },
   { id: 'ngo_civil_society', label: 'NGOs & Civil Society', icon: Users, desc: 'Community development, charity, human rights watch' },
-  { id: 'other', label: 'Other Commercial / Civic Sector', icon: Sparkles, desc: 'Specify any unique trade, profession, or craft' },
+  { id: 'other', label: 'Other Commercial / Civic Sector', icon: Layers, desc: 'Specify any unique trade, profession, or craft' },
 ];
 
 export const TYPOLOGY_PRESETS: Record<string, string[]> = {
@@ -318,11 +318,8 @@ export const EntityRegisterView: React.FC = () => {
       toast('Please specify your exact professional title', 'amber');
       return;
     }
-    if (priceVal === 0) {
-      completeRegistration('FREE-PROMO');
-    } else {
-      setStep('payment');
-    }
+    // All private providers & businesses receive a 30-Day Founding Partner Free Trial during public launch
+    completeRegistration('FOUNDING-TRIAL-30D');
   };
 
   const completeRegistration = (paymentRef: string) => {
@@ -472,7 +469,7 @@ export const EntityRegisterView: React.FC = () => {
             {selectedSector === 'other' && (
               <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/60 rounded-xl space-y-1.5 animate-fade-in">
                 <label className="text-[9px] mono text-amber-900 dark:text-amber-300 uppercase tracking-wider font-bold flex items-center gap-1">
-                  <Sparkles size={12} /> Specify Your Exact Industry / Sector:
+                  <PlusCircle size={12} /> Specify Your Exact Industry / Sector:
                 </label>
                 <input
                   type="text"
@@ -508,7 +505,7 @@ export const EntityRegisterView: React.FC = () => {
                         : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-700 dark:text-zinc-400 hover:border-slate-300'
                     }`}
                   >
-                    {isSelected ? '✓ ' : '• '} {typeOption}
+                    {isSelected ? '[Selected] ' : '• '} {typeOption}
                   </button>
                 );
               })}
@@ -601,7 +598,7 @@ export const EntityRegisterView: React.FC = () => {
                           : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 text-slate-700 dark:text-zinc-400'
                       }`}
                     >
-                      {isSel ? '✓ ' : '• '} {tOpt}
+                      {isSel ? '[Selected] ' : '• '} {tOpt}
                     </button>
                   );
                 })}
@@ -689,7 +686,7 @@ export const EntityRegisterView: React.FC = () => {
                 5. Location & Country Scope
               </label>
               <span className="text-[8.5px] mono text-emerald-700 dark:text-emerald-400 font-bold">
-                {COUNTRIES[country]?.flag} {countryName}
+                [{country}] {countryName}
               </span>
             </div>
 
@@ -808,43 +805,33 @@ export const EntityRegisterView: React.FC = () => {
           </div>
 
           {/* Plan Summary Card */}
-          <div className="card-civic p-4 space-y-2 a-fade bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm">
+          <div className="card-civic p-4 space-y-2.5 a-fade bg-emerald-50/70 dark:bg-emerald-950/30 border-2 border-emerald-400 dark:border-emerald-700 rounded-2xl shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest font-bold">Verified Registration Plan</p>
+                <p className="text-[9px] mono text-emerald-800 dark:text-emerald-300 uppercase tracking-widest font-black flex items-center gap-1">
+                  <ShieldCheck size={11} /> Founding Partner Public Launch Trial
+                </p>
                 <p className="text-[16px] font-black text-slate-900 dark:text-zinc-100 mt-1">
-                  {tier.name} · {Math.max(covered, 1) <= 1 ? 'Free Community Plan' : 'Multi-Branch Plan'}
+                  {tier.name} · 30-Day Free Trial
                 </p>
                 <p className="text-[10px] mono text-slate-600 dark:text-zinc-400 mt-0.5 font-medium">
                   {Math.max(covered, 1)} {primaryUnitName} · {staffSeats} Staff Seats · Entity Admin Console
                 </p>
               </div>
               <div className="text-right">
-                <p className={`text-2xl font-black mono ${Math.max(covered, 1) <= 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-zinc-100'}`}>
-                  {entityPrice(Math.max(covered, 1), kind, interval, country)}
+                <p className="text-2xl font-black mono text-emerald-600 dark:text-emerald-400">
+                  $0 Today
                 </p>
+                {priceVal > 0 && (
+                  <p className="text-[10px] mono line-through text-slate-400">
+                    {entityPrice(Math.max(covered, 1), kind, interval, country)} post-trial
+                  </p>
+                )}
               </div>
             </div>
-
-            {covered > 1 && (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {(['annual', 'monthly'] as const).map((iv) => (
-                  <button
-                    key={iv}
-                    onClick={() => setInterval(iv)}
-                    className={`py-2 rounded-xl text-[9.5px] mono font-bold border transition-all ${
-                      interval === iv
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 shadow-sm'
-                        : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
-                    }`}
-                  >
-                    {iv === 'annual'
-                      ? 'Annual — ' + fmtUsd(annualUsd(covered, kind, country))
-                      : 'Monthly — ' + fmtUsd(intervalUsd(covered, kind, 'monthly', country))}
-                  </button>
-                ))}
-              </div>
-            )}
+            <p className="text-[10.5px] text-slate-700 dark:text-slate-300 leading-relaxed border-t border-emerald-200 dark:border-emerald-800/60 pt-2">
+              <strong>Zero Payment Required Today:</strong> During CivicDuty&apos;s public launch rollout, all private businesses and service providers receive a full <strong>30-Day Founding Partner Trial</strong> with instant access to SLA tools, multi-seat team management, and Counter QR Placards.
+            </p>
           </div>
 
           <NoteBox
@@ -855,16 +842,10 @@ export const EntityRegisterView: React.FC = () => {
 
           <button
             onClick={handleStartSubmit}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] flex items-center justify-center gap-2 shadow-sm"
+            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] flex items-center justify-center gap-2 shadow-sm cursor-pointer"
           >
-            {priceVal === 0 ? (
-              'Mount Entity Desk — Free'
-            ) : (
-              <>
-                <span>Proceed to Payment ({entityPrice(covered, kind, interval, country)})</span>
-                <ArrowRight size={16} />
-              </>
-            )}
+            <span>Activate 30-Day Founding Partner Trial — $0 Due Today</span>
+            <ArrowRight size={16} />
           </button>
         </>
       )}
@@ -972,7 +953,7 @@ export const EntityRegisterView: React.FC = () => {
                         : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 text-slate-600 dark:text-zinc-400'
                     }`}
                   >
-                    🟡 MTN Mobile Money
+                    MTN Mobile Money
                   </button>
                   <button
                     type="button"
@@ -983,7 +964,7 @@ export const EntityRegisterView: React.FC = () => {
                         : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 text-slate-600 dark:text-zinc-400'
                     }`}
                   >
-                    🔴 Airtel Money
+                    Airtel Money
                   </button>
                 </div>
 
@@ -1105,7 +1086,7 @@ export const EntityDoneView: React.FC = () => {
         <div className="flex items-center justify-between">
           <p className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest font-bold">Registration & Plan Status</p>
           <span className="text-[8.5px] mono text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/20 font-bold">
-            {res.price === 0 ? 'Active · Free' : 'Paid & Active ✓'}
+            Active · 30-Day Founding Partner Trial ($0 Billed Today)
           </span>
         </div>
 

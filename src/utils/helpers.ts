@@ -51,19 +51,26 @@ export function allDepts(c: CountryCode): Department[] {
   }
   const info = COUNTRIES[c];
   const name = info?.name || c;
+  const lc = c.toLowerCase();
   return [
-    { id: `${c.toLowerCase()}_gov`, name: `${name} Public Works`, full: `${name} Ministry of Infrastructure & Public Works`, sla: 48, lane: 'civic', icon: '🏛' },
-    { id: `${c.toLowerCase()}_water`, name: `${name} Water Authority`, full: `${name} National Water & Sewerage Utility`, sla: 48, lane: 'civic', icon: '💧' },
-    { id: `${c.toLowerCase()}_power`, name: `${name} Electric Utility`, full: `${name} National Power Grid & Distribution`, sla: 24, lane: 'civic', icon: '⚡' },
-    { id: `${c.toLowerCase()}_police`, name: `${name} Police Command`, full: `${name} National Police & Public Security`, sla: 24, lane: 'civic', icon: '⚖' },
-    { id: `${c.toLowerCase()}_health`, name: `${name} Health Services`, full: `${name} Ministry of Health & Hospital Board`, sla: 48, lane: 'civic', icon: '🏥' },
-    { id: `${c.toLowerCase()}_telecom`, name: `${name} Telecom & Data`, full: `${name} National Communications Provider`, sla: 72, lane: 'consumer', icon: '📡' },
+    { id: `${lc}_gov`, name: `${name} Public Works`, full: `${name} Ministry of Infrastructure & Public Works`, sla: 48, lane: 'civic', icon: 'Landmark', category: 'government', ministry: 'Ministry of Works & Transport', sector: 'Highways & Municipal Infrastructure', trustScore: 88, verified: true, qualityAudit: 'National Audit Verified', location: `${name} Capital Hub` },
+    { id: `${lc}_local_gov`, name: `${name} Local Gov`, full: `${name} Ministry of Local Government & Municipalities`, sla: 48, lane: 'civic', icon: 'Landmark', category: 'government', ministry: 'Ministry of Local Government', sector: 'Decentralized Municipal Councils', trustScore: 91, verified: true, qualityAudit: 'Statutory Decentralization Desk', location: `${name} National Secretariat` },
+    { id: `${lc}_water`, name: `${name} Water Authority`, full: `${name} National Water & Sewerage Utility`, sla: 48, lane: 'civic', icon: 'Droplets', category: 'utility', ministry: 'Ministry of Water & Environment', sector: 'Piped Water & Sanitation', trustScore: 89, verified: true, qualityAudit: 'ISO 9001 Utility Standard', location: `${name} Metropolitan Grid` },
+    { id: `${lc}_power`, name: `${name} Electric Utility`, full: `${name} National Power Grid & Distribution`, sla: 24, lane: 'civic', icon: 'Zap', category: 'utility', ministry: 'Ministry of Energy', sector: 'National Electricity Grid', trustScore: 85, verified: true, qualityAudit: 'National Energy Regulator', location: `${name} Grid Control` },
+    { id: `${lc}_police`, name: `${name} Police Command`, full: `${name} National Police & Public Security`, sla: 24, lane: 'civic', icon: 'Scale', category: 'government', ministry: 'Ministry of Interior', sector: 'Law Enforcement & Public Safety', trustScore: 82, verified: true, qualityAudit: 'Internal Affairs Audited', location: `${name} Command HQ` },
+    { id: `${lc}_ombudsman`, name: `${name} Anti-Corruption`, full: `${name} Office of the Ombudsman & Inspector General`, sla: 72, lane: 'civic', icon: 'ShieldCheck', category: 'government', ministry: 'Supreme Audit & Integrity', sector: 'Whistleblower & Anti-Corruption', trustScore: 95, verified: true, qualityAudit: 'Statutory Whistleblower Desk', location: `${name} Integrity House` },
+    { id: `${lc}_health`, name: `${name} National Hospital`, full: `${name} National Referral & Teaching Hospital`, sla: 24, lane: 'consumer', icon: 'Hospital', category: 'health', sector: 'Tertiary Emergency & Clinical Care', trustScore: 90, verified: true, qualityAudit: 'Medical Council Accredited', location: `${name} Central Medical District` },
+    { id: `${lc}_univ`, name: `Univ. of ${name}`, full: `National University of ${name} (Campuses & Student Welfare)`, sla: 48, lane: 'consumer', icon: 'GraduationCap', category: 'education', sector: 'Higher Education & Research', trustScore: 93, verified: true, qualityAudit: 'Higher Education Council', location: `${name} University Precinct` },
+    { id: `${lc}_telecom`, name: `${name} Telecom & Fiber`, full: `${name} National Broadband & Mobile Communications`, sla: 48, lane: 'consumer', icon: 'Radio', category: 'telecom', sector: '5G Mobile, Fiber & Digital Payments', trustScore: 91, verified: true, qualityAudit: 'Communications Commission Licensed', location: `Nationwide Coverage` },
+    { id: `${lc}_bank`, name: `${name} Commercial Bank`, full: `National Commercial Bank of ${name} (Retail & Digital)`, sla: 48, lane: 'consumer', icon: 'Landmark', category: 'finance', sector: 'Commercial & Retail Banking', trustScore: 94, verified: true, qualityAudit: 'Central Bank Regulated', location: `${name} Financial District` },
+    { id: `${lc}_transit`, name: `${name} Metro Transit`, full: `${name} Metropolitan Bus & Commuter Rail Authority`, sla: 24, lane: 'consumer', icon: 'Bus', category: 'transport', sector: 'Public Commuter Transit', trustScore: 86, verified: true, qualityAudit: 'Transport Safety Board', location: `${name} Central Terminal` },
+    { id: `${lc}_cso`, name: `Transparency ${name}`, full: `${name} Civic Watchdog & Consumer Protection Alliance`, sla: 48, lane: 'consumer', icon: 'Users', category: 'cso', sector: 'Civil Society & Rights Watchdog', trustScore: 96, verified: true, qualityAudit: 'Registered NGO / CSO', location: `${name} Civic Center` },
   ];
 }
 
 export function getDept(country: CountryCode, id: string): Department {
   const all = allDepts(country);
-  return all.find((d) => d.id === id) || { id, name: id, full: id, sla: 48, lane: 'civic', icon: '🏛' };
+  return all.find((d) => d.id === id) || { id, name: id, full: id, sla: 48, lane: 'civic', icon: 'Landmark' };
 }
 
 export function srcLabel(s: string) {
@@ -129,6 +136,27 @@ export function makeCode(prefix: string): string {
   let s = '';
   for (const x of b) s += CODE_ALPHABET[x % CODE_ALPHABET.length];
   return `${prefix}-${s}`;
+}
+
+/**
+ * Strips decorative Unicode emojis while preserving standard text.
+ * Ensures cached localStorage / Firestore records conform to the Google AI Studio monochrome vector icon standard.
+ */
+export function stripDecorativeEmojis(str?: string): string {
+  if (!str) return '';
+  return str
+    .replace(
+      /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}]\s*/gu,
+      ''
+    )
+    .trim();
+}
+
+export function sanitizePostEmojis(p: Post): Post {
+  return {
+    ...p,
+    demo_highlight: p.demo_highlight ? stripDecorativeEmojis(p.demo_highlight) : p.demo_highlight,
+  };
 }
 
 export function csvEscape(v: any): string {

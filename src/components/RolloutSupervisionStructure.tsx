@@ -25,7 +25,6 @@ import {
   Award,
   Filter,
   X,
-  Sparkles,
   Zap,
   Download,
   ExternalLink,
@@ -361,7 +360,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
 
     // 3. Inviter only gets notification of active or pending
     toast(
-      `✓ Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
+      `Statutory invite sent immediately to ${officerName.trim()} for ${inviteModal.stationName}! Status: PENDING acceptance.`,
       'amber'
     );
 
@@ -379,7 +378,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
         `${officerNameStr} statutory appointment validated for ${stationNameStr}`,
         activeCountry
       );
-      toast(`✓ ${officerNameStr} accepted statutory appointment for ${stationNameStr}! Enlisted into ACTIVE section.`, 'emerald');
+      toast(`${officerNameStr} accepted statutory appointment for ${stationNameStr}! Enlisted into ACTIVE section.`, 'emerald');
     }
   };
 
@@ -548,7 +547,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
     });
 
     toast(
-      `✓ Batch dispatched ${manifestItems.length} statutory credentials immediately! Status: PENDING acceptance.`,
+      `Batch dispatched ${manifestItems.length} statutory credentials immediately! Status: PENDING acceptance.`,
       'emerald'
     );
   };
@@ -584,10 +583,10 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
           <button
             type="button"
             onClick={() => handleOpenBatchModal('all')}
-            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition-all active:scale-[0.98]"
+            className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <Zap size={14} />
-            <span>⚡ National Batch Dispatch</span>
+            <Zap size={14} strokeWidth={1.75} />
+            <span>National Batch Dispatch</span>
           </button>
         </div>
       </div>
@@ -809,7 +808,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                           ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                       }`}>
-                        {district.isCity ? '🏙️ City' : 'District'}
+                        {district.isCity ? 'City' : 'District'}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -856,8 +855,8 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                   </div>
 
                   <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
-                    <span>{district.isCity ? '🏙️' : '🏛️'} {district.pdmParishes} {district.isCity ? 'Wards' : 'Parishes'}</span>
-                    <span>⏱️ {district.sla} Resolution</span>
+                    <span>{district.pdmParishes} {district.isCity ? 'Wards' : 'Parishes'}</span>
+                    <span>{district.sla} Resolution</span>
                   </div>
                 </div>
 
@@ -897,7 +896,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       <button
                         type="button"
                         onClick={() => {
-                          const memo = `🏛️ STATUTORY CAO APPOINTMENT & TRANSMITTAL MEMO\nStation: ${district.name} District Local Government\nAppointee: ${pendingInvite.name}\nDesignation: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nAuthority: Section 64, Local Governments Act (Cap. 243)\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                          const memo = `STATUTORY CAO APPOINTMENT & TRANSMITTAL MEMO\nStation: ${district.name} District Local Government\nAppointee: ${pendingInvite.name}\nDesignation: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nAuthority: Section 64, Local Governments Act (Cap. 243)\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                           navigator.clipboard.writeText(memo);
                           toast(`Copied dispatch memo for ${district.name}!`, 'emerald');
                         }}
@@ -1099,7 +1098,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       <button
                         type="button"
                         onClick={() => {
-                          const memo = `🏛️ STATUTORY CABINET TRANSMITTAL MEMO\nOffice: Permanent Secretary, Ministry of Local Government\nTo: ${pendingInvite.name} (${pendingInvite.title})\nSingle-Use Sovereign Key: ${pendingInvite.code}\nMandate: Inter-Agency Cabinet Delivery Coordination\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                          const memo = `STATUTORY CABINET TRANSMITTAL MEMO\nOffice: Permanent Secretary, Ministry of Local Government\nTo: ${pendingInvite.name} (${pendingInvite.title})\nSingle-Use Sovereign Key: ${pendingInvite.code}\nMandate: Inter-Agency Cabinet Delivery Coordination\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                           navigator.clipboard.writeText(memo);
                           toast(`Copied dispatch memo for ${ministry.title}!`, 'emerald');
                         }}
@@ -1491,14 +1490,14 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                   <button
                     type="button"
                     onClick={() => {
-                      const memo = `🏛️ REPUBLIC OF UGANDA — MINISTRY OF LOCAL GOVERNMENT\nOFFICIAL BATCH TRANSMITTAL GAZETTE MANIFEST\nDate: ${new Date().toLocaleDateString()}\nAuthority: Article 174, 1995 Constitution\n\n${batchManifest.items
+                      const memo = `REPUBLIC OF UGANDA — MINISTRY OF LOCAL GOVERNMENT\nOFFICIAL BATCH TRANSMITTAL GAZETTE MANIFEST\nDate: ${new Date().toLocaleDateString()}\nAuthority: Article 174, 1995 Constitution\n\n${batchManifest.items
                         .map(
                           (it, i) =>
                             `${i + 1}. ${it.station} | ${it.title}\n   Access Key: ${it.code}\n   Gateway: ${it.loginUrl}`
                         )
                         .join('\n\n')}`;
                       navigator.clipboard.writeText(memo);
-                      toast('✓ Official Batch Transmittal Gazette copied to clipboard!', 'emerald');
+                      toast('Official Batch Transmittal Gazette copied to clipboard!', 'emerald');
                     }}
                     className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5"
                   >

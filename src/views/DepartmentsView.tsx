@@ -18,7 +18,6 @@ import {
   UserCheck, 
   Flame, 
   Award,
-  Sparkles,
   SlidersHorizontal,
   GraduationCap,
   HeartPulse,
@@ -39,14 +38,16 @@ import {
   HelpCircle,
   QrCode
 } from 'lucide-react';
+import { DeptIcon } from '../components/DeptIcon';
 import { ProviderClaimModal } from '../components/ProviderClaimModal';
 import { QrCodeModal } from '../components/QrCodeModal';
 import { CustomerDefectionNotice } from '../components/CustomerDefectionNotice';
+import { CountrySelector } from '../components/CountrySelector';
 import { getCountryBranding } from '../data/countryBranding';
 
 const CATEGORY_TABS: { id: 'all' | EntityCategory | 'mystake'; label: string; icon: any; color: string }[] = [
   { id: 'all', label: 'All Providers', icon: Building2, color: 'text-slate-700 dark:text-slate-300' },
-  { id: 'mystake', label: '★ My Stakes', icon: Bookmark, color: 'text-amber-600 dark:text-amber-400' },
+  { id: 'mystake', label: 'My Stakes', icon: Bookmark, color: 'text-amber-600 dark:text-amber-400' },
   { id: 'education', label: 'Schools & Unis', icon: GraduationCap, color: 'text-emerald-600 dark:text-emerald-400' },
   { id: 'health', label: 'Hospitals & Clinics', icon: HeartPulse, color: 'text-rose-600 dark:text-rose-400' },
   { id: 'hospitality', label: 'Dining & Foods', icon: Utensils, color: 'text-orange-600 dark:text-orange-400' },
@@ -165,19 +166,6 @@ export const DepartmentsView: React.FC = () => {
     if (!newDeptName.trim()) return;
 
     const newId = `custom_${newDeptName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
-    const categoryIcons: Record<EntityCategory, string> = {
-      education: '🏫',
-      health: '🏥',
-      hospitality: '🍽️',
-      finance: '🏦',
-      transport: '🚌',
-      housing: '🏢',
-      utility: '⚡',
-      telecom: '📶',
-      government: '🏛️',
-      contractor: '🏗️',
-      cso: '🛡️',
-    };
 
     const newEntity: Department = {
       id: newId,
@@ -185,7 +173,7 @@ export const DepartmentsView: React.FC = () => {
       full: newDeptFull.trim() || newDeptName.trim(),
       category: newDeptCategory,
       country: country,
-      icon: categoryIcons[newDeptCategory] || '🏢',
+      icon: newDeptCategory,
       sla: newDeptSla,
       lane: newDeptCategory === 'government' ? 'civic' : 'consumer',
       trustScore: 85,
@@ -248,9 +236,9 @@ export const DepartmentsView: React.FC = () => {
               <span>·</span>
               <span className="text-emerald-700 dark:text-emerald-400 font-black">{COUNTRIES[country]?.name || 'National'} Jurisdiction</span>
             </div>
-            <h2 className="text-lg sm:text-xl font-black font-serif text-slate-950 dark:text-white tracking-tight leading-tight flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight flex items-center gap-2">
               <span>{COUNTRIES[country]?.name} Service &amp; Sovereign Directory</span>
-              <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                 {depts.length} MONITORED
               </span>
             </h2>
@@ -260,6 +248,7 @@ export const DepartmentsView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0 flex-wrap">
+            <CountrySelector variant="compact" />
             <button
               onClick={() => {
                 setClaimModalDept(null);
@@ -290,12 +279,12 @@ export const DepartmentsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Global Private-First Rollout & Customer Care Market Dynamics Banner - Newspaper Editorial Dispatch */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 shadow-xs space-y-3.5 relative overflow-hidden">
+      {/* Global Private-First Rollout & Customer Care Market Dynamics Banner — AI Studio Matte Panel */}
+      <div className="p-4 sm:p-5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3.5 relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-              <Sparkles size={14} />
+            <div className="w-7 h-7 rounded-md bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <ShieldCheck size={14} strokeWidth={1.75} />
             </div>
             <div>
               <span className="text-[8px] mono font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-700">
@@ -312,7 +301,7 @@ export const DepartmentsView: React.FC = () => {
           <div className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
             {branding.advertisingCampaign.campaignTitle}
           </div>
-          <h3 className="text-sm sm:text-base font-black font-serif text-slate-950 dark:text-white leading-snug">
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">
             {branding.advertisingCampaign.headline}
           </h3>
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
@@ -451,9 +440,9 @@ export const DepartmentsView: React.FC = () => {
             <span>Sort:</span>
             <button
               onClick={() => setSortBy(sortBy === 'trust' ? 'sla' : sortBy === 'sla' ? 'posts' : sortBy === 'posts' ? 'name' : 'trust')}
-              className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-950 dark:text-white rounded-lg font-black uppercase shadow-2xs hover:border-emerald-500 transition-colors cursor-pointer"
+              className="px-2.5 py-1 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-950 dark:text-white rounded-md font-bold uppercase hover:border-emerald-500 transition-colors cursor-pointer"
             >
-              {sortBy === 'trust' ? '★ Trust Score' : sortBy === 'sla' ? '⚡ SLA Resolution' : sortBy === 'posts' ? '🔥 Reports' : '🔤 Name'}
+              {sortBy === 'trust' ? 'Trust Score' : sortBy === 'sla' ? 'SLA Resolution' : sortBy === 'posts' ? 'Reports' : 'Name (A-Z)'}
             </button>
           </div>
         </div>
@@ -491,10 +480,10 @@ export const DepartmentsView: React.FC = () => {
             return (
               <div
                 key={d.id}
-                className={`p-4 rounded-3xl bg-white dark:bg-slate-900 border shadow-2xs space-y-3 hover:border-emerald-500/60 transition-all group ${
+                className={`p-4 rounded-lg bg-white dark:bg-[#161a22] border space-y-3 hover:border-emerald-500/60 transition-all group ${
                   isF 
-                    ? 'border-amber-400/80 dark:border-amber-500/60 bg-amber-500/[0.03] dark:bg-amber-500/[0.04] ring-1 ring-amber-400/20' 
-                    : 'border-slate-300 dark:border-slate-800'
+                    ? 'border-amber-400/80 dark:border-amber-500/60 bg-amber-500/[0.03] dark:bg-amber-500/[0.04]' 
+                    : 'border-[#e3e6ea] dark:border-[#262b36]'
                 }`}
               >
                 {/* Header Row: Left info container and dedicated right aligned My Stake button */}
@@ -507,8 +496,8 @@ export const DepartmentsView: React.FC = () => {
                     }}
                     className="flex items-start gap-3 min-w-0 flex-1 cursor-pointer"
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-2xl flex-shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                      {d.icon || '🏢'}
+                    <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 flex-shrink-0 group-hover:border-emerald-500/50 transition-colors">
+                      <DeptIcon dept={d} size={20} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -687,10 +676,10 @@ export const DepartmentsView: React.FC = () => {
                           setActiveDeptCountry(country);
                           go('entity_gateway');
                         }}
-                        className="px-2.5 py-1.5 rounded-xl text-[10.5px] mono font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200 flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg text-[10.5px] mono font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200 flex items-center gap-1 transition-all cursor-pointer"
                         title="Open provider resolution desk"
                       >
-                        <Sparkles size={12} />
+                        <ShieldCheck size={12} strokeWidth={1.75} />
                         <span>Provider Desk</span>
                       </button>
                     )}
@@ -759,27 +748,28 @@ export const DepartmentsView: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {[
-                    { id: 'education', label: '🏫 School / Uni' },
-                    { id: 'health', label: '🏥 Hospital / Clinic' },
-                    { id: 'hospitality', label: '🍽️ Restaurant / Cafe' },
-                    { id: 'finance', label: '🏦 Bank / SACCO' },
-                    { id: 'transport', label: '🚌 Transit / Bus / Taxi' },
-                    { id: 'housing', label: '🏢 Mall / Market / Plaza' },
-                    { id: 'utility', label: '⚡ Utility / Power' },
-                    { id: 'cso', label: '🛡️ CSO / Watchdog' },
-                    { id: 'government', label: '🏛️ Gov / Municipal Desk' },
+                    { id: 'education', label: 'School / Uni' },
+                    { id: 'health', label: 'Hospital / Clinic' },
+                    { id: 'hospitality', label: 'Restaurant / Cafe' },
+                    { id: 'finance', label: 'Bank / SACCO' },
+                    { id: 'transport', label: 'Transit / Bus / Taxi' },
+                    { id: 'housing', label: 'Mall / Market / Plaza' },
+                    { id: 'utility', label: 'Utility / Power' },
+                    { id: 'cso', label: 'CSO / Watchdog' },
+                    { id: 'government', label: 'Gov / Municipal Desk' },
                   ].map((cat) => (
                     <button
                       type="button"
                       key={cat.id}
                       onClick={() => setNewDeptCategory(cat.id as any)}
-                      className={`p-2 rounded-xl text-[11px] font-black text-left transition-all border ${
+                      className={`p-2 rounded-lg text-[11px] font-bold text-left transition-all border flex items-center gap-1.5 ${
                         newDeptCategory === cat.id
                           ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border-emerald-500'
                           : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
                       }`}
                     >
-                      {cat.label}
+                      <DeptIcon category={cat.id} size={13} />
+                      <span>{cat.label}</span>
                     </button>
                   ))}
                 </div>
@@ -849,9 +839,10 @@ export const DepartmentsView: React.FC = () => {
                     setShowRegisterModal(false);
                     go('entity_register');
                   }}
-                  className="w-full sm:w-auto text-[11px] font-black mono text-emerald-700 dark:text-emerald-400 hover:underline flex items-center justify-center sm:justify-start gap-1"
+                  className="w-full sm:w-auto text-[11px] font-bold mono text-emerald-700 dark:text-emerald-400 hover:underline flex items-center justify-center sm:justify-start gap-1"
                 >
-                  🚀 Open Full Multi-Tier Registration Portal
+                  <ExternalLink size={12} strokeWidth={1.75} />
+                  <span>Open Full Multi-Tier Registration Portal</span>
                 </button>
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   <button

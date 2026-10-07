@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { CdOpsPromotionalAd } from '../types';
 import {
-  Sparkles,
   PhoneCall,
   Bus,
   Bike,
@@ -56,12 +55,12 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({ ad
 
   return (
     <>
-      <div className="p-3.5 sm:p-5 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-y sm:border sm:rounded-2xl border-emerald-500/40 text-slate-100 shadow-md space-y-3 relative overflow-hidden transition-all hover:border-emerald-500/70">
+      <div className="p-3.5 sm:p-5 bg-[#161a22] border-y sm:border sm:rounded-xl border-[#262b36] text-slate-100 space-y-3 relative overflow-hidden transition-colors hover:border-emerald-500/60">
         {/* Top Header Label */}
         <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-mono flex items-center gap-1 shadow-2xs">
-              <Megaphone size={10} />
+            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-600 text-white font-mono flex items-center gap-1">
+              <Megaphone size={10} strokeWidth={1.75} />
               <span>MARKET PROMOTION</span>
             </span>
             <span className="text-[9.5px] font-mono font-bold text-emerald-300 uppercase tracking-tight">
@@ -96,10 +95,10 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({ ad
               (e.currentTarget as HTMLImageElement).src = '/campaign/boda_poster_ad_1790426299023.jpg';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-between p-3">
+          <div className="absolute inset-0 bg-black/55 flex flex-col justify-between p-3">
             <div className="flex justify-end">
               <span className="p-1.5 rounded-lg bg-black/60 text-white backdrop-blur-xs text-[10px] mono flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Maximize2 size={12} />
+                <Maximize2 size={12} strokeWidth={1.75} />
                 <span>Full Poster</span>
               </span>
             </div>
@@ -138,7 +137,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({ ad
           <button
             type="button"
             onClick={handleAction}
-            className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black mono uppercase tracking-wider flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all cursor-pointer"
+            className="flex-1 py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold mono uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
           >
             {ad.ctaType === 'ussd' && <PhoneCall size={14} className="text-amber-300" />}
             {ad.ctaType === 'specs' && <Bus size={14} className="text-white" />}

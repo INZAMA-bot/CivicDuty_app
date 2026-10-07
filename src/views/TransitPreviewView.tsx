@@ -7,7 +7,6 @@ import {
   Eye,
   Bus,
   Train,
-  Sparkles,
   ShieldCheck,
   Megaphone,
   Radio,
@@ -184,7 +183,7 @@ export const TransitPreviewView: React.FC = () => {
       {/* Main Campaign Showcase Container */}
       <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 space-y-6">
         {/* Campaign Hero Briefing Card */}
-        <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-emerald-500/30 p-4 sm:p-5 shadow-xl relative overflow-hidden">
+        <div className="rounded-2xl bg-slate-900 border border-[#262b36] p-4 sm:p-5 relative overflow-hidden">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1.5 max-w-2xl">
@@ -263,7 +262,7 @@ export const TransitPreviewView: React.FC = () => {
                   className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/30 pointer-events-none" />
+                <div className="absolute inset-0 bg-slate-950/35 pointer-events-none" />
 
                 {/* Top Badge Overlay */}
                 <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
@@ -326,7 +325,7 @@ export const TransitPreviewView: React.FC = () => {
             {/* Thumbnail Carousel / Grid */}
             <div className="space-y-2">
               <div className="text-[10px] font-black uppercase text-slate-400 mono tracking-wider flex items-center gap-1.5">
-                <Sparkles size={12} className="text-emerald-400" />
+                <Layers size={12} strokeWidth={1.75} className="text-emerald-400" />
                 <span>Select Campaign Mockup to Inspect ({filteredMedia.length} Available)</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -349,7 +348,7 @@ export const TransitPreviewView: React.FC = () => {
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-black/45" />
                         <div className="absolute bottom-1.5 left-2 right-2 text-[9.5px] font-bold text-white truncate mono">
                           {item.categoryLabel}
                         </div>
@@ -389,11 +388,11 @@ export const TransitPreviewView: React.FC = () => {
         </div>
 
         {/* Bodaboda Community Stage Poster & Market Launch Creative Suite */}
-        <div id="bodaboda-creative-suite" className="rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-emerald-500/40 p-4 sm:p-6 space-y-4 shadow-xl">
+        <div id="bodaboda-creative-suite" className="rounded-2xl bg-slate-900 border border-[#262b36] p-4 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
-                <Bike size={20} />
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                <Bike size={20} strokeWidth={1.75} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -470,7 +469,7 @@ export const TransitPreviewView: React.FC = () => {
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800/80 space-y-3">
                     <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                       <span className="text-[10px] font-black uppercase text-amber-400 mono tracking-wider flex items-center gap-1.5">
-                        <Sparkles size={12} /> Master Poster Headline &amp; Tagline
+                        <FileText size={12} strokeWidth={1.75} /> Master Poster Headline &amp; Tagline
                       </span>
                       <button
                         onClick={() => {
@@ -480,22 +479,22 @@ HEADLINE (English): YOUR STAGE. YOUR ROAD. YOUR POWER. SPEAK DIRECTLY TO GOVERNM
 SUB-HEADLINE: Tokyakaaba Potholes oba Bribes mu Kifuba. Speak · Serve · Be Heard.
 
 THE 3-SIGNAL SOVEREIGN LOOP:
-🔴 RED SIGNAL (OYOGERA - CITIZEN SPEAKS):
+[RED SIGNAL] (OYOGERA - CITIZEN SPEAKS):
 "Oguze ekinnya ekyonoona sipulinji yo? Otegekeddwa omuserikale ayagala embuzi ku roadblock? Tegeeza gavumenti mubuziba."
 Log the pothole, damaged culvert, dark streetlight, or police extortion point.
 
-🟡 AMBER SIGNAL (GAVUMENTI EKOZI - GOVERNMENT SERVES):
+[AMBER SIGNAL] (GAVUMENTI EKOZI - GOVERNMENT SERVES):
 "KCCA, UNRA n’abakulu b’amateeka bafuna alert ku sipiidi. Public SLA timer ebalira buli ddakiika paka bwe bakola ku nsonga yo."
 Public countdown SLA clock starts ticking. Municipal engineers and supervisors are dispatched.
 
-🟢 GREEN SIGNAL WITH WHITE TICK (PROOF ETEKEBWAWO - PROOF UPLOADED & CITIZEN HEARD):
+[GREEN SIGNAL WITH WHITE TICK] (PROOF ETEKEBWAWO - PROOF UPLOADED & CITIZEN HEARD):
 "Oluguudo lusibwa, kabi kasalwako, era ebifaananyi by’obujulizi (Proof of Work) bitekebwa ku ledger! Stage yo efuna Civic Fuel Perks n’ekitiibwa!"
 Repairs completed, hazard verified, timestamped photographic proof sealed on ledger. Stage earns fuel & airtime perks!
 
 CALL TO ACTION:
-👉 DIAL *3030# FOR FREE (No Data Needed / Kabiriti & Smartphone Compatible / MTN & Airtel)
-👉 Scan QR Code to open CivicDuty Offline PWA
-👉 Stage Chairmen: Register your Stage SACCO to receive instant emergency road fund dispatch alerts!`;
+- DIAL *3030# FOR FREE (No Data Needed / Kabiriti & Smartphone Compatible / MTN & Airtel)
+- Scan QR Code to open CivicDuty Offline PWA
+- Stage Chairmen: Register your Stage SACCO to receive instant emergency road fund dispatch alerts!`;
                           navigator.clipboard.writeText(posterText);
                           setCopiedScript('poster');
                           setTimeout(() => setCopiedScript(null), 2500);
@@ -554,7 +553,9 @@ CALL TO ACTION:
 
                     <div className="p-3 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-1 bg-emerald-950/20">
                       <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-black uppercase mono">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex items-center justify-center text-[7px] text-white font-bold">✓</span>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                          <Check size={7} strokeWidth={3} />
+                        </span>
                         <span>3. Green: Proof</span>
                       </div>
                       <div className="text-[10.5px] text-emerald-300 font-bold">Oluguudo Lusibwa!</div>
@@ -565,7 +566,7 @@ CALL TO ACTION:
                   </div>
 
                   {/* Direct Call To Action Callout */}
-                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <div className="text-xs font-black text-white mono uppercase flex items-center gap-1.5">
                         <span className="text-amber-400 font-extrabold text-sm">*3030#</span>
@@ -777,21 +778,24 @@ Koona *3030# kati. CIVICDUTY: Speak, Serve, Be Heard!"`;
               Target Phase 1 Transit Corridors (Kampala Metropolitan Area)
             </div>
             <div className="flex flex-wrap gap-2 text-[10px] mono">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-                🚌 Route A: Ntinda ↔ Kiwatule ↔ Najjera ↔ Kira ↔ Nakwero
+              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 flex items-center gap-1.5">
+                <Bus size={12} strokeWidth={1.75} className="text-emerald-400" />
+                <span>Route A: Ntinda ↔ Kiwatule ↔ Najjera ↔ Kira ↔ Nakwero</span>
               </span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-                🚌 Route B: Jinja Road Express ↔ Bweyogerere ↔ Mukono
+              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 flex items-center gap-1.5">
+                <Bus size={12} strokeWidth={1.75} className="text-emerald-400" />
+                <span>Route B: Jinja Road Express ↔ Bweyogerere ↔ Mukono</span>
               </span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-                🚆 Commuter Rail: Namanve ↔ Kampala Central Station
+              <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 flex items-center gap-1.5">
+                <Train size={12} strokeWidth={1.75} className="text-emerald-400" />
+                <span>Commuter Rail: Namanve ↔ Kampala Central Station</span>
               </span>
             </div>
           </div>
         </div>
 
         {/* Action Exit to Citizen Core */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-950 border border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-slate-900 border border-slate-800">
           <div className="text-left">
             <div className="text-xs font-black text-white uppercase mono">Ready to experience CivicDuty?</div>
             <div className="text-[10px] text-slate-400">Return to the sovereign citizen feed or report an infrastructure issue.</div>

@@ -18,9 +18,9 @@ import {
   FileCheck2,
   Briefcase,
   Layers,
-  Sparkles,
   Lock,
-  BadgeCheck
+  BadgeCheck,
+  Landmark,
 } from 'lucide-react';
 import { CountryCode, Project, ProjectMilestone } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
@@ -191,7 +191,7 @@ export const GovProjectsView: React.FC = () => {
 
   const handleToggleAwarder = (id: string) => {
     if (signingRole !== 'awarder') {
-      toast('⛔ ACCESS DENIED: Contractor Executives cannot sign the Procuring Entity slot!', 'amber');
+      toast('ACCESS DENIED: Contractor Executives cannot sign the Procuring Entity slot!', 'amber');
       return;
     }
     setContractMilestones((prev) =>
@@ -206,12 +206,12 @@ export const GovProjectsView: React.FC = () => {
         };
       })
     );
-    toast('🏛️ Procuring Entity signoff updated', 'emerald');
+    toast('Procuring Entity signoff updated', 'emerald');
   };
 
   const handleToggleContractor = (id: string) => {
     if (signingRole !== 'contractor') {
-      toast('⛔ ACCESS DENIED: Government Officials cannot sign the Contractor Executive slot!', 'amber');
+      toast('ACCESS DENIED: Government Officials cannot sign the Contractor Executive slot!', 'amber');
       return;
     }
     setContractMilestones((prev) =>
@@ -226,7 +226,7 @@ export const GovProjectsView: React.FC = () => {
         };
       })
     );
-    toast('🚜 Contractor Executive signoff updated', 'amber');
+    toast('Contractor Executive signoff updated', 'amber');
   };
 
   const handleOpenWall = () => {
@@ -536,7 +536,7 @@ export const GovProjectsView: React.FC = () => {
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  <span>🏛️ Procuring Entity</span>
+                  <span className="flex items-center gap-1"><Landmark size={11} /> Procuring Entity</span>
                   {signingRole === 'awarder' && <span className="text-[8px] bg-teal-600 text-white px-1 py-0.2 rounded font-black">ACTIVE</span>}
                 </button>
                 <button
@@ -551,7 +551,7 @@ export const GovProjectsView: React.FC = () => {
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  <span>🚜 Contractor Exec</span>
+                  <span className="flex items-center gap-1"><HardHat size={11} /> Contractor Exec</span>
                   {signingRole === 'contractor' && <span className="text-[8px] bg-amber-700 text-white px-1 py-0.2 rounded font-black">ACTIVE</span>}
                 </button>
               </div>
@@ -580,7 +580,7 @@ export const GovProjectsView: React.FC = () => {
                             ? 'bg-amber-50 dark:bg-amber-500/20 border-amber-600/30 text-amber-800 dark:text-amber-300'
                             : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400'
                         }`}>
-                          {fullyDone ? '✓✓ 2/2 DUAL VERIFIED' : (awarderSigned || contractorSigned) ? '⌛ 1/2 PENDING' : '○ 0/2 UNVERIFIED'}
+                          {fullyDone ? '2/2 DUAL VERIFIED' : (awarderSigned || contractorSigned) ? '1/2 PENDING' : '0/2 UNVERIFIED'}
                         </span>
                         <button
                           type="button"
@@ -617,9 +617,9 @@ export const GovProjectsView: React.FC = () => {
                           }`}
                         >
                           {signingRole === 'awarder' ? (
-                            <>🏛️ Procuring Entity {awarderSigned ? '✓ Signed' : '+ Sign'}</>
+                            <><Landmark size={10} /> Procuring Entity {awarderSigned ? 'Signed' : '+ Sign'}</>
                           ) : (
-                            <>🔒 Gov Slot Locked {awarderSigned ? '(✓)' : ''}</>
+                            <><Lock size={10} /> Gov Slot Locked {awarderSigned ? '(Signed)' : ''}</>
                           )}
                         </button>
                         <button
@@ -634,9 +634,9 @@ export const GovProjectsView: React.FC = () => {
                           }`}
                         >
                           {signingRole === 'contractor' ? (
-                            <>🚜 Contractor Exec {contractorSigned ? '✓ Signed' : '+ Sign'}</>
+                            <><HardHat size={10} /> Contractor Exec {contractorSigned ? 'Signed' : '+ Sign'}</>
                           ) : (
-                            <>🔒 Contractor Slot Locked {contractorSigned ? '(✓)' : ''}</>
+                            <><Lock size={10} /> Contractor Slot Locked {contractorSigned ? '(Signed)' : ''}</>
                           )}
                         </button>
                       </div>

@@ -1888,6 +1888,72 @@ export const GOV_CODES: Record<string, GovCodeData> = {
   },
 };
 
+// Auto-populate sovereign credentials in GOV_CODES for every global country in COUNTRIES after module initialization
+queueMicrotask(() => {
+  if (!COUNTRIES) return;
+  Object.entries(COUNTRIES).forEach(([code, info]) => {
+    const hasCodes = Object.values(GOV_CODES).some((d) => d.country === code);
+    if (!hasCodes) {
+      const lc = code.toLowerCase();
+      GOV_CODES[`${code}-PS-LOCAL-GOV`] = {
+        country: code as CountryCode,
+        dept: `${lc}_local_gov`,
+        scope: code,
+        role: 'platform_admin',
+        is_utility: false,
+        role_label: `Permanent Secretary / National Superadmin, Ministry of Local Government (${info.name})`,
+        real_title_short: `Perm. Sec. Local Gov (${code})`,
+        hierarchy_level: 'tier5_perm_sec',
+        escalation_rank: 5,
+      };
+      GOV_CODES[`${code}-CITY-MAYOR`] = {
+        country: code as CountryCode,
+        dept: `${lc}_gov`,
+        scope: `${lc}_capital_reg`,
+        role: 'node_admin',
+        is_utility: false,
+        role_label: `Metropolitan Mayor / Chief Executive Officer, ${info.name} Capital Region`,
+        real_title_short: `Metro Mayor (${code})`,
+        hierarchy_level: 'tier3_district_cao',
+        escalation_rank: 3,
+      };
+      GOV_CODES[`${code}-WATER-UTIL`] = {
+        country: code as CountryCode,
+        dept: `${lc}_water`,
+        scope: code,
+        role: 'spokesperson',
+        is_utility: true,
+        role_label: `Managing Director, ${info.name} National Water & Sewerage Utility`,
+        real_title_short: `MD Water Utility (${code})`,
+        hierarchy_level: 'tier4_agency',
+        escalation_rank: 4,
+      };
+      GOV_CODES[`${code}-POWER-GRID`] = {
+        country: code as CountryCode,
+        dept: `${lc}_power`,
+        scope: code,
+        role: 'spokesperson',
+        is_utility: true,
+        role_label: `Chief Grid Operations Director, ${info.name} National Electric Utility`,
+        real_title_short: `Grid Director (${code})`,
+        hierarchy_level: 'tier4_agency',
+        escalation_rank: 4,
+      };
+      GOV_CODES[`${code}-AUDITOR-GEN`] = {
+        country: code as CountryCode,
+        dept: `${lc}_ombudsman`,
+        scope: code,
+        role: 'read_only',
+        is_utility: false,
+        role_label: `Auditor General & Anti-Corruption Ombudsman (${info.name})`,
+        real_title_short: `Auditor General (${code})`,
+        hierarchy_level: 'tier5_perm_sec',
+        escalation_rank: 5,
+      };
+    }
+  });
+});
+
 export function getBusinessTitlePresets(category?: string): string[] {
   switch (category) {
     case 'retail_shops':
@@ -1980,143 +2046,143 @@ export function getCountryCapacityPresets(countryCode?: string): string[] {
   switch (code) {
     case 'UG':
       return [
-        '🏛️ Resident District Commissioner (RDC) / CAO',
-        '🌍 World Bank / International Development Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Community Watchdog',
-        '🔍 Inspectorate of Government (IGG) Auditor',
-        '👷 Ministry / KCCA Supervising Engineer',
+        'Resident District Commissioner (RDC) / CAO',
+        'World Bank / International Development Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Community Watchdog',
+        'Inspectorate of Government (IGG) Auditor',
+        'Ministry / KCCA Supervising Engineer',
       ];
     case 'KE':
       return [
-        '🏛️ County Executive (CECM) / SubCounty Admin',
-        '🌍 World Bank / AfDB Development Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Ward Citizen',
-        '🔍 Ethics & Anti-Corruption (EACC) Auditor',
-        '👷 Ministry Supervising Engineer',
+        'County Executive (CECM) / SubCounty Admin',
+        'World Bank / AfDB Development Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Ward Citizen',
+        'Ethics & Anti-Corruption (EACC) Auditor',
+        'Ministry Supervising Engineer',
       ];
     case 'NG':
       return [
-        '🏛️ LGA Chairman / State Commissioner',
-        '🌍 World Bank / AfDB Development Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Community Watchdog',
-        '🔍 ICPC / EFCC Anti-Corruption Auditor',
-        '👷 Ministry Supervising Engineer',
+        'LGA Chairman / State Commissioner',
+        'World Bank / AfDB Development Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Community Watchdog',
+        'ICPC / EFCC Anti-Corruption Auditor',
+        'Ministry Supervising Engineer',
       ];
     case 'GH':
       return [
-        '🏛️ District Chief Executive (DCE) / Assembly Member',
-        '🌍 World Bank / AfDB Development Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Community Watchdog',
-        '🔍 CHRAJ Auditor / Public Inspector',
-        '👷 Ministry Supervising Engineer',
+        'District Chief Executive (DCE) / Assembly Member',
+        'World Bank / AfDB Development Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Community Watchdog',
+        'CHRAJ Auditor / Public Inspector',
+        'Ministry Supervising Engineer',
       ];
     case 'RW':
       return [
-        '🏛️ District Mayor / Sector Executive Secretary',
-        '🌍 World Bank / AfDB Development Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Umuganda Representative',
-        '🔍 Office of the Ombudsman Auditor',
-        '👷 Ministry Supervising Engineer',
+        'District Mayor / Sector Executive Secretary',
+        'World Bank / AfDB Development Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Umuganda Representative',
+        'Office of the Ombudsman Auditor',
+        'Ministry Supervising Engineer',
       ];
     case 'TZ':
       return [
-        '🏛️ Regional Commissioner (RC) / District Director (DED)',
-        '🌍 World Bank / AfDB Development Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Ward Representative',
-        '🔍 TAKUKURU Anti-Corruption Auditor',
-        '👷 Ministry Supervising Engineer',
+        'Regional Commissioner (RC) / District Director (DED)',
+        'World Bank / AfDB Development Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Ward Representative',
+        'TAKUKURU Anti-Corruption Auditor',
+        'Ministry Supervising Engineer',
       ];
     case 'ZA':
       return [
-        '🏛️ Municipal Manager / Ward Officer',
-        '🌍 World Bank / Development Bank Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Community Watchdog',
-        '🔍 Special Investigating Unit (SIU) Auditor',
-        '👷 Department Supervising Engineer',
+        'Municipal Manager / Ward Officer',
+        'World Bank / Development Bank Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Community Watchdog',
+        'Special Investigating Unit (SIU) Auditor',
+        'Department Supervising Engineer',
       ];
     case 'SN':
       return [
-        '🏛️ Préfet de Département / Maire',
-        '🌍 Banque Mondiale / Inspecteur International',
-        '📰 Journaliste / Presse',
-        '🚜 Ingénieur de Chantier (Contractant)',
-        '👥 Résident Local / Citoyen',
-        '🔍 Inspecteur d\'État (OFNAC)',
-        '👷 Ingénieur de Supervision Ministériel',
+        'Préfet de Département / Maire',
+        'Banque Mondiale / Inspecteur International',
+        'Journaliste / Presse',
+        'Ingénieur de Chantier (Contractant)',
+        'Résident Local / Citoyen',
+        'Inspecteur d\'État (OFNAC)',
+        'Ingénieur de Supervision Ministériel',
       ];
     case 'ZM':
       return [
-        '🏛️ Provincial Govt Officer / Town Clerk',
-        '🌍 World Bank / AfDB Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / WDC Chair',
-        '🔍 ACC Anti-Corruption Auditor',
-        '👷 Ministry Supervising Engineer',
+        'Provincial Govt Officer / Town Clerk',
+        'World Bank / AfDB Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / WDC Chair',
+        'ACC Anti-Corruption Auditor',
+        'Ministry Supervising Engineer',
       ];
     case 'ZW':
       return [
-        '🏛️ Provincial Director / CEO Town Clerk',
-        '🌍 World Bank / AfDB Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Ward Officer',
-        '🔍 ZACC Anti-Corruption Auditor',
-        '👷 Ministry Supervising Engineer',
+        'Provincial Director / CEO Town Clerk',
+        'World Bank / AfDB Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Ward Officer',
+        'ZACC Anti-Corruption Auditor',
+        'Ministry Supervising Engineer',
       ];
     case 'US':
       return [
-        '🏛️ County Executive / City Manager',
-        '🌍 World Bank / Federal Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Community Advisory',
-        '🔍 Office of Inspector General (OIG)',
-        '👷 Department of Transportation Engineer',
+        'County Executive / City Manager',
+        'World Bank / Federal Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Community Advisory',
+        'Office of Inspector General (OIG)',
+        'Department of Transportation Engineer',
       ];
     case 'GB':
       return [
-        '🏛️ Council Chief Executive / Ward Officer',
-        '🌍 World Bank / Infrastructure Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Community Watchdog',
-        '🔍 National Audit Office (NAO) Auditor',
-        '👷 Supervising Civil Engineer',
+        'Council Chief Executive / Ward Officer',
+        'World Bank / Infrastructure Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Community Watchdog',
+        'National Audit Office (NAO) Auditor',
+        'Supervising Civil Engineer',
       ];
     case 'IN':
       return [
-        '🏛️ District Collector (DM) / BDO / Sarpanch',
-        '🌍 World Bank / ADB Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Gram Sabha Watchdog',
-        '🔍 Lokayukta / Vigilance Auditor',
-        '👷 PWD Supervising Engineer',
+        'District Collector (DM) / BDO / Sarpanch',
+        'World Bank / ADB Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Gram Sabha Watchdog',
+        'Lokayukta / Vigilance Auditor',
+        'PWD Supervising Engineer',
       ];
     default:
       return [
-        '🏛️ District Procuring Entity Officer',
-        '🌍 World Bank / International Development Inspector',
-        '📰 Media Reporter / Press',
-        '🚜 Contractor Site Engineer',
-        '👥 Local Resident / Community Watchdog',
-        '🔍 Public Procurement Auditor',
-        '👷 Ministry Supervising Engineer',
+        'District Procuring Entity Officer',
+        'World Bank / International Development Inspector',
+        'Media Reporter / Press',
+        'Contractor Site Engineer',
+        'Local Resident / Community Watchdog',
+        'Public Procurement Auditor',
+        'Ministry Supervising Engineer',
       ];
   }
 }
@@ -2125,7 +2191,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   UG: {
     countryCode: 'UG',
     countryName: 'Uganda',
-    flag: '🇺🇬',
+    flag: 'UG',
     totalTargetDesks: 14153,
     primaryUnitName: 'Parishes (LC II / Parish Chiefs)',
     tiersDescription: '1 OPM HQ → 146 CAO Districts → 1,438 SubCounties → 10,515 Parishes',
@@ -2161,7 +2227,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   KE: {
     countryCode: 'KE',
     countryName: 'Kenya',
-    flag: '🇰🇪',
+    flag: 'KE',
     totalTargetDesks: 2458,
     primaryUnitName: 'Wards (Ward Administrators)',
     tiersDescription: '1 PS Office → 47 CECM County Executives → 290 SubCounty Admins → 1,450 Wards',
@@ -2197,7 +2263,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   NG: {
     countryCode: 'NG',
     countryName: 'Nigeria',
-    flag: '🇳🇬',
+    flag: 'NG',
     totalTargetDesks: 10824,
     primaryUnitName: 'Wards (Ward Councillors & Desk Officers)',
     tiersDescription: '1 Federal PS → 36 State Commissioners → 774 LGA Chairmen → 8,812 Wards',
@@ -2217,7 +2283,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   GH: {
     countryCode: 'GH',
     countryName: 'Ghana',
-    flag: '🇬🇭',
+    flag: 'GH',
     totalTargetDesks: 7398,
     primaryUnitName: 'Communities (Assembly Members & Unit Committees)',
     tiersDescription: '1 Chief Director → 16 Regional Coordinating Directors → 261 DCEs → 6,270 Electoral Areas',
@@ -2237,7 +2303,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   RW: {
     countryCode: 'RW',
     countryName: 'Rwanda',
-    flag: '🇷🇼',
+    flag: 'RW',
     totalTargetDesks: 3025,
     primaryUnitName: 'Cells (Cell Executive Secretaries)',
     tiersDescription: '1 MINALOC PS → 5 Governors → 30 Mayors → 416 Sector ES → 2,148 Cell ES',
@@ -2257,7 +2323,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   TZ: {
     countryCode: 'TZ',
     countryName: 'Tanzania',
-    flag: '🇹🇿',
+    flag: 'TZ',
     totalTargetDesks: 4867,
     primaryUnitName: 'Wards (Ward Executive Officers - WEO)',
     tiersDescription: '1 PS TAMISEMI → 31 Regional Commissioners → 184 DEDs → 3,956 Wards',
@@ -2277,7 +2343,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   ZA: {
     countryCode: 'ZA',
     countryName: 'South Africa',
-    flag: '🇿🇦',
+    flag: 'ZA',
     totalTargetDesks: 5885,
     primaryUnitName: 'Wards (Ward Councillors & Ward Committees)',
     tiersDescription: '1 DG COGTA → 9 Provincial HoDs → 257 Municipal Managers → 4,468 Wards',
@@ -2297,7 +2363,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   ET: {
     countryCode: 'ET',
     countryName: 'Ethiopia',
-    flag: '🇪🇹',
+    flag: 'ET',
     totalTargetDesks: 20481,
     primaryUnitName: 'Kebeles (Kebele Administrators)',
     tiersDescription: '1 State Minister → 12 Regional Bureau Heads → 1,068 Woreda Admins → 18,000 Kebeles',
@@ -2317,7 +2383,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   EG: {
     countryCode: 'EG',
     countryName: 'Egypt',
-    flag: '🇪🇬',
+    flag: 'EG',
     totalTargetDesks: 6201,
     primaryUnitName: 'Local Units (Sheikha / Village Chiefs)',
     tiersDescription: '1 Ministry Deputy → 27 Governors → 300+ Markaz / City Chiefs → 4,600 Local Units',
@@ -2337,7 +2403,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   SN: {
     countryCode: 'SN',
     countryName: 'Senegal',
-    flag: '🇸🇳',
+    flag: 'SN',
     totalTargetDesks: 1018,
     primaryUnitName: 'Communes (Maires / Chefs de Commune)',
     tiersDescription: '1 DG CNDT → 14 Gouverneurs → 46 Préfets → 557 Communes',
@@ -2357,7 +2423,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   ZM: {
     countryCode: 'ZM',
     countryName: 'Zambia',
-    flag: '🇿🇲',
+    flag: 'ZM',
     totalTargetDesks: 2435,
     primaryUnitName: 'Wards (WDC Committee Chairs)',
     tiersDescription: '1 PS MLGH → 10 Provincial Officers → 116 Town Clerks → 1,858 Wards',
@@ -2377,7 +2443,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   ZW: {
     countryCode: 'ZW',
     countryName: 'Zimbabwe',
-    flag: '🇿🇼',
+    flag: 'ZW',
     totalTargetDesks: 2461,
     primaryUnitName: 'Wards (Ward Executive Officers)',
     tiersDescription: '1 PS MLGP → 10 Provincial Directors → 92 Council CEOs → 1,958 Wards',
@@ -2397,7 +2463,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   US: {
     countryCode: 'US',
     countryName: 'United States',
-    flag: '🇺🇸',
+    flag: 'US',
     totalTargetDesks: 46144,
     primaryUnitName: 'Districts (Neighborhood Commissioners)',
     tiersDescription: '1 Cabinet Secretary → 50 State/County Executives → 3,142 City Managers → 35,000 District ANCs',
@@ -2417,7 +2483,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   GB: {
     countryCode: 'GB',
     countryName: 'United Kingdom',
-    flag: '🇬🇧',
+    flag: 'GB',
     totalTargetDesks: 11234,
     primaryUnitName: 'Wards (Ward Councillors & Officers)',
     tiersDescription: '1 PS DLUHC → 333 Council Chief Execs → Parish Clerks → 9,500 Wards',
@@ -2437,7 +2503,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   IN: {
     countryCode: 'IN',
     countryName: 'India',
-    flag: '🇮🇳',
+    flag: 'IN',
     totalTargetDesks: 287501,
     primaryUnitName: 'Panchayats / Wards (Gram Panchayat Secretaries)',
     tiersDescription: '1 Ministry Secretary → 36 State DMs → 6,700 BDOs → 255,000 Gram Panchayats',
@@ -2457,7 +2523,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
   DE: {
     countryCode: 'DE',
     countryName: 'Germany',
-    flag: '🇩🇪',
+    flag: 'DE',
     totalTargetDesks: 11210,
     primaryUnitName: 'Gemeinden & Ortsbezirke (Ortsvorsteher / Bezirksamtsleiter)',
     tiersDescription: '1 BMI Federal Minister/State Secretary → 16 Bundesländer Ministers → 401 Landräte/Oberbürgermeister → 10,753 Gemeinden',
@@ -2496,7 +2562,7 @@ export function getNationalRolloutArrangements(countryCode: string): import('../
   const code = (countryCode || 'UG').toUpperCase();
   const info = COUNTRIES[code];
   const countryName = info?.name || code;
-  const flag = info?.flag || '🌐';
+  const flag = info?.flag || code;
 
   const base = NATIONAL_ROLLOUTS[code] || {
     countryCode: code,

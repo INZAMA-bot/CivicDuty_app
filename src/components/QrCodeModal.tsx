@@ -11,7 +11,6 @@ import {
   ExternalLink,
   Building2,
   FileCheck2,
-  Sparkles,
   Smartphone
 } from 'lucide-react';
 import { Department, Post } from '../types';

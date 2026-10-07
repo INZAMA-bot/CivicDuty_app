@@ -13,7 +13,7 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
 
   const isResolved = post.status === 'resolved';
   const isInvestigating = ['investigating', 'budget', 'resolved'].includes(post.status);
-  const isGovResponded = post.comments.some((c) => c.role === 'gov') || isResolved;
+  const isGovResponded = (post.comments || []).some((c) => c.role === 'gov') || isResolved;
   const isCitizenConfirmed = post.citizen_satisfied === true;
 
   const handleConfirmResolution = () => {
@@ -29,7 +29,7 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
       signal: 'red' as const,
       phaseName: 'Signal 1: RED (Citizen Speaks)',
       title: 'Citizen SPEAKS (Filed on Node)',
-      desc: `Registered on ${post.territory.parish || 'Parish Node'} · ${timeAgo(post.created_at)}`,
+      desc: `Registered on ${post.territory?.parish || post.location || 'Parish Node'} · ${timeAgo(post.created_at)}`,
       completed: true,
       icon: MapPin,
       badge: 'Step 1 Complete',
@@ -80,7 +80,7 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
         : 'Pending physical completion',
       completed: isCitizenConfirmed,
       icon: Award,
-      badge: isCitizenConfirmed ? 'Sealed ✓' : 'Awaiting Signoff',
+      badge: isCitizenConfirmed ? 'Sealed' : 'Awaiting Signoff',
     },
   ];
 

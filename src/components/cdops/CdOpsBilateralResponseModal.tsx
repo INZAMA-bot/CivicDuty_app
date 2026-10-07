@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Send,
-  Sparkles,
   CheckCircle2,
   Clock,
   ShieldAlert,
@@ -16,6 +15,7 @@ import {
   FileText,
   Copy,
   Check,
+  Landmark,
 } from 'lucide-react';
 import {
   GovFeedbackMessage,
@@ -166,7 +166,7 @@ export const CdOpsBilateralResponseModal: React.FC<CdOpsBilateralResponseModalPr
           <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🏛️</span>
+                <Landmark size={16} className="text-amber-500 shrink-0" />
                 <div>
                   <div className="text-xs font-black text-slate-900 dark:text-slate-100">
                     {message.senderMinistry}
@@ -228,7 +228,7 @@ export const CdOpsBilateralResponseModal: React.FC<CdOpsBilateralResponseModalPr
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] mono font-bold text-slate-700 dark:text-slate-300 uppercase flex items-center gap-1">
-                <Sparkles size={12} className="text-amber-500" />
+                <FileText size={12} className="text-amber-500" />
                 Respectful Bureaucratic Templates (One-Click Auto-Fill)
               </span>
               <span className="text-[8.5px] mono text-slate-500">
@@ -310,8 +310,8 @@ export const CdOpsBilateralResponseModal: React.FC<CdOpsBilateralResponseModalPr
                   onChange={(e) => setSelectedStatus(e.target.value as any)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500"
                 >
-                  <option value="actioned">✅ Actioned & Certified in Sovereign Ledger</option>
-                  <option value="reviewed_by_cd_ops">🔍 Under Technical Evaluation (In Progress)</option>
+                  <option value="actioned">Actioned &amp; Certified in Sovereign Ledger</option>
+                  <option value="reviewed_by_cd_ops">Under Technical Evaluation (In Progress)</option>
                 </select>
               </div>
 

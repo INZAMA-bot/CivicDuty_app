@@ -12,7 +12,6 @@ import {
   Phone, 
   Globe, 
   Ticket, 
-  Sparkles, 
   Send,
   QrCode,
   BadgeCheck,
@@ -196,7 +195,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
       `${issuerLabel} awarded ${currentPerk.name} voucher (${finalCode})${fromEscrow ? ' [DRAWN FROM PRE-FUNDED ESCROW]' : ''} to ${recipient} for wall engagement.`
     );
 
-    toast(`🎁 ${currentPerk.name} awarded to ${targetCitizenName}!`, 'emerald');
+    toast(`${currentPerk.name} awarded to ${targetCitizenName}.`, 'emerald');
 
     setIsSubmitting(false);
     setSuccessData({
@@ -234,7 +233,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                   <h3 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     Reward Citizen Engagement
                     <span className="text-[10px] mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 font-normal">
-                      {countryPerks.flag} {countryPerks.countryName}
+                      {countryPerks.countryName}
                     </span>
                   </h3>
                   <p className="text-[11px] mono text-slate-500 dark:text-slate-400">
@@ -384,15 +383,26 @@ export const RewardModal: React.FC<RewardModalProps> = ({
             {/* Note / Citation */}
             <div className="space-y-1">
               <label className="text-[10px] mono text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider block">
-                Recognition Note / Citation
+                Field Cost Reimbursement Citation
               </label>
               <textarea
                 rows={2}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-slate-100 text-xs resize-none focus:outline-none focus:border-amber-600"
-                placeholder="Reason for reward..."
+                placeholder="Reason for field cost reimbursement..."
               ></textarea>
+            </div>
+
+            {/* Ethical Non-Interference & Anti-Hush-Money Covenant Notice */}
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[10px] text-slate-700 dark:text-slate-300 space-y-1">
+              <div className="font-black text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 uppercase mono text-[9.5px]">
+                <CheckCircle2 size={12} className="shrink-0" />
+                <span>Ethical Non-Interference Covenant (Anti-Hush-Money Rule)</span>
+              </div>
+              <p className="leading-snug">
+                This voucher is issued strictly as a <strong>Field Evidence &amp; Utility Cost Reimbursement</strong>. Accepting this perk <strong>never</strong> closes, locks, or mutes this ticket—the citizen retains 100% of their right to audit or dispute physical repairs.
+              </p>
             </div>
 
             <button
@@ -406,7 +416,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                   ? 'Dispatching from Escrow...'
                   : escrowStockCount > 0
                   ? `Dispatch Pre-Funded Voucher (${escrowStockCount} in Escrow)`
-                  : 'Dispatch Perk Voucher to Citizen'}
+                  : 'Dispatch Field Cost Voucher to Citizen'}
               </span>
             </button>
           </form>
@@ -454,7 +464,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
 
               <div className="text-[9px] text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <span>Issued By: {successData.issuer}</span>
-                <span className="text-emerald-600 font-bold">SMS Push Sent ✓</span>
+                <span className="text-emerald-600 font-bold">SMS Push Sent</span>
               </div>
             </div>
 

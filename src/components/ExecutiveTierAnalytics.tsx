@@ -25,7 +25,6 @@ import {
   ArrowUpRight,
   RefreshCw,
   Search,
-  Sparkles,
   ChevronRight,
   Layers,
   Activity,
@@ -53,7 +52,7 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
   const { user, toast, logAudit, officialQueries } = useApp();
 
   const activeCountry: CountryCode = initialCountry || user?.country || 'UG';
-  const countryObj = COUNTRIES[activeCountry] || { name: activeCountry, flag: '🏛️' };
+  const countryObj = COUNTRIES[activeCountry] || { name: activeCountry, flag: activeCountry };
   const rolloutArrangement = getNationalRolloutArrangements(activeCountry);
   const countryTiers = tiersFor(activeCountry);
 
@@ -243,7 +242,7 @@ Authority: Local Governments Act & Public Finance Management Mandate
 Civic Duty Sovereign Digital Infrastructure`;
 
     navigator.clipboard.writeText(brief);
-    toast('✓ Statutory Performance Brief copied to clipboard! Ready for Council review.', 'emerald');
+    toast('Statutory Performance Brief copied to clipboard. Ready for Council review.', 'emerald');
   };
 
   return (
@@ -259,8 +258,8 @@ Civic Duty Sovereign Digital Infrastructure`;
               <span className="text-[11px] mono font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
                 Tier {effectiveTier} Executive Oversight Analytics
               </span>
-              <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700">
-                {countryObj.flag} {countryObj.name}
+              <span className="text-[10px] mono px-2 py-0.5 rounded-md bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-300 font-bold border border-[#e3e6ea] dark:border-[#262b36]">
+                {activeCountry} · {countryObj.name}
               </span>
             </div>
 

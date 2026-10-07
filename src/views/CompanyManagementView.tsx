@@ -59,6 +59,10 @@ export const CompanyManagementView: React.FC = () => {
     govFeedbackMessages,
     activeCdOpsOperator,
     cdOpsStaffList,
+    showDemos,
+    setShowDemos,
+    posts,
+    claimedEntities,
   } = useApp();
 
   const [internalUnlocked, setInternalUnlocked] = useState<boolean>(
@@ -193,7 +197,7 @@ export const CompanyManagementView: React.FC = () => {
           </div>
 
           <div className="bg-amber-950/30 border border-amber-500/20 p-3 rounded-xl text-[10px] text-amber-200/80 leading-relaxed font-mono">
-            ⚠️ <strong>Restricted to CivicDuty Platform Staff (CD-Ops).</strong> Internal operational cockpit for responding to national officials, calibrating SLAs, and managing sovereign accords.
+            <strong>Restricted to CivicDuty Platform Staff (CD-Ops).</strong> Internal operational cockpit for responding to national officials, calibrating SLAs, and managing sovereign accords.
           </div>
 
           <form onSubmit={handleUnlock} className="space-y-3 pt-1">
@@ -436,11 +440,11 @@ export const CompanyManagementView: React.FC = () => {
       {activeTab === 'bilateral_desk' && (
         <div className="space-y-4 animate-fade-in">
           {/* Executive Overview Banner */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/15 via-slate-900/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl">📡</span>
-                <span className="text-xs font-black mono text-amber-800 dark:text-amber-400 uppercase tracking-wider">
+                <Radio size={15} className="text-amber-500 shrink-0" />
+                <span className="text-xs font-bold mono text-amber-800 dark:text-amber-400 uppercase tracking-wider">
                   Sovereign Bilateral Operational Feedback Loop
                 </span>
               </div>
@@ -556,10 +560,10 @@ export const CompanyManagementView: React.FC = () => {
                   onChange={(e) => setFilterCountry(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-2 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500 cursor-pointer"
                 >
-                  <option value="ALL">🌐 All 15 Sovereign Nations</option>
+                  <option value="ALL">All 15 Sovereign Nations</option>
                   {Object.entries(COUNTRIES).map(([code, c]) => (
                     <option key={code} value={code}>
-                      {c.flag} {c.name} ({code})
+                      [{code}] {c.name}
                     </option>
                   ))}
                 </select>
@@ -572,10 +576,10 @@ export const CompanyManagementView: React.FC = () => {
                   onChange={(e) => setFilterPriority(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-2 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500 cursor-pointer"
                 >
-                  <option value="ALL">⚡ All Priorities</option>
-                  <option value="statutory_directive">🔴 Statutory Directive (PFMA)</option>
-                  <option value="urgent">🟡 Urgent Escalation</option>
-                  <option value="routine">🟢 Routine Operational Sync</option>
+                  <option value="ALL">All Priorities</option>
+                  <option value="statutory_directive">Statutory Directive (PFMA)</option>
+                  <option value="urgent">Urgent Escalation</option>
+                  <option value="routine">Routine Operational Sync</option>
                 </select>
               </div>
 
@@ -586,10 +590,10 @@ export const CompanyManagementView: React.FC = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500 cursor-pointer"
                 >
-                  <option value="ALL">📑 All Statuses</option>
-                  <option value="awaiting">⚠️ Awaiting CD-Ops Reply</option>
-                  <option value="reviewed_by_cd_ops">🔍 Under Technical Evaluation</option>
-                  <option value="actioned">✅ Actioned &amp; Certified</option>
+                  <option value="ALL">All Statuses</option>
+                  <option value="awaiting">Awaiting CD-Ops Reply</option>
+                  <option value="reviewed_by_cd_ops">Under Technical Evaluation</option>
+                  <option value="actioned">Actioned &amp; Certified</option>
                 </select>
               </div>
 
@@ -707,7 +711,7 @@ export const CompanyManagementView: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black mono text-teal-700 dark:text-teal-300 flex items-center gap-1.5">
-                      <span className="text-base">{acc.flag}</span>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">{acc.countryCode}</span>
                       <span>{acc.countryName}</span>
                     </span>
                     <span className="text-[8px] mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold">
@@ -853,7 +857,7 @@ export const CompanyManagementView: React.FC = () => {
                   }}
                   className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded-lg text-[9px] uppercase tracking-wider transition-all cursor-pointer"
                 >
-                  ⚡ Test USSD Session Hook
+                  Test USSD Session Hook
                 </button>
 
                 <button
@@ -877,13 +881,13 @@ export const CompanyManagementView: React.FC = () => {
                   }}
                   className="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-black rounded-lg text-[9px] uppercase tracking-wider transition-all cursor-pointer"
                 >
-                  ✉️ Test Inbound SMS Hook
+                  Test Inbound SMS Hook
                 </button>
               </div>
             </div>
 
             <p className="text-[8px] mono text-slate-500 dark:text-zinc-500 leading-relaxed pt-1">
-              🔒 Strictly isolated from public feeds and government department walls. Only authorized CivicDuty Platform Reliability Engineers hold access keys to this infrastructure layer.
+              Strictly isolated from public feeds and government department walls. Only authorized CivicDuty Platform Reliability Engineers hold access keys to this infrastructure layer.
             </p>
           </div>
 
@@ -965,7 +969,7 @@ export const CompanyManagementView: React.FC = () => {
                 </table>
               </div>
               <p className="text-[9.5px] text-slate-400 leading-relaxed">
-                💡 <strong>Note:</strong> Remove any default Namecheap Parking Record or URL Redirect Record on <code className="text-amber-300">@</code> and <code className="text-amber-300">www</code> before saving these records. Also add <code className="text-emerald-300">civicduty.site</code> and <code className="text-emerald-300">www.civicduty.site</code> under <strong>Firebase Console → Authentication → Settings → Authorized domains</strong>.
+                <strong>Note:</strong> Remove any default Namecheap Parking Record or URL Redirect Record on <code className="text-amber-300">@</code> and <code className="text-amber-300">www</code> before saving these records. Also add <code className="text-emerald-300">civicduty.site</code> and <code className="text-emerald-300">www.civicduty.site</code> under <strong>Firebase Console → Authentication → Settings → Authorized domains</strong>.
               </p>
             </div>
           </div>
@@ -977,6 +981,20 @@ export const CompanyManagementView: React.FC = () => {
       {/* ============================================================ */}
       {activeTab === 'billing' && (
         <div className="space-y-4 animate-fade-in">
+          <div className="card p-4 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[10.5px] mono text-emerald-800 dark:text-emerald-300 font-black uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck size={15} /> Pre-Incorporation Public Launch Mode · 30-Day Founding Partner Trial Active
+              </span>
+              <span className="text-[9px] mono px-2 py-0.5 rounded bg-emerald-600 text-white font-black">
+                $0 UPFRONT FRICTION · {Object.keys(claimedEntities || {}).length} TRIAL DESKS CLAIMED
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-700 dark:text-zinc-300 leading-relaxed">
+              All private service providers and commercial enterprises onboarding on <strong>CivicDuty.site</strong> are automatically provisioned onto a <strong>30-Day Founding Partner Free Trial ($0 Due Today)</strong> while corporate incorporation and merchant settlement accounts are finalized. Once live merchant keys are activated, trial desks convert seamlessly into recurring annual/monthly subscriptions.
+            </p>
+          </div>
+
           <div className="card p-4 bg-amber-500/5 border-amber-500/20 space-y-2">
             <span className="text-[10px] mono text-amber-800 dark:text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
               <DollarSign size={15} /> Global Institutional Tenancy &amp; Municipal Subscriptions
@@ -1100,6 +1118,51 @@ export const CompanyManagementView: React.FC = () => {
                 <div className="text-[9px] text-slate-500 dark:text-zinc-400">Automatic gateway message compression for feature phones (*3030#).</div>
               </div>
               <span className="text-emerald-600 font-mono font-bold text-xs">ONLINE</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/60 rounded-xl">
+              <div>
+                <div className="font-black text-amber-950 dark:text-amber-200">
+                  Illustrative Demo Showcases (&ldquo;Boutique Mannequins&rdquo;) — {posts.filter((p) => p.is_demo).length} Multi-Country Demos
+                </div>
+                <div className="text-[9.5px] text-slate-600 dark:text-zinc-400 mt-0.5">
+                  Pre-filled country-specific showcase tickets labeled <code className="font-mono font-bold">ILLUSTRATIVE DEMO</code>. Live citizen dispatches always sort #1 above demos.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDemos(!showDemos);
+                  toast(
+                    !showDemos
+                      ? 'Illustrative Demo Showcases enabled across public feeds.'
+                      : 'Illustrative Demo Showcases hidden — showing strictly live citizen dispatches.',
+                    'emerald'
+                  );
+                }}
+                className={`px-3 py-1.5 rounded-lg font-mono font-black text-[10px] shrink-0 cursor-pointer transition-all ${
+                  showDemos
+                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                }`}
+              >
+                {showDemos ? 'Demos: ON (Click to Hide)' : 'Demos: OFF (Live Only)'}
+              </button>
+            </div>
+
+            {/* Perk & Voucher Dual-Stream Revenue + Ethical Non-Interference Governance Card */}
+            <div className="p-3.5 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-700/60 rounded-xl space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="font-black text-indigo-950 dark:text-indigo-200 text-[11px] flex items-center gap-1.5">
+                  <span>Perks &amp; Vouchers Supply Chain · Dual-Stream Revenue &amp; Ethical Covenant</span>
+                </div>
+                <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                  6% Wholesale Spread + 10% CSR Fee
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-600 dark:text-zinc-300 leading-relaxed">
+                <strong>1. Ethical Framing:</strong> All vouchers are categorized as <em>Citizen Field Evidence &amp; Utility Cost Reimbursements</em> and bound by the <strong>Anti-Hush-Money Covenant</strong> (perks never close or mute a ticket).{' '}
+                <strong>2. Supply Chain &amp; Commissions:</strong> During the 30-Day Founding Partner Trial, sponsors can upload their own prepaid utility PINs via CSV/Single entry (<strong>BYOV Mode — 0% Fee</strong>) or use Instant Aggregator Checkout where CivicDuty earns a <strong>6% B2B Telco/Utility Wholesale Discount Spread</strong> plus a <strong>10% Corporate CSR Escrow &amp; SHA-256 Audit Fee</strong> (16% combined net margin while delivering 100% face value to citizens).
+              </p>
             </div>
           </div>
           <button

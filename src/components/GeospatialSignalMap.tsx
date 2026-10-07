@@ -16,7 +16,6 @@ import {
   ShieldAlert, 
   Maximize2, 
   Minimize2,
-  Sparkles,
   Filter
 } from 'lucide-react';
 import { catByID, getDept, slaStatus } from '../utils/helpers';
@@ -394,14 +393,14 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
           <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-white/95 dark:bg-slate-900/95 border border-slate-300 dark:border-slate-700 backdrop-blur-md rounded-2xl p-3 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 a-fade text-slate-950 dark:text-white">
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-md uppercase ${
+                <span className={`text-[8.5px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
                   selectedPost.status === 'resolved' 
                     ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                     : selectedPost.category === 'corruption' || selectedPost.status === 'overdue'
                     ? 'bg-rose-100 dark:bg-rose-950 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
                     : 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
                 }`}>
-                  {selectedPost.status === 'resolved' ? '🟢 Resolved' : selectedPost.category === 'corruption' ? '🔴 Corruption' : '🟡 Active 48h SLA'}
+                  {selectedPost.status === 'resolved' ? 'Resolved' : selectedPost.category === 'corruption' ? 'Corruption' : 'Active 48h SLA'}
                 </span>
                 <span className="text-[9.5px] font-bold text-slate-700 dark:text-slate-300 truncate">
                   {selectedPost.location}

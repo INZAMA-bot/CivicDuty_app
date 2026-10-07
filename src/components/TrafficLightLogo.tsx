@@ -21,19 +21,32 @@ export const TrafficLightLogo: React.FC<TrafficLightLogoProps> = ({
   const [hoveredSignal, setHoveredSignal] = useState<'red' | 'amber' | 'green' | null>(null);
 
   if (variant === 'green-only') {
+    const greenSizeClasses = {
+      sm: 'w-6 h-6',
+      md: 'w-7 h-7 sm:w-8 sm:h-8',
+      lg: 'w-9 h-9 sm:w-10 sm:h-10',
+      xl: 'w-11 h-11 sm:w-12 sm:h-12',
+    };
+    const greenSize = greenSizeClasses[size] || greenSizeClasses.sm;
+
     return (
       <div
-        className={`inline-flex items-center justify-center select-none ${className}`}
-        title="CivicDuty Sovereign Beacon — Citizen Heard & Proof Uploaded"
+        className={`inline-flex items-center justify-center select-none shrink-0 ${className}`}
+        title="CivicDuty Sovereign Green Signal — Citizen Heard & Proof Uploaded"
       >
-        <div className="relative flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8">
-          <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-sm">
-            <circle cx="50" cy="50" r="42" fill="#064E3B" stroke="#10B981" strokeWidth="8" />
+        <div className={`relative flex items-center justify-center ${greenSize}`}>
+          <svg
+            viewBox="0 0 100 100"
+            className="w-full h-full filter drop-shadow-[0_0_6px_rgba(16,185,129,0.45)]"
+            role="img"
+            aria-label="CivicDuty Green Signal Logo"
+          >
+            <circle cx="50" cy="50" r="42" fill="#064E3B" stroke="#10B981" strokeWidth="8.5" />
             <path
               d="M 32 50.5 L 46 64.5 L 70 38.5"
               fill="none"
               stroke="#FFFFFF"
-              strokeWidth="8.5"
+              strokeWidth="9"
               strokeLinecap="round"
               strokeLinejoin="round"
             />

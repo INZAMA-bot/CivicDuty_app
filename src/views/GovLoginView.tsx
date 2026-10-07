@@ -1,509 +1,641 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { CountryCode, GovCodeData } from '../types';
-import { GOV_CODES, resolveTitle, tiersFor } from '../data/tiers';
-import { COUNTRIES, getDept } from '../data/countries';
-import { CountrySelector } from '../components/CountrySelector';
-import { getCountryDesksProfile } from '../data/countryDesks';
-import { getMinistriesForCountry, MinistrySector } from '../data/countryMinistries';
+import { GOV_CODES } from '../data/tiers';
+import { COUNTRIES } from '../data/countries';
 import {
-  ChevronLeft,
-  Shield,
-  Radio,
-  Landmark,
+  getCountryDesksProfile,
+  EscalationTierItem,
+  AccountingDeskPreset,
+} from '../data/countryDesks';
+import { getPsMinistryInfo } from '../utils/helpers';
+import {
+  KeyRound,
+  Building,
+  ShieldCheck,
   ArrowRight,
-  Handshake,
-  MessageSquare,
-  Sparkles,
   Lock,
+  Landmark,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  Layers,
 } from 'lucide-react';
-import { NoteBox } from '../components/NoteBox';
+import { UserSession } from '../types';
 
 export const GovLoginView: React.FC = () => {
   const {
+    user,
+    setUser,
     go,
-    execGovLoginByData,
-    projects,
-    setActiveProject,
     toast,
-    selectedCountry,
-    setSelectedCountry,
-    setSelectedMinistryId,
+    logAudit,
+    teamMembers,
     customGovCodes,
+    setActiveDeptCountry,
+    setSelectedMinistryId,
   } = useApp();
 
-  const isSuperadminCode = (inputCode: string): boolean => {
-    const c = inputCode.trim().toUpperCase();
-    return (
-      c === 'PS-MOLG-2026' ||
-      c === 'PS-MOLG-ROLLOUT' ||
-      c.includes('MOLG') ||
-      c.includes('SUPERADMIN') ||
-      c.includes('MINALOC') ||
-      c.includes('TAMISEMI') ||
-      c.includes('COGTA') ||
-      c.includes('LOCALGOV') ||
-      c.includes('DEVOLUTION') ||
-      c === 'PS-KE-INTERIOR-2026'
+  const [selectedCountry, setSelectedCountry] = useState<string>(user?.country || 'UG');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+
+  // Track which escalation tier or specialized desk is currently selected
+  const [selectedDeskKey, setSelectedDeskKey] = useState<string>('rank-2');
+  // Per-desk access code state so multiple desks have their own independent input
+  const [deskCodes, setDeskCodes] = useState<Record<string, string>>({});
+  // Universal / Manual Access Code fallback
+  const [manualCode, setManualCode] = useState('');
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'hierarchy' | 'ministries' | 'manual'>('hierarchy');
+
+  const profile = useMemo(() => getCountryDesksProfile(selectedCountry), [selectedCountry]);
+
+  const countryList = useMemo(
+    () =>
+      Object.entries(COUNTRIES).map(([code, info]) => ({
+        code,
+        name: info?.name || code,
+        flag: info?.flag || code,
+      })),
+    []
+  );
+
+  const filteredCountries = useMemo(() => {
+    const q = countrySearch.trim().toLowerCase();
+    if (!q) return countryList;
+    return countryList.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
     );
-  };
+  }, [countrySearch, countryList]);
 
-  const resolvePsMinistryId = (inputCode: string, countryCode?: string): string | null => {
-    const c = inputCode.trim().toUpperCase();
-    if (isSuperadminCode(c)) return null;
-
-    const cCode = (countryCode || activeCountry || 'UG').toUpperCase();
-    const countryLineMinistries = getMinistriesForCountry(cCode).filter(
-      (m) => !m.isSuperadmin && m.sector !== 'GOVERNANCE'
-    );
-
-    // Direct match against known line ministry ID or code
-    const directMatch = countryLineMinistries.find(
-      (m) => m.id.toUpperCase() === c || m.code.toUpperCase() === c
-    );
-    if (directMatch) return directMatch.id;
-
-    // Sector keyword mapping
-    let matchedSector: MinistrySector | null = null;
-    if (c.includes('MOFPED') || c.includes('FINANCE') || c.includes('TREASURY') || c.includes('FISCAL') || c.includes('MINECOFIN')) {
-      matchedSector = 'FISCAL';
-    } else if (c.includes('MOWT') || c.includes('WORKS') || c.includes('ROADS') || c.includes('TRANSPORT') || c.includes('INFRA')) {
-      matchedSector = 'INFRASTRUCTURE';
-    } else if (c.includes('MOH') || c.includes('HEALTH') || c.includes('MEDICAL')) {
-      matchedSector = 'HEALTH';
-    } else if (c.includes('MOES') || c.includes('EDUCATION') || c.includes('EDU') || c.includes('SPORTS')) {
-      matchedSector = 'EDUCATION';
-    } else if (c.includes('MOWE') || c.includes('WATER') || c.includes('ENVIRONMENT')) {
-      matchedSector = 'WATER_ENVIRONMENT';
-    } else if (c.includes('MOICT') || c.includes('ICT') || c.includes('DIGITAL') || c.includes('TECH')) {
-      matchedSector = 'ICT_DIGITAL';
-    } else if (c.includes('OPM') || c.includes('CABINET') || c.includes('PRESIDENCY')) {
-      matchedSector = 'CABINET_DELIVERY';
-    }
-
-    if (matchedSector) {
-      const sectorMin = countryLineMinistries.find((m) => m.sector === matchedSector);
-      if (sectorMin) return sectorMin.id;
-    }
-
-    if (c.startsWith('PS-') && countryLineMinistries.length > 0) {
-      return countryLineMinistries[0].id;
-    }
-
-    return null;
-  };
-
-  const [step, setStep] = useState<'code' | 'email' | 'otp'>('code');
-  const [code, setCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [preview, setPreview] = useState<GovCodeData | null>(null);
-
-  const activeCountry = selectedCountry || 'UG';
-  const profile = getCountryDesksProfile(activeCountry);
-
-  const stepN = step === 'code' ? 0 : step === 'email' ? 1 : 2;
-
-  // Auto-detect and pre-authenticate when ?gov_code=... is passed in URL
-  React.useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const urlGovCode = params.get('gov_code');
-      if (urlGovCode) {
-        const cleanCode = urlGovCode.trim().toUpperCase();
-        setCode(cleanCode);
-        const data = customGovCodes[cleanCode] || GOV_CODES[cleanCode];
-        if (data) {
-          execGovLoginByData(data);
-          if (isSuperadminCode(cleanCode)) {
-            toast(`Territorial Superadmin Desk mounted (${data.officer_name || data.real_title_short || 'Sovereign Administrator'}).`, 'emerald');
-            go('ps_molg_rollout');
-          } else {
-            const psId = resolvePsMinistryId(cleanCode, data.country);
-            if (psId) {
-              if (data.country) setSelectedCountry(data.country);
-              setSelectedMinistryId(psId);
-              toast(`Mounted Apex Executive Desk: ${data.real_title_short || data.role_label || cleanCode}`, 'emerald');
-              go('ps_executive_desk');
-            } else if (cleanCode === 'CD-CORP-9999') {
-              go('company_management');
-            } else {
-              go('gov_admin');
-            }
-          }
-        }
-      }
-    } catch {}
-  }, []);
-
-  const handleNext = () => {
-    if (step === 'code') {
-      const cleanCode = code.trim().toUpperCase();
-      let data = customGovCodes[cleanCode] || GOV_CODES[cleanCode];
-
-      // Support contractor project codes like PRJ-PERF-KPV89826
-      const matchingProj =
-        projects.find((p) => p.code.toUpperCase() === cleanCode) ||
-        (cleanCode.startsWith('PRJ-') ? projects[0] : null);
-
-      if (!data && matchingProj) {
-        data = {
-          country: matchingProj.country || 'UG',
-          dept: matchingProj.dept || 'kcca',
-          scope: matchingProj.units[0] || 'nakawa',
-          role: 'spokesperson',
-          is_utility: true,
-        };
-      }
-
-      if (!data) {
-        toast('Invalid code. Contact your Node Admin.', 'red');
-        return;
-      }
-      setPreview(data);
-      setStep('email');
+  const authenticateWithCode = (rawCode: string, expectedCodeForDesk?: string, deskTitle?: string) => {
+    const clean = (rawCode || '').trim().toUpperCase();
+    if (!clean) {
+      setError('Please enter the official access code for this desk.');
       return;
     }
 
-    if (step === 'email') {
-      if (!email.trim()) {
-        toast('Enter your official email', 'red');
+    if (expectedCodeForDesk && clean !== expectedCodeForDesk.toUpperCase()) {
+      // Also allow any other valid registered code if the officer typed a valid custom/national code
+      const isKnownCode =
+        Boolean(GOV_CODES[clean]) ||
+        Boolean(customGovCodes && customGovCodes[clean]) ||
+        Boolean(teamMembers?.some((m) => m.code?.toUpperCase() === clean));
+
+      if (!isKnownCode) {
+        setError(
+          `Invalid access code "${clean}" for ${deskTitle || 'selected desk'}. Tap "Auto-fill: ${expectedCodeForDesk}" to test this desk.`
+        );
         return;
       }
-      setStep('otp');
-      toast('Verification code sent', 'amber');
+    }
+
+    // Ensure profile codes for selectedCountry are registered in GOV_CODES
+    getCountryDesksProfile(selectedCountry);
+
+    // 1. Check dynamic teamMembers
+    const dynamicMember = teamMembers?.find((m) => m.code?.toUpperCase() === clean);
+    if (dynamicMember) {
+      const mCountry = dynamicMember.country || selectedCountry;
+      const newUser: User = {
+        id: 'gov_' + Date.now(),
+        name: dynamicMember.name,
+        anon: false,
+        country: mCountry,
+        territory: {},
+        points: 100,
+        verified: true,
+        role: dynamicMember.role as any,
+        role_label: dynamicMember.role_label,
+        real_title: dynamicMember.real_title || dynamicMember.role_label,
+        real_title_short: dynamicMember.real_title_short || dynamicMember.role_label,
+        dept: dynamicMember.dept,
+        scope: dynamicMember.scope,
+        scope_label: dynamicMember.scope,
+        entity_type: 'government_node',
+        hierarchy_level: dynamicMember.hierarchy_level,
+        is_admin: dynamicMember.role === 'node_admin' || dynamicMember.role === 'platform_admin',
+      };
+      setError('');
+      setUser(newUser);
+      setActiveDeptCountry(mCountry);
+      logAudit('gov_login', dynamicMember.dept, `${dynamicMember.name} signed in via code ${clean}`);
+      toast(`Authenticated: ${dynamicMember.name}`, 'emerald');
+      go('gov_inbox');
       return;
     }
 
-    if (step === 'otp') {
-      if (otp.trim().length < 4) {
-        toast('Enter the verification code', 'red');
-        return;
-      }
-      if (preview) {
-        execGovLoginByData(preview);
-        const cleanCode = code.trim().toUpperCase();
-        if (cleanCode === 'CD-CORP-9999') {
-          toast('Company & Tenant Management access granted.', 'amber');
-          go('company_management');
-          return;
-        }
-        if (isSuperadminCode(cleanCode)) {
-          toast(`Territorial Superadmin Desk mounted (${preview.officer_name || 'Superadmin'}).`, 'emerald');
-          go('ps_molg_rollout');
-          return;
-        }
-        const psId = resolvePsMinistryId(cleanCode, preview.country);
-        if (psId) {
-          if (preview.country) setSelectedCountry(preview.country);
-          setSelectedMinistryId(psId);
-          toast(`Mounted Apex Executive Desk: ${preview?.real_title_short || preview?.role_label || cleanCode}`, 'emerald');
-          go('ps_executive_desk');
-          return;
-        }
-
-        const matchedP = projects.find((p) => p.code.toUpperCase() === cleanCode || cleanCode.startsWith('PRJ-'));
-        if (matchedP || cleanCode.startsWith('PRJ-')) {
-          const targetProj = matchedP || projects[0];
-          setActiveProject(targetProj);
-          toast(`Contractor Desk mounted for ${targetProj.code}! Public Contractor Wall active.`, 'emerald');
-          go('project');
-          return;
+    // 2. Check GOV_CODES or customGovCodes (and if not found, scan all countries so any country code works)
+    let match = GOV_CODES[clean] || (customGovCodes ? customGovCodes[clean] : undefined);
+    if (!match) {
+      for (const c of countryList) {
+        getCountryDesksProfile(c.code);
+        if (GOV_CODES[clean]) {
+          match = GOV_CODES[clean];
+          break;
         }
       }
     }
-  };
 
-  const prevDept = preview ? getDept(preview.country, preview.dept) : null;
-  const prevTitle = preview ? resolveTitle(preview.scope, preview.country, preview.is_utility) : null;
+    if (match) {
+      const targetCountry = match.country || selectedCountry;
+      const labelStr = match.role_label || match.label || deskTitle || 'Government Desk';
+      const shortStr = match.real_title_short || match.label || 'GOV';
+      const newUser: User = {
+        id: 'gov_' + Date.now(),
+        name: `${labelStr} (${match.scope_label || match.scope || targetCountry})`,
+        anon: false,
+        country: targetCountry,
+        territory: {},
+        points: 100,
+        verified: true,
+        role: match.role || 'node_admin',
+        role_label: labelStr,
+        real_title: match.real_title || labelStr,
+        real_title_short: shortStr,
+        dept: match.dept || 'molg',
+        scope: match.scope || targetCountry,
+        scope_label: match.scope_label || match.scope || targetCountry,
+        entity_type: match.entity_type || 'government_node',
+        hierarchy_level: match.hierarchy_level,
+        is_admin: match.role === 'platform_admin' || match.role === 'node_admin',
+      };
+
+      setError('');
+      setUser(newUser);
+      setActiveDeptCountry(targetCountry);
+      logAudit('gov_login', newUser.dept || 'gov', `${labelStr} signed in via code ${clean}`);
+      toast(`Authenticated: ${labelStr}`, 'emerald');
+
+      const psCheck = getPsMinistryInfo(newUser);
+      if (psCheck.isMoLG) {
+        go('ps_molg_rollout');
+      } else if (psCheck.isPs && psCheck.ministryId) {
+        setSelectedMinistryId(psCheck.ministryId);
+        go('ps_executive_desk');
+      } else {
+        go('gov_inbox');
+      }
+      return;
+    }
+
+    setError(
+      expectedCodeForDesk
+        ? `Invalid access code "${clean}". Tap "Auto-fill: ${expectedCodeForDesk}" to test this desk.`
+        : 'Invalid access code. Select your desk from the 5-Tier Escalation Hierarchy or check your issued code.'
+    );
+  };
 
   return (
-    <div className="p-5 space-y-5 pt-6 animate-fade-in text-slate-800 dark:text-slate-100">
-      <div>
-        <button
-          onClick={() => go('splash')}
-          className="flex items-center gap-1 text-[10px] mono text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 mb-4 transition-colors font-bold"
-        >
-          <ChevronLeft size={14} /> Back
-        </button>
-        <div className="tagline mb-1.5 font-bold" style={{ color: '#0d9488' }}>
-          Government Desk
-        </div>
-        <h2 className="text-[26px] font-black text-teal-700 dark:text-teal-400 tracking-tight leading-tight">
-          Government &amp; Regulator Desk
-        </h2>
-        <p className="text-[13px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-          Invite-only statutory access for State, Ministries, Accounting Officers, Local Authorities &amp; Regulators. 1 Account = 1 Desk. Every action is audited and permanent.
-        </p>
-      </div>
-
-      {/* Global Country Jurisdiction Selector */}
-      {step === 'code' && (
-        <CountrySelector
-          value={activeCountry}
-          onChange={(c) => {
-            setSelectedCountry(c);
-            toast(`Jurisdiction switched to ${COUNTRIES[c]?.name || c}. Governance structure & desks updated.`, 'emerald');
-          }}
-          variant="card"
-          label="Active National Jurisdiction"
-        />
-      )}
-
-      {/* PARTNER WITH CIVICDUTY CALL-TO-PARTNERSHIP & LIVE BILATERAL FEEDBACK BANNER */}
-      {step === 'code' && (
-        <div
-          onClick={() => go('gov_partnership')}
-          className="p-3.5 rounded-2xl bg-gradient-to-r from-teal-900 via-slate-900 to-slate-950 border border-teal-500/40 hover:border-teal-400 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group shadow-md transition-all"
-          title="Open Sovereign Partnership & Bilateral Operations Feedback Loop"
-        >
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-300 shrink-0 group-hover:scale-105 transition-transform shadow-inner">
-              <Handshake size={20} />
+    <div className="animate-fade-in px-3.5 sm:px-5 pt-4 pb-16 max-w-2xl mx-auto space-y-4 text-slate-900 dark:text-slate-100">
+      {/* Main Studio Card */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+        {/* Top Studio Header Bar */}
+        <div className="px-4 py-3 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+              <Landmark size={16} strokeWidth={1.75} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black mono uppercase tracking-wider text-white flex items-center gap-1.5">
-                  Partner with CivicDuty
-                </span>
-                <span className="text-[7.5px] mono px-2 py-0.5 rounded-full font-bold bg-teal-500/30 text-teal-200 border border-teal-400/40 uppercase">
-                  Sovereign Accord &amp; Feedback Loop
-                </span>
-              </div>
-              <p className="text-[10px] text-teal-100/80 mt-0.5 leading-snug">
-                Sovereign MoUs, *3030# USSD infrastructure, and live bilateral feedback loop between national ministries and CivicDuty Platform Operations (CD-Ops).
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                Government &amp; Statutory Desk Authentication
+              </h1>
+              <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                Select country · Tap your statutory desk · Enter access code
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-500 group-hover:bg-teal-400 text-slate-950 font-black text-[10px] mono uppercase transition-colors shrink-0 self-start sm:self-auto shadow-xs">
-            <span>Explore Accord</span>
-            <ArrowRight size={12} />
-          </div>
+
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold shrink-0">
+            <Lock size={10} />
+            <span>SHA-256 Audited</span>
+          </span>
         </div>
-      )}
 
-      {/* Steps Indicator */}
-      <div className="flex items-center gap-2">
-        {['Code', 'Email', 'Verify'].map((l, i) => (
-          <div key={l} className={`flex items-center gap-2 ${i < 2 ? 'flex-1' : ''}`}>
-            <div
-              className={`step-dot ${
-                i < stepN ? 'step-done' : i === stepN ? 'step-on' : 'step-off'
-              }`}
-            >
-              {i < stepN ? '✓' : i + 1}
-            </div>
-            <span
-              className={`text-[8px] mono uppercase tracking-widest ${
-                i === stepN ? 'text-teal-700 dark:text-teal-400 font-bold' : 'text-slate-400 dark:text-slate-500 font-medium'
-              }`}
-            >
-              {l}
-            </span>
-            {i < 2 && <div className={`flex-1 h-px ${i < stepN ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-800'}`}></div>}
-          </div>
-        ))}
-      </div>
-
-      {/* Code Card */}
-      <div className="card-gov p-4 space-y-3" style={{ borderRadius: '16px' }}>
-        <label className="text-[9px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-bold">Access Code</label>
-        <input
-          type="text"
-          value={code}
-          disabled={step !== 'code'}
-          placeholder={profile.samplePlaceholder}
-          className="mono tracking-widest text-teal-700 dark:text-teal-300 text-sm font-bold"
-          style={{ opacity: step !== 'code' ? 0.6 : 1 }}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-        />
-        {preview && (
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1 a-fade">
-            <p className="text-[8px] mono text-slate-500 uppercase tracking-widest font-bold">
-              {preview.entity_type === 'non_government_entity' ? '🏢 You are mounting an Entity Desk' : '🏛️ You are mounting a Government Desk'}
-            </p>
-            <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">
-              {preview.organization_name || (prevTitle ? `${prevTitle.short} — ${prevTitle.role_label}` : preview.role_label || code)}
-            </p>
-            {preview.officer_name && (
-              <p className="text-[11px] font-semibold text-teal-700 dark:text-teal-300">
-                👤 {preview.officer_name}
-              </p>
-            )}
-            <p className="text-[10px] mono text-slate-600 dark:text-slate-400">
-              {prevDept?.name || preview.dept} · {preview.role} · {COUNTRIES[preview.country]?.flag} {COUNTRIES[preview.country]?.name}
-              {preview.entity_category && ` · ${preview.entity_category.replace('_', ' ').toUpperCase()}`}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Email Card */}
-      {step !== 'code' && (
-        <div className="card-gov p-4 space-y-3 a-fade" style={{ borderRadius: '16px' }}>
-          <label className="text-[9px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-bold">Official Email</label>
-          <input
-            type="email"
-            value={email}
-            disabled={step !== 'email'}
-            placeholder="name@ministry.go.ug"
-            className="mono text-sm"
-            style={{ opacity: step !== 'email' ? 0.6 : 1 }}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <p className="text-[8px] mono text-slate-500 leading-relaxed">
-            A one-time code is sent to this address. It becomes the permanent login for this desk.
-          </p>
-        </div>
-      )}
-
-      {/* OTP Card */}
-      {step === 'otp' && (
-        <div className="card-gov p-4 space-y-3 a-fade" style={{ borderRadius: '16px' }}>
-          <label className="text-[9px] mono text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-bold">Verification Code</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            placeholder="000000"
-            className="mono tracking-widest text-sm font-bold"
-          />
-          <p className="text-[8px] mono text-slate-500">Walkthrough: any six digits will do.</p>
-        </div>
-      )}
-
-      <button
-        onClick={handleNext}
-        className="w-full bg-teal-600 hover:bg-teal-500 dark:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] shadow-sm"
-      >
-        {step === 'code' ? 'Verify Code →' : step === 'email' ? 'Send Verification Code →' : 'Mount Desk →'}
-      </button>
-
-      {/* Interactive Walkthrough Demo Codes */}
-      {step === 'code' && (
-        <div className="note-amber space-y-2.5">
-          {/* Featured Contractor Code Direct Access */}
-          <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-amber-400/60 dark:border-amber-500/40 space-y-2 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] mono text-amber-800 dark:text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                🚧 Contractor Wall Access Link (PRJ-PERF-KPV89826)
-              </span>
-              <span className="text-[8px] mono bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded font-bold border border-amber-300 dark:border-amber-500/30">
-                Contractor Desk
-              </span>
-            </div>
-            <p className="text-[9.5px] text-slate-700 dark:text-slate-300 leading-snug">
-              Access the created contractor wall using code <strong className="text-amber-800 dark:text-amber-300 font-mono">PRJ-PERF-KPV89826</strong> (KPV Construction & Engineering Ltd).
-            </p>
-            <button
-              onClick={() => {
-                setCode('PRJ-PERF-KPV89826');
-                const perfProj = projects.find((p) => p.code === 'PRJ-PERF-KPV89826') || projects[0];
-                execGovLoginByData({
-                  country: perfProj.country || 'UG',
-                  dept: perfProj.dept || 'kcca',
-                  scope: perfProj.units[0] || 'nakawa',
-                  role: 'spokesperson',
-                  is_utility: true,
-                });
-                if (perfProj) setActiveProject(perfProj);
-                toast('Mounted Contractor Desk for PRJ-PERF-KPV89826!', 'emerald');
-                go('project');
-              }}
-              className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 dark:from-amber-500 dark:to-amber-600 dark:hover:from-amber-400 dark:hover:to-amber-500 text-white dark:text-slate-950 font-black py-2 rounded-lg text-[10px] mono uppercase tracking-wider transition-all shadow-sm active:scale-[0.98]"
-            >
-              ⚡ Mount Contractor Desk & Open Public Contractor Wall
-            </button>
-          </div>
-
-          <p className="text-[9px] mono text-amber-800 dark:text-amber-400 font-bold uppercase tracking-widest pt-1">
-            Browse All National Codes — {COUNTRIES[activeCountry]?.name || activeCountry}
-          </p>
-          <div className="flex flex-wrap gap-1 pb-1">
-            {(['UG', 'KE', 'NG', 'GH', 'RW', 'TZ', 'ZA', 'ET', 'EG', 'SN', 'ZM', 'ZW', 'US', 'GB', 'IN'] as CountryCode[]).map((c) => (
+        <div className="p-4 space-y-4">
+          {/* STEP 1: Country / Sovereign Jurisdiction Selector */}
+          <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Step 1 · Select Sovereign Jurisdiction
+              </label>
               <button
-                key={c}
-                onClick={() => {
-                  setSelectedCountry(c);
-                  toast(`Switched view to ${COUNTRIES[c]?.name || c}`, 'emerald');
-                }}
-                className={`px-2 py-1 rounded-lg text-[8.5px] mono font-bold border transition-all ${
-                  activeCountry === c
-                    ? 'border-teal-500 bg-teal-500 text-white shadow-xs'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
+                type="button"
+                onClick={() => setShowCountryPicker(!showCountryPicker)}
+                className="text-[11px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
-                {COUNTRIES[c]?.flag} {c}
+                <span>{showCountryPicker ? 'Close List' : `All ${countryList.length} Countries`}</span>
+                <ChevronDown
+                  size={12}
+                  className={showCountryPicker ? 'rotate-180 transition-transform' : 'transition-transform'}
+                />
               </button>
-            ))}
-          </div>
-          <p className="text-[8px] mono text-slate-600 dark:text-slate-400 leading-relaxed">
-            {COUNTRIES[activeCountry]?.name}: {tiersFor(activeCountry).filter((t) => t.depth > 0).map((t) => t.unit).join(' › ')}
-          </p>
+            </div>
 
-          <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-            {(Object.entries({ ...GOV_CODES, ...customGovCodes }) as [string, GovCodeData][])
-              .filter(([, data]) => data.country === activeCountry)
-              .map(([cCode, data], idx) => {
-                const t = resolveTitle(data.scope, data.country, data.is_utility);
-                const titleLabel = data.real_title_short || t.short;
-                return (
-                  <div key={`${cCode}-${idx}`} className="flex items-center justify-between gap-2 p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-900">
-                    <button
-                      onClick={() => setCode(cCode)}
-                      className="text-left text-[9.5px] mono text-teal-700 dark:text-teal-300 hover:underline flex-1 truncate font-bold"
-                    >
-                      {cCode} <span className="text-slate-500 font-normal">— {titleLabel}, {getDept(data.country, data.dept).name}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setCode(cCode);
-                        execGovLoginByData(data);
-                        if (isSuperadminCode(cCode)) {
-                          toast(`Territorial Superadmin Desk mounted (${data.officer_name || titleLabel}).`, 'emerald');
-                          go('ps_molg_rollout');
-                          return;
-                        }
-                        const psId = resolvePsMinistryId(cCode, data.country);
-                        if (psId) {
-                          if (data.country) setSelectedCountry(data.country);
-                          setSelectedMinistryId(psId);
-                          toast(`Mounted Apex Executive Desk: ${titleLabel}`, 'emerald');
-                          go('ps_executive_desk');
-                          return;
-                        }
-                        if (cCode === 'CD-CORP-9999') {
-                          go('company_management');
-                          return;
-                        }
-                        go('gov_admin');
-                      }}
-                      className="px-2 py-0.5 bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 hover:bg-teal-200 dark:hover:bg-teal-500/30 border border-teal-300 dark:border-teal-500/40 rounded text-[8px] mono font-bold whitespace-nowrap"
-                    >
-                      ⚡ Quick Mount
-                    </button>
+            {/* Active Country Summary Banner */}
+            <div
+              onClick={() => setShowCountryPicker(!showCountryPicker)}
+              className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/50 flex items-center justify-between gap-2 cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-mono text-xs font-bold shrink-0">
+                  {profile.countryCode}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {profile.countryName}
                   </div>
+                  <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                    {profile.statutoryFramework}
+                  </div>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400 shrink-0">
+                Change ▾
+              </span>
+            </div>
+
+            {/* Quick Jurisdiction Switcher Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-0.5">
+              {['UG', 'NL', 'KE', 'TZ', 'RW', 'NG', 'ZA', 'GH', 'GB', 'US'].map((code) => {
+                const c = COUNTRIES[code];
+                if (!c) return null;
+                const isSel = selectedCountry === code;
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCountry(code);
+                      setError('');
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold whitespace-nowrap border transition-colors cursor-pointer ${
+                      isSel
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
+                        : 'bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
+                    }`}
+                  >
+                    {code} · {c.name}
+                  </button>
                 );
               })}
+            </div>
+
+            {/* Expandable Full Country Search Picker */}
+            {showCountryPicker && (
+              <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2 animate-fade-in">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+                  <Search size={13} className="text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={countrySearch}
+                    onChange={(e) => setCountrySearch(e.target.value)}
+                    placeholder="Search any country by name or ISO code..."
+                    className="w-full text-xs bg-transparent text-slate-900 dark:text-white focus:outline-none"
+                  />
+                </div>
+                <div className="max-h-44 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5 pr-1">
+                  {filteredCountries.map((c) => (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCountry(c.code);
+                        setShowCountryPicker(false);
+                        setError('');
+                      }}
+                      className={`px-2.5 py-1.5 rounded-lg text-left text-[11px] font-mono truncate border transition-colors cursor-pointer ${
+                        selectedCountry === c.code
+                          ? 'bg-emerald-600 text-white border-emerald-700 font-bold'
+                          : 'bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/50'
+                      }`}
+                    >
+                      <span className="font-bold">{c.code}</span> · {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* STEP 2: Mode Tabs (5-Tier Escalation Hierarchy vs Sectoral Ministry Desks vs Direct Code) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Step 2 · Tap Your Respective Desk &amp; Enter Access Code
+              </label>
+              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                {profile.countryName} Hierarchy
+              </span>
+            </div>
+
+            <div className="flex border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] rounded-t-xl overflow-x-auto scrollbar-none">
+              {[
+                { id: 'hierarchy', label: '5-Tier Escalation Hierarchy', icon: Layers },
+                {
+                  id: 'ministries',
+                  label: `Accounting & Ministry Desks (${profile.accountingDesks.length})`,
+                  icon: Building,
+                },
+                { id: 'manual', label: 'Direct Code Entry', icon: KeyRound },
+              ].map((t) => {
+                const Icon = t.icon;
+                const active = activeTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(t.id as any);
+                      setError('');
+                    }}
+                    className={`flex-1 py-2.5 px-3 text-[11px] font-mono font-semibold flex items-center justify-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer ${
+                      active
+                        ? 'text-emerald-700 dark:text-emerald-400 border-b-2 border-emerald-600 bg-white dark:bg-[#161a22]'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Icon size={12} />
+                    <span>{t.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-mono">
+                {error}
+              </div>
+            )}
+
+            {/* TAB 1: Interactive 5-Tier Escalation Hierarchy (Tap Desk -> Enter Access Code -> Sign In) */}
+            {activeTab === 'hierarchy' && (
+              <div className="space-y-2.5">
+                {profile.escalationLadder.map((tier: EscalationTierItem) => {
+                  const itemKey = `rank-${tier.rank}`;
+                  const isExpanded = selectedDeskKey === itemKey;
+                  const codeVal = deskCodes[itemKey] ?? '';
+
+                  return (
+                    <div
+                      key={itemKey}
+                      className={`rounded-xl border transition-all overflow-hidden ${
+                        isExpanded
+                          ? 'bg-white dark:bg-[#161a22] border-emerald-500/60 shadow-xs'
+                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 dark:hover:border-slate-600'
+                      }`}
+                    >
+                      {/* Tappable Escalation Tier Header */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeskKey(isExpanded ? '' : itemKey);
+                          setError('');
+                        }}
+                        className="w-full p-3.5 text-left flex items-start justify-between gap-3 cursor-pointer"
+                      >
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div
+                            className={`w-7 h-7 rounded-lg font-mono text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 border ${
+                              isExpanded
+                                ? 'bg-emerald-600 text-white border-emerald-700'
+                                : 'bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-200 border-[#e3e6ea] dark:border-[#262b36]'
+                            }`}
+                          >
+                            {tier.rank}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                                {tier.title}
+                              </span>
+                              <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
+                                {tier.badge}
+                              </span>
+                            </div>
+                            <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300 mt-0.5">
+                              {tier.roleLabel}
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                              {tier.subtitle}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 shrink-0 mt-1">
+                          <span>{isExpanded ? 'Selected' : 'Tap Desk'}</span>
+                          <ChevronRight
+                            size={14}
+                            className={isExpanded ? 'rotate-90 transition-transform' : 'transition-transform'}
+                          />
+                        </div>
+                      </button>
+
+                      {/* Inline Desk-Specific Access Code Entry Drawer */}
+                      {isExpanded && (
+                        <div className="px-3.5 pb-3.5 pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 animate-fade-in">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                              <KeyRound size={12} className="text-emerald-600 dark:text-emerald-400" />
+                              <span>Enter {tier.badge} Access Code</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeskCodes((prev) => ({ ...prev, [itemKey]: tier.sampleCode }));
+                                setError('');
+                              }}
+                              className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 cursor-pointer"
+                            >
+                              Auto-fill: {tier.sampleCode}
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="text"
+                              value={codeVal}
+                              onChange={(e) => {
+                                setDeskCodes((prev) => ({ ...prev, [itemKey]: e.target.value }));
+                                setError('');
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  authenticateWithCode(
+                                    codeVal || tier.sampleCode,
+                                    tier.sampleCode,
+                                    tier.title
+                                  );
+                                }
+                              }}
+                              placeholder={`e.g. ${tier.sampleCode}`}
+                              className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                authenticateWithCode(codeVal, tier.sampleCode, tier.title)
+                              }
+                              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                            >
+                              <span>Sign In to Desk</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TAB 2: Specialized Ministry & Sector Accounting Desks for Selected Country */}
+            {activeTab === 'ministries' && (
+              <div className="space-y-2.5">
+                {profile.accountingDesks.map((desk: AccountingDeskPreset) => {
+                  const deskKey = `min-${desk.code}`;
+                  const isExpanded = selectedDeskKey === deskKey;
+                  const codeVal = deskCodes[deskKey] ?? '';
+
+                  return (
+                    <div
+                      key={desk.code}
+                      className={`rounded-xl border transition-all overflow-hidden ${
+                        isExpanded
+                          ? 'bg-white dark:bg-[#161a22] border-emerald-500/60'
+                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36]'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeskKey(isExpanded ? '' : deskKey);
+                          setError('');
+                        }}
+                        className="w-full p-3.5 text-left flex items-start justify-between gap-3 cursor-pointer"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              {desk.title}
+                            </span>
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
+                              {desk.badge}
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300 mt-0.5">
+                            {desk.deptName} · {desk.role}
+                          </div>
+                        </div>
+                        <ChevronRight
+                          size={15}
+                          className={`text-slate-400 shrink-0 mt-1 transition-transform ${
+                            isExpanded ? 'rotate-90 text-emerald-600' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-3.5 pb-3.5 pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 animate-fade-in">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono uppercase font-bold text-slate-600 dark:text-slate-300">
+                              Desk Access Code ({desk.badge})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDeskCodes((prev) => ({ ...prev, [deskKey]: desk.code }));
+                                setError('');
+                              }}
+                              className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 cursor-pointer"
+                            >
+                              Auto-fill: {desk.code}
+                            </button>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="text"
+                              value={codeVal}
+                              onChange={(e) => {
+                                setDeskCodes((prev) => ({ ...prev, [deskKey]: e.target.value }));
+                                setError('');
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  authenticateWithCode(codeVal || desk.code, desk.code, desk.title);
+                                }
+                              }}
+                              placeholder={`Enter ${desk.code}`}
+                              className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => authenticateWithCode(codeVal, desk.code, desk.title)}
+                              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                              <span>Sign In to Desk</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TAB 3: Universal Direct Access Code Input */}
+            {activeTab === 'manual' && (
+              <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                <label className="block text-[10.5px] font-mono uppercase tracking-wider font-bold text-slate-600 dark:text-slate-300">
+                  Enter Any Issued Officer or Executive Access Code
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={manualCode}
+                    onChange={(e) => {
+                      setManualCode(e.target.value);
+                      setError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        authenticateWithCode(manualCode);
+                      }
+                    }}
+                    placeholder={profile.samplePlaceholder || 'e.g. UG-CAO-KAMPALA'}
+                    className="flex-1 px-3.5 py-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => authenticateWithCode(manualCode)}
+                    className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <span>Authenticate Desk</span>
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      <NoteBox
-        tone="amber"
-        title="Invite-Only Protocol"
-        text="Access codes are issued by your Node Admin and expire if unused. Every action taken from this desk is permanently audit-logged."
-      />
-
-      <div className="pt-2 text-center">
-        <button
-          onClick={() => go('gov_partnership')}
-          className="inline-flex items-center gap-1.5 text-[11px] mono text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-bold hover:underline"
-        >
-          <Handshake size={14} />
-          <span>New Sovereign Jurisdiction? Partner with CivicDuty &amp; Open Bilateral Desk →</span>
-        </button>
+        {/* Footer Switcher for Utilities / Private Service Providers */}
+        <div className="px-4 py-3 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            Operating a Utility, Bank, Telecom, Hospital, or NGO Desk?
+          </span>
+          <button
+            type="button"
+            onClick={() => go('entity')}
+            className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <ShieldCheck size={13} />
+            <span>Open Service Provider Gateway →</span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -245,7 +245,7 @@ export const GovReplyView: React.FC = () => {
             canResolve ? '' : 'opacity-40 cursor-not-allowed'
           }`}
         >
-          Post + Mark Resolved ✓
+          Post + Mark Resolved
         </button>
       </div>
 

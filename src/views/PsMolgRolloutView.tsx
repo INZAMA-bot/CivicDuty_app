@@ -16,7 +16,6 @@ import {
   Landmark, 
   ArrowLeft,
   ChevronRight,
-  Sparkles,
   Download,
   Filter,
   Check,
@@ -276,8 +275,8 @@ export const PsMolgRolloutView: React.FC = () => {
         </div>
       </div>
 
-      {/* Sovereign Header Card */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white p-5 sm:p-6 rounded-3xl shadow-lg border border-emerald-700/50">
+      {/* Sovereign Header Card — AI Studio Matte Panel */}
+      <div className="relative overflow-hidden bg-slate-900 text-white p-5 sm:p-6 rounded-xl border border-[#262b36]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-black tracking-wider uppercase">
@@ -292,8 +291,8 @@ export const PsMolgRolloutView: React.FC = () => {
             </p>
           </div>
 
-          <div className="hidden sm:block w-36 shrink-0">
-            <TrafficLightLogo size="sm" />
+          <div className="hidden sm:flex items-center justify-end shrink-0">
+            <TrafficLightLogo size="lg" variant="green-only" />
           </div>
         </div>
 
@@ -351,7 +350,7 @@ export const PsMolgRolloutView: React.FC = () => {
               : 'border-transparent text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-emerald-600" />
+          <Zap className="w-4 h-4 text-emerald-600" />
           Sovereign Batch Commissioning (CAOs &amp; Sister PSs)
         </button>
 
@@ -661,9 +660,9 @@ export const PsMolgRolloutView: React.FC = () => {
             <label className="text-xs font-black text-slate-900 dark:text-slate-100">Delivery Channels</label>
             <div className="flex gap-2">
               {[
-                { id: 'sms', label: '📱 GSM SMS Gateway' },
-                { id: 'whatsapp', label: '💬 Official WhatsApp Push' },
-                { id: 'ussd_push', label: '⚡ USSD Flash Broadcast' },
+                { id: 'sms', label: 'GSM SMS Gateway' },
+                { id: 'whatsapp', label: 'Official WhatsApp Push' },
+                { id: 'ussd_push', label: 'USSD Flash Broadcast' },
               ].map((ch) => (
                 <button
                   type="button"
@@ -722,7 +721,7 @@ export const PsMolgRolloutView: React.FC = () => {
                   Live Dispatch Ledger & Delivery Receipts ({liveQueue.length})
                 </span>
                 <span className="text-[10px] mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  ✓ High Delivery Rate (99.8%)
+                  High Delivery Rate (99.8%)
                 </span>
               </div>
               <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
@@ -741,7 +740,7 @@ export const PsMolgRolloutView: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] mono text-slate-500">{item.deliveryLatencyMs || 95}ms</span>
                       <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold">
-                        Delivered ✓
+                        Delivered
                       </span>
                     </div>
                   </div>
@@ -978,8 +977,9 @@ export const PsMolgRolloutView: React.FC = () => {
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {inspectingDistrict.subCounties.map((sc: string, idx: number) => (
-                  <span key={idx} className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
-                    📍 {sc}
+                  <span key={idx} className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 inline-flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-emerald-600" />
+                    <span>{sc}</span>
                   </span>
                 ))}
               </div>

@@ -18,7 +18,13 @@ import {
   BadgeCheck,
   Send,
   Ticket,
-  Briefcase
+  Briefcase,
+  Lock,
+  Landmark,
+  Check,
+  AlertTriangle,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { RewardModal } from '../components/RewardModal';
@@ -168,7 +174,7 @@ export const ProjectView: React.FC = () => {
       anonymous: false,
       category: 'other',
       title: `[Inspection Memo: ${roleTitle}] ${proj.title}`,
-      body: `📌 Statement Capacity / Designation: ${roleTitle}\n\n${commentText.trim()}`,
+      body: `Statement Capacity / Designation: ${roleTitle}\n\n${commentText.trim()}`,
       location: proj.location || 'Project Site',
       source: 'web',
       media: [],
@@ -218,7 +224,7 @@ export const ProjectView: React.FC = () => {
         setActiveVoucher(data.voucher);
         // Persist to Cloud Firestore
         saveFiscalVoucherToCloud(data.voucher).catch(() => {});
-        toast(`🎉 Fiscal Release Warrant #${data.voucher.voucherNumber} minted! Ready for MoFPED release.`, 'emerald');
+        toast(`Fiscal Release Warrant #${data.voucher.voucherNumber} minted! Ready for MoFPED release.`, 'emerald');
       }
     } catch {
       toast('Failed to reach automated treasury minting service.', 'amber');
@@ -249,7 +255,7 @@ export const ProjectView: React.FC = () => {
   const handleToggleAwarder = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (signingRole !== 'awarder') {
-      toast('⛔ ACCESS DENIED: Contractor Executives/Engineers CANNOT sign the Procuring Entity slot!', 'amber');
+      toast('ACCESS DENIED: Contractor Executives/Engineers CANNOT sign the Procuring Entity slot!', 'amber');
       return;
     }
     setMilestones((prev) =>
@@ -258,9 +264,9 @@ export const ProjectView: React.FC = () => {
         const nextAwarder = !m.awarderVerified;
         const isBoth = nextAwarder && Boolean(m.contractorVerified);
         if (isBoth) {
-          toast('🎉 Dual Signoff Complete! Phase 100% verified by Procuring Entity & Contractor', 'emerald');
+          toast('Dual Signoff Complete! Phase 100% verified by Procuring Entity & Contractor', 'emerald');
         } else if (nextAwarder) {
-          toast('🏛️ Procuring Entity (Gov Authority) signoff appended', 'emerald');
+          toast('Procuring Entity (Gov Authority) signoff appended', 'emerald');
         } else {
           toast('Procuring Entity signoff removed', 'amber');
         }
@@ -278,7 +284,7 @@ export const ProjectView: React.FC = () => {
   const handleToggleContractor = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (signingRole !== 'contractor') {
-      toast('⛔ ACCESS DENIED: Government Officials CANNOT sign the Contractor Executive slot!', 'amber');
+      toast('ACCESS DENIED: Government Officials CANNOT sign the Contractor Executive slot!', 'amber');
       return;
     }
     setMilestones((prev) =>
@@ -287,9 +293,9 @@ export const ProjectView: React.FC = () => {
         const nextContractor = !m.contractorVerified;
         const isBoth = Boolean(m.awarderVerified) && nextContractor;
         if (isBoth) {
-          toast('🎉 Dual Signoff Complete! Phase 100% verified by Government & Contractor', 'emerald');
+          toast('Dual Signoff Complete! Phase 100% verified by Government & Contractor', 'emerald');
         } else if (nextContractor) {
-          toast('🚜 Contractor Executive signoff appended', 'emerald');
+          toast('Contractor Executive signoff appended', 'emerald');
         } else {
           toast('Contractor Executive signoff removed', 'amber');
         }
@@ -354,7 +360,7 @@ export const ProjectView: React.FC = () => {
         </div>
         <div className="w-full bg-slate-100 dark:bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 p-0.5">
           <div
-            className="bg-gradient-to-r from-amber-600 to-teal-500 h-full rounded-full transition-all duration-500"
+            className="bg-emerald-600 h-full rounded-full transition-all duration-500"
             style={{ width: `${progressPct}%` }}
           ></div>
         </div>
@@ -445,7 +451,8 @@ export const ProjectView: React.FC = () => {
               }`}
             >
               <span className="flex items-center gap-1.5">
-                🏛️ Procuring Entity (Gov Authority)
+                <Landmark size={13} strokeWidth={1.75} />
+                <span>Procuring Entity (Gov Authority)</span>
               </span>
               {signingRole === 'awarder' && <span className="text-[9px] bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950 px-1.5 py-0.5 rounded font-black">ACTIVE</span>}
             </button>
@@ -463,7 +470,8 @@ export const ProjectView: React.FC = () => {
               }`}
             >
               <span className="flex items-center gap-1.5">
-                🚜 Contractor Executive (Site Engineer)
+                <HardHat size={13} strokeWidth={1.75} />
+                <span>Contractor Executive (Site Engineer)</span>
               </span>
               {signingRole === 'contractor' && <span className="text-[9px] bg-amber-700 text-white dark:bg-amber-400 dark:text-slate-950 px-1.5 py-0.5 rounded font-black">ACTIVE</span>}
             </button>
@@ -471,16 +479,16 @@ export const ProjectView: React.FC = () => {
 
           {/* Strict Separation Notice */}
           <div className="text-[9.5px] mono text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/90 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-start gap-2">
-            <span className="text-amber-600 dark:text-amber-400 text-sm">⛔</span>
+            <AlertTriangle size={14} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-amber-800 dark:text-amber-300 block mb-0.5">Strict Authority Isolation Enforced</span>
               {signingRole === 'awarder' ? (
                 <span className="text-slate-600 dark:text-slate-300">
-                  You are currently acting as <strong>Procuring Entity (Gov Authority)</strong>. You can <strong>ONLY</strong> sign the 🏛️ Procuring Entity slot. The Contractor slot is strictly locked for you.
+                  You are currently acting as <strong>Procuring Entity (Gov Authority)</strong>. You can <strong>ONLY</strong> sign the Procuring Entity slot. The Contractor slot is strictly locked for you.
                 </span>
               ) : (
                 <span className="text-slate-600 dark:text-slate-300">
-                  You are currently acting as <strong>Contractor Executive / Site Engineer</strong>. You can <strong>ONLY</strong> sign the 🚜 Contractor Exec slot. The Procuring Entity slot is strictly locked for you.
+                  You are currently acting as <strong>Contractor Executive / Site Engineer</strong>. You can <strong>ONLY</strong> sign the Contractor Exec slot. The Procuring Entity slot is strictly locked for you.
                 </span>
               )}
             </div>
@@ -523,7 +531,7 @@ export const ProjectView: React.FC = () => {
                         : 'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
                     }`}
                   >
-                    {dualVerified ? '✓✓ 2/2 DUAL VERIFIED' : countTicks === 1 ? '⌛ 1/2 PENDING COUNTERPART' : '○ 0/2 UNVERIFIED'}
+                    {dualVerified ? '2/2 DUAL VERIFIED' : countTicks === 1 ? '1/2 PENDING COUNTERPART' : '0/2 UNVERIFIED'}
                   </span>
                 </div>
 
@@ -552,9 +560,9 @@ export const ProjectView: React.FC = () => {
                       }`}
                     >
                       {signingRole === 'awarder' ? (
-                        <>🏛️ Procuring Entity {awarderSigned ? '✓ Signed' : '+ Sign'}</>
+                        <><Landmark size={11} strokeWidth={1.75} /> Procuring Entity {awarderSigned ? 'Signed' : '+ Sign'}</>
                       ) : (
-                        <>🔒 Gov Slot Locked {awarderSigned ? '(✓)' : ''}</>
+                        <><Lock size={11} strokeWidth={1.75} /> Gov Slot Locked {awarderSigned ? '(Signed)' : ''}</>
                       )}
                     </button>
 
@@ -571,9 +579,9 @@ export const ProjectView: React.FC = () => {
                       }`}
                     >
                       {signingRole === 'contractor' ? (
-                        <>🚜 Contractor Exec {contractorSigned ? '✓ Signed' : '+ Sign'}</>
+                        <><HardHat size={11} strokeWidth={1.75} /> Contractor Exec {contractorSigned ? 'Signed' : '+ Sign'}</>
                       ) : (
-                        <>🔒 Contractor Slot Locked {contractorSigned ? '(✓)' : ''}</>
+                        <><Lock size={11} strokeWidth={1.75} /> Contractor Slot Locked {contractorSigned ? '(Signed)' : ''}</>
                       )}
                     </button>
                   </div>
@@ -582,7 +590,7 @@ export const ProjectView: React.FC = () => {
                   <div className="text-[9px] text-slate-600 dark:text-slate-400 flex items-center gap-2.5 ml-auto flex-wrap">
                     {m.awarderSignedBy ? (
                       <span className="text-teal-800 dark:text-teal-300 font-bold bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded border border-teal-200 dark:border-teal-800/60">
-                        🏛️ Gov: {m.awarderSignedBy} ({m.awarderSignedAt || 'Verified'})
+                        Gov: {m.awarderSignedBy} ({m.awarderSignedAt || 'Verified'})
                       </span>
                     ) : (
                       <span className="text-slate-400 dark:text-slate-500 italic">Gov: Pending</span>
@@ -590,7 +598,7 @@ export const ProjectView: React.FC = () => {
 
                     {m.contractorSignedBy ? (
                       <span className="text-amber-800 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800/60">
-                        🚜 Exec: {m.contractorSignedBy} ({m.contractorSignedAt || 'Verified'})
+                        Exec: {m.contractorSignedBy} ({m.contractorSignedAt || 'Verified'})
                       </span>
                     ) : (
                       <span className="text-slate-400 dark:text-slate-500 italic">Exec: Pending</span>
@@ -649,7 +657,7 @@ export const ProjectView: React.FC = () => {
       {/* Community & Field Inspection Wall */}
       <div className="space-y-3">
         {/* Wall Reward Banner for Entities & Contractors */}
-        <div className="card p-3.5 bg-gradient-to-r from-amber-50/70 via-white to-teal-50/70 dark:from-amber-500/10 dark:via-slate-900 dark:to-teal-500/10 border border-amber-600/20 dark:border-amber-500/30 space-y-2 shadow-sm rounded-2xl">
+        <div className="card p-3.5 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2 rounded-xl">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <span className="p-2 rounded-xl bg-amber-600/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-600/20 dark:border-amber-500/30">
@@ -814,7 +822,7 @@ export const ProjectView: React.FC = () => {
                 onClick={() => setActiveVoucher(null)}
                 className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
               >
-                ✕
+                ×
               </button>
             </div>
 
@@ -848,9 +856,9 @@ export const ProjectView: React.FC = () => {
             </div>
 
             <div className="text-[10px] mono text-slate-500 dark:text-slate-400 space-y-1">
-              <div>• 🏛️ Procuring Signoff: {activeVoucher.awarderSigner}</div>
-              <div>• 🚜 Contractor Signoff: {activeVoucher.contractorSigner}</div>
-              <div>• 🛡️ Blockchain Audit Seal: <span className="text-teal-600 dark:text-teal-400 font-bold">{activeVoucher.blockchainSeal}</span></div>
+              <div>• Procuring Signoff: {activeVoucher.awarderSigner}</div>
+              <div>• Contractor Signoff: {activeVoucher.contractorSigner}</div>
+              <div>• Blockchain Audit Seal: <span className="text-teal-600 dark:text-teal-400 font-bold">{activeVoucher.blockchainSeal}</span></div>
             </div>
 
             <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800">
@@ -859,7 +867,7 @@ export const ProjectView: React.FC = () => {
                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                   : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
               }`}>
-                {activeVoucher.disbursementStatus === 'completed_bank_transfer' ? 'Disbursed to Bank ✓' : 'Certified: Pending Release'}
+                {activeVoucher.disbursementStatus === 'completed_bank_transfer' ? 'Disbursed to Bank' : 'Certified: Pending Release'}
               </span>
 
               {activeVoucher.disbursementStatus !== 'completed_bank_transfer' ? (

@@ -12,7 +12,6 @@ import {
   Radio,
   Briefcase,
   AlertTriangle,
-  Sparkles,
   CheckCircle2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -370,13 +369,31 @@ export const CdOpsStaffManagerModal: React.FC<Props> = ({
           </div>
 
           {/* Regional Jurisdictions */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="text-[11px] mono font-bold uppercase text-slate-600 dark:text-slate-400 flex items-center justify-between">
-              <span>Authorized Regional Jurisdictions</span>
-              <span className="text-[9px] text-slate-400">Select countries handled</span>
+              <span>Authorized Global Jurisdictions ({Object.keys(COUNTRIES).length} Nations)</span>
+              <span className="text-[9px] text-slate-400">Select or add any country</span>
             </label>
+            <div className="flex items-center gap-2">
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) handleRegionToggle(e.target.value);
+                }}
+                aria-label="Add Country Jurisdiction"
+                className="flex-1 px-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 cursor-pointer"
+              >
+                <option value="">+ Select any of {Object.keys(COUNTRIES).length} Global Countries to Toggle...</option>
+                <option value="ALL">ALL GLOBAL JURISDICTIONS</option>
+                {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
+                  <option key={cCode} value={cCode}>
+                    [{cCode}] {cInfo.name} {handlingRegions.includes(cCode) ? '(Active)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-wrap gap-1.5">
-              {REGION_OPTIONS.map((code) => {
+              {Array.from(new Set([...REGION_OPTIONS, ...handlingRegions])).map((code) => {
                 const isSelected = handlingRegions.includes(code);
                 const c = COUNTRIES[code as any];
                 return (
@@ -390,7 +407,7 @@ export const CdOpsStaffManagerModal: React.FC<Props> = ({
                         : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    <span>{code === 'ALL' ? '🌐 ALL' : `${c?.flag || '🌐'} ${code}`}</span>
+                    <span>{code === 'ALL' ? 'ALL GLOBAL' : `[${code}] ${c?.name || code}`}</span>
                   </button>
                 );
               })}

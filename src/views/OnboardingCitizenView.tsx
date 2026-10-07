@@ -14,14 +14,20 @@ import {
   Building2, 
   MapPin, 
   Layers, 
-  Sparkles, 
   Phone,
   Compass,
   ArrowRight
 } from 'lucide-react';
+import { DeptIcon } from '../components/DeptIcon';
 
 export const OnboardingCitizenView: React.FC = () => {
-  const { view, go, setUser, toast, setProfiles, ensureCitizenSession } = useApp();
+  const { view, go, user, setUser, toast, profiles, setProfiles, ensureCitizenSession, openLegalCenter } = useApp();
+
+  // Onboarding Mode: New Citizen Sign Up (3-Step) vs Returning Citizen Login (1-Step)
+  const [citizenAuthMode, setCitizenAuthMode] = useState<'signup' | 'login'>('signup');
+  const [acceptedCharter, setAcceptedCharter] = useState<boolean>(true);
+  const [loginIdentifier, setLoginIdentifier] = useState<string>('');
+  const [loginCountry, setLoginCountry] = useState<CountryCode>(user?.country || 'UG');
 
   // Onboarding Step 1 State
   const [idType, setIdType] = useState<'nid' | 'passport'>('nid');
@@ -56,6 +62,10 @@ export const OnboardingCitizenView: React.FC = () => {
   };
 
   const handleOb1Next = () => {
+    if (!acceptedCharter) {
+      toast('Please accept the Sovereign Privacy Charter & Terms of Use to continue.', 'amber');
+      return;
+    }
     let activeId = idVal.trim();
     let activeCountry = country;
     if (!activeId) {
@@ -67,6 +77,52 @@ export const OnboardingCitizenView: React.FC = () => {
       setCountry('UG');
     }
     go('ob_home');
+  };
+
+  const handleReturningCitizenLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const raw = loginIdentifier.trim().toUpperCase() || 'CM9028491';
+    const detected = detectCountry(raw) || loginCountry || 'UG';
+    const uid = 'usr-' + raw.replace(/[^A-Z0-9]/g, '').slice(-5) + '-' + detected;
+    const existingProfile = profiles[uid];
+
+    const defaultFollowed =
+      detected === 'KE'
+        ? ['ke-kplc', 'ke-ncwsc', 'ke-kura']
+        : detected === 'NG'
+        ? ['ng-ikeja', 'ng-lawma', 'ng-ferma']
+        : ['ug-unra', 'ug-nwsc', 'ug-umeme', 'ug-kcca'];
+
+    const activeProfile = existingProfile || {
+      id: uid,
+      country: detected,
+      id_frag: raw.slice(-4) || '9028',
+      display_name: user?.name || `Citizen #${raw.slice(-4) || '9028'}`,
+      phone: raw.startsWith('+') ? raw : undefined,
+      civic_score: 50,
+      rank: 'Observer',
+      followed: defaultFollowed,
+      posts: 2,
+      resolved: 1,
+      corruption_reports: 0,
+      upvotes_received: 14,
+    };
+
+    if (!existingProfile) {
+      setProfiles((prev) => ({ ...prev, [uid]: activeProfile }));
+    }
+
+    setUser({
+      id: uid,
+      role: 'citizen',
+      country: detected,
+      nodeTag: COUNTRIES[detected]?.node || 'NODE_01',
+      followed: activeProfile.followed || defaultFollowed,
+      name: activeProfile.display_name,
+    });
+
+    toast(`Welcome back, ${activeProfile.display_name} · Mounted ${COUNTRIES[detected]?.name} Feed`, 'emerald');
+    go('feed');
   };
 
   const handleFinishOnboarding = () => {
@@ -138,20 +194,140 @@ export const OnboardingCitizenView: React.FC = () => {
               }}
               className="text-[10.5px] mono text-teal-700 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-500/10 border border-teal-500/30 px-3 py-1.5 rounded-xl hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all flex items-center gap-1.5"
             >
-              <Sparkles size={13} />
+              <ArrowRight size={13} strokeWidth={1.75} />
               <span>Skip to Live Feed</span>
             </button>
           </div>
 
           <div className="flex items-center gap-1.5 text-[10px] mono text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">
             <Fingerprint size={13} />
-            <span>Step 1 of 3 · Identity Anchor</span>
+            <span>{citizenAuthMode === 'signup' ? 'New Citizen Sign Up · Step 1 of 3' : 'Returning Citizen Sign In · 1-Step Instant Mount'}</span>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">Verify Citizen Identity</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+            {citizenAuthMode === 'signup' ? 'Verify Citizen Identity' : 'Returning Citizen Sign In'}
+          </h2>
           <p className="text-[12.5px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-            1 Verified ID = 1 Authentic Voice. Sybil-resistant cryptographic validation routes your voice directly to your municipal council.
+            {citizenAuthMode === 'signup'
+              ? '1 Verified ID = 1 Authentic Voice. Sybil-resistant cryptographic validation routes your voice directly to your municipal council.'
+              : 'Already onboarded? Resume your saved citizen session in one tap or enter your National ID / Phone to jump straight to your Live Feed.'}
           </p>
+
+          {/* 2-Tab Mode Switcher: New Citizen Sign Up vs Returning Citizen Login */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 mt-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setCitizenAuthMode('signup')}
+              className={`py-2 px-3 rounded-xl text-xs font-black mono transition-all cursor-pointer ${
+                citizenAuthMode === 'signup'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              New Citizen Sign Up (3 Steps)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCitizenAuthMode('login')}
+              className={`py-2 px-3 rounded-xl text-xs font-black mono transition-all cursor-pointer ${
+                citizenAuthMode === 'login'
+                  ? 'bg-amber-500 text-slate-950 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Returning Login (1-Step)
+            </button>
+          </div>
         </div>
+
+        {citizenAuthMode === 'login' ? (
+          <div className="space-y-4 animate-fade-in">
+            {/* 1-Click Resume Saved Device Session Card */}
+            {user && (
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs mono">
+                      {user.country || 'UG'}
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-slate-900 dark:text-white">
+                        Saved Session: {user.name || 'Verified Citizen Observer'}
+                      </div>
+                      <div className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300">
+                        {COUNTRIES[user.country]?.name} · {(user.followed || []).length} Monitored Desks
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200">
+                    Active Device
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    ensureCitizenSession();
+                    toast(`Resumed session as ${user.name || 'Verified Citizen'}`, 'emerald');
+                    go('feed');
+                  }}
+                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider mono flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+                >
+                  <ArrowRight size={14} strokeWidth={1.75} />
+                  <span>1-Click Resume Saved Session → Live Feed</span>
+                </button>
+              </div>
+            )}
+
+            {/* 1-Step NIN / Phone Direct Login Form */}
+            <form onSubmit={handleReturningCitizenLogin} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 space-y-3.5">
+              <div className="text-xs font-black text-slate-900 dark:text-white">
+                Or Sign In with National ID / Mobile Number
+              </div>
+
+              <div>
+                <label className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest block font-bold mb-1">
+                  National ID (NIN), Passport, or Registered Phone
+                </label>
+                <input
+                  type="text"
+                  value={loginIdentifier}
+                  onChange={(e) => {
+                    setLoginIdentifier(e.target.value);
+                    const det = detectCountry(e.target.value);
+                    if (det) setLoginCountry(det);
+                  }}
+                  placeholder="e.g. CM90284918841 or +256 778 277 900"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest block font-bold mb-1">
+                  Jurisdiction Country
+                </label>
+                <select
+                  value={loginCountry}
+                  onChange={(e) => setLoginCountry(e.target.value as CountryCode)}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600"
+                >
+                  {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      [{k}] {v.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold rounded-xl py-3 text-xs uppercase tracking-widest mono transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <span>Instant Sign In → Jump to Live Feed</span>
+                <ArrowRight size={15} />
+              </button>
+            </form>
+          </div>
+        ) : (
+          <>
 
         {/* Identity Type Selection */}
         <div className="grid grid-cols-2 gap-2.5">
@@ -194,7 +370,7 @@ export const OnboardingCitizenView: React.FC = () => {
           <div className="flex items-center gap-2 h-5 pt-0.5">
             {country && COUNTRIES[country] && (
               <div className="flex items-center gap-1.5 text-[10.5px] mono text-emerald-700 dark:text-emerald-400 font-medium">
-                <span className="text-base">{COUNTRIES[country].flag}</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-black">{country}</span>
                 <span>Jurisdiction Detected: <strong>{COUNTRIES[country].name}</strong></span>
               </div>
             )}
@@ -214,7 +390,7 @@ export const OnboardingCitizenView: React.FC = () => {
             <option value="">Select country...</option>
             {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
               <option key={k} value={k}>
-                {v.flag} {v.name}
+                [{k}] {v.name}
               </option>
             ))}
           </select>
@@ -243,19 +419,59 @@ export const OnboardingCitizenView: React.FC = () => {
           </div>
         </div>
 
-        {/* Security Note Box */}
-        <div className="p-3 bg-amber-600/5 dark:bg-amber-500/5 rounded-xl border border-amber-600/20 dark:border-amber-500/20 flex items-start gap-2.5 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-          <ShieldCheck size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-          <span>Your ID number is cryptographically salted & hashed. Only your verified citizenship status and parish node are broadcast to public walls.</span>
+        {/* Security Note Box & Legal Charter Consent */}
+        <div className="p-3 bg-amber-600/5 dark:bg-amber-500/5 rounded-xl border border-amber-600/20 dark:border-amber-500/20 space-y-2.5 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheck size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <span>Your ID number is cryptographically salted &amp; hashed. Only your verified citizenship status and parish node are broadcast to public walls.</span>
+          </div>
+
+          <label className="flex items-start gap-2 pt-2 border-t border-amber-600/15 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={acceptedCharter}
+              onChange={(e) => setAcceptedCharter(e.target.checked)}
+              className="mt-0.5 rounded accent-emerald-600"
+            />
+            <span className="text-[10.5px] text-slate-700 dark:text-slate-300">
+              I agree to the CivicDuty{' '}
+              <button
+                type="button"
+                onClick={() => openLegalCenter('terms')}
+                className="font-bold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
+              >
+                Terms of Use
+              </button>
+              ,{' '}
+              <button
+                type="button"
+                onClick={() => openLegalCenter('privacy')}
+                className="font-bold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
+              >
+                Zero-Knowledge Privacy Charter
+              </button>
+              , and{' '}
+              <button
+                type="button"
+                onClick={() => openLegalCenter('ethics')}
+                className="font-bold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
+              >
+                Ethical Perks Covenant
+              </button>
+              .
+            </span>
+          </label>
         </div>
 
         <button
           onClick={handleOb1Next}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold rounded-2xl py-3.5 text-xs uppercase tracking-widest mono transition-all active:scale-[.98] shadow-sm flex items-center justify-center gap-2"
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold rounded-2xl py-3.5 text-xs uppercase tracking-widest mono transition-all active:scale-[.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer"
         >
-          <span>Continue to Location</span>
+          <span>Continue to Step 2 (Home Location)</span>
           <ArrowRight size={15} />
         </button>
+          </>
+        )}
       </div>
     );
   }
@@ -442,7 +658,9 @@ export const OnboardingCitizenView: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl w-7 text-center">{d.icon || '🏢'}</span>
+                  <div className="w-8 h-8 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                    <DeptIcon dept={d} size={15} />
+                  </div>
                   <div>
                     <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{d.name}</div>
                     <div className="text-[9.5px] mono text-slate-500 dark:text-slate-400">{d.ministry || d.full}</div>
@@ -481,7 +699,9 @@ export const OnboardingCitizenView: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xl w-7 text-center">{d.icon || '🏢'}</span>
+                    <div className="w-8 h-8 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                      <DeptIcon dept={d} size={15} />
+                    </div>
                     <div>
                       <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{d.name}</div>
                       <div className="text-[9.5px] mono text-slate-500 dark:text-slate-400">{d.full}</div>
