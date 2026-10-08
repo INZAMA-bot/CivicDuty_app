@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { KayoolaBusGraphic } from '../components/KayoolaBusGraphic';
+import { CountrySelector } from '../components/CountrySelector';
+import { getCountryTransitSpecs } from '../data/promotionalAds';
 import {
   ArrowLeft,
   Download,
@@ -40,96 +42,102 @@ interface CampaignMediaItem {
   highlights: string[];
 }
 
-const CAMPAIGN_MEDIA: CampaignMediaItem[] = [
-  {
-    id: 'bodaboda-stage-poster',
-    title: 'Bodaboda Community Stage Poster & Market Launch Campaign',
-    category: 'bodaboda',
-    categoryLabel: 'Bodaboda Stage Poster',
-    imageSrc: '/campaign/boda_poster_ad_1790426299023.jpg',
-    summary: 'High-visibility weather-resistant advertising poster tailored directly to Uganda’s 1.5M+ Bodaboda riders, stage chairmen, and SACCO leadership across Kampala, Wakiso, and national transit hubs.',
-    specs: 'A1/A2 Waterproof Outdoor Polypropylene Synthetic Poster · High-Tack Adhesive & Stage Noticeboard Mount',
-    tagline: 'BODA MAN: GWE BOSS W’OLUGUUDO! • SPEAK. SERVE. BE HEARD.',
-    callToAction: 'Dial *3030# FREE (Zero Data) or Scan QR to Report Potholes & Police Extortion',
-    highlights: [
-      'Empowers riders as frontline street inspectors with direct access to KCCA & Ministry of Works',
-      'Instant USSD *3030# access works on simple feature phones (Kabiriti) without internet bundles',
-      'The 3-Signal Loop: Red (Log Pothole/Hazard), Amber (KCCA Dispatched), Green Tick (Repaired & Certified)',
-      'Stage SACCO recognition and verified rider fuel perks for validated road reports'
-    ]
-  },
-  {
-    id: 'kayoola-bus-wrap',
-    title: 'Kayoola EVS Electric Bus Full Vehicle Wrap',
-    category: 'bus',
-    categoryLabel: 'Kayoola Electric Bus',
-    imageSrc: '/campaign/kayoola_bus_branding_1788711208719.jpg',
-    summary: 'Full exterior commercial vehicle wrap for the 10.5m & 12m Kiira Motors Kayoola EVS transit bus, operating along high-density metropolitan routes.',
-    specs: '3M IJ180mC-10 Vinyl with Cast Lamination · High-Contrast UV Resistant',
-    tagline: 'SPEAK. SERVE. BE HEARD. • Connect. Resolve. Progress.',
-    callToAction: 'Dial *3030# or Scan QR to Report Road Hazards & Civic Issues',
-    highlights: [
-      'Visible from 150+ meters in bright daytime sunlight and night streetlighting',
-      'Emerald civic sweep accentuating zero-emission green transit and integrity',
-      'Iconic 3-Signal Beacon (Red Citizen Speaks, Amber Gov Serves, Green Resolved)',
-      'Direct USSD code (*3030#) prominently positioned for zero-data smartphone and feature phone users'
-    ]
-  },
-  {
-    id: 'commuter-train-wrap',
-    title: 'Passenger Commuter Train Exterior Branding',
-    category: 'train',
-    categoryLabel: 'Commuter Train',
-    imageSrc: '/campaign/train_branding_1788711224267.jpg',
-    summary: 'Full-car exterior passenger train wrap for commuter rail lines connecting outer townships to central business districts and government stations.',
-    specs: 'Flame-Retardant Anti-Graffiti Vinyl Wrap · Rail Grade Compliance EN 45545',
-    tagline: 'CITIZEN-GOVERNMENT INTERFACE • Bridging The Gap',
-    callToAction: 'Have a Voice in Your Community on Every Commute',
-    highlights: [
-      'Panoramic train car livery visible across crowded station platforms and pedestrian flyovers',
-      'Repeated 3-Signal Beacon pattern guiding riders to civic participation during transit',
-      'Dual-language sensitization slogans in English, Luganda, Swahili, and regional dialects',
-      'Transforms daily rail journeys into active community vigilance moments'
-    ]
-  },
-  {
-    id: 'fleet-depot-charging',
-    title: 'Kayoola Fleet Terminal & E-Charging Depot Branding',
-    category: 'terminal',
-    categoryLabel: 'Fleet Terminal & Depot',
-    imageSrc: '/campaign/fleet_depot_branding_1788711242525.jpg',
-    summary: 'Synchronized fleet branding across terminal bays and charging depots, presenting a unified national infrastructure identity.',
-    specs: 'Fleet-wide Vinyl Wrap & Overhead Terminal Pylon Signage',
-    tagline: 'Making Uganda The Best • Ministry of ICT & NG Sovereign Fleet',
-    callToAction: 'Community Sensitization at Scale: 250,000+ Daily Commuter Impressions',
-    highlights: [
-      'Synchronized multi-vehicle visual impact reinforcing official state backing and legitimacy',
-      'High-traffic commuter departure bays at Ntinda, Kiwatule, Najjera, Kira, and Kampala Central',
-      'Co-branded with Ministry of ICT & National Guidance crest',
-      'Integrated charging station posters detailing how civic reports are resolved within 24-72 hours'
-    ]
-  },
-  {
-    id: 'transit-shelter-billboard',
-    title: 'Transit Station & Bus Shelter Backlit Advertising',
-    category: 'billboard',
-    categoryLabel: 'Station Shelter & Billboard',
-    imageSrc: '/campaign/transit_station_billboard_1788711258042.jpg',
-    summary: 'High-impact illuminated billboard at urban bus terminals and commuter waiting shelters, illustrating real-time citizen-government accountability.',
-    specs: 'Backlit Translucent Polycarbonate 6-Sheet Poster & LED Lightbox Display',
-    tagline: 'HAVE A VOICE IN YOUR COMMUNITY • Download CivicDuty',
-    callToAction: 'Scan the QR Code to Install CivicDuty or Dial *3030# Now',
-    highlights: [
-      'Captures commuters during dwell time (average 12-25 min platform wait time)',
-      'Visual demonstration showing citizen phone report transforming from Amber to Green',
-      'Encourages immediate app downloads and offline USSD session initiates',
-      'Deters public service apathy through verified case study resolution metrics'
-    ]
-  }
-];
-
 export const TransitPreviewView: React.FC = () => {
-  const { go } = useApp();
+  const { go, selectedCountry, user } = useApp();
+  const activeCountry = selectedCountry || user?.country || 'UG';
+  const transitSpec = getCountryTransitSpecs(activeCountry);
+
+  const CAMPAIGN_MEDIA: CampaignMediaItem[] = useMemo(
+    () => [
+      {
+        id: 'kayoola-bus-wrap',
+        title: `${transitSpec.countryName} Organized Bus Fleet Painting & Ad Partnership Proposal`,
+        category: 'bus',
+        categoryLabel: `Bus Painting Proposal (${transitSpec.countryName})`,
+        imageSrc: '/campaign/kayoola_bus_partnership.jpg',
+        summary: transitSpec.busProposalSummary,
+        specs: `${transitSpec.busFleetType} · Full Exterior Paint & 3M Cast Lamination Proposal · ${transitSpec.busRoutes}`,
+        tagline: `PROPOSAL FOR ACTUAL FLEET PAINTING · ${transitSpec.busPartnerName.toUpperCase()}`,
+        callToAction: `Dial ${transitSpec.ussdCode} or Partner for Fleet Painting`,
+        highlights: [
+          `Commercial & Sovereign Proposal: Once agreed upon with ${transitSpec.busPartnerName}, CivicDuty funds and executes actual bus painting with our 3-Signal brand design`,
+          `High-contrast Emerald, Slate & White livery visible from 150+ meters along ${transitSpec.busRoutes}`,
+          'Iconic 3-Signal Beacon: Red (Citizen Speaks), Amber (Gov Serves), Green Checkmark (Resolved)',
+          `Direct USSD code (${transitSpec.ussdCode}) prominently painted for zero-data smartphone and feature phone riders`,
+        ],
+      },
+      {
+        id: 'commuter-train-wrap',
+        title: `${transitSpec.trainOperatorName} "Moving Billboard" Train Painting Proposal`,
+        category: 'train',
+        categoryLabel: `Railway Moving Billboard (${transitSpec.countryName})`,
+        imageSrc: '/campaign/train_moving_billboard.jpg',
+        summary: transitSpec.trainProposalSummary,
+        specs: `${transitSpec.trainType} · Industrial Anti-Corrosion Primer & Rail-Grade Polyurethane Livery · ${transitSpec.trainCorridors}`,
+        tagline: `MOVING BILLBOARD PROPOSAL • ${transitSpec.trainOperatorName.toUpperCase()}`,
+        callToAction: `Refurbish & Paint ${transitSpec.countryName} Commuter Trains in CivicDuty Livery`,
+        highlights: [
+          `CivicDuty is ready to paint existing ${transitSpec.countryName} railway carriages (${transitSpec.trainType}) as panoramic moving billboards`,
+          `High-visibility 3-Signal brand livery seen at every railway crossing and station along ${transitSpec.trainCorridors}`,
+          `Revitalizes classic rail rolling stock aesthetics while sensitizing ratusan of thousands of daily commuters`,
+          `Co-branded with ${transitSpec.trainOperatorName} and ${transitSpec.municipalAuthority}`,
+        ],
+      },
+      {
+        id: 'bodaboda-stage-poster',
+        title: `${transitSpec.countryName} ${transitSpec.stageTransportName} Poster Campaign`,
+        category: 'bodaboda',
+        categoryLabel: `${transitSpec.stageTransportName}`,
+        imageSrc: '/campaign/bodaboda_matatu_poster.jpg',
+        summary: `High-visibility weather-resistant stage shelter poster and rider reflector campaign tailored to ${transitSpec.stageLocations}.`,
+        specs: 'A1/A2 Waterproof Outdoor Polypropylene Poster & Rider Safety Reflector Vests',
+        tagline: `${transitSpec.localSlogan} • DIAL ${transitSpec.ussdCode}`,
+        callToAction: `Dial ${transitSpec.ussdCode} FREE (Zero Data) or Scan QR at Any Stage`,
+        highlights: [
+          `Auto-adjusted for ${transitSpec.countryName}: ${transitSpec.stageLocations}`,
+          `Empowers riders and drivers as frontline street inspectors reporting directly to ${transitSpec.municipalAuthority}`,
+          `Instant USSD ${transitSpec.ussdCode} works on simple feature phones without internet bundles`,
+          'Stage SACCO recognition and verified fuel/airtime perks for validated road reports',
+        ],
+      },
+      {
+        id: 'fleet-depot-charging',
+        title: `${transitSpec.countryName} Fleet Terminal & Bus Park Branding`,
+        category: 'terminal',
+        categoryLabel: 'Fleet Terminal & Depot',
+        imageSrc: '/campaign/fleet_depot_branding_1788711242525.jpg',
+        summary: `Synchronized fleet branding across ${transitSpec.countryName} bus terminals, departure bays, and charging depots.`,
+        specs: 'Fleet-wide Exterior Livery & Overhead Terminal Pylon Signage',
+        tagline: `${transitSpec.countryName} Sovereign Transit Fleet · ${transitSpec.ussdCode}`,
+        callToAction: 'Community Sensitization at Scale: 250,000+ Daily Commuter Impressions',
+        highlights: [
+          'Synchronized multi-vehicle visual impact reinforcing official public-private accountability',
+          `High-traffic commuter departure bays across ${transitSpec.busRoutes}`,
+          `Co-branded with ${transitSpec.municipalAuthority}`,
+          'Integrated terminal bay posters detailing how civic reports are resolved within 24–72 hours',
+        ],
+      },
+      {
+        id: 'transit-shelter-billboard',
+        title: 'Transit Station & Bus Shelter Backlit Advertising',
+        category: 'billboard',
+        categoryLabel: 'Station Shelter & Billboard',
+        imageSrc: '/campaign/transit_station_billboard_1788711258042.jpg',
+        summary: 'High-impact illuminated billboard at urban bus terminals and commuter waiting shelters, illustrating real-time citizen-government accountability.',
+        specs: 'Backlit Translucent Polycarbonate 6-Sheet Poster & LED Lightbox Display',
+        tagline: `HAVE A VOICE IN YOUR COMMUNITY • Download CivicDuty (${transitSpec.ussdCode})`,
+        callToAction: `Scan the QR Code to Install CivicDuty PWA or Dial ${transitSpec.ussdCode}`,
+        highlights: [
+          'Captures commuters during dwell time (average 12–25 min platform wait time)',
+          'Visual demonstration showing citizen phone report transforming from Amber to Green',
+          'Encourages immediate PWA installs and offline USSD session initiates',
+          'Deters public service apathy through verified case study resolution metrics',
+        ],
+      },
+    ],
+    [transitSpec]
+  );
+
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'bodaboda' | 'bus' | 'train' | 'terminal' | 'billboard' | 'strategy'>('all');
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxItem, setLightboxItem] = useState<CampaignMediaItem | null>(null);
@@ -145,34 +153,35 @@ export const TransitPreviewView: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col transition-colors selection:bg-emerald-500 selection:text-white">
       {/* Top Sovereign Navigation Header */}
-      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
           <button
             onClick={() => go('splash')}
-            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all active:scale-95"
+            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all active:scale-95 cursor-pointer"
             title="Return to Core Civic Platform"
           >
             <ArrowLeft size={16} />
           </button>
           <div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[12px] font-black uppercase mono tracking-wider text-white">
-                Brand Advertising &amp; Sensitization
+                {transitSpec.countryName} Transit &amp; Railway Branding Proposals
               </span>
               <span className="px-1.5 py-0.2 rounded-full text-[8px] bg-emerald-950 text-emerald-300 border border-emerald-700 mono font-bold">
-                CAMPAIGN IMAGES
+                AUTO-ADAPTED ({transitSpec.countryCode})
               </span>
             </div>
             <p className="text-[9px] text-slate-400 mono">
-              Transit Marketing Strategy: Kayoola Buses, Passenger Train &amp; Billboards
+              {transitSpec.busPartnerName} · {transitSpec.trainOperatorName} · {transitSpec.stageTransportName}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <CountrySelector variant="compact" />
           <button
             onClick={() => go('feed')}
-            className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold mono uppercase transition-all shadow-md flex items-center gap-1"
+            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold mono uppercase transition-all shadow-md flex items-center gap-1 cursor-pointer"
           >
             <span>Citizen Feed</span>
             <ChevronRight size={12} />

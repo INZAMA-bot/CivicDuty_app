@@ -2,29 +2,29 @@
   "id": "/",
   "name": "CivicDuty · Sovereign Governance Platform",
   "short_name": "CivicDuty",
-  "description": "Direct citizen infrastructure reporting and municipal officer desk platform.",
+  "description": "Speak. Serve. Be Heard. Direct citizen infrastructure reporting, municipal SLA tracking, and government desk accountability platform.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e1116",
-  "theme_color": "#0e1116",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
   "categories": ["government", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/civicduty-logo.png",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/civicduty-logo.png",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/civicduty-logo.png",
+      "src": "/pwa-maskable-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

@@ -233,6 +233,21 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
                 <span className="truncate">Verify Seal</span>
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                window.dispatchEvent(new CustomEvent('open-pwa-install-modal'));
+              }}
+              className="w-full min-h-[38px] mt-1.5 px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15 text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <img src="/favicon.svg" alt="" className="w-4 h-4 rounded" />
+                <span>Install CivicDuty App (PWA)</span>
+              </span>
+              <span className="text-[10px] uppercase tracking-wider">512px</span>
+            </button>
           </div>
 
           {/* 5. Switch Portal / Exit Desk (Only when inside workspace) */}

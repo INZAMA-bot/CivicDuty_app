@@ -431,17 +431,17 @@ export const FeedView: React.FC = () => {
                 <PostCardComponent post={p} rankIndex={feedTab === 'trending' ? i : null} />
                 {i === 1 && activePromotionalAds[0] && (
                   <div className="my-2 px-0 sm:px-3">
-                    <PromotionalAdFeedCard ad={activePromotionalAds[0]} />
+                    <PromotionalAdFeedCard ad={activePromotionalAds[0]} defaultIndex={0} />
                   </div>
                 )}
                 {i === 4 && activePromotionalAds[1] && (
                   <div className="my-2 px-0 sm:px-3">
-                    <PromotionalAdFeedCard ad={activePromotionalAds[1]} />
+                    <PromotionalAdFeedCard ad={activePromotionalAds[1]} defaultIndex={1} />
                   </div>
                 )}
                 {i === 7 && activePromotionalAds[2] && (
                   <div className="my-2 px-0 sm:px-3">
-                    <PromotionalAdFeedCard ad={activePromotionalAds[2]} />
+                    <PromotionalAdFeedCard ad={activePromotionalAds[2]} defaultIndex={2} />
                   </div>
                 )}
               </React.Fragment>

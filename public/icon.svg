@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgGlowM" cx="50%" cy="54%" r="55%">
+      <stop offset="0%" stop-color="#064E3B" stop-opacity="0.6" />
+      <stop offset="70%" stop-color="#090D16" stop-opacity="1" />
+      <stop offset="100%" stop-color="#06090F" stop-opacity="1" />
+    </radialGradient>
+    <linearGradient id="emeraldRingM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="50%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="coreFillM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#065F46" />
+      <stop offset="100%" stop-color="#042F2E" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full-Bleed Maskable Canvas (Android Safe Zone Compliant) -->
+  <rect width="512" height="512" fill="url(#bgGlowM)" />
+
+  <!-- Top 3-Signal Pips inside 80% Safe Zone -->
+  <circle cx="222" cy="108" r="9.5" fill="#EF4444" />
+  <circle cx="256" cy="108" r="9.5" fill="#F59E0B" />
+  <circle cx="290" cy="108" r="9.5" fill="#10B981" />
+
+  <!-- Safe-Zone Centered Sovereign Green Checkmark Beacon -->
+  <circle cx="256" cy="276" r="126" fill="url(#coreFillM)" stroke="url(#emeraldRingM)" stroke-width="24" />
+  <path
+    d="M 200 278 L 239 317 L 315 234"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="29"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

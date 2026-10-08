@@ -276,45 +276,25 @@ export const DeptWallView: React.FC = () => {
     <div className="animate-fade-in pb-24 max-w-4xl mx-auto text-slate-900 dark:text-slate-100">
       {/* Top Navigation & Studio Profile Header */}
       <div className="px-4 pt-4 pb-4 bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36]">
-        <button
-          onClick={() => go('departments')}
-          className="flex items-center gap-1 text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 mb-3 transition-colors cursor-pointer"
-        >
-          <ChevronLeft size={15} />
-          <span>Back to Service Registry</span>
-        </button>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => go('depts')}
+            className="flex items-center gap-1 text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+          >
+            <ChevronLeft size={15} />
+            <span>Back to Service Registry</span>
+          </button>
 
-        <div className="flex items-start justify-between gap-3.5 mb-4">
-          <div className="flex items-start gap-3.5 min-w-0 flex-1">
-            <div className="w-14 h-14 rounded-lg bg-slate-100 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 flex-shrink-0">
-              <DeptIcon dept={d} size={26} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h2 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white leading-tight">
-                  {d.name}
-                </h2>
-                {isConsumer ? (
-                  <span className="chip ch-private text-[9px]">Verified Private Utility</span>
-                ) : (
-                  <span className="chip ch-gov text-[9px]">Sovereign Desk</span>
-                )}
-              </div>
-              <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">{d.full}</p>
-              {d.ministry && <p className="text-[10px] mono text-slate-600 dark:text-slate-400 mt-0.5 font-bold">{d.ministry}</p>}
-            </div>
-          </div>
-
-          {/* Wall Aligned Action Buttons */}
-          <div className="shrink-0 pt-0.5 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setShowPlacardModal(true)}
-              className="px-3 py-2 rounded-xl text-xs mono font-black bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 shadow-2xs cursor-pointer transition active:scale-95"
+              className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-semibold bg-[#f8f9fa] hover:bg-[#f1f3f4] dark:bg-[#0e1116] dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1.5 cursor-pointer transition-colors"
               title="Download or Print Counter QR Placard for Reception Desk"
             >
-              <QrCode size={14} className="text-amber-500" />
-              <span>Counter QR Placard</span>
+              <QrCode size={13} className="text-amber-500" />
+              <span>QR Placard</span>
             </button>
 
             <button
@@ -327,17 +307,41 @@ export const DeptWallView: React.FC = () => {
                 setUser({ ...activeU, followed: updated });
                 toast(isF ? `Removed ${d.name} from My Stake` : `Added ${d.name} to My Stake`, 'emerald');
               }}
-              className={`px-3.5 py-2 rounded-xl text-xs mono font-black border transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-semibold border transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 (user?.followed || []).includes(did)
-                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-600 dark:border-amber-400 shadow-amber-500/25 ring-2 ring-amber-400/40'
-                  : 'bg-amber-50/90 hover:bg-amber-100 text-amber-950 dark:bg-amber-950/40 dark:text-amber-300 border-amber-300 dark:border-amber-700/80 hover:border-amber-400'
+                  ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40'
+                  : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-200 border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500/50'
               }`}
               title={(user?.followed || []).includes(did) ? 'Pinned to your monitored stake watchlist' : 'Pin to your monitored stake watchlist'}
               aria-label={(user?.followed || []).includes(did) ? `Remove ${d.name} from My Stake` : `Add ${d.name} to My Stake`}
             >
-              <Bookmark size={13} className={(user?.followed || []).includes(did) ? 'fill-current text-slate-950' : 'text-amber-700 dark:text-amber-400'} />
-              <span>{(user?.followed || []).includes(did) ? 'In My Stake' : '+ My Stake'}</span>
+              <Bookmark size={12} className={(user?.followed || []).includes(did) ? 'fill-current text-amber-500' : 'text-slate-400'} />
+              <span>{(user?.followed || []).includes(did) ? 'Staked' : '+ Stake'}</span>
             </button>
+          </div>
+        </div>
+
+        {/* Full-Width Unobstructed Entity Identity Header */}
+        <div className="flex items-start gap-3.5 mb-4">
+          <div className="w-12 h-12 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0 mt-0.5">
+            <DeptIcon dept={d} size={22} />
+          </div>
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 dark:text-slate-400 flex-wrap">
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold uppercase">
+                {isConsumer ? 'Verified Private Provider' : 'Sovereign Public Desk'}
+              </span>
+              {d.ministry && (
+                <>
+                  <span>·</span>
+                  <span>{d.ministry}</span>
+                </>
+              )}
+            </div>
+            <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
+              {d.name}
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{d.full}</p>
           </div>
         </div>
 
