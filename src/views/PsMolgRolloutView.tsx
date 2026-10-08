@@ -47,7 +47,22 @@ import { SovereignBatchCommissioning } from '../components/SovereignBatchCommiss
 import { getMinistriesForCountry } from '../data/countryMinistries';
 
 export const PsMolgRolloutView: React.FC = () => {
-  const { go, toast, user, selectedCountry, setSelectedCountry, selectedMinistryId, setSelectedMinistryId, teamMembers, addTeamMember, addInvite, logAudit } = useApp();
+  const {
+    go,
+    toast,
+    user,
+    selectedCountry,
+    setSelectedCountry,
+    selectedMinistryId,
+    setSelectedMinistryId,
+    teamMembers,
+    addTeamMember,
+    addInvite,
+    logAudit,
+    govFeedbackMessages,
+    endorseModificationForCdOps,
+    rejectModificationBySuperadmin,
+  } = useApp();
   const [currentCountry, setCurrentCountry] = useState<CountryCode>(selectedCountry || user?.country || 'UG');
   const [activeTab, setActiveTab] = useState<'cascade' | 'batch_mint' | 'districts' | 'inter_ps' | 'circulars' | 'pdm'>('cascade');
   const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
@@ -327,6 +342,82 @@ export const PsMolgRolloutView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* National Superadmin Modification Clearinghouse (Accounting Officer Requests -> PS MoLG -> CD-Ops) */}
+      {(govFeedbackMessages || []).filter(
+        (m) => m.countryCode === currentCountry && m.clearanceStage === 'pending_national_superadmin'
+      ).length > 0 && (
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[10px] font-mono font-bold uppercase">
+                  National Node Head Clearinghouse
+                </span>
+                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                  Sub-National Accounting Officer Modification Requests → {rolloutArrangement.superadminShort || 'PS MoLG'} → CivicDuty CD-Ops
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-1">
+                Accounting Officer App Modification Requests Awaiting Your Endorsement
+              </h3>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {(govFeedbackMessages || [])
+              .filter((m) => m.countryCode === currentCountry && m.clearanceStage === 'pending_national_superadmin')
+              .map((req) => (
+                <div
+                  key={req.id}
+                  className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{req.subject}</span>
+                      <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
+                        {req.senderTitle}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                      Submitted by {req.senderOfficer} · {req.senderMinistry} ({req.timestamp})
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-snug">{req.message}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        rejectModificationBySuperadmin(
+                          req.id,
+                          rolloutArrangement.superadminTitle || 'PS MoLG (National Superadmin)',
+                          'Rejected by National Node Head — covered by existing statutory template.'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-mono font-semibold cursor-pointer"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        endorseModificationForCdOps(
+                          req.id,
+                          rolloutArrangement.superadminTitle || 'PS MoLG (National Superadmin)',
+                          'Vetted & endorsed by National Superadmin for CivicDuty Operatives deployment.'
+                        )
+                      }
+                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer"
+                    >
+                      Approve &amp; Submit to CD-Ops →
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Superadmin Tab Controls */}
       <div className="flex border-b border-slate-300 dark:border-slate-800 gap-2 overflow-x-auto pb-1 text-xs font-black">

@@ -43,9 +43,17 @@ export const GovInboxView: React.FC = () => {
     townHalls,
     setActiveTownHall,
     setHostBarazaModalOpen,
+    govFeedbackMessages,
+    addGovFeedbackMessage,
+    endorseModificationForCdOps,
+    rejectModificationBySuperadmin,
   } = useApp();
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
   const [selectedDupToMerge, setSelectedDupToMerge] = useState<string>('');
+  const [showModRequestForm, setShowModRequestForm] = useState(false);
+  const [modSubject, setModSubject] = useState('');
+  const [modBody, setModBody] = useState('');
+  const [modPriority, setModPriority] = useState<'routine' | 'urgent' | 'statutory_directive'>('routine');
 
   const activeCountry = user?.country || activeDeptCountry || 'UG';
   const countryPerks = getCountryPerks(activeCountry);
@@ -265,6 +273,190 @@ export const GovInboxView: React.FC = () => {
               </button>
             )}
           </div>
+        </div>
+
+        {/* 2-Stage Sovereign App Modification Request & National Node Head Clearinghouse */}
+        <div className="mt-3 p-3 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[8.5px] font-mono font-bold uppercase">
+                  {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
+                    ? 'NATIONAL NODE HEAD CLEARINGHOUSE'
+                    : 'DESK MODIFICATION PROTOCOL'}
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
+                    ? `Direct Bilateral Line to CivicDuty CD-Ops (${countryPerks.countryName})`
+                    : `Routed via ${countryPerks.countryName} National Node Head (e.g. PS MoLG) → CivicDuty CD-Ops`}
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-slate-900 dark:text-white mt-0.5">
+                {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
+                  ? 'Review Accounting Officer Modification Requests & Submit Vetted Directives to CD-Ops'
+                  : 'Request Custom Desk Modifications, SLA Adjustments, or Form Fields'}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowModRequestForm(!showModRequestForm)}
+              className="px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
+            >
+              <Plus size={11} />
+              <span>{showModRequestForm ? 'Close Form' : '+ Request App Modification'}</span>
+            </button>
+          </div>
+
+          {showModRequestForm && (
+            <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5 animate-fade-in">
+              <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+                {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
+                  ? 'As National Superadmin, your modification directive is transmitted directly to CivicDuty Operatives (CD-Ops).'
+                  : `Your request will be sent to the ${countryPerks.countryName} National Node Head (e.g. PS MoLG) for statutory review. Once approved by the National Superadmin, it is forwarded to CivicDuty Operatives (CD-Ops).`}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  value={modSubject}
+                  onChange={(e) => setModSubject(e.target.value)}
+                  placeholder="Modification title (e.g. Add Borehole Serial No. field)..."
+                  className="sm:col-span-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                />
+                <select
+                  value={modPriority}
+                  onChange={(e) => setModPriority(e.target.value as any)}
+                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+                >
+                  <option value="routine">Priority: Routine</option>
+                  <option value="urgent">Priority: Urgent</option>
+                  <option value="statutory_directive">Priority: Statutory</option>
+                </select>
+              </div>
+              <textarea
+                rows={2}
+                value={modBody}
+                onChange={(e) => setModBody(e.target.value)}
+                placeholder="Describe the exact workflow, SLA, or form modification required for your accounting desk..."
+                className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!modSubject.trim() || !modBody.trim()) {
+                      toast('Please enter both a subject and modification description.', 'amber');
+                      return;
+                    }
+                    const isNationalSuperadmin =
+                      user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec';
+                    addGovFeedbackMessage({
+                      id: `MOD-${activeCountry}-${Date.now().toString().slice(-4)}`,
+                      countryCode: activeCountry,
+                      countryName: countryPerks.countryName,
+                      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                      senderMinistry: d.full || d.name,
+                      senderTitle: user.real_title_short || user.role_label || 'Accounting Officer',
+                      senderOfficer: user.name || 'Official Desk Officer',
+                      subject: modSubject.trim(),
+                      message: modBody.trim(),
+                      priority: modPriority,
+                      status: 'sent',
+                      clearanceStage: isNationalSuperadmin
+                        ? 'escalated_to_cd_ops'
+                        : 'pending_national_superadmin',
+                      nationalSuperadminTitle: `National Superadmin (${countryPerks.countryName} Node Head)`,
+                      ...(isNationalSuperadmin
+                        ? {
+                            endorsedBySuperadmin: user.name || 'National Superadmin',
+                            endorsedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                          }
+                        : {}),
+                    });
+                    setModSubject('');
+                    setModBody('');
+                    setShowModRequestForm(false);
+                    toast(
+                      isNationalSuperadmin
+                        ? 'National Directive transmitted directly to CivicDuty Operatives (CD-Ops)!'
+                        : `Modification request submitted to ${countryPerks.countryName} National Node Head for vetting!`,
+                      'emerald'
+                    );
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Send size={12} />
+                  <span>
+                    {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
+                      ? 'Submit Directly to CivicDuty CD-Ops'
+                      : 'Submit to National Node Head (PS MoLG)'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* National Superadmin Clearinghouse Queue (Visible to National Node Head / Superadmin) */}
+          {(user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec') &&
+            (govFeedbackMessages || []).filter(
+              (m) => m.countryCode === activeCountry && m.clearanceStage === 'pending_national_superadmin'
+            ).length > 0 && (
+              <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-wider font-bold text-amber-600 dark:text-amber-400">
+                  Pending Accounting Officer Modification Requests Awaiting Your Endorsement
+                </div>
+                {(govFeedbackMessages || [])
+                  .filter(
+                    (m) => m.countryCode === activeCountry && m.clearanceStage === 'pending_national_superadmin'
+                  )
+                  .map((req) => (
+                    <div
+                      key={req.id}
+                      className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {req.subject}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          From: {req.senderOfficer} ({req.senderTitle} · {req.senderMinistry})
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2">
+                          {req.message}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            rejectModificationBySuperadmin(
+                              req.id,
+                              user.name || 'National Superadmin',
+                              'Rejected by National Node Head — covered by existing statutory template.'
+                            )
+                          }
+                          className="px-2.5 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-mono font-semibold cursor-pointer"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            endorseModificationForCdOps(
+                              req.id,
+                              user.name || 'PS MoLG (National Superadmin)',
+                              'Vetted and endorsed by National Superadmin for CD-Ops deployment.'
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-semibold cursor-pointer"
+                        >
+                          Approve &amp; Send to CD-Ops →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
         </div>
 
         {canInvite && (

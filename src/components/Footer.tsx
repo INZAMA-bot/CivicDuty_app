@@ -123,10 +123,10 @@ export const Footer: React.FC<FooterProps> = ({ isSplash = false }) => {
               type="button"
               onClick={() => go('company_management')}
               className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors flex items-center gap-1 cursor-pointer font-medium py-1"
-              title="Restricted CivicDuty Internal Ops & Tenancy"
+              title="Open Launch Countdown & Restricted CivicDuty Internal Ops (CD-Ops)"
             >
               <Lock size={11} strokeWidth={1.75} />
-              <span>CD-Ops</span>
+              <span>CD-Ops &amp; Launch</span>
             </button>
           </div>
         </div>

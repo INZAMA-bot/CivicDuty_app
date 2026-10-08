@@ -34,6 +34,11 @@ export interface GovFeedbackMessage {
   message: string;
   priority: 'routine' | 'urgent' | 'statutory_directive';
   status: 'sent' | 'reviewed_by_cd_ops' | 'actioned';
+  clearanceStage?: 'pending_national_superadmin' | 'rejected_by_superadmin' | 'escalated_to_cd_ops';
+  nationalSuperadminTitle?: string;
+  endorsedBySuperadmin?: string;
+  endorsedAt?: string;
+  superadminNotes?: string;
   cdOpsResponse?: string;
   respondedAt?: string;
   respondedBy?: string;
@@ -205,6 +210,40 @@ export const INITIAL_PARTNERSHIPS: GovPartnershipRecord[] = [
 ];
 
 export const INITIAL_FEEDBACK_MESSAGES: GovFeedbackMessage[] = [
+  {
+    id: 'MOD-UG-CAO-01',
+    countryCode: 'UG',
+    countryName: 'Uganda',
+    timestamp: '2026-10-07 09:15',
+    senderMinistry: 'Gulu District Local Government',
+    senderTitle: 'Chief Administrative Officer (CAO)',
+    senderOfficer: 'Innocent Asaba Birekeyaho',
+    senderEmail: 'cao@gulu.go.ug',
+    senderPhone: '+256 772 410 892',
+    subject: 'Add DDEG Culvert & Borehole Serial Number Field on District Works Resolution Form',
+    message: 'Requesting a modification on the District Works resolution screen to include a mandatory Borehole/Culvert Serial Number field before Parish Chiefs can mark water tickets as resolved.',
+    priority: 'urgent',
+    status: 'sent',
+    clearanceStage: 'pending_national_superadmin',
+    nationalSuperadminTitle: 'Permanent Secretary, Ministry of Local Government (PS MoLG)',
+  },
+  {
+    id: 'MOD-UG-TC-02',
+    countryCode: 'UG',
+    countryName: 'Uganda',
+    timestamp: '2026-10-07 10:40',
+    senderMinistry: 'Mbarara City Council',
+    senderTitle: 'City Town Clerk',
+    senderOfficer: 'Assy Abireebe Tumwesigire',
+    senderEmail: 'townclerk@mbararacity.go.ug',
+    senderPhone: '+256 782 901 114',
+    subject: 'Custom Streetlight Solar Battery Telemetry Tag for Municipal Ward Desks',
+    message: 'We need a dedicated sub-tag under Power/Infrastructure for Municipal Solar Streetlight Battery replacements so Ward Administrators can track contractor warranty claims separately from grid outages.',
+    priority: 'routine',
+    status: 'sent',
+    clearanceStage: 'pending_national_superadmin',
+    nationalSuperadminTitle: 'Permanent Secretary, Ministry of Local Government (PS MoLG)',
+  },
   {
     id: 'FDBK-UG-01',
     countryCode: 'UG',

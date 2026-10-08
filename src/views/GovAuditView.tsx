@@ -3,31 +3,22 @@ import { useApp } from '../context/AppContext';
 import { getDept, timeAgo, csvEscape } from '../utils/helpers';
 import {
   Download,
-  Check,
   ShieldCheck,
   Search,
-  Filter,
   Lock,
   Scale,
-  Building2,
   FileCheck,
   CheckCircle2,
   Clock,
   ShieldAlert,
-  Layers,
   Activity,
-  AlertTriangle,
   FileText,
-  Copy,
-  ExternalLink,
-  ChevronRight,
   Eye,
   RefreshCw,
-  Award,
   Hash,
-  X
+  X,
+  ArrowUpRight,
 } from 'lucide-react';
-import { NoteBox } from '../components/NoteBox';
 import { COUNTRIES } from '../data/countries';
 import { AuditEntry, OfficialQuery } from '../types';
 import { OfficialQueryDossierModal } from '../components/OfficialQueryDossierModal';
@@ -141,10 +132,12 @@ const COUNTRY_AUDIT_SPECS: Record<string, AuditSpec> = {
 };
 
 export const GovAuditView: React.FC = () => {
-  const { user, audit, officialQueries, toast } = useApp();
+  const { user, audit, officialQueries, toast, go, setVerifyTarget } = useApp();
 
   // Audit suite pages: 1: action_ledger, 2: crypto_chain, 3: statutory_dossier, 4: queries_trail, 5: telemetry
-  const [activePage, setActivePage] = useState<'action_ledger' | 'crypto_chain' | 'statutory_dossier' | 'queries_trail' | 'telemetry'>('action_ledger');
+  const [activePage, setActivePage] = useState<
+    'action_ledger' | 'crypto_chain' | 'statutory_dossier' | 'queries_trail' | 'telemetry'
+  >('action_ledger');
 
   // Page 1 filter states
   const [filterType, setFilterType] = useState<string>('all');
@@ -153,17 +146,26 @@ export const GovAuditView: React.FC = () => {
 
   // Page 2 verification engine state
   const [isVerifyingChain, setIsVerifyingChain] = useState<boolean>(false);
-  const [verificationResult, setVerificationResult] = useState<{ verified: boolean; checkedCount: number; timestamp: string } | null>(null);
+  const [verificationResult, setVerificationResult] = useState<{
+    verified: boolean;
+    checkedCount: number;
+    timestamp: string;
+  } | null>(null);
 
   // Page 4 dossier modal state
   const [selectedDossierQuery, setSelectedDossierQuery] = useState<OfficialQuery | null>(null);
-  const [queryStatusFilter, setQueryStatusFilter] = useState<'all' | 'pending' | 'review' | 'resolved' | 'sanctions'>('all');
+  const [queryStatusFilter, setQueryStatusFilter] = useState<
+    'all' | 'pending' | 'review' | 'resolved' | 'sanctions'
+  >('all');
 
   if (!user) return null;
 
   const countryCode = user.country || 'UG';
   const countryObj = COUNTRIES[countryCode] || COUNTRIES['UG'];
-  const d = getDept(countryCode, user.dept || (countryCode === 'KE' ? 'kplc' : countryCode === 'RW' ? 'reg' : countryCode === 'GH' ? 'ecg' : 'kcca'));
+  const d = getDept(
+    countryCode,
+    user.dept || (countryCode === 'KE' ? 'kplc' : countryCode === 'RW' ? 'reg' : countryCode === 'GH' ? 'ecg' : 'kcca')
+  );
 
   const auditSpec: AuditSpec = COUNTRY_AUDIT_SPECS[countryCode] || {
     agency: `${countryObj.name} Anti-Corruption Oversight Bureau`,
@@ -196,6 +198,9 @@ export const GovAuditView: React.FC = () => {
       citizen_ratification: 'Citizen Ratified Resolution',
       dispute_reopen: 'Citizen Dispute Re-opened',
       sla_auto_escalation: 'Statutory SLA Auto-Escalated',
+      endorse_modification_cd_ops: 'National Node Head Endorsed App Modification → CD-Ops',
+      reject_modification_superadmin: 'National Node Head Rejected Modification Request',
+      gov_login: 'Official Desk Authenticated',
     };
     return map[a] || String(a).replace(/_/g, ' ');
   };
@@ -210,14 +215,19 @@ export const GovAuditView: React.FC = () => {
 
   const filteredAudit = useMemo(() => {
     return countryAudit.filter((entry) => {
-      // Action Type filter
       if (filterType === 'queries' && !entry.action.includes('query')) return false;
       if (filterType === 'replies' && entry.action !== 'reply') return false;
       if (filterType === 'resolutions' && entry.action !== 'resolve') return false;
       if (filterType === 'escalations' && !entry.action.includes('escalat')) return false;
-      if (filterType === 'desks' && !['deactivate', 'reactivate', 'invite_member', 'bulk_invite', 'open_project_wall'].includes(entry.action)) return false;
+      if (filterType === 'modifications' && !entry.action.includes('modification')) return false;
+      if (
+        filterType === 'desks' &&
+        !['deactivate', 'reactivate', 'invite_member', 'bulk_invite', 'open_project_wall', 'gov_login'].includes(
+          entry.action
+        )
+      )
+        return false;
 
-      // Search Query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchActor = entry.actor_name?.toLowerCase().includes(q);
@@ -232,7 +242,19 @@ export const GovAuditView: React.FC = () => {
   }, [countryAudit, filterType, searchQuery]);
 
   const toAuditCsv = (rows: typeof audit) => {
-    const header = ['Timestamp', 'Country Code', 'Jurisdiction Node', 'Department', 'Action', 'Actor Title', 'Actor Role', 'Ticket ID / Ref', 'Audit Hash', 'Tamper Seal', 'Audit Detail'].join(',');
+    const header = [
+      'Timestamp',
+      'Country Code',
+      'Jurisdiction Node',
+      'Department',
+      'Action',
+      'Actor Title',
+      'Actor Role',
+      'Ticket ID / Ref',
+      'Audit Hash',
+      'Tamper Seal',
+      'Audit Detail',
+    ].join(',');
     return [
       header,
       ...rows.map((e) =>
@@ -326,38 +348,39 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
         timestamp: new Date().toLocaleTimeString(),
       });
       toast(`Cryptographic chain verification complete: ${countryAudit.length} records 100% verified.`, 'emerald');
-    }, 1200);
+    }, 900);
   };
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto pb-16 animate-fade-in">
-      {/* TOP STATUTORY HEADER */}
-      <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-teal-600 rounded-2xl text-white shadow-sm">
-              <Lock size={26} />
+    <div className="px-3.5 sm:px-5 pt-4 pb-16 max-w-5xl mx-auto space-y-4 animate-fade-in text-slate-900 dark:text-slate-100">
+      {/* TOP STATUTORY STUDIO HEADER */}
+      <div className="bg-white dark:bg-[#161a22] rounded-xl p-4 sm:p-5 border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/25 rounded-xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+              <Lock size={20} strokeWidth={1.75} />
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                  Cryptographic Non-Repudiation
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  SHA-256 NON-REPUDIATION LEDGER
                 </span>
-                <span className="text-xs mono text-slate-400">
-                  [{countryCode}] · {countryObj.node}
+                <span aria-hidden="true">·</span>
+                <span>
+                  [{countryCode}] {countryObj.name} ({countryObj.node})
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
-                National Governance Audit Suite
-              </h2>
+              <h1 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                National Governance &amp; Forensic Audit Suite
+              </h1>
             </div>
           </div>
 
           {/* Header Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
               onClick={exportAuditCsv}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all"
+              className="px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-slate-700 dark:text-slate-200 text-xs font-mono font-semibold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Download size={13} />
               <span>Export CSV</span>
@@ -365,7 +388,7 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
 
             <button
               onClick={generateAuditCertificate}
-              className="px-3 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <FileCheck size={13} />
               <span>Compliance Certificate</span>
@@ -374,12 +397,12 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
         </div>
 
         {/* 5-PAGE MULTI-TAB NAVIGATION */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-slate-800 pb-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-3 border-t border-[#e3e6ea] dark:border-[#262b36]">
           {[
-            { id: 'action_ledger', label: '1. Action Ledger', icon: FileText, badge: countryAudit.length },
+            { id: 'action_ledger', label: `1. Action Ledger (${countryAudit.length})`, icon: FileText },
             { id: 'crypto_chain', label: '2. Cryptographic Proof', icon: Hash },
             { id: 'statutory_dossier', label: '3. Legal & Whistleblower', icon: Scale },
-            { id: 'queries_trail', label: '4. Official Queries', icon: ShieldAlert, badge: countryQueries.length },
+            { id: 'queries_trail', label: `4. Official Queries (${countryQueries.length})`, icon: ShieldAlert },
             { id: 'telemetry', label: '5. Node Telemetry', icon: Activity },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -388,21 +411,14 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
               <button
                 key={tab.id}
                 onClick={() => setActivePage(tab.id as any)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap ${
+                className={`px-3 py-2 rounded-lg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer border ${
                   isActive
-                    ? 'bg-teal-500 text-slate-950 shadow-md font-black'
-                    : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700/50'
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
                 }`}
               >
-                <Icon size={14} />
+                <Icon size={13} />
                 <span>{tab.label}</span>
-                {tab.badge !== undefined && (
-                  <span className={`text-[10px] mono px-1.5 py-0.2 rounded-full font-black ${
-                    isActive ? 'bg-slate-950 text-teal-300' : 'bg-slate-700 text-slate-300'
-                  }`}>
-                    {tab.badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -414,57 +430,62 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
         <div className="space-y-4 animate-fade-in">
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-            <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-              <span className="text-[10px] font-bold text-slate-500 block uppercase">Total Verified Events</span>
-              <span className="text-lg font-black text-slate-900 dark:text-white">{countryAudit.length}</span>
+            <div className="p-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
+              <span className="text-[10px] font-mono text-slate-500 block uppercase">Verified Events</span>
+              <span className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-0.5 block">
+                {countryAudit.length}
+              </span>
             </div>
-            <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-              <span className="text-[10px] font-bold text-rose-600 block uppercase">Official Queries Logged</span>
-              <span className="text-lg font-black text-rose-600">
+            <div className="p-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
+              <span className="text-[10px] font-mono text-slate-500 block uppercase">Official Queries</span>
+              <span className="text-lg font-bold font-mono text-rose-600 dark:text-rose-400 mt-0.5 block">
                 {countryAudit.filter((e) => e.action.includes('query')).length}
               </span>
             </div>
-            <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-              <span className="text-[10px] font-bold text-teal-600 block uppercase">Verified Resolutions</span>
-              <span className="text-lg font-black text-teal-600">
+            <div className="p-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
+              <span className="text-[10px] font-mono text-slate-500 block uppercase">Resolutions Sealed</span>
+              <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block">
                 {countryAudit.filter((e) => e.action === 'resolve').length}
               </span>
             </div>
-            <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-              <span className="text-[10px] font-bold text-emerald-600 block uppercase">Immutability Index</span>
-              <span className="text-lg font-black text-emerald-600">100% Intact</span>
+            <div className="p-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
+              <span className="text-[10px] font-mono text-slate-500 block uppercase">Chain Integrity</span>
+              <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                100% Intact
+              </span>
             </div>
           </div>
 
           {/* Search & Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-            <div className="relative flex-1">
+          <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+            <div className="relative">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search action, actor, ticket ref, or hash stamp..."
-                className="w-full bg-white dark:bg-slate-900 pl-8 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                placeholder="Search action, actor, ticket ref, or SHA-256 hash stamp..."
+                className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] pl-8 pr-3 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs">
               {[
                 { id: 'all', label: 'All Events' },
                 { id: 'queries', label: 'Official Queries' },
                 { id: 'resolutions', label: 'Resolutions' },
                 { id: 'replies', label: 'Official Replies' },
                 { id: 'escalations', label: 'SLA Escalations' },
-                { id: 'desks', label: 'Desk Administration' },
+                { id: 'modifications', label: 'Node Head Vetting' },
+                { id: 'desks', label: 'Desk Auth & Admin' },
               ].map((f) => (
                 <button
                   key={f.id}
                   onClick={() => setFilterType(f.id)}
-                  className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs whitespace-nowrap ${
+                  className={`px-2.5 py-1.5 rounded-lg font-mono font-semibold transition-colors text-[11px] whitespace-nowrap cursor-pointer border ${
                     filterType === f.id
-                      ? 'bg-teal-600 text-white shadow-2xs'
-                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
                   }`}
                 >
                   {f.label}
@@ -476,71 +497,78 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
           {/* Action Ledger List */}
           <div className="space-y-2">
             {filteredAudit.length === 0 ? (
-              <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <CheckCircle2 size={32} className="text-teal-500 mx-auto" />
-                <h4 className="text-sm font-black text-slate-800 dark:text-slate-200">
+              <div className="p-10 text-center bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <CheckCircle2 size={28} className="text-emerald-500 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                   No Audit Entries Matching Filter
                 </h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  All logged transactions remain cryptographically sealed. Adjust search query or filter pills to view records.
+                  All logged transactions remain cryptographically sealed. Adjust search query or filter tabs to view records.
                 </p>
               </div>
             ) : (
-              filteredAudit.map((entry, idx) => (
-                <div
-                  key={`${entry.id}-${idx}`}
-                  className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-teal-500/50 transition-all space-y-2 text-xs shadow-2xs"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded-lg text-[9.5px] font-black uppercase ${
-                        entry.action.includes('query')
-                          ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300'
-                          : entry.action === 'resolve'
-                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                          : entry.action.includes('escalat')
-                          ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}>
-                        {auditActionLabel(entry.action)}
-                      </span>
-                      {entry.ticket_id && entry.ticket_id !== '—' && (
-                        <span className="mono text-[9.5px] font-bold text-teal-800 dark:text-teal-300 bg-teal-500/10 px-2 py-0.2 rounded border border-teal-500/20">
-                          {entry.ticket_id}
+              filteredAudit.map((entry, idx) => {
+                const entryHash = entry.hash || `SHA256-CD-${countryCode}-${entry.id.slice(-6)}`;
+                return (
+                  <div
+                    key={`${entry.id}-${idx}`}
+                    className="p-3.5 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/50 transition-colors space-y-2 text-xs"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap font-mono text-[11px]">
+                        <span
+                          className={`font-bold uppercase ${
+                            entry.action.includes('query')
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : entry.action === 'resolve'
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : entry.action.includes('escalat')
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-slate-900 dark:text-white'
+                          }`}
+                        >
+                          {auditActionLabel(entry.action)}
                         </span>
-                      )}
-                    </div>
+                        {entry.ticket_id && entry.ticket_id !== '—' && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-700">·</span>
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                              Ref: {entry.ticket_id}
+                            </span>
+                          </>
+                        )}
+                      </div>
 
-                    <span className="text-[10px] mono text-slate-400 flex items-center gap-1">
-                      <Clock size={11} /> {timeAgo(entry.ts)}
-                    </span>
-                  </div>
-
-                  <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-                    {entry.detail}
-                  </p>
-
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[9.5px] mono text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <span>Actor: <strong className="text-slate-700 dark:text-slate-300">{entry.actor_name}</strong></span>
-                      <span>({entry.actor_role})</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="text-slate-400">
-                        {entry.hash || `SHA256-CD-${countryCode}-${entry.id.slice(-6)}`}
+                      <span className="text-[10.5px] font-mono text-slate-500 flex items-center gap-1 shrink-0">
+                        <Clock size={11} /> {timeAgo(entry.ts)}
                       </span>
-                      <button
-                        onClick={() => setSelectedAuditEntry(entry)}
-                        className="text-teal-600 dark:text-teal-400 font-bold hover:underline flex items-center gap-0.5"
-                      >
-                        <Eye size={10} />
-                        <span>Inspect</span>
-                      </button>
+                    </div>
+
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                      {entry.detail}
+                    </p>
+
+                    <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-mono text-slate-500">
+                      <div className="flex items-center gap-1.5">
+                        <span>Actor:</span>
+                        <strong className="text-slate-800 dark:text-slate-200">{entry.actor_name}</strong>
+                        <span>({entry.actor_role})</span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-400">{entryHash}</span>
+                        <button
+                          onClick={() => setSelectedAuditEntry(entry)}
+                          className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye size={11} />
+                          <span>Inspect Record</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -549,84 +577,107 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
       {/* PAGE 2: CRYPTOGRAPHIC CHAIN & NODE INTEGRITY */}
       {activePage === 'crypto_chain' && (
         <div className="space-y-4 animate-fade-in text-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="bg-white dark:bg-[#161a22] rounded-xl p-4 sm:p-5 border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                   Cryptographic Merkle Chain &amp; Block Verification
                 </h3>
                 <p className="text-slate-500 text-xs mt-0.5">
-                  Every civic interaction, status change, and administrative query generates an SHA-256 state seal.
+                  Every civic interaction, status change, and administrative query generates an immutable SHA-256 state seal.
                 </p>
               </div>
 
               <button
                 onClick={handleRunCryptographicVerification}
                 disabled={isVerifyingChain}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition-all shadow-sm disabled:opacity-50"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg text-xs flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shrink-0"
               >
                 <RefreshCw size={13} className={isVerifyingChain ? 'animate-spin' : ''} />
                 <span>{isVerifyingChain ? 'Verifying Block Hashes...' : 'Run Integrity Scan'}</span>
               </button>
             </div>
 
-            {/* Verification Banner */}
             {verificationResult && (
-              <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-2xl flex items-center justify-between">
+              <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200">
-                  <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
                   <div>
-                    <strong>Chain Integrity 100% Intact:</strong> Scanned {verificationResult.checkedCount} block records. Zero discrepancies, zero modifications, zero retrospective tampering detected.
+                    <strong>Chain Integrity 100% Intact:</strong> Scanned {verificationResult.checkedCount} block records. Zero discrepancies or retrospective tampering detected.
                   </div>
                 </div>
-                <span className="text-[10px] mono font-bold text-emerald-700 dark:text-emerald-400">
+                <span className="text-[10.5px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
                   Verified at {verificationResult.timestamp}
                 </span>
               </div>
             )}
 
-            {/* State Characteristics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">Chain Block Height</span>
-                <span className="text-xl font-black text-slate-900 dark:text-white mono">#{countryAudit.length + 1042}</span>
-                <span className="text-[10px] text-slate-500 block">Blocks appended consecutively</span>
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">Chain Block Height</span>
+                <span className="text-lg font-bold text-slate-900 dark:text-white font-mono block">
+                  #{countryAudit.length + 1042}
+                </span>
+                <span className="text-[10.5px] text-slate-500 block">Blocks appended consecutively</span>
               </div>
 
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">State Root Hash</span>
-                <span className="text-xs font-black text-teal-700 dark:text-teal-400 mono block truncate">
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">State Root Hash</span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono block truncate">
                   SHA256-ROOT-{countryCode}-7FA94E28B10C
                 </span>
-                <span className="text-[10px] text-slate-500 block">Salted cryptographic state</span>
+                <span className="text-[10.5px] text-slate-500 block">Salted cryptographic state</span>
               </div>
 
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">Non-Repudiation Guarantee</span>
-                <span className="text-xs font-black text-emerald-600 uppercase block">Auditor General Certified</span>
-                <span className="text-[10px] text-slate-500 block">Forensic admissibility compliant</span>
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">Non-Repudiation Status</span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase block">
+                  Auditor General Certified
+                </span>
+                <span className="text-[10.5px] text-slate-500 block">Forensic admissibility compliant</span>
               </div>
             </div>
 
-            {/* Consecutive Chain Sample */}
             <div className="space-y-2">
-              <h4 className="text-xs font-black uppercase text-slate-700 dark:text-slate-300">
-                Live Consecutive Block Sequence (Sample)
-              </h4>
-              <div className="space-y-1.5 mono text-[10px]">
-                {countryAudit.slice(0, 5).map((e, idx) => (
-                  <div
-                    key={e.id}
-                    className="p-2.5 bg-slate-50 dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between text-slate-700 dark:text-slate-300"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-teal-600 dark:text-teal-400 font-bold">BLK #{1042 - idx}</span>
-                      <span className="text-slate-400">|</span>
-                      <span>{e.hash || `SHA256-CD-${countryCode}-${e.id.slice(-6)}`}</span>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-mono font-bold uppercase text-slate-700 dark:text-slate-300">
+                  Live Consecutive Block Sequence
+                </h4>
+                <button
+                  onClick={() => go('verify')}
+                  className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Open Public Seal Verifier</span>
+                  <ArrowUpRight size={12} />
+                </button>
+              </div>
+              <div className="space-y-1.5 font-mono text-[10.5px]">
+                {countryAudit.slice(0, 6).map((e, idx) => {
+                  const h = e.hash || `SHA256-CD-${countryCode}-${e.id.slice(-6)}`;
+                  return (
+                    <div
+                      key={e.id}
+                      className="p-2.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-slate-700 dark:text-slate-300"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                          BLK #{1042 - idx}
+                        </span>
+                        <span className="text-slate-400">·</span>
+                        <span className="truncate">{h}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setVerifyTarget(e.ticket_id && e.ticket_id !== '—' ? e.ticket_id : h);
+                          go('verify');
+                        }}
+                        className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline shrink-0 cursor-pointer"
+                      >
+                        VERIFY_SEAL →
+                      </button>
                     </div>
-                    <span className="text-emerald-600 font-bold">VERIFIED_CHAIN</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -636,28 +687,27 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
       {/* PAGE 3: STATUTORY AUTHORITY & WHISTLEBLOWER PROTECTIONS */}
       {activePage === 'statutory_dossier' && (
         <div className="space-y-4 animate-fade-in text-xs">
-          {/* Statutory Matrix Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="p-2.5 bg-teal-600 text-white rounded-2xl">
-                <Scale size={22} />
+          <div className="bg-white dark:bg-[#161a22] rounded-xl p-4 sm:p-5 border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+            <div className="flex items-center gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div className="w-9 h-9 bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center shrink-0">
+                <Scale size={18} />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
-                  National Legal &amp; Anti-Corruption Oversight Framework
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  National Legal &amp; Anti-Corruption Oversight Framework ({countryObj.name})
                 </h3>
                 <p className="text-slate-500 text-xs">
-                  Statutory mandates governing transparency, citizen petitioning, and administrative accountability in {countryObj.name}.
+                  Statutory mandates governing transparency, citizen petitioning, and administrative accountability.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">
                   Primary Anti-Corruption Oversight Body
                 </span>
-                <strong className="text-sm font-black text-slate-900 dark:text-white block">
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block">
                   {auditSpec.agency}
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400 text-xs">
@@ -665,11 +715,11 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">
                   Supreme Audit Institution
                 </span>
-                <strong className="text-sm font-black text-slate-900 dark:text-white block">
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block">
                   {auditSpec.auditor}
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400 text-xs">
@@ -677,11 +727,11 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">
                   Specialized Judicial Bench
                 </span>
-                <strong className="text-sm font-black text-slate-900 dark:text-white block">
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block">
                   {auditSpec.court}
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400 text-xs">
@@ -689,11 +739,11 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                 </p>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block">
                   Governing Statutory Code
                 </span>
-                <strong className="text-sm font-black text-slate-900 dark:text-white block">
+                <strong className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white block">
                   {auditSpec.act}
                 </strong>
                 <p className="text-slate-600 dark:text-slate-400 text-xs">
@@ -702,18 +752,17 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
               </div>
             </div>
 
-            {/* Whistleblower Anonymity Guarantee */}
-            <div className="p-4 bg-teal-50 dark:bg-teal-950/40 border border-teal-300 dark:border-teal-800 rounded-2xl space-y-2">
-              <div className="flex items-center gap-2 text-teal-900 dark:text-teal-200">
-                <ShieldCheck size={18} className="text-teal-600" />
-                <h4 className="font-black text-xs uppercase tracking-wider">
-                  Whistleblower Anonymity &amp; Protection Shield
+            <div className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/30 rounded-lg space-y-2">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                <ShieldCheck size={16} />
+                <h4 className="font-bold text-xs uppercase font-mono">
+                  Whistleblower Anonymity &amp; Zero-Knowledge Protection Shield
                 </h4>
               </div>
               <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                In compliance with <strong>{auditSpec.whistleblowerAct}</strong>, reports originating from citizen observers undergo irreversible SHA-256 identity obfuscation before transmission to departmental dispatchers. Substantive officers cannot access citizen biometric or personal phone telemetry, preventing reprisal or administrative harassment.
+                In compliance with <strong>{auditSpec.whistleblowerAct}</strong>, reports originating from citizen observers undergo irreversible SHA-256 identity obfuscation before transmission to departmental dispatchers. Substantive officers cannot access citizen personal phone telemetry, preventing reprisal or administrative harassment.
               </p>
-              <div className="text-[10.5px] mono text-teal-800 dark:text-teal-300">
+              <div className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400">
                 Subpoena Reference Authority: {auditSpec.subpoenaCode} · Forensic Exemption Verified
               </div>
             </div>
@@ -724,10 +773,10 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
       {/* PAGE 4: ADMINISTRATIVE INQUIRIES & SANCTIONS TRAIL */}
       {activePage === 'queries_trail' && (
         <div className="space-y-4 animate-fade-in text-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="bg-white dark:bg-[#161a22] rounded-xl p-4 sm:p-5 border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
               <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                   Official Administrative Queries &amp; Inquiries Ledger
                 </h3>
                 <p className="text-slate-500 text-xs">
@@ -735,8 +784,7 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                 </p>
               </div>
 
-              {/* Status Filter Buttons */}
-              <div className="flex items-center gap-1.5 overflow-x-auto">
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                 {[
                   { id: 'all', label: 'All Queries' },
                   { id: 'pending', label: 'Pending Response' },
@@ -747,10 +795,10 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                   <button
                     key={f.id}
                     onClick={() => setQueryStatusFilter(f.id as any)}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs whitespace-nowrap ${
+                    className={`px-2.5 py-1.5 rounded-lg font-mono font-semibold transition-colors text-[11px] whitespace-nowrap cursor-pointer border ${
                       queryStatusFilter === f.id
-                        ? 'bg-rose-600 text-white shadow-2xs'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        ? 'bg-rose-600 text-white border-rose-600'
+                        : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
                     }`}
                   >
                     {f.label}
@@ -759,11 +807,10 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
               </div>
             </div>
 
-            {/* Queries List */}
             {countryQueries.length === 0 ? (
-              <div className="p-12 text-center bg-slate-50 dark:bg-slate-850 rounded-2xl space-y-2">
-                <CheckCircle2 size={32} className="text-emerald-500 mx-auto" />
-                <h4 className="text-sm font-black text-slate-800 dark:text-slate-200">
+              <div className="p-10 text-center bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg space-y-2">
+                <CheckCircle2 size={28} className="text-emerald-500 mx-auto" />
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
                   No Official Queries Recorded
                 </h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -777,38 +824,31 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                     if (queryStatusFilter === 'pending' && q.status !== 'pending_response') return false;
                     if (queryStatusFilter === 'review' && q.status !== 'under_review') return false;
                     if (queryStatusFilter === 'resolved' && q.status !== 'resolved_exonerated') return false;
-                    if (queryStatusFilter === 'sanctions' && !['escalated_igg', 'remedial_directive'].includes(q.status)) return false;
+                    if (
+                      queryStatusFilter === 'sanctions' &&
+                      !['escalated_igg', 'remedial_directive'].includes(q.status)
+                    )
+                      return false;
                     return true;
                   })
                   .map((q) => (
                     <div
                       key={q.id}
-                      className="p-4 bg-slate-50 dark:bg-slate-850/80 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5"
+                      className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="mono text-xs font-black text-rose-700 dark:text-rose-400">
-                              {q.queryRef}
-                            </span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                              {q.category.replace(/_/g, ' ').toUpperCase()}
-                            </span>
+                          <div className="flex items-center gap-2 font-mono text-[11px]">
+                            <span className="font-bold text-rose-600 dark:text-rose-400">{q.queryRef}</span>
+                            <span>·</span>
+                            <span className="text-slate-500">{q.category.replace(/_/g, ' ').toUpperCase()}</span>
                           </div>
-                          <h4 className="text-sm font-black text-slate-900 dark:text-white mt-1">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-1">
                             {q.subject}
                           </h4>
                         </div>
 
-                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-xl uppercase ${
-                          q.status === 'resolved_exonerated'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                            : q.status === 'under_review'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                            : q.status === 'pending_response'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                        }`}>
+                        <span className="text-[10.5px] font-mono font-semibold uppercase text-amber-600 dark:text-amber-400">
                           {q.status.replace(/_/g, ' ')}
                         </span>
                       </div>
@@ -820,22 +860,20 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                         </div>
                         <div>
                           <span className="text-slate-500">Target Officer:</span>{' '}
-                          <span className="font-bold text-slate-800 dark:text-slate-200">{q.targetOfficer}</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{q.targetOfficer}</span>
                         </div>
                       </div>
 
-                      <p className="text-slate-700 dark:text-slate-300 font-medium">
-                        {q.grounds}
-                      </p>
+                      <p className="text-slate-700 dark:text-slate-300">{q.grounds}</p>
 
-                      <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
-                        <span className="text-[10px] mono text-slate-400">
+                      <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                        <span className="text-[10.5px] font-mono text-slate-500">
                           Issued by {q.issuerName} ({q.issuerTitle})
                         </span>
 
                         <button
                           onClick={() => setSelectedDossierQuery(q)}
-                          className="py-1 px-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+                          className="py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
                         >
                           <FileText size={12} />
                           <span>View Full Dossier</span>
@@ -852,9 +890,9 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
       {/* PAGE 5: DEPARTMENTAL & JURISDICTIONAL NODE TELEMETRY */}
       {activePage === 'telemetry' && (
         <div className="space-y-4 animate-fade-in text-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-[#161a22] rounded-xl p-4 sm:p-5 border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
             <div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                 Multi-Tier Governance Velocity &amp; Compliance Node Telemetry
               </h3>
               <p className="text-slate-500 text-xs">
@@ -863,42 +901,42 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Tier 1 &amp; 2 (Parish/Sub-County)</span>
-                  <span className="font-black text-teal-600">89.4% SLA</span>
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <div className="flex items-center justify-between font-mono">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Tier 1 &amp; 2 (Grassroots)</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">89.4% SLA</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                  <div className="bg-teal-500 h-full rounded-full" style={{ width: '89.4%' }} />
+                <div className="w-full bg-[#e3e6ea] dark:bg-[#262b36] h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: '89.4%' }} />
                 </div>
-                <div className="text-[10px] text-slate-500">Parish Development Model &amp; Local Grievances</div>
+                <div className="text-[10.5px] text-slate-500">Parish &amp; Sub-County Field Desks</div>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Tier 3 (District Executives)</span>
-                  <span className="font-black text-emerald-600">93.8% SLA</span>
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <div className="flex items-center justify-between font-mono">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Tier 3 (District CAOs)</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">93.8% SLA</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-[#e3e6ea] dark:bg-[#262b36] h-1.5 rounded-full overflow-hidden">
                   <div className="bg-emerald-500 h-full rounded-full" style={{ width: '93.8%' }} />
                 </div>
-                <div className="text-[10px] text-slate-500">Chief Administrative Officer Approvals</div>
+                <div className="text-[10.5px] text-slate-500">Chief Administrative Officer Approvals</div>
               </div>
 
-              <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Tier 4 &amp; 5 (National &amp; Ministries)</span>
-                  <span className="font-black text-blue-600">96.2% SLA</span>
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <div className="flex items-center justify-between font-mono">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Tier 4 &amp; 5 (Ministries)</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">96.2% SLA</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
-                  <div className="bg-blue-500 h-full rounded-full" style={{ width: '96.2%' }} />
+                <div className="w-full bg-[#e3e6ea] dark:bg-[#262b36] h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: '96.2%' }} />
                 </div>
-                <div className="text-[10px] text-slate-500">Inter-Ministerial Harmonization &amp; Grants</div>
+                <div className="text-[10.5px] text-slate-500">Permanent Secretaries &amp; Ombudsman</div>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <h4 className="font-black text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            <div className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+              <h4 className="font-bold text-xs uppercase font-mono text-slate-800 dark:text-slate-200">
                 Top Compliance Desks in Active Jurisdiction
               </h4>
               <div className="space-y-1.5">
@@ -908,14 +946,19 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                   { name: 'Makindye Division Health Inspectorate', score: '92.3%', count: 31, status: 'Compliant' },
                   { name: 'Nakawa Urban Agriculture & CDO Desk', score: '91.0%', count: 24, status: 'Compliant' },
                 ].map((item, i) => (
-                  <div key={i} className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <div
+                    key={i}
+                    className="p-2.5 bg-white dark:bg-[#161a22] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between"
+                  >
                     <div>
                       <strong className="text-slate-900 dark:text-white">{item.name}</strong>
-                      <span className="text-slate-500 text-[10.5px] block">{item.count} verified transactions</span>
+                      <span className="text-slate-500 text-[10.5px] font-mono block">
+                        {item.count} verified transactions
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-emerald-600 font-black">{item.score}</span>
-                      <span className="text-[9.5px] block text-slate-400">{item.status}</span>
+                    <div className="text-right font-mono">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">{item.score}</span>
+                      <span className="text-[10px] block text-slate-500">{item.status}</span>
                     </div>
                   </div>
                 ))}
@@ -927,56 +970,89 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
 
       {/* INSPECT AUDIT ENTRY MODAL */}
       {selectedAuditEntry && (
-        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 border-2 border-teal-500 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
-            <div className="flex items-start justify-between gap-3 border-b border-teal-500/30 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-5 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-teal-600 text-white rounded-xl">
-                  <ShieldCheck size={20} />
+                <div className="w-8 h-8 bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center">
+                  <ShieldCheck size={16} />
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-slate-900 dark:text-white">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                     Forensic Audit Record Inspector
                   </h4>
-                  <p className="text-[11px] mono text-teal-700 dark:text-teal-400">
+                  <p className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400">
                     ID: {selectedAuditEntry.id}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedAuditEntry(null)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 cursor-pointer"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="p-3 bg-slate-50 dark:bg-slate-850 rounded-xl space-y-1">
-                <div><strong>Action:</strong> <span className="capitalize">{auditActionLabel(selectedAuditEntry.action)}</span></div>
-                <div><strong>Actor:</strong> {selectedAuditEntry.actor_name} ({selectedAuditEntry.actor_role})</div>
-                <div><strong>Timestamp:</strong> {selectedAuditEntry.ts} ({timeAgo(selectedAuditEntry.ts)})</div>
-                <div><strong>Reference Code:</strong> {selectedAuditEntry.ticket_id}</div>
+            <div className="space-y-2.5 text-xs">
+              <div className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg space-y-1 font-mono text-[11px]">
+                <div>
+                  <strong>Action:</strong> <span>{auditActionLabel(selectedAuditEntry.action)}</span>
+                </div>
+                <div>
+                  <strong>Actor:</strong> {selectedAuditEntry.actor_name} ({selectedAuditEntry.actor_role})
+                </div>
+                <div>
+                  <strong>Timestamp:</strong> {selectedAuditEntry.ts} ({timeAgo(selectedAuditEntry.ts)})
+                </div>
+                <div>
+                  <strong>Reference Code:</strong> {selectedAuditEntry.ticket_id}
+                </div>
               </div>
 
               <div>
                 <strong className="block mb-1 text-slate-700 dark:text-slate-300">Transaction Content:</strong>
-                <p className="p-3 bg-white dark:bg-slate-850 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
+                <p className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 leading-relaxed">
                   {selectedAuditEntry.detail}
                 </p>
               </div>
 
-              <div className="p-3 bg-teal-50 dark:bg-teal-950/40 border border-teal-300 dark:border-teal-800 rounded-xl space-y-1 mono text-[10px]">
-                <div><strong>Cryptographic Hash:</strong> {selectedAuditEntry.hash || `SHA256-CD-${countryCode}-${selectedAuditEntry.id.slice(-6)}`}</div>
-                <div><strong>Tamper Seal:</strong> {selectedAuditEntry.tamper_seal || 'IMMUTABLE_CHAIN_VERIFIED'}</div>
-                <div><strong>Admissibility:</strong> Admissible under Section 65 Electronic Signatures Act</div>
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-lg space-y-1 font-mono text-[10.5px]">
+                <div>
+                  <strong>Cryptographic Hash:</strong>{' '}
+                  {selectedAuditEntry.hash || `SHA256-CD-${countryCode}-${selectedAuditEntry.id.slice(-6)}`}
+                </div>
+                <div>
+                  <strong>Tamper Seal:</strong> {selectedAuditEntry.tamper_seal || 'IMMUTABLE_CHAIN_VERIFIED'}
+                </div>
+                <div>
+                  <strong>Admissibility:</strong> Electronic Signatures &amp; Public Records Act Compliant
+                </div>
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end">
+            <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  const h =
+                    selectedAuditEntry.hash || `SHA256-CD-${countryCode}-${selectedAuditEntry.id.slice(-6)}`;
+                  setVerifyTarget(
+                    selectedAuditEntry.ticket_id && selectedAuditEntry.ticket_id !== '—'
+                      ? selectedAuditEntry.ticket_id
+                      : h
+                  );
+                  setSelectedAuditEntry(null);
+                  go('verify');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <span>Verify in Public Ledger</span>
+                <ArrowUpRight size={12} />
+              </button>
+
               <button
                 onClick={() => setSelectedAuditEntry(null)}
-                className="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-all"
+                className="px-4 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 rounded-lg text-xs font-mono font-semibold cursor-pointer"
               >
                 Close Inspector
               </button>

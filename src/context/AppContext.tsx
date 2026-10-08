@@ -211,6 +211,8 @@ interface AppContextType {
   ) => void;
   addGovFeedbackMessage: (msg: GovFeedbackMessage) => void;
   updateGovFeedbackPriority: (id: string, priority: 'routine' | 'urgent' | 'statutory_directive') => void;
+  endorseModificationForCdOps: (id: string, superadminName: string, notes?: string) => void;
+  rejectModificationBySuperadmin: (id: string, superadminName: string, reason: string) => void;
   cdOpsStaffList: CdOpsStaffMember[];
   activeCdOpsOperator: CdOpsStaffMember;
   setActiveCdOpsOperator: (op: CdOpsStaffMember) => void;
@@ -2310,6 +2312,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast(`Priority updated for ${id} to ${priority.replace(/_/g, ' ')}.`, 'emerald');
   };
 
+  const endorseModificationForCdOps = (id: string, superadminName: string, notes?: string) => {
+    const updated = govFeedbackMessages.map((m) =>
+      m.id === id
+        ? {
+            ...m,
+            clearanceStage: 'escalated_to_cd_ops' as const,
+            endorsedBySuperadmin: superadminName,
+            endorsedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+            superadminNotes: notes || 'Endorsed by National Superadmin for CivicDuty Operatives implementation.',
+          }
+        : m
+    );
+    setGovFeedbackMessages(updated);
+    try {
+      localStorage.setItem('civicduty_feedback_messages', JSON.stringify(updated));
+    } catch {}
+    logAudit(
+      'superadmin_endorsed_modification',
+      id,
+      `National Superadmin (${superadminName}) approved & escalated modification ${id} to CivicDuty CD-Ops`
+    );
+    toast('Modification approved & escalated to CivicDuty Operatives (CD-Ops)!', 'emerald');
+  };
+
+  const rejectModificationBySuperadmin = (id: string, superadminName: string, reason: string) => {
+    const updated = govFeedbackMessages.map((m) =>
+      m.id === id
+        ? {
+            ...m,
+            clearanceStage: 'rejected_by_superadmin' as const,
+            endorsedBySuperadmin: superadminName,
+            endorsedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+            superadminNotes: reason || 'Returned by National Superadmin — does not align with national statutory template.',
+          }
+        : m
+    );
+    setGovFeedbackMessages(updated);
+    try {
+      localStorage.setItem('civicduty_feedback_messages', JSON.stringify(updated));
+    } catch {}
+    logAudit(
+      'superadmin_rejected_modification',
+      id,
+      `National Superadmin (${superadminName}) rejected modification ${id}: ${reason}`
+    );
+    toast('Modification request rejected and returned to accounting officer.', 'amber');
+  };
+
   const addCdOpsStaff = (staff: CdOpsStaffMember) => {
     const updated = [staff, ...cdOpsStaffList];
     setCdOpsStaffList(updated);
@@ -3245,6 +3295,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         respondToGovFeedback,
         addGovFeedbackMessage,
         updateGovFeedbackPriority,
+        endorseModificationForCdOps,
+        rejectModificationBySuperadmin,
         cdOpsStaffList,
         activeCdOpsOperator,
         setActiveCdOpsOperator,

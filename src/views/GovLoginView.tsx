@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ChevronDown,
   Layers,
+  Handshake,
 } from 'lucide-react';
 import { UserSession } from '../types';
 
@@ -96,24 +97,19 @@ export const GovLoginView: React.FC = () => {
     // 1. Check dynamic teamMembers
     const dynamicMember = teamMembers?.find((m) => m.code?.toUpperCase() === clean);
     if (dynamicMember) {
-      const mCountry = dynamicMember.country || selectedCountry;
-      const newUser: User = {
+      const mCountry = (dynamicMember as any).country || selectedCountry;
+      const newUser: UserSession = {
         id: 'gov_' + Date.now(),
         name: dynamicMember.name,
-        anon: false,
         country: mCountry,
-        territory: {},
-        points: 100,
-        verified: true,
         role: dynamicMember.role as any,
         role_label: dynamicMember.role_label,
-        real_title: dynamicMember.real_title || dynamicMember.role_label,
-        real_title_short: dynamicMember.real_title_short || dynamicMember.role_label,
+        real_title_short: (dynamicMember as any).real_title_short || dynamicMember.role_label,
         dept: dynamicMember.dept,
         scope: dynamicMember.scope,
         scope_label: dynamicMember.scope,
-        entity_type: 'government_node',
-        hierarchy_level: dynamicMember.hierarchy_level,
+        entity_type: 'government',
+        hierarchy_level: (dynamicMember as any).hierarchy_level,
         is_admin: dynamicMember.role === 'node_admin' || dynamicMember.role === 'platform_admin',
       };
       setError('');
@@ -126,7 +122,7 @@ export const GovLoginView: React.FC = () => {
     }
 
     // 2. Check GOV_CODES or customGovCodes (and if not found, scan all countries so any country code works)
-    let match = GOV_CODES[clean] || (customGovCodes ? customGovCodes[clean] : undefined);
+    let match: any = GOV_CODES[clean] || (customGovCodes ? customGovCodes[clean] : undefined);
     if (!match) {
       for (const c of countryList) {
         getCountryDesksProfile(c.code);
@@ -141,22 +137,17 @@ export const GovLoginView: React.FC = () => {
       const targetCountry = match.country || selectedCountry;
       const labelStr = match.role_label || match.label || deskTitle || 'Government Desk';
       const shortStr = match.real_title_short || match.label || 'GOV';
-      const newUser: User = {
+      const newUser: UserSession = {
         id: 'gov_' + Date.now(),
         name: `${labelStr} (${match.scope_label || match.scope || targetCountry})`,
-        anon: false,
         country: targetCountry,
-        territory: {},
-        points: 100,
-        verified: true,
         role: match.role || 'node_admin',
         role_label: labelStr,
-        real_title: match.real_title || labelStr,
         real_title_short: shortStr,
         dept: match.dept || 'molg',
         scope: match.scope || targetCountry,
         scope_label: match.scope_label || match.scope || targetCountry,
-        entity_type: match.entity_type || 'government_node',
+        entity_type: match.entity_type === 'non_government_entity' ? 'non_government_entity' : 'government',
         hierarchy_level: match.hierarchy_level,
         is_admin: match.role === 'platform_admin' || match.role === 'node_admin',
       };
@@ -206,10 +197,21 @@ export const GovLoginView: React.FC = () => {
             </div>
           </div>
 
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold shrink-0">
-            <Lock size={10} />
-            <span>SHA-256 Audited</span>
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => go('gov_partnership')}
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Open Government Partnership & Bilateral Communication Hub"
+            >
+              <Handshake size={12} strokeWidth={1.75} />
+              <span>Partnership Hub</span>
+            </button>
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold">
+              <Lock size={10} />
+              <span>SHA-256</span>
+            </span>
+          </div>
         </div>
 
         <div className="p-4 space-y-4">
@@ -622,19 +624,42 @@ export const GovLoginView: React.FC = () => {
           </div>
         </div>
 
-        {/* Footer Switcher for Utilities / Private Service Providers */}
-        <div className="px-4 py-3 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <span className="text-[11px] text-slate-500 dark:text-slate-400">
-            Operating a Utility, Bank, Telecom, Hospital, or NGO Desk?
-          </span>
-          <button
-            type="button"
-            onClick={() => go('entity')}
-            className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <ShieldCheck size={13} />
-            <span>Open Service Provider Gateway →</span>
-          </button>
+        {/* Footer Switchers: Sovereign Partnership Hub & Service Provider Gateway */}
+        <div className="px-4 py-3 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5">
+          {/* Immediate Government Representative -> CivicDuty Partnership Hub Banner */}
+          <div className="p-3 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Handshake size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>National Government Representative or Ministry Delegation?</span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                Communicate directly with CivicDuty, review sovereign MOUs, or initiate national rollout onboarding.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => go('gov_partnership')}
+              className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 cursor-pointer transition-colors"
+            >
+              <Handshake size={13} />
+              <span>Open Partnership Hub →</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Operating a Utility, Bank, Telecom, Hospital, or NGO Desk?
+            </span>
+            <button
+              type="button"
+              onClick={() => go('entity')}
+              className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <ShieldCheck size={13} />
+              <span>Open Service Provider Gateway →</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

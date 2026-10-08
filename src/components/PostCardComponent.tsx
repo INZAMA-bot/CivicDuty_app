@@ -35,11 +35,13 @@ import {
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 
 interface PostCardComponentProps {
-  post: Post;
+  post?: Post;
+  p?: Post;
   rankIndex?: number | null;
 }
 
-export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post, rankIndex }) => {
+export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: propPost, p: fallbackPost, rankIndex }) => {
+  const post = propPost || fallbackPost;
   const {
     setActivePost,
     go,
@@ -59,6 +61,9 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post, rank
   } = useApp();
   const [showQr, setShowQr] = useState<boolean>(false);
   const [playingVoice, setPlayingVoice] = useState<boolean>(false);
+
+  if (!post) return null;
+
   const isBookmarked = (bookmarks || []).includes(post.id);
 
   const d = getDept(post.country, post.dept);

@@ -37,44 +37,44 @@ export const ProfileView: React.FC = () => {
     setUser,
     profiles,
     posts,
-    followedDepts,
     go,
     setActiveDept,
     setActiveDeptCountry,
     setActivePost,
     toast,
-    updateCitizenProfile,
+    updateUserProfile,
+    updateUserAvatar,
     bookmarks,
   } = useApp();
 
   const activeUser = user || ensureCitizenSession();
-  const profile = profiles[activeUser.id] || {
+  const profile: any = (profiles && profiles[activeUser.id]) || {
     civic_score: 50,
-    badges: ['b_init'],
-    posts_count: 0,
-    helpful_count: 0,
-    flagged_count: 0,
+    display_name: activeUser.name || 'Citizen Watchdog',
+    followed: activeUser.followed || ['nwsc', 'umeme', 'kcca'],
   };
 
-  const myPosts = posts.filter(
-    (p) => p.citizen_id === activeUser.id || p.citizen_name === activeUser.name
+  const displayName = profile.display_name || activeUser.name || 'Citizen Watchdog';
+
+  const myPosts = (posts || []).filter(
+    (p) => p.citizen_id === activeUser.id || p.citizen_name === displayName || p.citizen_name === activeUser.name
   );
   const myPraisePosts = myPosts.filter((p) => p.category === 'praise');
   const myResolvedPosts = myPosts.filter((p) => p.status === 'resolved');
-  const savedPosts = posts.filter((p) => (bookmarks || []).includes(p.id));
-  const followed = followedDepts[activeUser.id] || [];
-  const score = profile.civic_score || 0;
+  const savedPosts = (posts || []).filter((p) => (bookmarks || []).includes(p.id));
+  const followed: string[] = activeUser.followed || profile.followed || [];
+  const score = profile.civic_score || 50;
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(activeUser.name || '');
+  const [editName, setEditName] = useState(displayName);
   const [editBio, setEditBio] = useState(
     profile.bio ||
       'Verified Civic Watchdog monitoring public service delivery, infrastructure SLAs, and statutory accountability.'
   );
   const [editLocation, setEditLocation] = useState(
-    profile.location || pathStr(activeUser.country, activeUser.territory || {}) || 'National Jurisdiction'
+    profile.location || pathStr(activeUser.country, (activeUser as any).territory || {}) || 'National Jurisdiction'
   );
-  const [isAnonMode, setIsAnonMode] = useState(activeUser.anon !== false);
+  const [isAnonMode, setIsAnonMode] = useState((activeUser as any).anon !== false);
 
   const [activeTab, setActiveTab] = useState<'reports' | 'resolved' | 'praise' | 'saved'>('reports');
   const [showCivicCardModal, setShowCivicCardModal] = useState(false);
@@ -96,35 +96,45 @@ export const ProfileView: React.FC = () => {
   const progressPct = Math.min(100, Math.round((score / tier.next) * 100));
 
   const initials =
-    (activeUser.name || 'CD')
+    displayName
       .replace(/^@/, '')
       .split(/[\s_.-]+/)
       .filter(Boolean)
       .slice(0, 2)
-      .map((s) => s[0]?.toUpperCase() || '')
+      .map((s: string) => s[0]?.toUpperCase() || '')
       .join('') || 'CD';
 
   const currentAvatar = profile.avatar_url || activeUser.avatar_url;
 
   const handleSaveProfile = () => {
-    const trimmed = editName.trim() || activeUser.name;
-    updateCitizenProfile({
+    const trimmed = editName.trim() || displayName;
+    if (updateUserProfile) {
+      updateUserProfile(activeUser.id, {
+        display_name: trimmed,
+        bio: editBio.trim(),
+      });
+    }
+    setUser({
+      ...activeUser,
       name: trimmed,
-      bio: editBio.trim(),
-      location: editLocation.trim(),
-      anon: isAnonMode,
     });
     setIsEditing(false);
     toast('Identity dossier updated', 'emerald');
   };
 
   const handleSaveAvatar = (newAvatarUrl: string) => {
-    updateCitizenProfile({ avatar_url: newAvatarUrl });
+    if (updateUserAvatar) {
+      updateUserAvatar(activeUser.id, newAvatarUrl);
+    }
+    setUser({
+      ...activeUser,
+      avatar_url: newAvatarUrl,
+    });
     toast(newAvatarUrl ? 'Identity photo updated' : 'Reverted to default monogram', 'emerald');
   };
 
   const handleCopyPass = () => {
-    const shareText = `CivicDuty Watchdog Dossier: ${activeUser.name} · ${tier.name} (${score} pts) · ${myPosts.length} Dispatches Filed in ${countryPerks.countryName}.`;
+    const shareText = `CivicDuty Watchdog Dossier: ${displayName} · ${tier.name} (${score} pts) · ${myPosts.length} Dispatches Filed in ${countryPerks.countryName}.`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareText);
       toast('Watchdog dossier summary copied to clipboard', 'emerald');
@@ -151,7 +161,7 @@ export const ProfileView: React.FC = () => {
 
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 48px sans-serif';
-    ctx.fillText(activeUser.name, 76, 175);
+    ctx.fillText(displayName, 76, 175);
 
     ctx.fillStyle = '#34d399';
     ctx.font = 'bold 26px monospace';
@@ -172,7 +182,7 @@ export const ProfileView: React.FC = () => {
     ctx.fillText(`Cryptographic Ledger Seal: ${certHash}`, 76, 575);
 
     const link = document.createElement('a');
-    link.download = `CivicDuty-Dossier-${activeUser.name.replace(/[^a-zA-Z0-9]/g, '')}.png`;
+    link.download = `CivicDuty-Dossier-${displayName.replace(/[^a-zA-Z0-9]/g, '')}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
     toast('Watchdog Dossier PNG downloaded', 'emerald');
@@ -217,7 +227,7 @@ export const ProfileView: React.FC = () => {
                 {currentAvatar ? (
                   <img
                     src={currentAvatar}
-                    alt={activeUser.name}
+                    alt={displayName}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
@@ -235,7 +245,7 @@ export const ProfileView: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
-                    {activeUser.name}
+                    {displayName}
                   </h1>
                   <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 </div>
@@ -566,14 +576,7 @@ export const ProfileView: React.FC = () => {
             </div>
           ) : (
             displayedPosts.map((post) => (
-              <PostCardComponent
-                key={post.id}
-                p={post}
-                onSelect={() => {
-                  setActivePost(post.id);
-                  go('post_detail');
-                }}
-              />
+              <PostCardComponent key={post.id} post={post} />
             ))
           )}
         </div>
@@ -612,7 +615,7 @@ export const ProfileView: React.FC = () => {
         isOpen={showAvatarModal}
         onClose={() => setShowAvatarModal(false)}
         currentAvatar={currentAvatar}
-        userName={activeUser.name}
+        userName={displayName}
         onSave={handleSaveAvatar}
       />
 
@@ -653,7 +656,7 @@ export const ProfileView: React.FC = () => {
                   </span>
                 </div>
                 <div className="text-base font-bold text-slate-900 dark:text-white">
-                  {activeUser.name}
+                  {displayName}
                 </div>
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   {tier.name} · {score} Civic Points
