@@ -152,9 +152,9 @@ export const GovInboxView: React.FC = () => {
   };
 
   return (
-    <div className="animate-fade-in pb-12 text-slate-800 dark:text-slate-100">
+    <div className="animate-fade-in pb-12 max-w-4xl mx-auto text-slate-900 dark:text-slate-100">
       {/* Header Docket */}
-      <div className="px-4 pt-4 pb-3.5 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/60">
+      <div className="px-3.5 sm:px-5 pt-4 pb-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116]">
         <AccountabilityDocket
           leftLabel={user.real_title_short || d.name}
           leftSubLabel={user.scope_label || ''}
@@ -166,38 +166,38 @@ export const GovInboxView: React.FC = () => {
         />
 
         {/* Entity Civic Perks & Rewards Dispatch Console (Always visible to all Entity Desk users) */}
-        <div className="mt-3 bg-white dark:bg-slate-950 p-3.5 rounded-xl border border-teal-500/40 shadow-sm dark:shadow-lg space-y-2.5">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+        <div className="mt-3 bg-white dark:bg-[#161a22] p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+          <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-teal-600 dark:text-teal-400">
+              <div className="w-7 h-7 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <Gift size={14} strokeWidth={1.75} />
               </div>
               <div>
                 <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono uppercase tracking-wide flex items-center gap-1.5">
-                  <span>Entity Civic Perks & Rewards Dispatch Console</span>
-                  <span className="text-[8px] bg-teal-500/20 text-teal-800 dark:text-teal-300 border border-teal-500/30 px-1.5 py-0.5 rounded font-bold uppercase">
-                    Active Entity Desk
+                  <span>Entity Civic Perks &amp; Rewards Dispatch Console</span>
+                  <span className="text-[8.5px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold uppercase">
+                    Active Desk
                   </span>
                 </h5>
-                <p className="text-[9px] mono text-slate-500 dark:text-slate-400">
+                <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
                   Dispatch digital items or issue allocated Headquarter physical prize collection passes
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] mono">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
             {/* Digital Item Dispatch */}
-            <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-amber-500/30 space-y-1.5">
+            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
               <div className="flex items-center justify-between">
-                <strong className="text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                <strong className="text-amber-700 dark:text-amber-400 flex items-center gap-1">
                   <Zap size={11} strokeWidth={1.75} />
                   <span>Digital Item Dispatch</span>
-                  <span className="text-[9px] text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-1 py-0.2 rounded font-bold">[{countryPerks.countryCode}] {countryPerks.countryName}</span>
+                  <span className="text-[9px] text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] px-1.5 py-0.2 rounded font-bold">[{countryPerks.countryCode}]</span>
                 </strong>
-                <span className="text-[8px] bg-amber-500/20 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold">Instant PWA / SMS</span>
+                <span className="text-[8.5px] bg-amber-500/10 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-semibold">Instant PWA / SMS</span>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 text-[9px] leading-snug">
+              <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
                 Send {countryPerks.digitalPerks[0]?.name || 'Data Bundles'}, airtime credit, or utility discount vouchers to verified {countryPerks.countryName} citizen phone numbers.
               </p>
               <button
@@ -205,23 +205,23 @@ export const GovInboxView: React.FC = () => {
                   setDispatchSuccess(null);
                   setDispatchModal('digital');
                 }}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 rounded text-[9.5px] uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Zap size={13} />
+                <Zap size={12} />
                 <span>1-Click Dispatch Digital Perks ({countryPerks.countryCode})</span>
               </button>
             </div>
 
             {/* Physical Prize HQ Collection Pass */}
-            <div className="bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-teal-500/30 space-y-1.5">
+            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
               <div className="flex items-center justify-between">
-                <strong className="text-teal-800 dark:text-teal-300 font-mono flex items-center gap-1">
+                <strong className="text-emerald-700 dark:text-emerald-400 font-mono flex items-center gap-1">
                   <MapPin size={11} strokeWidth={1.75} />
                   <span>Allocated HQ Pickup Pass</span>
                 </strong>
-                <span className="text-[8px] bg-teal-500/20 text-teal-800 dark:text-teal-300 px-1.5 py-0.5 rounded font-bold">HQ Desk Pass</span>
+                <span className="text-[8.5px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded font-semibold">HQ Desk Pass</span>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 text-[9px] leading-snug">
+              <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
                 Assign physical prize (Plaque / Solar Lantern) at <strong className="text-slate-800 dark:text-slate-200">{countryPerks.hqRoom}</strong>.
               </p>
               <button
@@ -229,9 +229,9 @@ export const GovInboxView: React.FC = () => {
                   setDispatchSuccess(null);
                   setDispatchModal('physical');
                 }}
-                className="w-full bg-teal-600 dark:bg-teal-500 hover:bg-teal-500 dark:hover:bg-teal-400 text-white dark:text-slate-950 font-black py-2 rounded text-[9.5px] uppercase tracking-wider transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <MapPin size={13} />
+                <MapPin size={12} />
                 <span>Issue Allocated HQ Pickup Pass</span>
               </button>
             </div>
@@ -460,9 +460,9 @@ export const GovInboxView: React.FC = () => {
         </div>
 
         {canInvite && (
-          <div className="mt-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 space-y-3">
+          <div className="mt-3 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-400 font-bold text-[11px] mono uppercase tracking-wider">
+              <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-[11px] font-mono uppercase tracking-wider">
                 <UserPlus size={14} />
                 <span>
                   {user.role === 'platform_admin'
@@ -470,38 +470,38 @@ export const GovInboxView: React.FC = () => {
                     : `${user.real_title_short || 'Node Executive'} (${countryPerks.countryName} Executive Desk)`}
                 </span>
               </div>
-              <span className="text-[8px] mono text-amber-900 dark:text-amber-300/80 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 font-bold">
+              <span className="text-[9px] font-mono text-amber-800 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/25 font-semibold">
                 1-Click Approval Queue
               </span>
             </div>
-            <p className="text-[10px] text-slate-700 dark:text-zinc-300 leading-snug">
-              As <span className="text-amber-800 dark:text-amber-300 font-bold">{user.real_title_short || 'Node Executive'}</span>, you hold official mandate to issue officer access codes and digitally sign monthly Citizen Champion Certificates of Civic Excellence.
+            <p className="text-[10.5px] text-slate-600 dark:text-slate-400 leading-snug">
+              As <span className="text-slate-900 dark:text-white font-semibold">{user.real_title_short || 'Node Executive'}</span>, you hold official mandate to issue officer access codes and digitally sign monthly Citizen Champion Certificates of Civic Excellence.
             </p>
 
             {/* Auto-Certificate Engine Queue Card */}
-            <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-amber-500/30 space-y-2">
+            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-3 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-amber-600 dark:text-amber-400">
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-amber-600 dark:text-amber-400">
                     <Award size={14} strokeWidth={1.75} />
                   </div>
                   <div>
                     <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono uppercase">Monthly Civic Awards Approval Queue</h5>
-                    <p className="text-[9px] mono text-slate-500 dark:text-slate-400">
+                    <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
                       {countryPerks.countryName} Jurisdictions · {countryPerks.sampleCitizens.length} Citizen Champions Pending Certificate Signing
                     </p>
                   </div>
                 </div>
-                <span className="text-[9px] mono text-amber-800 dark:text-amber-400 font-bold bg-amber-500/20 px-2 py-0.5 rounded">
+                <span className="text-[9px] font-mono text-amber-700 dark:text-amber-400 font-semibold bg-amber-500/10 px-2 py-0.5 rounded">
                   End of Month Cycle
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-[10px] mono bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between text-[10px] font-mono bg-white dark:bg-[#161a22] p-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
                 <span className="text-slate-700 dark:text-slate-300">
                   Top Candidate: <strong>{countryPerks.sampleCitizens[0]?.name || 'Citizen Champion'}</strong> ({countryPerks.sampleCitizens[0]?.location || 'Ward'} - {countryPerks.sampleCitizens[0]?.points || 1240} pts)
                 </span>
-                <span className="text-teal-700 dark:text-teal-400 font-bold">Auto-Drafted PDF Ready</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Auto-Drafted PDF Ready</span>
               </div>
 
               <div className="flex gap-2 pt-1">
@@ -514,10 +514,10 @@ export const GovInboxView: React.FC = () => {
                     );
                     toast(`All ${countryPerks.countryName} Champion Certificates digitally signed & dispatched via PWA & SMS!`, 'emerald');
                   }}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider mono flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98]"
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <UserPlus size={13} />
-                  <span>1-Click Approve & Digitally Sign All ({countryPerks.countryCode})</span>
+                  <span>1-Click Approve &amp; Digitally Sign All ({countryPerks.countryCode})</span>
                 </button>
               </div>
             </div>
@@ -525,14 +525,14 @@ export const GovInboxView: React.FC = () => {
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => go('gov_team')}
-                className="flex-1 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-amber-800 dark:text-amber-300 font-bold border border-amber-500/40 rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider mono flex items-center justify-center gap-1.5 transition-all"
+                className="flex-1 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 text-slate-800 dark:text-slate-200 font-semibold border border-[#e3e6ea] dark:border-[#262b36] rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <UserPlus size={13} />
                 <span>{user.entity_type === 'non_government_entity' ? 'Invite Duty Staff' : 'Issue Officer Access Code'}</span>
               </button>
               <button
                 onClick={() => go('gov_team')}
-                className="border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider mono flex items-center justify-center gap-1.5 transition-all"
+                className="border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-slate-800 dark:text-slate-200 font-semibold rounded-lg py-2 px-3 text-[10px] uppercase tracking-wider font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Users size={13} />
                 <span>{user.entity_type === 'non_government_entity' ? `Staff & Roles (${myTeam.length})` : `Manage Team (${myTeam.length})`}</span>

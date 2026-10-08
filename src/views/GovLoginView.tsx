@@ -158,6 +158,12 @@ export const GovLoginView: React.FC = () => {
       logAudit('gov_login', newUser.dept || 'gov', `${labelStr} signed in via code ${clean}`);
       toast(`Authenticated: ${labelStr}`, 'emerald');
 
+      // Check if this is a Read-Only External Auditor Subpoena Token (e.g. AUDIT-RO-UG-2026)
+      if (clean.startsWith('AUDIT-RO-') || match.targetView === 'gov_audit') {
+        go('gov_audit');
+        return;
+      }
+
       const psCheck = getPsMinistryInfo(newUser);
       if (psCheck.isMoLG) {
         go('ps_molg_rollout');
@@ -167,6 +173,32 @@ export const GovLoginView: React.FC = () => {
       } else {
         go('gov_inbox');
       }
+      return;
+    }
+
+    // 3. Support instant Read-Only External Auditor Passcode pattern (AUDIT-RO-<COUNTRY>-2026)
+    if (clean.startsWith('AUDIT-RO-')) {
+      const parts = clean.split('-');
+      const tokenCountry = parts[2] && COUNTRIES[parts[2] as any] ? parts[2] : selectedCountry;
+      const roUser: UserSession = {
+        id: 'auditor_ro_' + Date.now(),
+        name: `External Statutory Auditor (${tokenCountry} Read-Only Pass)`,
+        country: tokenCountry as any,
+        role: 'read_only',
+        role_label: 'Auditor General / IGG Read-Only Inspector',
+        real_title_short: 'EXT-AUDITOR (RO)',
+        dept: 'igg',
+        scope: tokenCountry,
+        scope_label: `${COUNTRIES[tokenCountry as any]?.name || tokenCountry} Read-Only Audit Scope`,
+        entity_type: 'government',
+        is_admin: false,
+      };
+      setError('');
+      setUser(roUser);
+      setActiveDeptCountry(tokenCountry as any);
+      logAudit('external_auditor_ro_login', 'AUDIT-LEDGER', `Read-only external auditor authenticated via token ${clean}`);
+      toast('Authenticated: Read-Only External Auditor Token · Opening 5-Page Audit Suite', 'emerald');
+      go('gov_audit');
       return;
     }
 
@@ -181,36 +213,50 @@ export const GovLoginView: React.FC = () => {
     <div className="animate-fade-in px-3.5 sm:px-5 pt-4 pb-16 max-w-2xl mx-auto space-y-4 text-slate-900 dark:text-slate-100">
       {/* Main Studio Card */}
       <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
-        {/* Top Studio Header Bar */}
-        <div className="px-4 py-3 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-              <Landmark size={16} strokeWidth={1.75} />
+        {/* Top Studio Header Bar — Unobstructed Full-Width Title + Separated Partnership Hub Action Strip */}
+        <div className="px-4 py-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-3">
+          <div className="flex items-start justify-between gap-2.5">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                <Landmark size={16} strokeWidth={1.75} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
+                  Government &amp; Statutory Desk Authentication
+                </h1>
+                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 leading-normal">
+                  Select country · Tap your statutory desk · Enter access code
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
-                Government &amp; Statutory Desk Authentication
-              </h1>
-              <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                Select country · Tap your statutory desk · Enter access code
-              </p>
-            </div>
+
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[9.5px] font-mono font-semibold shrink-0">
+              <Lock size={10} />
+              <span>SHA-256</span>
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Separated Partnership Hub & Bilateral Gateway Strip */}
+          <div className="pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[10.5px] font-mono font-semibold text-slate-700 dark:text-slate-300">
+                Sovereign Bilateral &amp; Modification Desk
+              </div>
+              <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                Direct Gov ↔ CivicDuty accord &amp; 2-stage desk modifications
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={() => go('gov_partnership')}
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
               title="Open Government Partnership & Bilateral Communication Hub"
             >
               <Handshake size={12} strokeWidth={1.75} />
               <span>Partnership Hub</span>
+              <ArrowRight size={11} />
             </button>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold">
-              <Lock size={10} />
-              <span>SHA-256</span>
-            </span>
           </div>
         </div>
 

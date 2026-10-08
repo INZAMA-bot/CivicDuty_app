@@ -65,9 +65,9 @@ const INITIAL_LAUNCH_ITEMS: LaunchChecklistItem[] = [
   {
     id: 'ui-gov-login',
     category: 'design_aistudio',
-    title: '4. Government & Statutory Desk Auth + Partnership Hub Gateway',
+    title: '4. Government & Statutory Desk Auth + Separated Partnership Hub Gateway',
     description:
-      'Country selector, 5-Tier Escalation Hierarchy inline access code entry, and direct Partnership Hub button for immediate Gov-to-CivicDuty communication.',
+      'Unobstructed header wording, separated Partnership Hub action strip, 5-Tier Escalation Hierarchy inline access code entry, and External Auditor Read-Only Passcode support.',
     statusNote: 'Completed & Verified',
     targetView: 'gov_login',
     targetLabel: 'Inspect Gov Auth',
@@ -78,7 +78,7 @@ const INITIAL_LAUNCH_ITEMS: LaunchChecklistItem[] = [
     category: 'design_aistudio',
     title: '5. 5-Page National Governance Audit Suite (GovAuditView)',
     description:
-      'Refined to aistudio.google studio aesthetic with Action Ledger, Merkle Chain Verifier, Legal/Whistleblower Shield, Official Queries, and Node Telemetry.',
+      'Refined to aistudio.google studio aesthetic with Action Ledger, Merkle Chain Verifier, Read-Only Subpoena Token Generator, Official Queries, and Node Telemetry.',
     statusNote: 'Polished to AI Studio',
     targetView: 'gov_audit',
     targetLabel: 'Inspect Audit Suite',
@@ -100,44 +100,44 @@ const INITIAL_LAUNCH_ITEMS: LaunchChecklistItem[] = [
     category: 'design_aistudio',
     title: '7. Citizen Onboarding & Jurisdiction Selection (OnboardingCitizenView)',
     description:
-      'Next up for review: streamline citizen onboarding steps to match the ultra-clean aistudio.google card density on mobile.',
-    statusNote: 'Ready for Review',
+      'Streamlined 3-step citizen onboarding & 1-step returning login inside aistudio.google studio cards with 1-tap parish quick-select and wall auto-pick.',
+    statusNote: 'Polished to AI Studio',
     targetView: 'ob1',
-    targetLabel: 'Review Onboarding',
-    defaultDone: false,
+    targetLabel: 'Inspect Onboarding',
+    defaultDone: true,
   },
   {
     id: 'ui-compose-dispatch',
     category: 'design_aistudio',
     title: '8. Citizen Speak / Report Dispatch Studio (ComposeView)',
     description:
-      'Next up for review: tighten GPS geotagging, photo proof upload, and statutory department auto-routing into a compact AI Studio form.',
-    statusNote: 'Ready for Review',
+      'Compact aistudio.google dispatch studio with 4-step status bar, cascading territory router, Master Dossier clustering radar, GPS pin, and evidence staging.',
+    statusNote: 'Polished to AI Studio',
     targetView: 'compose',
-    targetLabel: 'Review Speak Form',
-    defaultDone: false,
+    targetLabel: 'Inspect Speak Studio',
+    defaultDone: true,
   },
   {
     id: 'ui-depts-wall',
     category: 'design_aistudio',
     title: '9. Service Provider Registry & Department Walls (DepartmentsView & DeptWallView)',
     description:
-      'Next up for review: align utility/ministry cards and SLA scoreboards with zero-pill typography and AI Studio hairline borders.',
-    statusNote: 'Ready for Review',
+      'Aligned utility/ministry cards, rectangular category filters, Public Capital Grant Ledger, and SLA scoreboards with AI Studio hairline borders.',
+    statusNote: 'Polished to AI Studio',
     targetView: 'depts',
-    targetLabel: 'Review Registry',
-    defaultDone: false,
+    targetLabel: 'Inspect Registry',
+    defaultDone: true,
   },
   {
     id: 'ui-gov-workspaces',
     category: 'design_aistudio',
     title: '10. Official Desk Workspaces (GovInboxView, GovAdminView, PsMolgRolloutView)',
     description:
-      'Next up for review: unify executive banners, district supervision tables, and reply consoles under the aistudio.google visual system.',
-    statusNote: 'Ready for Review',
+      'Unified executive command banners, Perks Dispatch Console, Baraza host strip, and 2-Stage Modification clearinghouse under the aistudio.google visual system.',
+    statusNote: 'Polished to AI Studio',
     targetView: 'gov_inbox',
-    targetLabel: 'Review Gov Desk',
-    defaultDone: false,
+    targetLabel: 'Inspect Gov Desk',
+    defaultDone: true,
   },
 
   // Category 2: Sovereign Hierarchy & Bilateral Operations
@@ -271,7 +271,7 @@ export const CdOpsLaunchCountdown: React.FC = () => {
 
   const [checkedMap, setCheckedMap] = useState<Record<string, boolean>>(() => {
     try {
-      const saved = localStorage.getItem('civicduty_launch_checklist_v1');
+      const saved = localStorage.getItem('civicduty_launch_checklist_v2');
       if (saved) return JSON.parse(saved);
     } catch {}
     const init: Record<string, boolean> = {};
@@ -294,7 +294,7 @@ export const CdOpsLaunchCountdown: React.FC = () => {
   const saveChecklist = (next: Record<string, boolean>) => {
     setCheckedMap(next);
     try {
-      localStorage.setItem('civicduty_launch_checklist_v1', JSON.stringify(next));
+      localStorage.setItem('civicduty_launch_checklist_v2', JSON.stringify(next));
     } catch {}
   };
 

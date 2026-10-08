@@ -273,14 +273,15 @@ export const DeptWallView: React.FC = () => {
   });
 
   return (
-    <div className="animate-fade-in pb-24 text-slate-950 dark:text-white">
-      {/* Top Navigation & Profile Header */}
-      <div className="px-4 pt-4 pb-0 bg-white dark:bg-slate-950 border-b border-slate-300 dark:border-slate-800 shadow-2xs">
+    <div className="animate-fade-in pb-24 max-w-4xl mx-auto text-slate-900 dark:text-slate-100">
+      {/* Top Navigation & Studio Profile Header */}
+      <div className="px-4 pt-4 pb-4 bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36]">
         <button
           onClick={() => go('departments')}
-          className="flex items-center gap-1 text-xs mono font-black text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 mb-3 transition-colors"
+          className="flex items-center gap-1 text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 mb-3 transition-colors cursor-pointer"
         >
-          <ChevronLeft size={16} /> Back to Entities Registry
+          <ChevronLeft size={15} />
+          <span>Back to Service Registry</span>
         </button>
 
         <div className="flex items-start justify-between gap-3.5 mb-4">
@@ -390,13 +391,12 @@ export const DeptWallView: React.FC = () => {
                     <button
                       onClick={() => {
                         nudgeEntity(did);
-                        const tweetText = `Dear @${d.id} leadership, citizens have filed ${deptPosts.length} complaints on CivicDuty. Claim your free 30-Day Founding Partner desk to resume public customer care: ${typeof window !== 'undefined' ? window.location.href : ''}`;
-                        if (typeof window !== 'undefined') {
-                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
-                        }
+                        const tweetText = `Dear @${d.id} leadership, citizens have filed ${deptPosts.length} complaints on CivicDuty. Claim your free 30-Day Founding Partner desk to resume public customer care.`;
+                        navigator.clipboard?.writeText(tweetText);
+                        toast(`Leadership nudge logged & public notice copied to clipboard!`, 'emerald');
                       }}
-                      className="px-3.5 py-2 rounded-xl text-xs mono font-black bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-2xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-                      title="Nudge Brand Executives on X & Social Media"
+                      className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Nudge Brand Executives"
                     >
                       <Megaphone size={13} />
                       <span>Nudge Leadership ({nudgeCounts[did] || 0})</span>
@@ -468,13 +468,12 @@ export const DeptWallView: React.FC = () => {
                 <button
                   onClick={() => {
                     nudgeEntity(did);
-                    const tweetText = `Public notice: ${d.name} has ${deptPosts.length} unresolved citizen reports on CivicDuty. We urge the Accounting Officer to activate the statutory desk subscription: ${typeof window !== 'undefined' ? window.location.href : ''}`;
-                    if (typeof window !== 'undefined') {
-                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
-                    }
+                    const tweetText = `Public notice: ${d.name} has ${deptPosts.length} unresolved citizen reports on CivicDuty. We urge the Accounting Officer to activate the statutory desk subscription.`;
+                    navigator.clipboard?.writeText(tweetText);
+                    toast(`Official nudge logged & public notice copied to clipboard!`, 'emerald');
                   }}
-                  className="px-3.5 py-2 rounded-xl text-xs mono font-black bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-2xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-                  title="Nudge Mayor / Town Clerk on Social Media"
+                  className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Nudge Mayor / Town Clerk"
                 >
                   <Megaphone size={13} />
                   <span>Nudge Official ({nudgeCounts[did] || 0})</span>
@@ -493,13 +492,13 @@ export const DeptWallView: React.FC = () => {
         )}
 
         {/* Quick Contact & USSD Hotlines Bar */}
-        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 mb-4 flex items-center justify-between gap-2 flex-wrap text-[10px] mono">
+        <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] mb-3.5 flex items-center justify-between gap-2 flex-wrap text-[10px] font-mono">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-950 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800 font-black flex items-center gap-1.5 shadow-2xs">
-              <Radio size={11} className="text-indigo-600 dark:text-indigo-400" />
+            <span className="px-2 py-1 rounded bg-white dark:bg-[#161a22] text-slate-800 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36] font-semibold flex items-center gap-1.5">
+              <Radio size={11} className="text-emerald-600 dark:text-emerald-400" />
               <span>USSD: {ussdCode}</span>
             </span>
-            <span className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold flex items-center gap-1.5 shadow-2xs">
+            <span className="px-2 py-1 rounded bg-white dark:bg-[#161a22] text-slate-800 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36] font-semibold flex items-center gap-1.5">
               <PhoneCall size={11} className="text-emerald-600 dark:text-emerald-400" />
               <span>Hotline: {tollFree}</span>
             </span>
@@ -507,7 +506,7 @@ export const DeptWallView: React.FC = () => {
 
           <button
             onClick={() => setShowOfficerRoster(!showOfficerRoster)}
-            className="px-3 py-1 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-xl font-black text-[10px] mono flex items-center gap-1 hover:bg-slate-300 transition-colors"
+            className="px-2.5 py-1 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 rounded-lg font-semibold text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer"
           >
             <UserCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
             <span>{showOfficerRoster ? 'Hide Officers' : 'Designated Officers Roster'}</span>
@@ -516,39 +515,39 @@ export const DeptWallView: React.FC = () => {
 
         {/* Expandable Officer & Field Roster */}
         {showOfficerRoster && (
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border-2 border-emerald-500/40 mb-4 space-y-3 a-fade shadow-md">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-950 dark:text-white flex items-center gap-1.5">
+          <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/40 mb-3.5 space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
                 <UserCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Statutory Accounting Officer & Designated Desks</span>
+                <span>Statutory Accounting Officer &amp; Designated Desks</span>
               </span>
-              <span className="text-[9px] mono font-bold text-slate-500">Public Audit Registry</span>
+              <span className="text-[9.5px] font-mono text-slate-500">Public Audit Registry</span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1 text-xs">
-              <div className="font-black text-slate-950 dark:text-white">{accountingOfficer.name}</div>
-              <div className="text-[10.5px] mono text-slate-600 dark:text-slate-400">{accountingOfficer.role}</div>
-              <div className="flex items-center gap-4 text-[10px] mono pt-1 text-slate-700 dark:text-slate-300 font-bold">
+            <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1 text-xs">
+              <div className="font-bold text-slate-900 dark:text-white">{accountingOfficer.name}</div>
+              <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">{accountingOfficer.role}</div>
+              <div className="flex items-center gap-4 text-[10px] font-mono pt-1 text-slate-700 dark:text-slate-300 font-semibold">
                 <span>Tel: {accountingOfficer.phone}</span>
                 <span>Email: {accountingOfficer.email}</span>
               </div>
             </div>
 
             <div className="space-y-1.5 pt-1">
-              <span className="text-[9.5px] mono uppercase tracking-wider text-slate-600 dark:text-slate-400 font-black block">
+              <span className="text-[9.5px] font-mono uppercase tracking-wider text-slate-500 font-semibold block">
                 Live On-Duty Field Inspection Teams
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {fieldRoster.map((f, i) => (
-                  <div key={i} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1 text-[10px] mono">
+                  <div key={i} className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1 text-[10px] font-mono">
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-slate-900 dark:text-slate-100">{f.role}</span>
-                      <span className="text-[8px] font-black px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-400">
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{f.role}</span>
+                      <span className="text-[8.5px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                         {f.status}
                       </span>
                     </div>
-                    <div className="text-slate-600 dark:text-slate-400 text-[9px]">{f.parish}</div>
-                    <div className="text-slate-800 dark:text-slate-200 font-bold">{f.lead}</div>
+                    <div className="text-slate-500 text-[9.5px]">{f.parish}</div>
+                    <div className="text-slate-800 dark:text-slate-200 font-semibold">{f.lead}</div>
                   </div>
                 ))}
               </div>
@@ -557,37 +556,37 @@ export const DeptWallView: React.FC = () => {
         )}
 
         {/* Public Expenditure & Fiscal Grant Docket */}
-        <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 mb-4 space-y-2.5 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-950 dark:text-white flex items-center gap-1.5">
+        <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] mb-3.5 space-y-2">
+          <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
               <Coins size={13} className="text-amber-600 dark:text-amber-400" />
-              <span>Public Capital Grant Ledger & Disbursed Expenditure</span>
+              <span>Public Capital Grant Ledger &amp; Disbursed Expenditure</span>
             </span>
-            <span className="text-[8.5px] mono font-black px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+            <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
               AUDIT VERIFIED
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-[10px] mono">
+          <div className="grid grid-cols-2 gap-3 text-[10.5px] font-mono">
             <div>
-              <span className="text-slate-600 dark:text-slate-400 block font-bold">Grant Facility</span>
-              <span className="text-slate-950 dark:text-white font-black text-[11px]">{fiscalGrant.source}</span>
+              <span className="text-slate-500 block">Grant Facility</span>
+              <span className="text-slate-900 dark:text-white font-semibold text-[11px]">{fiscalGrant.source}</span>
             </div>
             <div>
-              <span className="text-slate-600 dark:text-slate-400 block font-bold">Approved Budget</span>
-              <span className="text-emerald-800 dark:text-emerald-400 font-black text-xs">
+              <span className="text-slate-500 block">Approved Budget</span>
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold text-xs">
                 {fiscalGrant.currency} {fiscalGrant.totalAllocated.toLocaleString()}
               </span>
             </div>
             <div>
-              <span className="text-slate-500 block font-bold">Disbursed to Date</span>
-              <span className="text-slate-900 dark:text-slate-100 font-bold">
+              <span className="text-slate-500 block">Disbursed to Date</span>
+              <span className="text-slate-900 dark:text-slate-100 font-semibold">
                 {fiscalGrant.currency} {fiscalGrant.disbursed.toLocaleString()} ({Math.round((fiscalGrant.disbursed / fiscalGrant.totalAllocated) * 100)}%)
               </span>
             </div>
             <div>
-              <span className="text-slate-500 block font-bold">Active Public Tenders</span>
-              <span className="text-slate-900 dark:text-slate-100 font-bold">{deptProjects.length || 2} Works in Progress</span>
+              <span className="text-slate-500 block">Active Public Tenders</span>
+              <span className="text-slate-900 dark:text-slate-100 font-semibold">{deptProjects.length || 2} Works in Progress</span>
             </div>
           </div>
         </div>

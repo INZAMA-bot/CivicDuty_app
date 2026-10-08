@@ -1,27 +1,36 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode, Department } from '../types';
-import { COUNTRIES, allDepts, TERRITORY } from '../data/countries';
+import { COUNTRIES, allDepts } from '../data/countries';
 import { primaryNodes } from '../data/tiers';
-import { 
-  ChevronLeft, 
-  Search, 
-  Check, 
-  ShieldCheck, 
-  Fingerprint, 
-  BadgeCheck, 
-  Lock, 
-  Building2, 
-  MapPin, 
-  Layers, 
-  Phone,
+import {
+  ChevronLeft,
+  Search,
+  Check,
+  ShieldCheck,
+  Fingerprint,
+  BadgeCheck,
+  Lock,
+  MapPin,
+  Layers,
   Compass,
-  ArrowRight
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { DeptIcon } from '../components/DeptIcon';
 
 export const OnboardingCitizenView: React.FC = () => {
-  const { view, go, user, setUser, toast, profiles, setProfiles, ensureCitizenSession, openLegalCenter } = useApp();
+  const {
+    view,
+    go,
+    user,
+    setUser,
+    toast,
+    profiles,
+    setProfiles,
+    ensureCitizenSession,
+    openLegalCenter,
+  } = useApp();
 
   // Onboarding Mode: New Citizen Sign Up (3-Step) vs Returning Citizen Login (1-Step)
   const [citizenAuthMode, setCitizenAuthMode] = useState<'signup' | 'login'>('signup');
@@ -32,7 +41,7 @@ export const OnboardingCitizenView: React.FC = () => {
   // Onboarding Step 1 State
   const [idType, setIdType] = useState<'nid' | 'passport'>('nid');
   const [idVal, setIdVal] = useState('');
-  const [country, setCountry] = useState<CountryCode | ''>('');
+  const [country, setCountry] = useState<CountryCode | ''>(user?.country || 'UG');
   const [phone, setPhone] = useState('');
 
   // Onboarding Step 2 (Home) State
@@ -178,558 +187,685 @@ export const OnboardingCitizenView: React.FC = () => {
   // STEP 1: Verify Identity
   if (view === 'ob1') {
     return (
-      <div className="p-5 space-y-6 pt-8 animate-fade-in max-w-lg mx-auto text-slate-800 dark:text-slate-100">
-        <div>
-          <div className="flex items-center justify-between gap-2 mb-4">
+      <div className="px-3.5 sm:px-5 pt-4 pb-16 animate-fade-in max-w-lg mx-auto text-slate-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+          {/* Top Studio Header Bar */}
+          <div className="px-4 py-3 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
             <button
               onClick={() => go('splash')}
-              className="flex items-center gap-1 text-[11px] mono text-slate-500 hover:text-amber-700 dark:hover:text-amber-400 transition-colors font-medium"
+              className="flex items-center gap-1 text-xs font-mono text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
             >
-              <ChevronLeft size={14} /> Back
+              <ChevronLeft size={14} />
+              <span>Portal</span>
             </button>
+
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold">
+                1 / 3 · Identity
+              </span>
+              <span>·</span>
+              <span>2 · Parish</span>
+              <span>·</span>
+              <span>3 · Walls</span>
+            </div>
+
             <button
               onClick={() => {
                 ensureCitizenSession();
                 go('feed');
               }}
-              className="text-[10.5px] mono text-teal-700 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-500/10 border border-teal-500/30 px-3 py-1.5 rounded-xl hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all flex items-center gap-1.5"
+              className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors flex items-center gap-1 cursor-pointer"
             >
-              <ArrowRight size={13} strokeWidth={1.75} />
-              <span>Skip to Live Feed</span>
+              <span>Skip</span>
+              <ArrowRight size={11} strokeWidth={1.75} />
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[10px] mono text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">
-            <Fingerprint size={13} />
-            <span>{citizenAuthMode === 'signup' ? 'New Citizen Sign Up · Step 1 of 3' : 'Returning Citizen Sign In · 1-Step Instant Mount'}</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-            {citizenAuthMode === 'signup' ? 'Verify Citizen Identity' : 'Returning Citizen Sign In'}
-          </h2>
-          <p className="text-[12.5px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-            {citizenAuthMode === 'signup'
-              ? '1 Verified ID = 1 Authentic Voice. Sybil-resistant cryptographic validation routes your voice directly to your municipal council.'
-              : 'Already onboarded? Resume your saved citizen session in one tap or enter your National ID / Phone to jump straight to your Live Feed.'}
-          </p>
+          <div className="p-4 sm:p-5 space-y-4">
+            <div>
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-1">
+                <Fingerprint size={12} />
+                <span>
+                  {citizenAuthMode === 'signup'
+                    ? 'New Citizen Onboarding · Step 1 of 3'
+                    : 'Returning Citizen Sign In · 1-Step Instant Mount'}
+                </span>
+              </div>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {citizenAuthMode === 'signup' ? 'Verify Citizen Identity' : 'Returning Citizen Sign In'}
+              </h1>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                {citizenAuthMode === 'signup'
+                  ? '1 Verified ID = 1 Authentic Voice. Zero-knowledge SHA-256 validation routes your voice directly to your parish & municipal council.'
+                  : 'Resume your saved citizen session in one tap or enter your National ID / Phone to jump straight to your Live Feed.'}
+              </p>
 
-          {/* 2-Tab Mode Switcher: New Citizen Sign Up vs Returning Citizen Login */}
-          <div className="grid grid-cols-2 gap-1.5 p-1 mt-4 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => setCitizenAuthMode('signup')}
-              className={`py-2 px-3 rounded-xl text-xs font-black mono transition-all cursor-pointer ${
-                citizenAuthMode === 'signup'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              New Citizen Sign Up (3 Steps)
-            </button>
-            <button
-              type="button"
-              onClick={() => setCitizenAuthMode('login')}
-              className={`py-2 px-3 rounded-xl text-xs font-black mono transition-all cursor-pointer ${
-                citizenAuthMode === 'login'
-                  ? 'bg-amber-500 text-slate-950 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Returning Login (1-Step)
-            </button>
-          </div>
-        </div>
-
-        {citizenAuthMode === 'login' ? (
-          <div className="space-y-4 animate-fade-in">
-            {/* 1-Click Resume Saved Device Session Card */}
-            {user && (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs mono">
-                      {user.country || 'UG'}
-                    </div>
-                    <div>
-                      <div className="text-xs font-black text-slate-900 dark:text-white">
-                        Saved Session: {user.name || 'Verified Citizen Observer'}
-                      </div>
-                      <div className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300">
-                        {COUNTRIES[user.country]?.name} · {(user.followed || []).length} Monitored Desks
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-mono font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-200">
-                    Active Device
-                  </span>
-                </div>
+              {/* 2-Tab Mode Switcher */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 mt-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
                 <button
                   type="button"
-                  onClick={() => {
-                    ensureCitizenSession();
-                    toast(`Resumed session as ${user.name || 'Verified Citizen'}`, 'emerald');
-                    go('feed');
-                  }}
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider mono flex items-center justify-center gap-2 shadow-sm transition cursor-pointer"
+                  onClick={() => setCitizenAuthMode('signup')}
+                  className={`py-2 px-3 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer ${
+                    citizenAuthMode === 'signup'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
                 >
-                  <ArrowRight size={14} strokeWidth={1.75} />
-                  <span>1-Click Resume Saved Session → Live Feed</span>
+                  New Sign Up (3 Steps)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCitizenAuthMode('login')}
+                  className={`py-2 px-3 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer ${
+                    citizenAuthMode === 'login'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Returning Login (1-Step)
+                </button>
+              </div>
+            </div>
+
+            {citizenAuthMode === 'login' ? (
+              <div className="space-y-3.5 animate-fade-in">
+                {/* 1-Click Resume Saved Device Session Card */}
+                {user && (
+                  <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/30 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                          {user.country || 'UG'}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            Saved Session: {user.name || 'Verified Citizen Observer'}
+                          </div>
+                          <div className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 truncate">
+                            {COUNTRIES[user.country]?.name} · {(user.followed || []).length} Monitored Desks
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shrink-0">
+                        Active
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        ensureCitizenSession();
+                        toast(`Resumed session as ${user.name || 'Verified Citizen'}`, 'emerald');
+                        go('feed');
+                      }}
+                      className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <span>Resume Saved Session → Live Feed</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* 1-Step NIN / Phone Direct Login Form */}
+                <form
+                  onSubmit={handleReturningCitizenLogin}
+                  className="p-3.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-3"
+                >
+                  <div className="text-xs font-bold text-slate-900 dark:text-white">
+                    Sign In with National ID or Mobile Number
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold mb-1">
+                      National ID (NIN), Passport, or Registered Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={loginIdentifier}
+                      onChange={(e) => {
+                        setLoginIdentifier(e.target.value);
+                        const det = detectCountry(e.target.value);
+                        if (det) setLoginCountry(det);
+                      }}
+                      placeholder="e.g. CM90284918841 or +256 778 277 900"
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold mb-1">
+                      Jurisdiction Country
+                    </label>
+                    <select
+                      value={loginCountry}
+                      onChange={(e) => setLoginCountry(e.target.value as CountryCode)}
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    >
+                      {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          [{k}] {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-mono font-semibold rounded-lg py-2.5 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>Instant Sign In → Live Feed</span>
+                    <ArrowRight size={14} />
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                {/* Identity Type Selection */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIdType('nid')}
+                    className={`py-2.5 px-3 rounded-lg text-xs font-mono font-semibold border transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                      idType === 'nid'
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 bg-[#f8f9fa] dark:bg-[#0e1116]'
+                    }`}
+                  >
+                    <BadgeCheck size={14} />
+                    <span>National ID</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIdType('passport')}
+                    className={`py-2.5 px-3 rounded-lg text-xs font-mono font-semibold border transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                      idType === 'passport'
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 bg-[#f8f9fa] dark:bg-[#0e1116]'
+                    }`}
+                  >
+                    <Lock size={14} />
+                    <span>Passport</span>
+                  </button>
+                </div>
+
+                {/* ID Input */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold">
+                    {idType === 'nid' ? 'National ID Number (NIN)' : 'Passport Number'}
+                  </label>
+                  <input
+                    type="text"
+                    value={idVal}
+                    onChange={(e) => handleIDInput(e.target.value)}
+                    placeholder={idType === 'nid' ? 'e.g. CM90284918841 (or leave blank for instant demo ID)' : 'e.g. A01849204'}
+                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                  {country && COUNTRIES[country] && (
+                    <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 pt-0.5">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-[9.5px] font-bold">
+                        {country}
+                      </span>
+                      <span>
+                        Jurisdiction: <strong>{COUNTRIES[country].name}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Country Override */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold">
+                    Sovereign Jurisdiction
+                  </label>
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value as CountryCode)}
+                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="">Select country...</option>
+                    {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        [{k}] {v.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Phone Input */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold">
+                    Mobile Number <span className="text-slate-400 font-normal">(Optional · 2FA &amp; Perks)</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+256 778 277 900"
+                      className="flex-1 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toast('OTP verification code sent via SMS', 'emerald')}
+                      className="px-3 py-2 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-slate-700 dark:text-slate-300 text-xs font-mono font-semibold rounded-lg whitespace-nowrap cursor-pointer"
+                    >
+                      Send OTP
+                    </button>
+                  </div>
+                </div>
+
+                {/* Security Note Box & Legal Charter Consent */}
+                <div className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  <div className="flex items-start gap-2">
+                    <ShieldCheck size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <span>
+                      Your ID number is cryptographically salted &amp; hashed. Only your verified citizenship status and parish node are broadcast to public walls.
+                    </span>
+                  </div>
+
+                  <label className="flex items-start gap-2 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={acceptedCharter}
+                      onChange={(e) => setAcceptedCharter(e.target.checked)}
+                      className="mt-0.5 rounded accent-emerald-600"
+                    />
+                    <span className="text-[10.5px] text-slate-700 dark:text-slate-300">
+                      I agree to the CivicDuty{' '}
+                      <button
+                        type="button"
+                        onClick={() => openLegalCenter('terms')}
+                        className="font-semibold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
+                      >
+                        Terms of Use
+                      </button>
+                      ,{' '}
+                      <button
+                        type="button"
+                        onClick={() => openLegalCenter('privacy')}
+                        className="font-semibold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
+                      >
+                        Zero-Knowledge Privacy Charter
+                      </button>
+                      , and{' '}
+                      <button
+                        type="button"
+                        onClick={() => openLegalCenter('ethics')}
+                        className="font-semibold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
+                      >
+                        Ethical Perks Covenant
+                      </button>
+                      .
+                    </span>
+                  </label>
+                </div>
+
+                <button
+                  onClick={handleOb1Next}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-2.5 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>Continue to Step 2 (Home Location)</span>
+                  <ArrowRight size={14} />
                 </button>
               </div>
             )}
-
-            {/* 1-Step NIN / Phone Direct Login Form */}
-            <form onSubmit={handleReturningCitizenLogin} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 space-y-3.5">
-              <div className="text-xs font-black text-slate-900 dark:text-white">
-                Or Sign In with National ID / Mobile Number
-              </div>
-
-              <div>
-                <label className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest block font-bold mb-1">
-                  National ID (NIN), Passport, or Registered Phone
-                </label>
-                <input
-                  type="text"
-                  value={loginIdentifier}
-                  onChange={(e) => {
-                    setLoginIdentifier(e.target.value);
-                    const det = detectCountry(e.target.value);
-                    if (det) setLoginCountry(det);
-                  }}
-                  placeholder="e.g. CM90284918841 or +256 778 277 900"
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest block font-bold mb-1">
-                  Jurisdiction Country
-                </label>
-                <select
-                  value={loginCountry}
-                  onChange={(e) => setLoginCountry(e.target.value as CountryCode)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600"
-                >
-                  {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
-                    <option key={k} value={k}>
-                      [{k}] {v.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold rounded-xl py-3 text-xs uppercase tracking-widest mono transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-              >
-                <span>Instant Sign In → Jump to Live Feed</span>
-                <ArrowRight size={15} />
-              </button>
-            </form>
-          </div>
-        ) : (
-          <>
-
-        {/* Identity Type Selection */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            onClick={() => setIdType('nid')}
-            className={`py-3 px-3.5 rounded-xl text-xs font-bold border transition-all mono flex items-center justify-center gap-2 ${
-              idType === 'nid' 
-                ? 'border-amber-600/50 bg-amber-600/10 text-amber-800 dark:text-amber-300 shadow-xs' 
-                : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
-            }`}
-          >
-            <BadgeCheck size={16} className={idType === 'nid' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'} />
-            <span>National ID</span>
-          </button>
-          <button
-            onClick={() => setIdType('passport')}
-            className={`py-3 px-3.5 rounded-xl text-xs font-bold border transition-all mono flex items-center justify-center gap-2 ${
-              idType === 'passport' 
-                ? 'border-amber-600/50 bg-amber-600/10 text-amber-800 dark:text-amber-300 shadow-xs' 
-                : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
-            }`}
-          >
-            <Lock size={15} className={idType === 'passport' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'} />
-            <span>Passport</span>
-          </button>
-        </div>
-
-        {/* ID Input */}
-        <div className="space-y-1.5">
-          <label className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest block font-bold">
-            {idType === 'nid' ? 'National ID Number (NIN)' : 'Passport Number'}
-          </label>
-          <input
-            type="text"
-            value={idVal}
-            onChange={(e) => handleIDInput(e.target.value)}
-            placeholder={idType === 'nid' ? 'e.g. CM90284918841' : 'e.g. A01849204'}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600 transition-colors"
-          />
-          <div className="flex items-center gap-2 h-5 pt-0.5">
-            {country && COUNTRIES[country] && (
-              <div className="flex items-center gap-1.5 text-[10.5px] mono text-emerald-700 dark:text-emerald-400 font-medium">
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-black">{country}</span>
-                <span>Jurisdiction Detected: <strong>{COUNTRIES[country].name}</strong></span>
-              </div>
-            )}
           </div>
         </div>
-
-        {/* Country Override */}
-        <div className="space-y-1.5">
-          <label className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest block font-bold">
-            Country <span className="text-slate-400 dark:text-slate-500 font-normal">(Auto-detected · override if needed)</span>
-          </label>
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value as CountryCode)}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600 transition-colors"
-          >
-            <option value="">Select country...</option>
-            {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
-              <option key={k} value={k}>
-                [{k}] {v.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Phone Input */}
-        <div className="space-y-1.5">
-          <label className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest block font-bold">
-            Mobile Number <span className="text-slate-400 dark:text-slate-500 font-normal">(Optional · 2FA & Airtime Perks)</span>
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+256 778 277 900"
-              className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm font-mono focus:outline-none focus:border-amber-600 transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => toast('OTP verification code sent via SMS', 'emerald')}
-              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs mono rounded-xl whitespace-nowrap transition-colors font-bold"
-            >
-              Send OTP
-            </button>
-          </div>
-        </div>
-
-        {/* Security Note Box & Legal Charter Consent */}
-        <div className="p-3 bg-amber-600/5 dark:bg-amber-500/5 rounded-xl border border-amber-600/20 dark:border-amber-500/20 space-y-2.5 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-          <div className="flex items-start gap-2.5">
-            <ShieldCheck size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-            <span>Your ID number is cryptographically salted &amp; hashed. Only your verified citizenship status and parish node are broadcast to public walls.</span>
-          </div>
-
-          <label className="flex items-start gap-2 pt-2 border-t border-amber-600/15 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={acceptedCharter}
-              onChange={(e) => setAcceptedCharter(e.target.checked)}
-              className="mt-0.5 rounded accent-emerald-600"
-            />
-            <span className="text-[10.5px] text-slate-700 dark:text-slate-300">
-              I agree to the CivicDuty{' '}
-              <button
-                type="button"
-                onClick={() => openLegalCenter('terms')}
-                className="font-bold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
-              >
-                Terms of Use
-              </button>
-              ,{' '}
-              <button
-                type="button"
-                onClick={() => openLegalCenter('privacy')}
-                className="font-bold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
-              >
-                Zero-Knowledge Privacy Charter
-              </button>
-              , and{' '}
-              <button
-                type="button"
-                onClick={() => openLegalCenter('ethics')}
-                className="font-bold text-emerald-700 dark:text-emerald-400 underline cursor-pointer"
-              >
-                Ethical Perks Covenant
-              </button>
-              .
-            </span>
-          </label>
-        </div>
-
-        <button
-          onClick={handleOb1Next}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold rounded-2xl py-3.5 text-xs uppercase tracking-widest mono transition-all active:scale-[.98] shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <span>Continue to Step 2 (Home Location)</span>
-          <ArrowRight size={15} />
-        </button>
-          </>
-        )}
       </div>
     );
   }
 
   // STEP 2: Home Location
   if (view === 'ob_home') {
-    const activeCountry = country || 'UG';
+    const activeCountry = (country || 'UG') as CountryCode;
     const primaryUnitName = activeCountry === 'KE' ? 'ward' : activeCountry === 'RW' ? 'sector' : 'parish';
+    const allNodes = primaryNodes(activeCountry, undefined);
     const hits =
-      homeSearch.trim().length >= 2
-        ? primaryNodes(activeCountry, undefined).filter((n) =>
-            n.name.toLowerCase().includes(homeSearch.trim().toLowerCase())
-          ).slice(0, 6)
-        : [];
+      homeSearch.trim().length >= 1
+        ? allNodes
+            .filter((n) => n.name.toLowerCase().includes(homeSearch.trim().toLowerCase()))
+            .slice(0, 6)
+        : allNodes.slice(0, 5);
 
     return (
-      <div className="p-5 space-y-5 pt-8 animate-fade-in max-w-lg mx-auto text-slate-800 dark:text-slate-100">
-        <div>
-          <button
-            onClick={() => go('ob1')}
-            className="flex items-center gap-1 text-[11px] mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 mb-4 transition-colors font-medium"
-          >
-            <ChevronLeft size={14} /> Back
-          </button>
-          <div className="flex items-center gap-1.5 text-[10px] mono text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">
-            <Compass size={13} />
-            <span>Step 2 of 3 · Jurisdiction</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">Where do you live?</h2>
-          <p className="text-[12.5px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-            Sets your default parish so local council reports take one tap. You can report anywhere across the country.
-          </p>
-        </div>
+      <div className="px-3.5 sm:px-5 pt-4 pb-16 animate-fade-in max-w-lg mx-auto text-slate-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
+            <button
+              onClick={() => go('ob1')}
+              className="flex items-center gap-1 text-xs font-mono text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+            >
+              <ChevronLeft size={14} />
+              <span>Step 1</span>
+            </button>
 
-        <div className="card p-4 space-y-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 rounded-2xl shadow-sm">
-          {chosenHome ? (
-            <div className="flex items-start justify-between gap-3 bg-amber-600/10 dark:bg-amber-500/10 border border-amber-600/20 dark:border-amber-500/20 rounded-xl p-3">
-              <div className="min-w-0">
-                <div className="text-[13px] font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                  <MapPin size={14} className="text-amber-600 dark:text-amber-400" />
-                  <span>{chosenHome.name}</span>
-                </div>
-                <div className="text-[10px] mono text-slate-500 dark:text-slate-400 mt-0.5">{chosenHome.path}</div>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
+              <span>1 · ID</span>
+              <span>·</span>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold">
+                2 / 3 · {primaryUnitName.toUpperCase()}
+              </span>
+              <span>·</span>
+              <span>3 · Walls</span>
+            </div>
+
+            <button
+              onClick={() => {
+                setChosenHome(null);
+                go('ob3');
+              }}
+              className="text-[10.5px] font-mono text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+            >
+              Skip →
+            </button>
+          </div>
+
+          <div className="p-4 sm:p-5 space-y-4">
+            <div>
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-1">
+                <Compass size={12} />
+                <span>Step 2 of 3 · Default Grassroots Node</span>
               </div>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Select Your Home {primaryUnitName.charAt(0).toUpperCase() + primaryUnitName.slice(1)}
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                Sets your default grassroots node so local council reports take one tap. You can still report anywhere across {COUNTRIES[activeCountry]?.name}.
+              </p>
+            </div>
+
+            <div className="p-3.5 space-y-2.5 border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg">
+              {chosenHome ? (
+                <div className="flex items-start justify-between gap-3 bg-emerald-500/10 border border-emerald-500/25 rounded-lg p-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>{chosenHome.name}</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                      {chosenHome.path}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setChosenHome(null)}
+                    className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 hover:underline shrink-0 font-semibold cursor-pointer"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={homeSearch}
+                      onChange={(e) => setHomeSearch(e.target.value)}
+                      placeholder={`Search your ${primaryUnitName} or tap below…`}
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-8 pr-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5 pt-1">
+                    <div className="text-[10px] font-mono text-slate-500 uppercase">
+                      {homeSearch.trim() ? 'Matching Jurisdictions' : `Quick-Select ${COUNTRIES[activeCountry]?.name} Nodes`}
+                    </div>
+                    {hits.length === 0 ? (
+                      <p className="text-[11px] font-mono text-slate-500 py-2">
+                        No match found. Try a shorter spelling.
+                      </p>
+                    ) : (
+                      hits.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => {
+                            setChosenHome(n);
+                            setHomeSearch('');
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/50 transition-colors flex items-center justify-between gap-2 cursor-pointer"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                              {n.name}
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                              {n.path}
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 shrink-0">
+                            Select →
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-[10.5px] font-mono text-slate-600 dark:text-slate-400">
+              <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1 mb-0.5">
+                <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Zero-Exposure Location Policy</span>
+              </span>
+              Your home location pre-fills grassroots routing and local Baraza alerts. It is never displayed publicly on your posts.
+            </div>
+
+            <div className="flex gap-2">
               <button
-                onClick={() => setChosenHome(null)}
-                className="text-[10px] mono text-amber-800 dark:text-amber-300 hover:underline flex-shrink-0 font-bold"
+                onClick={() => {
+                  setChosenHome(null);
+                  go('ob3');
+                }}
+                className="px-3.5 py-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 text-xs font-mono font-semibold hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] cursor-pointer"
               >
-                Change
+                Skip
+              </button>
+              <button
+                onClick={() => {
+                  if (!chosenHome && hits.length > 0) {
+                    setChosenHome(hits[0]);
+                  }
+                  go('ob3');
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-2.5 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>Continue to Step 3 (Follow Walls)</span>
+                <ArrowRight size={14} />
               </button>
             </div>
-          ) : (
-            <>
-              <div className="relative">
-                <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  value={homeSearch}
-                  onChange={(e) => setHomeSearch(e.target.value)}
-                  placeholder={`Search for your ${primaryUnitName}…`}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600"
-                />
-              </div>
-              {homeSearch.trim().length >= 2 && (
-                <div className="mt-2 space-y-1">
-                  {hits.length === 0 ? (
-                    <p className="text-[10px] mono text-slate-500 py-2">No match found. Try a shorter spelling.</p>
-                  ) : (
-                    hits.map((n) => (
-                      <button
-                        key={n.id}
-                        onClick={() => {
-                          setChosenHome(n);
-                          setHomeSearch('');
-                        }}
-                        className="w-full text-left px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:bg-amber-50/30 dark:hover:bg-slate-800 transition-colors"
-                      >
-                        <div className="text-[12px] font-bold text-slate-800 dark:text-slate-200">{n.name}</div>
-                        <div className="text-[9.5px] mono text-slate-500 dark:text-slate-400">{n.path}</div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="p-3.5 space-y-1 bg-slate-100/70 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 text-[10px] mono text-slate-600 dark:text-slate-400">
-          <p className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1">
-            <ShieldCheck size={12} className="text-teal-600 dark:text-teal-400" /> Privacy Guarantee
-          </p>
-          <p className="leading-relaxed">
-            Your home location speeds up dispatch and tailors local emergency notifications. It is never displayed publicly on your posts.
-          </p>
-        </div>
-
-        <div className="space-y-2 pt-2">
-          <button
-            onClick={() => {
-              if (!chosenHome) {
-                toast('Search and pick a location first', 'amber');
-                return;
-              }
-              go('ob3');
-            }}
-            disabled={!chosenHome}
-            className={`w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold rounded-2xl py-3.5 text-xs uppercase tracking-widest mono transition-all active:scale-[.98] shadow-sm flex items-center justify-center gap-2 ${
-              chosenHome ? '' : 'opacity-40 cursor-not-allowed'
-            }`}
-          >
-            <span>Continue to Wall Selection</span>
-            <ArrowRight size={15} />
-          </button>
-          <button
-            onClick={() => {
-              setChosenHome(null);
-              go('ob3');
-            }}
-            className="w-full border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl py-2.5 text-[10.5px] uppercase tracking-widest mono hover:bg-slate-100 dark:hover:bg-slate-900 transition-all font-medium"
-          >
-            Skip for now
-          </button>
+          </div>
         </div>
       </div>
     );
   }
 
   // STEP 3: Pick Walls
-  const activeCountry = country || 'UG';
+  const activeCountry = (country || 'UG') as CountryCode;
   const depts = allDepts(activeCountry);
   const civic = depts.filter((d) => d.lane === 'civic');
   const consumer = depts.filter((d) => d.lane === 'consumer');
 
   const filterList = (list: Department[]) =>
-    list.filter((d) => d.name.toLowerCase().includes(deptSearch.toLowerCase()) || d.full.toLowerCase().includes(deptSearch.toLowerCase()));
+    list.filter(
+      (d) =>
+        d.name.toLowerCase().includes(deptSearch.toLowerCase()) ||
+        d.full.toLowerCase().includes(deptSearch.toLowerCase())
+    );
 
   return (
-    <div className="p-5 space-y-5 pt-8 animate-fade-in max-w-lg mx-auto text-slate-800 dark:text-slate-100">
-      <div>
-        <button
-          onClick={() => go('ob_home')}
-          className="flex items-center gap-1 text-[11px] mono text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 mb-4 transition-colors font-medium"
-        >
-          <ChevronLeft size={14} /> Back
-        </button>
-        <div className="flex items-center gap-1.5 text-[10px] mono text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">
-          <Layers size={13} />
-          <span>Step 3 of 3 · Wall Feeds</span>
-        </div>
-        <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-tight">Pick Your Walls</h2>
-        <p className="text-[12.5px] text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-          Follow 3+ public entity or utility walls. Your live Registry stream displays verified tickets and work orders from these departments.
-        </p>
-      </div>
+    <div className="px-3.5 sm:px-5 pt-4 pb-16 animate-fade-in max-w-lg mx-auto text-slate-900 dark:text-slate-100">
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
+          <button
+            onClick={() => go('ob_home')}
+            className="flex items-center gap-1 text-xs font-mono text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+          >
+            <ChevronLeft size={14} />
+            <span>Step 2</span>
+          </button>
 
-      <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
-        <input
-          type="text"
-          value={deptSearch}
-          onChange={(e) => setDeptSearch(e.target.value)}
-          placeholder="Search department or utility walls..."
-          className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-slate-900 dark:text-slate-100 text-sm mono focus:outline-none focus:border-amber-600"
-        />
-      </div>
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
+            <span>1 · ID</span>
+            <span>·</span>
+            <span>2 · Node</span>
+            <span>·</span>
+            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-bold">
+              3 / 3 · WALLS
+            </span>
+          </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest font-bold">Lane 1 · Public Authorities</span>
-          <span className="chip ch-gov text-[9.5px]">Verified Gov</span>
+          <button
+            onClick={() => {
+              const topThree = depts.slice(0, 4).map((d) => d.id);
+              setFollowedDepts(topThree);
+              toast('Selected top 4 national walls', 'emerald');
+            }}
+            className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <Sparkles size={11} />
+            <span>Auto-Pick 4</span>
+          </button>
         </div>
-        <div className="space-y-2">
-          {filterList(civic).map((d) => {
-            const sel = followedDepts.includes(d.id);
-            return (
-              <div
-                key={d.id}
-                onClick={() => toggleDept(d.id)}
-                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                  sel 
-                    ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-500/10 text-teal-950 dark:text-teal-100' 
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
-                    <DeptIcon dept={d} size={15} />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{d.name}</div>
-                    <div className="text-[9.5px] mono text-slate-500 dark:text-slate-400">{d.ministry || d.full}</div>
-                  </div>
+
+        <div className="p-4 sm:p-5 space-y-4">
+          <div>
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-1">
+              <Layers size={12} />
+              <span>Step 3 of 3 · Monitored Service Walls</span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+              Pick Your Monitored Walls
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+              Follow 3+ public authority or utility walls. Your live feed displays verified citizen tickets and statutory SLA responses from these desks.
+            </p>
+          </div>
+
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={deptSearch}
+              onChange={(e) => setDeptSearch(e.target.value)}
+              placeholder="Search department or utility walls..."
+              className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-8 pr-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
+          <div className="max-h-80 overflow-y-auto space-y-3 pr-0.5">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
+                  Lane 1 · Statutory Public Desks
+                </span>
+                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                  Sovereign SLA
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {filterList(civic).map((d) => {
+                  const sel = followedDepts.includes(d.id);
+                  return (
+                    <div
+                      key={d.id}
+                      onClick={() => toggleDept(d.id)}
+                      className={`p-2.5 rounded-lg border transition-colors cursor-pointer flex items-center justify-between gap-2 ${
+                        sel
+                          ? 'border-emerald-500 bg-emerald-500/10'
+                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                          <DeptIcon dept={d} size={14} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                            {d.name}
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                            {d.ministry || d.full}
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded flex items-center justify-center border shrink-0 ${
+                          sel
+                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                            : 'border-slate-300 dark:border-slate-700 text-transparent'
+                        }`}
+                      >
+                        <Check size={12} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {consumer.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
+                    Lane 2 · Utilities &amp; Service Providers
+                  </span>
+                  <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                    Consumer Care
+                  </span>
                 </div>
-                <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                  sel 
-                    ? 'bg-teal-600 border-teal-600 text-white' 
-                    : 'border-slate-300 dark:border-slate-700 text-transparent'
-                }`}>
-                  <Check size={14} />
+                <div className="space-y-1.5">
+                  {filterList(consumer).map((d) => {
+                    const sel = followedDepts.includes(d.id);
+                    return (
+                      <div
+                        key={d.id}
+                        onClick={() => toggleDept(d.id)}
+                        className={`p-2.5 rounded-lg border transition-colors cursor-pointer flex items-center justify-between gap-2 ${
+                          sel
+                            ? 'border-emerald-500 bg-emerald-500/10'
+                            : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                            <DeptIcon dept={d} size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                              {d.name}
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                              {d.full}
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className={`w-5 h-5 rounded flex items-center justify-center border shrink-0 ${
+                            sel
+                              ? 'bg-emerald-600 border-emerald-600 text-white'
+                              : 'border-slate-300 dark:border-slate-700 text-transparent'
+                          }`}
+                        >
+                          <Check size={12} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {consumer.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest font-bold">Lane 2 · Utilities & Infrastructure</span>
-            <span className="chip ch-private text-[9.5px]">Verified Utility</span>
+            )}
           </div>
-          <div className="space-y-2">
-            {filterList(consumer).map((d) => {
-              const sel = followedDepts.includes(d.id);
-              return (
-                <div
-                  key={d.id}
-                  onClick={() => toggleDept(d.id)}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    sel 
-                      ? 'border-amber-600/50 bg-amber-600/10 text-amber-950 dark:text-amber-100' 
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
-                      <DeptIcon dept={d} size={15} />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{d.name}</div>
-                      <div className="text-[9.5px] mono text-slate-500 dark:text-slate-400">{d.full}</div>
-                    </div>
-                  </div>
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                    sel 
-                      ? 'bg-amber-700 dark:bg-amber-600 border-amber-700 dark:border-amber-600 text-white' 
-                      : 'border-slate-300 dark:border-slate-700 text-transparent'
-                  }`}>
-                    <Check size={14} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      <div className="pb-6 pt-2">
-        <button
-          onClick={handleFinishOnboarding}
-          className="w-full bg-amber-700 hover:bg-amber-600 text-white dark:bg-amber-600 dark:hover:bg-amber-500 font-bold rounded-2xl py-3.5 text-xs uppercase tracking-widest mono transition-all active:scale-[.98] shadow-sm flex items-center justify-center gap-2"
-        >
-          {followedDepts.length < 3
-            ? `Select ${3 - followedDepts.length} more (min 3) →`
-            : `Following ${followedDepts.length} Walls — Enter Live Feed →`}
-        </button>
+          <button
+            onClick={handleFinishOnboarding}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-2.5 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <span>
+              {followedDepts.length < 3
+                ? `Auto-Complete Top 3 Walls & Enter Live Feed →`
+                : `Following ${followedDepts.length} Walls · Enter Live Feed →`}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

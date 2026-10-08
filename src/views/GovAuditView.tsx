@@ -132,7 +132,7 @@ const COUNTRY_AUDIT_SPECS: Record<string, AuditSpec> = {
 };
 
 export const GovAuditView: React.FC = () => {
-  const { user, audit, officialQueries, toast, go, setVerifyTarget } = useApp();
+  const { user, audit, officialQueries, toast, go, setVerifyTarget, logAudit } = useApp();
 
   // Audit suite pages: 1: action_ledger, 2: crypto_chain, 3: statutory_dossier, 4: queries_trail, 5: telemetry
   const [activePage, setActivePage] = useState<
@@ -157,6 +157,10 @@ export const GovAuditView: React.FC = () => {
   const [queryStatusFilter, setQueryStatusFilter] = useState<
     'all' | 'pending' | 'review' | 'resolved' | 'sanctions'
   >('all');
+
+  // External Auditor Read-Only Subpoena Token Generator state
+  const [issuedAuditorToken, setIssuedAuditorToken] = useState<string | null>(null);
+  const [copiedAuditorToken, setCopiedAuditorToken] = useState<boolean>(false);
 
   if (!user) return null;
 
@@ -351,6 +355,17 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
     }, 900);
   };
 
+  const handleGenerateAuditorToken = () => {
+    const newToken = `AUDIT-RO-${countryCode}-2026`;
+    setIssuedAuditorToken(newToken);
+    logAudit(
+      'issue_external_auditor_token',
+      newToken,
+      `Generated time-limited Read-Only External Auditor Passcode (${newToken}) for ${auditSpec.auditor} / ${auditSpec.agency}`
+    );
+    toast(`Issued Read-Only External Auditor Passcode: ${newToken}`, 'emerald');
+  };
+
   return (
     <div className="px-3.5 sm:px-5 pt-4 pb-16 max-w-5xl mx-auto space-y-4 animate-fade-in text-slate-900 dark:text-slate-100">
       {/* TOP STATUTORY STUDIO HEADER */}
@@ -379,6 +394,16 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
           {/* Header Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap shrink-0">
             <button
+              type="button"
+              onClick={handleGenerateAuditorToken}
+              className="px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-xs font-mono font-semibold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Generate a time-limited Read-Only Passcode for the Auditor General or Ombudsman"
+            >
+              <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span>{issuedAuditorToken ? `Pass: ${issuedAuditorToken}` : 'Issue Read-Only Auditor Token'}</span>
+            </button>
+
+            <button
               onClick={exportAuditCsv}
               className="px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-slate-700 dark:text-slate-200 text-xs font-mono font-semibold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1.5 transition-colors cursor-pointer"
             >
@@ -395,6 +420,36 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
             </button>
           </div>
         </div>
+
+        {issuedAuditorToken && (
+          <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs animate-fade-in">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold">
+                  READ-ONLY SUBPOENA PASSCODE
+                </span>
+                <code className="font-mono font-bold text-slate-900 dark:text-white">
+                  {issuedAuditorToken}
+                </code>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Grants {auditSpec.auditor} &amp; {auditSpec.agency} read-only entry to this 5-page audit ledger via the Government Desk login without operational write controls.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText(issuedAuditorToken);
+                setCopiedAuditorToken(true);
+                toast(`Copied Read-Only Auditor Token: ${issuedAuditorToken}`, 'emerald');
+                setTimeout(() => setCopiedAuditorToken(false), 2000);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-mono font-semibold shrink-0 cursor-pointer"
+            >
+              {copiedAuditorToken ? 'Copied Token' : 'Copy Token'}
+            </button>
+          </div>
+        )}
 
         {/* 5-PAGE MULTI-TAB NAVIGATION */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-3 border-t border-[#e3e6ea] dark:border-[#262b36]">
