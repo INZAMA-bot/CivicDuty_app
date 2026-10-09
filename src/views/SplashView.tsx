@@ -7,14 +7,9 @@ import {
   Building2,
   Check,
   Layers,
-  HardHat,
-  Edit3,
-  SlidersHorizontal,
-  Users,
-  Video,
+  Compass,
 } from 'lucide-react';
-import { COUNTRIES, allDepts } from '../data/countries';
-import { getNationalRolloutArrangements } from '../data/tiers';
+import { COUNTRIES } from '../data/countries';
 import { TrafficLightLogo } from '../components/TrafficLightLogo';
 import { HeaderSettingsMenu } from '../components/HeaderSettingsMenu';
 import { InstallPwaBanner } from '../components/InstallPwaBanner';
@@ -24,22 +19,14 @@ export const SplashView: React.FC = () => {
   const {
     go,
     posts,
-    projects,
     selectedCountry,
     ensureCitizenSession,
-    setUser,
-    setActiveProject,
-    setActiveDept,
-    setActiveDeptCountry,
-    claimEntity,
-    isEntityClaimed,
-    toast,
+    openGuide,
     t,
   } = useApp();
 
   const activeCountry = selectedCountry || 'UG';
   const countryMeta = COUNTRIES[activeCountry] || COUNTRIES.UG;
-  const rolloutArrangement = getNationalRolloutArrangements(activeCountry);
 
   const total = posts.length;
   const resolved = posts.filter((p) => p.status === 'resolved').length;
@@ -187,225 +174,42 @@ export const SplashView: React.FC = () => {
           </div>
         </div>
 
-        {/* Interactive Live Demos — Every CivicDuty Activity */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-emerald-600 dark:text-emerald-400 block">
-                INTERACTIVE SANDBOX · {countryMeta.name.toUpperCase()} ({activeCountry})
-              </span>
-              <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                1-Click Live Demo for Every Activity on CivicDuty
-              </h2>
+        {/* Compact Link to National Civic Platform Pitch · User Journeys & 6 Live Role Simulations */}
+        <div className="px-4 py-3 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+              <Compass size={14} strokeWidth={1.75} />
             </div>
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-              6 Live Role Simulations
-            </span>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                CivicDuty Pitch &amp; Architecture · User Journey Field Guide ({countryMeta.name})
+              </div>
+              <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                Includes 6 Live Role Simulations (Contractors, Claimed Wall Editor, Superadmin, Line PS, Foreign Visas &amp; Baraza)
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-left">
-            {/* Demo 1: Contractors & Contract Supervision */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => {
-                const countryProjects = projects.filter((p) => !p.country || p.country === activeCountry);
-                const targetProj = countryProjects[0] || projects[0];
-                if (targetProj) setActiveProject(targetProj);
-                ensureCitizenSession();
-                go('project');
-                toast('Contract Supervision Demo opened: Test Contractor, Appointed Supervisor & Resident/Traveler roles!', 'emerald');
-              }}
-              className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500/60 flex flex-col justify-between gap-2 transition-all cursor-pointer group"
+              onClick={() => openGuide('how_it_works')}
+              className="px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-[10.5px] font-mono font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                  <HardHat size={13} /> Contractors &amp; Supervision
-                </span>
-                <ArrowRight size={12} className="text-slate-400 group-hover:text-amber-500" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  Contractor, Supervisor &amp; Traveler Audit
-                </div>
-                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  Dual-signed BOQ milestones, Appointed Engineer audit &amp; Resident/Traveler on-site inspection.
-                </div>
-              </div>
+              Field Guide
             </button>
-
-            {/* Demo 2: Claimed Desk & Wall Profile Editor */}
             <button
               type="button"
               onClick={() => {
-                const depts = allDepts(activeCountry);
-                const consumerDept = depts.find((d) => d.lane === 'consumer') || depts[0];
-                const targetId = consumerDept?.id || 'kcca';
-                if (!isEntityClaimed(targetId) && consumerDept) {
-                  claimEntity({
-                    deptId: targetId,
-                    country: activeCountry,
-                    businessName: consumerDept.name,
-                    representativeName: 'Sarah Namukasa (Managing Director)',
-                    officialEmail: `care@${targetId}.org`,
-                    phone: '+256 700 112 233',
-                    role: 'Head of Customer Care & Operations',
-                    plan: 'district',
-                    monthlyFee: 89,
-                    customLocation: `Plot 18 Central Avenue, ${countryMeta.name} HQ`,
-                    customDescription: consumerDept.full,
-                  });
-                }
-                setActiveDept(targetId);
-                setActiveDeptCountry(activeCountry);
-                ensureCitizenSession();
-                go('dept_wall');
-                toast('Claimed Desk Wall opened! Click "Edit Wall Details" to update business name, location & profile picture.', 'emerald');
+                try {
+                  localStorage.setItem('cd_docs_initial_tab', 'journeys');
+                } catch {}
+                go('docs');
               }}
-              className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/60 flex flex-col justify-between gap-2 transition-all cursor-pointer group"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <Edit3 size={13} /> Claimed Desk Wall Editor
-                </span>
-                <ArrowRight size={12} className="text-slate-400 group-hover:text-emerald-500" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  Edit Wall Location, Name &amp; Avatar
-                </div>
-                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  Claim a business/entity desk and customize its wall profile picture, GPS location, bio &amp; hotlines.
-                </div>
-              </div>
-            </button>
-
-            {/* Demo 3: Country Adaptive Superadmin (100+ Countries) */}
-            <button
-              type="button"
-              onClick={() => {
-                setUser({
-                  id: `superadmin-${activeCountry.toLowerCase()}`,
-                  name: rolloutArrangement.superadminSubtitle || `${countryMeta.name} National Superadmin`,
-                  country: activeCountry,
-                  role: 'platform_admin',
-                  dept: 'molg',
-                  dept_label: rolloutArrangement.superadminMinistry || `${countryMeta.name} Ministry of Local Government`,
-                  scope: activeCountry,
-                  scope_label: `${countryMeta.name} National Territorial Superadmin`,
-                  title: rolloutArrangement.superadminTitle || `Permanent Secretary, Ministry of Local Government (${countryMeta.name})`,
-                  hierarchy_level: 'tier5_perm_sec',
-                  escalation_rank: 5,
-                  is_admin: true,
-                });
-                go('gov_admin');
-                toast(`${countryMeta.name} Adaptive National Superadmin mounted!`, 'emerald');
-              }}
-              className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/60 flex flex-col justify-between gap-2 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <SlidersHorizontal size={13} /> {countryMeta.name} Superadmin
-                </span>
-                <ArrowRight size={12} className="text-slate-400 group-hover:text-emerald-500" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  100+ Country Adaptive Admin Engine
-                </div>
-                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  Auto-adapts to {countryMeta.name}&apos;s unique governance hierarchy, regions, and territorial nodes.
-                </div>
-              </div>
-            </button>
-
-            {/* Demo 4: Line Ministry Permanent Secretary (Strict Jurisdiction + Invite Minister) */}
-            <button
-              type="button"
-              onClick={() => {
-                setUser({
-                  id: `ps-works-${activeCountry.toLowerCase()}`,
-                  name: `Permanent Secretary — Works & Transport (${countryMeta.name})`,
-                  country: activeCountry,
-                  role: 'node_admin',
-                  dept: 'unra',
-                  dept_label: `${countryMeta.name} Ministry of Works & Transport`,
-                  scope: activeCountry,
-                  scope_label: `${countryMeta.name} Ministry of Works & Transport (MoWT)`,
-                  title: `Permanent Secretary, Ministry of Works & Transport`,
-                  hierarchy_level: 'tier5_perm_sec',
-                  escalation_rank: 5,
-                  is_admin: true,
-                });
-                go('gov_admin');
-                toast(`Mounted Line Ministry PS (${countryMeta.name} Works & Transport) — strictly scoped Admin, Team & Apex!`, 'emerald');
-              }}
-              className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-indigo-500/60 flex flex-col justify-between gap-2 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                  <Users size={13} /> Line Ministry PS &amp; Apex
-                </span>
-                <ArrowRight size={12} className="text-slate-400 group-hover:text-indigo-500" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  Ministry Admin, Team &amp; Invite Minister
-                </div>
-                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  Strictly limited to your Ministry: invite your Cabinet Minister, State Ministers &amp; review Apex.
-                </div>
-              </div>
-            </button>
-
-            {/* Demo 5: National ID / Passport & Foreigner Permit Verification */}
-            <button
-              type="button"
-              onClick={() => {
-                go('ob1');
-                toast('Citizen & Foreign Resident Onboarding opened: Test National ID, Passport, Alien Card, Visa & Work Permit!', 'emerald');
-              }}
-              className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/60 flex flex-col justify-between gap-2 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <ShieldCheck size={13} /> ID &amp; Foreign Permit Gate
-                </span>
-                <ArrowRight size={12} className="text-slate-400 group-hover:text-emerald-500" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  National ID, Passport &amp; Foreigner Visas
-                </div>
-                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  3-layer cryptographic ID verification + Alien Card, Work Permit, Green Card &amp; Student Visa extension.
-                </div>
-              </div>
-            </button>
-
-            {/* Demo 6: Live Video Baraza, Multi-Media Speak & Perks */}
-            <button
-              type="button"
-              onClick={() => {
-                ensureCitizenSession();
-                go('feed');
-                toast('Public Feed opened: Explore Live Video Baraza Town Halls, Multi-Media Replies & Citizen Direct Messages!', 'emerald');
-              }}
-              className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/60 flex flex-col justify-between gap-2 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <Video size={13} /> Live Baraza &amp; Multi-Media
-                </span>
-                <ArrowRight size={12} className="text-slate-400 group-hover:text-emerald-500" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
-                  Live Video Baraza, DMs &amp; Boda Perks
-                </div>
-                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  Join live video town halls, attach photos/video/voice/GPS in comments &amp; DMs, and claim perks.
-                </div>
-              </div>
+              <span>Pitch &amp; 6 Role Demos</span>
+              <ArrowRight size={11} strokeWidth={1.75} />
             </button>
           </div>
         </div>

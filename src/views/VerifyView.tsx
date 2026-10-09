@@ -141,68 +141,71 @@ export const VerifyView: React.FC = () => {
   const country = COUNTRIES[validation.country] || COUNTRIES['UG'];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-950 dark:text-white px-4 py-5 transition-colors pb-24">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-300 dark:border-slate-800">
-        <button
-          onClick={() => go('feed')}
-          className="flex items-center gap-1.5 text-xs mono font-black text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-        >
-          <ArrowLeft size={16} />
-          <span>Back to Feed</span>
-        </button>
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-slate-100 px-4 py-5 transition-colors pb-24 max-w-3xl mx-auto space-y-4">
+      {/* Studio Top Bar & Hero Header Card */}
+      <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#e3e6ea] dark:border-[#262b36] flex-wrap gap-2">
+          <button
+            onClick={() => go('feed')}
+            className="px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+          >
+            <ArrowLeft size={14} />
+            <span>Back to Feed</span>
+          </button>
 
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-300 text-[10px] mono font-black">
-          <ShieldCheck size={13} />
-          <span>SHA-256 Cryptographic Engine</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-semibold">
+            <ShieldCheck size={13} />
+            <span>SHA-256 Cryptographic Engine</span>
+          </div>
         </div>
-      </div>
 
-      {/* Hero Header */}
-      <div className="text-center py-5 space-y-2">
-        <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-400 mb-1 shadow-2xs">
-          <ShieldCheck size={28} className="stroke-[2.5]" />
+        <div className="flex items-start gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+            <ShieldCheck size={22} />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-base sm:text-lg font-bold font-mono uppercase tracking-tight text-slate-900 dark:text-white">
+              Sovereign Verification Portal
+            </h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Public, transparent cryptographic verification of citizen certificates, public work tenders, and statutory tax vouchers.
+            </p>
+          </div>
         </div>
-        <h1 className="text-xl font-black mono uppercase tracking-wider text-slate-950 dark:text-white">
-          Sovereign Verification Portal
-        </h1>
-        <p className="text-xs text-slate-700 dark:text-slate-300 max-w-sm mx-auto leading-relaxed font-medium">
-          Public, transparent cryptographic verification of citizen certificates, public work tenders, and statutory tax vouchers.
-        </p>
       </div>
 
       {/* Code Search Box */}
-      <div className="p-3.5 mb-5 border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-3xl shadow-xs space-y-2">
-        <label className="block text-[10px] mono font-black uppercase text-slate-700 dark:text-slate-300 tracking-wider">
-          Enter Audit Hash, Ticket ID or Work Code:
+      <div className="p-4 border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] rounded-xl space-y-2.5">
+        <label className="block text-[10px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+          Enter Audit Hash, Ticket ID or Work Code
         </label>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={14} className="absolute left-3 top-3 text-slate-500" />
+            <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
               placeholder="e.g. KLA-102 or 0x8f9c... or UG-CERT-8841"
-              className="w-full pl-8 pr-3 py-2 text-xs mono font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-950 dark:text-white focus:outline-none focus:border-emerald-500"
+              className="w-full pl-8 pr-3 py-2 text-xs font-mono font-semibold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
             />
           </div>
           <button
             onClick={() => toast('Cryptographic proof verified on national ledger', 'emerald')}
-            className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs mono font-black rounded-xl uppercase tracking-wider shadow-sm transition-all"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold rounded-lg uppercase tracking-wider transition-colors cursor-pointer"
           >
             Verify
           </button>
         </div>
 
         {/* Quick Example Codes */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200 dark:border-slate-800">
-          <span className="text-[9px] mono text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold">Samples:</span>
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
+          <span className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Samples:</span>
           {['KLA-102', 'UG-CERT-8841', 'PRJ-KCCA-2026', 'CD-PERK-3982'].map((c) => (
             <button
               key={c}
               onClick={() => setSearchCode(c)}
-              className="px-2.5 py-1 rounded-lg text-[9.5px] mono font-black bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-emerald-100 hover:text-emerald-900 transition-colors border border-slate-300 dark:border-slate-700"
+              className="px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-emerald-500/40 transition-colors border border-[#e3e6ea] dark:border-[#262b36] cursor-pointer"
             >
               {c}
             </button>
@@ -211,60 +214,60 @@ export const VerifyView: React.FC = () => {
       </div>
 
       {/* Official Cryptographic Certificate Document Extract */}
-      <div className="p-5 border-2 border-emerald-500/50 bg-white dark:bg-slate-900 rounded-3xl shadow-lg relative overflow-hidden space-y-4">
+      <div className="p-4 sm:p-5 border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] rounded-xl relative overflow-hidden space-y-4">
         {/* Header Ribbon */}
-        <div className="flex items-center justify-between border-b border-emerald-300 dark:border-emerald-700 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
+        <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="px-2 py-1 rounded-md bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
               {validation.country}
             </span>
             <div>
-              <div className="text-xs font-black mono uppercase tracking-wider text-slate-950 dark:text-white">
+              <div className="text-xs font-bold font-mono uppercase tracking-wider text-slate-900 dark:text-white">
                 {country.name} · SOVEREIGN CIVIC REGISTRY
               </div>
-              <div className="text-[9px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest font-bold">
+              <div className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                 IMMUTABLE PUBLIC AUDIT RECORD
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-[10px] mono font-black text-emerald-900 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-400">
+          <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/25">
             <CheckCircle2 size={12} />
             <span>VERIFIED</span>
           </div>
         </div>
 
         {/* Document Title */}
-        <div className="text-center py-1 space-y-1">
-          <span className="text-[9px] mono uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-black">
+        <div className="py-1 space-y-1">
+          <span className="text-[9.5px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
             Document Record
           </span>
-          <h2 className="text-sm sm:text-base font-black text-slate-950 dark:text-white leading-snug">
+          <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
             {validation.title}
           </h2>
-          <div className="text-[10px] mono text-slate-600 dark:text-slate-400 font-bold">
-            Holder: <strong className="text-slate-900 dark:text-slate-100 font-black">{validation.holder}</strong>
+          <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+            Holder: <strong className="text-slate-900 dark:text-slate-100 font-semibold">{validation.holder}</strong>
           </div>
         </div>
 
         {/* Status Banner */}
-        <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-center space-y-1">
-          <div className="text-[10px] font-black mono text-emerald-950 dark:text-emerald-300 uppercase tracking-wider flex items-center justify-center gap-1.5">
+        <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+          <div className="text-[10.5px] font-semibold font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
             <Lock size={12} />
             <span>{validation.status}</span>
           </div>
-          <div className="text-[9px] mono text-slate-600 dark:text-slate-400 font-bold truncate">
+          <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
             SHA-256: {validation.hash}
           </div>
         </div>
 
         {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-2 text-left pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left pt-1">
           {validation.details.map((d, i) => (
-            <div key={i} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800">
-              <div className="text-[8.5px] mono uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold">
+            <div key={i} className="p-2.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="text-[9px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
                 {d.label}
               </div>
-              <div className="text-[10.5px] font-black text-slate-950 dark:text-slate-100 mt-0.5">
+              <div className="text-[11px] font-bold text-slate-900 dark:text-slate-100 mt-0.5">
                 {d.val}
               </div>
             </div>
@@ -272,7 +275,7 @@ export const VerifyView: React.FC = () => {
         </div>
 
         {/* Block Height & Issuing Authority */}
-        <div className="border-t border-slate-200 dark:border-slate-800 pt-3 flex items-center justify-between text-[9px] mono text-slate-600 dark:text-slate-400 font-bold">
+        <div className="border-t border-[#e3e6ea] dark:border-[#262b36] pt-3 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
           <div>
             <span>Ledger Block: </span>
             <strong className="text-slate-900 dark:text-slate-100">{validation.blockHeight}</strong>
@@ -284,10 +287,10 @@ export const VerifyView: React.FC = () => {
         </div>
 
         {/* Action Controls */}
-        <div className="grid grid-cols-2 gap-2 pt-2">
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <button
             onClick={() => window.print()}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[10.5px] mono font-black uppercase tracking-wider hover:bg-slate-200 transition-colors shadow-2xs"
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 text-[10.5px] font-mono font-semibold uppercase tracking-wider transition-colors cursor-pointer"
           >
             <Printer size={13} />
             <span>Print Extract</span>
@@ -299,7 +302,7 @@ export const VerifyView: React.FC = () => {
               }
               toast('Verification link copied to clipboard!', 'emerald');
             }}
-            className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-[10.5px] mono font-black uppercase tracking-wider transition-colors shadow-2xs"
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold uppercase tracking-wider transition-colors cursor-pointer"
           >
             <ExternalLink size={13} />
             <span>Share Seal</span>

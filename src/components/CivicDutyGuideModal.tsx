@@ -4,6 +4,7 @@ import { primaryUnit, tiersFor } from '../data/tiers';
 import { COUNTRIES } from '../data/countries';
 import { CountryCode } from '../types';
 import { getCountryBranding } from '../data/countryBranding';
+import { InteractiveRoleSandboxGrid } from './InteractiveRoleSandboxGrid';
 import {
   X,
   BookOpen,
@@ -261,6 +262,9 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Relocated 6 Live Role Simulations inside Field Guide */}
+              <InteractiveRoleSandboxGrid countryCode={guideCountry} onAfterSelect={onClose} />
 
               {/* Statutory Framework Callout */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">

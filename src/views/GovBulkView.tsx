@@ -114,47 +114,47 @@ Peter Wasswa,${presets[4]?.title || 'Area Utility Manager'},East Substation,Divi
   };
 
   return (
-    <div className="p-4 space-y-4 animate-fade-in pb-12">
-      <div>
+    <div className="p-4 sm:p-5 space-y-4 animate-fade-in pb-16 max-w-2xl mx-auto text-slate-900 dark:text-slate-100">
+      <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
         <button
           onClick={() => go('gov_team')}
-          className="flex items-center gap-1 text-[10px] mono text-zinc-600 hover:text-zinc-400 mb-3.5 transition-colors"
+          className="flex items-center gap-1 text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
         >
-          <ChevronLeft size={14} /> Team
+          <ChevronLeft size={14} /> Back to Team
         </button>
-        <div className="tagline mb-1.5" style={{ color: '#f59e0b' }}>
-          Bulk Provisioning
+        <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
+          Bulk Provisioning Studio
         </div>
-        <h2 className="text-[21px] font-black text-amber-400 tracking-tight leading-tight">
+        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
           Onboard a whole node at once
         </h2>
-        <p className="text-[11px] mono text-zinc-600 mt-1.5 leading-relaxed">
+        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
           Upload your officer list. Nothing is created until you have read the preview.
         </p>
       </div>
 
       {stage === 'upload' && (
         <>
-          <div className="card p-4 space-y-3">
-            <p className="text-[9px] mono text-zinc-500 uppercase tracking-widest">Officer list</p>
+          <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+            <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Officer list</p>
             <div className="drop-zone block cursor-pointer" onClick={handleLoadSample}>
-              <div className="flex items-center justify-center gap-2 text-zinc-600">
-                <Upload size={18} /> <span className="text-[13px] mono">Upload CSV (Tap to load sample batch)</span>
+              <div className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400">
+                <Upload size={18} /> <span className="text-xs font-mono font-medium">Upload CSV (Tap to load sample batch)</span>
               </div>
             </div>
             <button
               onClick={handleDownloadTemplate}
-              className="w-full flex items-center justify-center gap-2 border border-zinc-800 text-zinc-400 rounded-xl py-2.5 text-[10px] uppercase tracking-widest mono hover:border-zinc-700 transition-all"
+              className="w-full flex items-center justify-center gap-2 border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-[10.5px] uppercase tracking-wider font-mono font-semibold transition-colors cursor-pointer"
             >
               <Download size={14} /> Download template
             </button>
-            <p className="text-[8px] mono text-zinc-700 leading-relaxed">
+            <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 leading-relaxed">
               Walkthrough: tapping upload loads a seven-row sample batch, two of which are deliberately broken to test validation.
             </p>
           </div>
 
-          <div className="card p-4 space-y-2">
-            <p className="text-[9px] mono text-zinc-500 uppercase tracking-widest">Columns</p>
+          <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+            <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Columns</p>
             {[
               ['name', "The officer's full name"],
               ['title', 'Their official title — it appears on every reply they post'],
@@ -164,9 +164,9 @@ Peter Wasswa,${presets[4]?.title || 'Area Utility Manager'},East Substation,Divi
               ['utility', 'yes for an area engineer or branch manager'],
               ['email', 'Becomes the permanent login for this desk'],
             ].map(([c, description]) => (
-              <div key={c} className="flex items-start gap-2.5 text-[10px] mono leading-relaxed">
-                <span className="text-amber-500/70 flex-shrink-0 min-w-[52px]">{c}</span>
-                <span className="text-zinc-500">{description}</span>
+              <div key={c} className="flex items-start gap-2.5 text-[10.5px] font-mono leading-relaxed">
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex-shrink-0 min-w-[52px]">{c}</span>
+                <span className="text-slate-600 dark:text-slate-400">{description}</span>
               </div>
             ))}
           </div>
@@ -176,41 +176,41 @@ Peter Wasswa,${presets[4]?.title || 'Area Utility Manager'},East Substation,Divi
       {stage === 'preview' && (
         <>
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="admin-stat">
-              <div className="text-2xl font-black mono text-emerald-400">{rows.length}</div>
-              <div className="text-[8px] mono text-zinc-600 uppercase mt-1">Ready to issue</div>
+            <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center">
+              <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">{rows.length}</div>
+              <div className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 uppercase mt-1 font-semibold">Ready to issue</div>
             </div>
-            <div className="admin-stat">
-              <div className={`text-2xl font-black mono ${problems.length ? 'text-red-400' : 'text-zinc-200'}`}>
+            <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center">
+              <div className={`text-2xl font-bold font-mono ${problems.length ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-slate-200'}`}>
                 {problems.length}
               </div>
-              <div className="text-[8px] mono text-zinc-600 uppercase mt-1">Rows with problems</div>
+              <div className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 uppercase mt-1 font-semibold">Rows with problems</div>
             </div>
           </div>
 
           {problems.length > 0 && (
-            <div className="card p-4 space-y-2" style={{ borderLeft: '3px solid #ef444460' }}>
-              <p className="text-[9px] mono text-red-400 uppercase tracking-widest">These rows will be skipped</p>
+            <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/30 space-y-2">
+              <p className="text-[10px] font-mono text-rose-600 dark:text-rose-400 uppercase tracking-wider font-semibold">These rows will be skipped</p>
               {problems.map((p, idx) => (
-                <div key={idx} className="text-[9px] mono text-zinc-500 leading-relaxed">
-                  <span className="text-zinc-600">Line {p.line}</span> · <span className="text-amber-500/70">{p.field}</span> · {p.msg}
+                <div key={idx} className="text-[10.5px] font-mono text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <span className="text-slate-500 font-semibold">Line {p.line}</span> · <span className="text-amber-600 dark:text-amber-400 font-semibold">{p.field}</span> · {p.msg}
                 </div>
               ))}
-              <p className="text-[8px] mono text-zinc-700 leading-relaxed pt-1">
+              <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 leading-relaxed pt-1">
                 Ambiguity is treated as failure rather than guessed at.
               </p>
             </div>
           )}
 
-          <div className="card p-4 space-y-2">
-            <p className="text-[9px] mono text-zinc-500 uppercase tracking-widest">Desks to be created ({rows.length})</p>
+          <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+            <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Desks to be created ({rows.length})</p>
             {rows.map((r, idx) => (
-              <div key={idx} className="border-b border-zinc-900 pb-2 last:border-0">
-                <div className="text-[11px] font-bold text-zinc-200">{r.title}</div>
-                <div className="text-[9px] mono text-zinc-600">
+              <div key={idx} className="border-b border-[#e3e6ea] dark:border-[#262b36] pb-2.5 last:border-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white">{r.title}</div>
+                <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
                   {r.name} · {r.email}
                 </div>
-                <div className="path-crumb">{r.unit}</div>
+                <div className="path-crumb mt-1">{r.unit}</div>
               </div>
             ))}
           </div>
@@ -218,7 +218,7 @@ Peter Wasswa,${presets[4]?.title || 'Area Utility Manager'},East Substation,Divi
           <div className="space-y-2">
             <button
               onClick={handleIssueCodes}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98]"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg py-3 text-xs uppercase tracking-wider font-mono transition-colors cursor-pointer"
             >
               Issue {rows.length} access codes
             </button>
@@ -228,7 +228,7 @@ Peter Wasswa,${presets[4]?.title || 'Area Utility Manager'},East Substation,Divi
                 setRows([]);
                 setProblems([]);
               }}
-              className="w-full text-zinc-600 hover:text-zinc-400 font-bold rounded-2xl py-2 text-[10px] uppercase tracking-widest mono transition-all"
+              className="w-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-semibold rounded-lg py-2 text-[10.5px] uppercase tracking-wider font-mono transition-colors cursor-pointer"
             >
               Start over
             </button>
@@ -238,35 +238,35 @@ Peter Wasswa,${presets[4]?.title || 'Area Utility Manager'},East Substation,Divi
 
       {stage === 'done' && (
         <>
-          <div className="card p-4 space-y-2" style={{ borderLeft: '3px solid #10b98166' }}>
-            <p className="text-[13px] font-bold text-emerald-400">{issued.length} access codes issued</p>
-            <p className="text-[10px] mono text-zinc-500 leading-relaxed">
+          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/30 space-y-1.5">
+            <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 font-mono uppercase">{issued.length} access codes issued</p>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
               Download the list and send each officer their own code by SMS or WhatsApp.
             </p>
           </div>
 
           <button
             onClick={handleDownloadIssued}
-            className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98]"
+            className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg py-3 text-xs uppercase tracking-wider font-mono transition-colors cursor-pointer"
           >
-            <Download size={16} /> Download codes CSV
+            <Download size={15} /> Download codes CSV
           </button>
 
-          <div className="card p-4 space-y-2">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
             {issued.map((i, idx) => (
-              <div key={idx} className="flex items-center justify-between gap-3 border-b border-zinc-900 pb-2 last:border-0">
+              <div key={idx} className="flex items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-2 last:border-0">
                 <div className="min-w-0">
-                  <div className="text-[11px] font-bold text-zinc-200 truncate">{i.title}</div>
-                  <div className="text-[8px] mono text-zinc-600 truncate">{i.email}</div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{i.title}</div>
+                  <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">{i.email}</div>
                 </div>
-                <span className="text-[11px] mono font-bold text-amber-300 tracking-wider flex-shrink-0">{i.code}</span>
+                <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 tracking-wider flex-shrink-0">{i.code}</span>
               </div>
             ))}
           </div>
 
           <button
             onClick={() => go('gov_team')}
-            className="w-full border border-zinc-800 text-zinc-400 rounded-2xl py-3 text-[10px] uppercase tracking-widest mono hover:border-zinc-700 transition-all"
+            className="w-full border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-200 rounded-lg py-2.5 text-[10.5px] uppercase tracking-wider font-mono font-semibold hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] transition-colors cursor-pointer"
           >
             Back to team
           </button>

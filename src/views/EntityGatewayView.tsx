@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { GOV_CODES } from '../data/tiers';
-import { CountrySelector } from '../components/CountrySelector';
-import { HeaderSettingsMenu } from '../components/HeaderSettingsMenu';
 import { getCountryDesksProfile } from '../data/countryDesks';
 import {
   ChevronLeft,
@@ -119,26 +117,28 @@ export const EntityGatewayView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-slate-100 pb-20 animate-fade-in">
-      {/* Top Studio Navigation Bar */}
-      <header className="sticky top-0 z-20 bg-white/95 dark:bg-[#161a22]/95 backdrop-blur-md border-b border-[#e3e6ea] dark:border-[#262b36] px-3.5 sm:px-5 py-2.5 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => go('splash')}
-          className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
-        >
-          <ChevronLeft size={15} />
-          <span>Back to Home</span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          <CountrySelector variant="compact" />
-          <HeaderSettingsMenu />
-        </div>
-      </header>
-
       <div className="max-w-3xl mx-auto px-3.5 sm:px-5 pt-4 space-y-4">
         {/* Studio Identity Header Card */}
-        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => go('splash')}
+              className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+            >
+              <ChevronLeft size={14} />
+              <span>Portal</span>
+            </button>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                {profile.countryName} Provider Terminal
+              </span>
+              <span>·</span>
+              <span>24h–48h SLA</span>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2 text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 flex-wrap">
@@ -185,6 +185,7 @@ export const EntityGatewayView: React.FC = () => {
               <Building2 size={13} className={activeTab === 'register_info' ? 'text-emerald-600 dark:text-emerald-400' : ''} />
               <span>30-Day Free Trial</span>
             </button>
+          </div>
           </div>
         </div>
 

@@ -48,10 +48,20 @@ import {
   Printer,
   Bus,
 } from 'lucide-react';
+import { InteractiveRoleSandboxGrid } from '../components/InteractiveRoleSandboxGrid';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
-  const [activeTab, setActiveTab] = useState<'pitch' | 'overview' | 'partner' | 'journeys' | 'architecture'>('overview');
+  const [activeTab, setActiveTab] = useState<'pitch' | 'overview' | 'partner' | 'journeys' | 'architecture'>(() => {
+    try {
+      const saved = localStorage.getItem('cd_docs_initial_tab');
+      if (saved === 'journeys' || saved === 'pitch' || saved === 'overview' || saved === 'partner' || saved === 'architecture') {
+        localStorage.removeItem('cd_docs_initial_tab');
+        return saved;
+      }
+    } catch {}
+    return 'overview';
+  });
   const [journeyRole, setJourneyRole] = useState<'citizen' | 'government' | 'entity'>('citizen');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [pitchCountry, setPitchCountry] = useState<string>(user?.country || 'UG');
@@ -654,9 +664,9 @@ export const DocsView: React.FC = () => {
             </div>
 
             {/* In-Screen Document Viewer for Active Selected Document */}
-            <div className="card p-5 space-y-6 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm text-slate-800 dark:text-slate-200">
+            <div className="p-5 space-y-6 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-800 dark:text-slate-200">
               {/* Document Letterhead & Metadata Header */}
-              <div className="border-b border-slate-200 dark:border-slate-800 pb-4 space-y-3">
+              <div className="border-b border-[#e3e6ea] dark:border-[#262b36] pb-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-1 rounded bg-amber-500/10 text-amber-800 dark:text-amber-400 text-[10px] mono font-bold border border-amber-500/30 flex items-center gap-1.5">
@@ -1337,53 +1347,56 @@ export const DocsView: React.FC = () => {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 2: USER JOURNEY MAPS (3 CATEGORIES)                    */}
+      {/* TAB 2: USER JOURNEY MAPS & 6 LIVE ROLE SIMULATIONS        */}
       {/* ========================================================= */}
       {activeTab === 'journeys' && (
         <div className="space-y-4">
+          {/* Relocated Interactive Role Sandbox (6 Live Role Simulations) */}
+          <InteractiveRoleSandboxGrid countryCode={pitchCountry as any} />
+
           {/* User Category Selector */}
           <div className="grid grid-cols-3 gap-2 text-center">
             <button
               onClick={() => setJourneyRole('citizen')}
-              className={`p-3 rounded-2xl border transition-all text-left flex flex-col justify-between ${
+              className={`p-3 rounded-xl border transition-colors text-left flex flex-col justify-between cursor-pointer ${
                 journeyRole === 'citizen'
-                  ? 'bg-teal-50 dark:bg-teal-500/15 border-teal-500 dark:border-teal-400 text-teal-900 dark:text-teal-200 shadow-sm'
-                  : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-200'
+                  : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:border-slate-400'
               }`}
             >
-              <Users size={18} className={journeyRole === 'citizen' ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500'} />
+              <Users size={18} className={journeyRole === 'citizen' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'} />
               <div className="mt-2">
-                <p className="text-xs font-black uppercase tracking-wider">1. Citizen / Consumer</p>
+                <p className="text-xs font-bold uppercase tracking-wider">1. Citizen / Consumer</p>
                 <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Service Consumer</p>
               </div>
             </button>
 
             <button
               onClick={() => setJourneyRole('government')}
-              className={`p-3 rounded-2xl border transition-all text-left flex flex-col justify-between ${
+              className={`p-3 rounded-xl border transition-colors text-left flex flex-col justify-between cursor-pointer ${
                 journeyRole === 'government'
-                  ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-500 dark:border-indigo-400 text-indigo-900 dark:text-indigo-200 shadow-sm'
-                  : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-900 dark:text-indigo-200'
+                  : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:border-slate-400'
               }`}
             >
               <Building size={18} className={journeyRole === 'government' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
               <div className="mt-2">
-                <p className="text-xs font-black uppercase tracking-wider">2. Government</p>
+                <p className="text-xs font-bold uppercase tracking-wider">2. Government</p>
                 <p className="text-[9px] mono text-slate-500 dark:text-slate-400">State & Regulator</p>
               </div>
             </button>
 
             <button
               onClick={() => setJourneyRole('entity')}
-              className={`p-3 rounded-2xl border transition-all text-left flex flex-col justify-between ${
+              className={`p-3 rounded-xl border transition-colors text-left flex flex-col justify-between cursor-pointer ${
                 journeyRole === 'entity'
-                  ? 'bg-amber-50 dark:bg-amber-500/15 border-amber-500 dark:border-amber-400 text-amber-900 dark:text-amber-200 shadow-sm'
-                  : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-900 dark:text-amber-200'
+                  : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:border-slate-400'
               }`}
             >
               <Briefcase size={18} className={journeyRole === 'entity' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'} />
               <div className="mt-2">
-                <p className="text-xs font-black uppercase tracking-wider">3. Entity Desk</p>
+                <p className="text-xs font-bold uppercase tracking-wider">3. Entity Desk</p>
                 <p className="text-[9px] mono text-slate-500 dark:text-slate-400">Service Provider</p>
               </div>
             </button>
