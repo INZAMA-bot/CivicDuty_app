@@ -98,24 +98,24 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-sm overflow-y-auto animate-fade-in">
-      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl max-w-4xl w-full shadow-2xl overflow-hidden my-auto text-slate-800 dark:text-slate-100 max-h-[92vh] flex flex-col">
-        {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0 text-xs font-mono font-bold">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-sm overflow-y-auto animate-fade-in">
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl max-w-4xl w-full shadow-xl overflow-hidden my-auto text-slate-900 dark:text-slate-100 max-h-[92vh] flex flex-col">
+        {/* Studio Header */}
+        <div className="px-4 sm:px-5 py-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 text-xs font-mono font-bold">
               {guideCountry}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-black text-slate-950 dark:text-white tracking-tight">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
                   CivicDuty Field Manual &amp; Operational Guide
                 </h3>
-                <span className="text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                  {countryData.name} Sovereign Node
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                  · {countryData.name} Sovereign Node
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                 Adaptive legal frameworks, statutory decentralization tiers &amp; consumer protection
               </p>
             </div>
@@ -123,24 +123,24 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer shrink-0"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Adaptive Global Country Switcher Ribbon (All Countries) */}
-        <div className="px-4 py-2 bg-slate-100/90 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
+        {/* Adaptive Global Country Switcher Ribbon */}
+        <div className="px-4 sm:px-5 py-2.5 bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 text-slate-500 shrink-0 text-[10px] font-mono uppercase font-black">
-              <Globe size={13} className="text-emerald-600" />
-              <span>Global Jurisdiction ({Object.keys(COUNTRIES).length} Nations):</span>
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 shrink-0 text-[10px] font-mono uppercase font-semibold">
+              <Globe size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Jurisdiction ({Object.keys(COUNTRIES).length} Nations):</span>
             </div>
             <select
               value={guideCountry}
               onChange={(e) => setGuideCountry(e.target.value as CountryCode)}
               aria-label="Select Country for Field Manual"
-              className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer"
+              className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               {Object.entries(COUNTRIES).map(([code, info]) => (
                 <option key={code} value={code}>
@@ -159,10 +159,10 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   key={code}
                   type="button"
                   onClick={() => setGuideCountry(code)}
-                  className={`px-2 py-1 rounded-md text-[10px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
+                  className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold transition-colors flex items-center gap-1 cursor-pointer shrink-0 border ${
                     isSelected
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-[#e3e6ea] dark:border-[#262b36]'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-300 hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border-[#e3e6ea] dark:border-[#262b36]'
                   }`}
                   title={`Switch guide to ${c.name}`}
                 >
@@ -173,121 +173,116 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
           </div>
         </div>
 
-        {/* Tab Selector Bar */}
-        <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-x-auto flex items-center gap-1.5 shrink-0 scrollbar-none">
+        {/* Studio Segmented Tab Bar */}
+        <div className="px-4 sm:px-5 py-2 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] overflow-x-auto flex items-center gap-1 shrink-0 scrollbar-none">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-semibold transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer shrink-0 border ${
                   isActive
-                    ? 'bg-emerald-700 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-white dark:bg-[#161a22] text-emerald-600 dark:text-emerald-400 border-[#e3e6ea] dark:border-[#262b36]'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-[#161a22]/60'
                 }`}
               >
                 {tab.icon}
                 <span>{tab.label}</span>
-                {tab.badge && (
-                  <span className="text-[8px] font-black uppercase px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950">
-                    {tab.badge}
-                  </span>
-                )}
               </button>
             );
           })}
         </div>
 
         {/* Content Area */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-5 bg-white dark:bg-[#161a22]">
           {/* TAB 1: QUICK START */}
           {activeTab === 'quickstart' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-4 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <h4 className="text-sm font-semibold tracking-tight text-slate-950 dark:text-white flex items-center gap-2">
-                    <ShieldCheck size={16} strokeWidth={1.75} className="text-emerald-600" />
+                  <h4 className="text-xs sm:text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck size={16} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
                     How CivicDuty Delivers Real Results in {countryData.name}
                   </h4>
-                  <span className="text-[10px] mono font-black uppercase px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                  <span className="text-[10px] font-mono font-semibold uppercase text-emerald-600 dark:text-emerald-400">
                     {branding.currency} NODE
                   </span>
                 </div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   CivicDuty is not a social media rant wall. It is a cryptographic, statutory accountability engine bridging citizens directly to official accounting officers under <strong>{branding.fieldManual.constitutionalBasis}</strong> and the <strong>{branding.fieldManual.pfmaAct}</strong>.
                 </p>
-                <div className="pt-1 text-[11px] text-emerald-800 dark:text-emerald-300 italic font-mono">
+                <div className="pt-1 text-[11px] text-emerald-700 dark:text-emerald-400 italic font-mono">
                   &ldquo;{branding.culturalMotto}&rdquo;
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-black text-sm flex items-center justify-center border border-teal-300 dark:border-teal-700">
-                    1
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-[#161a22] text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
+                    01
                   </div>
-                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Speak Your Truth</h5>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">Speak Your Truth</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                     Select the responsible public agency or private provider, tag your grassroots {primary}, and upload voice recordings or photographic proof.
                   </p>
-                  <div className="text-[10px] text-teal-600 dark:text-teal-400 font-bold flex items-center gap-1 pt-1">
+                  <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 pt-0.5">
                     <ShieldCheck size={12} /> Masked by Sovereign Pseudonym
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-black text-sm flex items-center justify-center border border-amber-300 dark:border-amber-700">
-                    2
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-[#161a22] text-amber-600 dark:text-amber-400 font-mono font-bold text-xs flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
+                    02
                   </div>
-                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Cryptographic Timestamp</h5>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">Cryptographic Timestamp</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                     Your dispatch computes a SHA-256 mathematical hash stored on the public ledger. Corrupt officers cannot delete, conceal, or backdate incidents.
                   </p>
-                  <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 pt-1">
+                  <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1 pt-0.5">
                     <Hash size={12} /> Immutable Audit Trail
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-black text-sm flex items-center justify-center border border-emerald-300 dark:border-emerald-700">
-                    3
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-[#161a22] text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
+                    03
                   </div>
-                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Turnaround or Escalation</h5>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">Turnaround or Escalation</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                     A countdown starts against statutory SLAs. Unresolved tickets automatically escalate across {countryData.name}&rsquo;s 5 administrative tiers up to the {branding.fieldManual.accountingOfficerTitle} and {branding.fieldManual.antiCorruptionAgency.acronym}.
                   </p>
-                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 pt-1">
+                  <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 pt-0.5">
                     <Clock size={12} /> Escalation to {branding.fieldManual.antiCorruptionAgency.acronym}
                   </div>
                 </div>
               </div>
 
-              {/* Relocated 6 Live Role Simulations inside Field Guide */}
+              {/* Embedded 6 Live Role Simulations inside Field Guide */}
               <InteractiveRoleSandboxGrid countryCode={guideCountry} onAfterSelect={onClose} />
 
               {/* Statutory Framework Callout */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
+              <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
-                  <Scale size={14} className="text-emerald-600" />
-                  <span>{countryData.name} Statutory Foundations:</span>
+                  <Scale size={14} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>{countryData.name} Statutory Foundations</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
-                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200 block">Constitutional Basis:</span>
-                    <span>{branding.fieldManual.constitutionalBasis}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px] text-slate-600 dark:text-slate-400">
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+                    <span className="font-semibold text-slate-900 dark:text-slate-200 block">Constitutional Basis</span>
+                    <span className="mt-0.5 block">{branding.fieldManual.constitutionalBasis}</span>
                   </div>
-                  <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <span className="font-bold text-slate-800 dark:text-slate-200 block">Fiscal Accountability:</span>
-                    <span>{branding.fieldManual.pfmaAct}</span>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+                    <span className="font-semibold text-slate-900 dark:text-slate-200 block">Fiscal Accountability</span>
+                    <span className="mt-0.5 block">{branding.fieldManual.pfmaAct}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
                 <div className="text-xs">
                   <strong className="text-slate-900 dark:text-white">Ready to file a dispatch in {countryData.name}?</strong>
-                  <span className="text-slate-500 block text-[11px]">Submit your report or browse the public registry.</span>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[11px]">Submit your report or browse the public registry.</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -295,7 +290,7 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                       onClose();
                       go('compose');
                     }}
-                    className="btn btn-primary text-xs font-bold px-3.5 py-2 flex items-center gap-1.5 shadow-sm"
+                    className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <ArrowRight size={13} strokeWidth={1.75} /> Speak (File Report)
                   </button>
@@ -304,7 +299,7 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                       onClose();
                       go('depts');
                     }}
-                    className="btn btn-secondary text-xs font-bold px-3 py-2"
+                    className="px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 text-xs font-mono font-semibold transition-colors cursor-pointer"
                   >
                     Directory
                   </button>
@@ -315,10 +310,10 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
           {/* TAB 2: THE 3-SIGNAL HUD */}
           {activeTab === 'hud' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <Activity size={16} strokeWidth={1.75} className="text-emerald-600" />
+                <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Activity size={16} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
                   The 3-Signal Sovereign HUD Decoded for {countryData.name}
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -327,49 +322,43 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
               </div>
 
               <div className="space-y-3">
-                <div className="p-4 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0">
-                    <AlertTriangle size={20} strokeWidth={1.75} />
+                <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                    <AlertTriangle size={18} strokeWidth={1.75} />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase text-rose-700 dark:text-rose-400 tracking-wider">
-                        Signal 1 (Red): Critical Breach &amp; Anti-Corruption Alert
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    <span className="text-xs font-mono font-bold uppercase text-rose-600 dark:text-rose-400 tracking-wider">
+                      Signal 1 (Red) · Critical Breach &amp; Anti-Corruption Alert
+                    </span>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                       Assigned to reports alleging bribery, extortion, life-threatening utility failures, or complaints where statutory SLAs have lapsed. Automatically flags the accounting officer&rsquo;s audit and dispatches alerts directly to <strong>{branding.fieldManual.antiCorruptionAgency.name} ({branding.fieldManual.antiCorruptionAgency.acronym})</strong>.
                     </p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0">
-                    <Clock size={20} strokeWidth={1.75} />
+                <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Clock size={18} strokeWidth={1.75} />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase text-amber-700 dark:text-amber-400 tracking-wider">
-                        Signal 2 (Amber): Active Investigation &amp; Field Review
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    <span className="text-xs font-mono font-bold uppercase text-amber-600 dark:text-amber-400 tracking-wider">
+                      Signal 2 (Amber) · Active Investigation &amp; Field Review
+                    </span>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                       The responsible department has officially acknowledged receipt, verified the grassroots location in the {primary}, and assigned an inspection crew with a public remediation deadline.
                     </p>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                    <CheckCircle2 size={20} strokeWidth={1.75} />
+                <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={18} strokeWidth={1.75} />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase text-emerald-700 dark:text-emerald-400 tracking-wider">
-                        Signal 3 (Green): Verified Public Resolution
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    <span className="text-xs font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
+                      Signal 3 (Green) · Verified Public Resolution
+                    </span>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                       Remediation is complete with photographic proof or repair telemetry uploaded. The ticket is only closed when local {countryData.name} citizens verify that the issue was actually solved on the ground.
                     </p>
                   </div>
@@ -385,10 +374,10 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
           {/* TAB 3: 5-TIER ROUTING */}
           {activeTab === 'tiers' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <Layers size={16} strokeWidth={1.75} className="text-emerald-600" />
+                <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Layers size={16} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
                   {countryData.name}&rsquo;s 5 Statutory Administrative Tiers
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
@@ -396,37 +385,42 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                 </p>
               </div>
 
-              <div className="relative border-l-2 border-emerald-500/40 ml-4 pl-4 space-y-4 text-xs">
+              <div className="grid grid-cols-1 gap-2.5 text-xs">
                 {branding.fieldManual.tiers.map((tier) => (
-                  <div key={tier.tierNumber} className="relative">
-                    <div className="absolute -left-[23px] top-0.5 w-4 h-4 rounded-full bg-emerald-600 text-white text-[9px] font-black flex items-center justify-center">
-                      {tier.tierNumber}
+                  <div
+                    key={tier.tierNumber}
+                    className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-start gap-3"
+                  >
+                    <div className="w-6 h-6 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
+                      0{tier.tierNumber}
                     </div>
-                    <div className="font-black text-slate-900 dark:text-white flex items-center gap-2">
-                      <span>{tier.levelName}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-bold text-slate-900 dark:text-white">{tier.levelName}</span>
+                        <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                          Authority: {tier.authority}
+                        </span>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-400 text-[11px] mt-1 leading-relaxed">
+                        {tier.description}
+                      </p>
                     </div>
-                    <div className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
-                      Authority: {tier.authority}
-                    </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
-                      {tier.description}
-                    </p>
                   </div>
                 ))}
               </div>
 
-              <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200">
-                <strong>No Administrative Silos:</strong> When you file a report in {countryData.name}, CivicDuty automatically links it across all 5 tiers. If a grassroots officer attempts to bury an incident, the {branding.fieldManual.accountingOfficerTitle} and {branding.fieldManual.antiCorruptionAgency.acronym} see the audit log immediately.
+              <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-700 dark:text-slate-300">
+                <strong className="text-slate-900 dark:text-white">No Administrative Silos:</strong> When you file a report in {countryData.name}, CivicDuty automatically links it across all 5 tiers. If a grassroots officer attempts to bury an incident, the {branding.fieldManual.accountingOfficerTitle} and {branding.fieldManual.antiCorruptionAgency.acronym} see the audit log immediately.
               </div>
             </div>
           )}
 
           {/* TAB 4: GOV VS PRIVATE */}
           {activeTab === 'gov_vs_private' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <Landmark size={16} strokeWidth={1.75} className="text-emerald-600" />
+                <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Landmark size={16} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
                   Sovereign Government Desks vs. Private Provider Desks ({countryData.name})
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -434,12 +428,12 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {/* Government Track */}
                 <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-                  <div className="flex items-center gap-2 text-teal-700 dark:text-teal-300">
-                    <Landmark size={18} strokeWidth={1.75} />
-                    <h5 className="text-xs font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <Landmark size={16} strokeWidth={1.75} />
+                    <h5 className="text-xs font-mono font-bold uppercase tracking-wider">
                       Sovereign Government Desks
                     </h5>
                   </div>
@@ -448,34 +442,34 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   </p>
 
                   <div className="space-y-2 text-[11px]">
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Citizen Cost:</span>
-                      <strong className="text-emerald-600">100% Free Always</strong>
+                      <strong className="text-emerald-600 dark:text-emerald-400">100% Free Always</strong>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Subscription Provision:</span>
-                      <strong className="text-blue-700 dark:text-blue-400 text-right">Centrally by Appointed Gov Personnel</strong>
+                      <strong className="text-slate-900 dark:text-slate-100 text-right">Centrally by Appointed Gov Personnel</strong>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Funding Mechanism:</span>
-                      <strong className="text-slate-800 dark:text-slate-200">Parliament Vote / Treasury Budget</strong>
+                      <strong className="text-slate-900 dark:text-slate-100">Parliament Vote / Treasury Budget</strong>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Payment Rail:</span>
-                      <strong className="text-slate-800 dark:text-slate-200">National Central Treasury TSA / IFMS</strong>
+                      <strong className="text-slate-900 dark:text-slate-100">National Central Treasury TSA / IFMS</strong>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-slate-500">Legal Mandate:</span>
-                      <strong className="text-slate-800 dark:text-slate-200">{branding.fieldManual.pfmaAct}</strong>
+                      <strong className="text-slate-900 dark:text-slate-100">{branding.fieldManual.pfmaAct}</strong>
                     </div>
                   </div>
                 </div>
 
                 {/* Private Provider Track */}
                 <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
-                    <Building2 size={18} strokeWidth={1.75} />
-                    <h5 className="text-xs font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <Building2 size={16} strokeWidth={1.75} />
+                    <h5 className="text-xs font-mono font-bold uppercase tracking-wider">
                       Private Commercial Providers
                     </h5>
                   </div>
@@ -484,25 +478,25 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   </p>
 
                   <div className="space-y-2 text-[11px]">
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Citizen Cost:</span>
-                      <strong className="text-emerald-600">100% Free Always</strong>
+                      <strong className="text-emerald-600 dark:text-emerald-400">100% Free Always</strong>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Subscription Provision:</span>
-                      <strong className="text-emerald-700 dark:text-emerald-400 text-right">Claimed by Business Owner ({branding.currency})</strong>
+                      <strong className="text-slate-900 dark:text-slate-100 text-right">Claimed by Business Owner ({branding.currency})</strong>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Funding Mechanism:</span>
-                      <strong className="text-slate-800 dark:text-slate-200">Territory Commercial SaaS Subscription</strong>
+                      <strong className="text-slate-900 dark:text-slate-100">Territory Commercial SaaS Subscription</strong>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36]">
                       <span className="text-slate-500">Payment Rails:</span>
-                      <strong className="text-slate-800 dark:text-slate-200">{branding.primaryTelecoms.join(', ')}</strong>
+                      <strong className="text-slate-900 dark:text-slate-100">{branding.primaryTelecoms.join(', ')}</strong>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-slate-500">Retention Incentive:</span>
-                      <strong className="text-slate-800 dark:text-slate-200">Prevent Customer Defection ({branding.advertisingCampaign.churnStatistic})</strong>
+                      <strong className="text-slate-900 dark:text-slate-100">Prevent Customer Defection ({branding.advertisingCampaign.churnStatistic})</strong>
                     </div>
                   </div>
                 </div>
@@ -510,7 +504,7 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
               {/* Local Advertising Campaign Card in Field Manual */}
               <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-xs text-slate-900 dark:text-slate-200 flex items-start gap-2.5">
-                <TrendingDown size={18} strokeWidth={1.75} className="shrink-0 mt-0.5 text-amber-600" />
+                <TrendingDown size={16} strokeWidth={1.75} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                 <div className="space-y-1">
                   <strong className="block text-slate-900 dark:text-white">
                     {branding.advertisingCampaign.headline}
@@ -518,7 +512,7 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                     {branding.advertisingCampaign.body}
                   </p>
-                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold block">
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold block">
                     {branding.advertisingCampaign.localLanguagePunchline}
                   </span>
                 </div>
@@ -528,10 +522,10 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
           {/* TAB 5: WHISTLEBLOWER SAFETY */}
           {activeTab === 'whistleblower' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <Lock size={16} strokeWidth={1.75} className="text-emerald-600" />
+                <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Lock size={16} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
                   Whistleblower Protection &amp; SHA-256 Ledger in {countryData.name}
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -539,9 +533,9 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                 </p>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+              <div className="space-y-2.5 text-xs">
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <ShieldCheck size={16} />
                   </div>
                   <div>
@@ -552,8 +546,8 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <Hash size={16} />
                   </div>
                   <div>
@@ -564,8 +558,8 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <FileCheck size={16} />
                   </div>
                   <div>
@@ -583,7 +577,7 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                     onClose();
                     go('verify');
                   }}
-                  className="btn btn-secondary text-xs font-bold px-4 py-2 flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Hash size={13} /> Open Hash Verifier Tool →
                 </button>
@@ -593,10 +587,10 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
           {/* TAB 6: OFFLINE & USSD */}
           {activeTab === 'offline_ussd' && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <Smartphone size={16} strokeWidth={1.75} className="text-emerald-600" />
+                <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Smartphone size={16} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
                   Inclusive Universal Access in {countryData.name}
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -604,21 +598,21 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
-                    <WifiOff size={18} />
-                    <h5 className="text-xs font-black uppercase tracking-wider">Offline Progressive PWA</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <WifiOff size={16} />
+                    <h5 className="text-xs font-mono font-bold uppercase tracking-wider">Offline Progressive PWA</h5>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                     When traveling through rural areas with no mobile data, CivicDuty caches your voice reports and photographs locally in encrypted storage. You can sync with a single tap once back in network range.
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
                   <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                    <Smartphone size={18} />
-                    <h5 className="text-xs font-black uppercase tracking-wider">
+                    <Smartphone size={16} />
+                    <h5 className="text-xs font-mono font-bold uppercase tracking-wider">
                       Zero-Data {branding.ussdShortcode} USSD ({branding.localPhoneSlang})
                     </h5>
                   </div>
@@ -634,7 +628,7 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                     onClose();
                     go('ussd');
                   }}
-                  className="btn btn-primary text-xs font-bold px-4 py-2 flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Smartphone size={13} /> Launch {branding.ussdShortcode} Simulator →
                 </button>
@@ -644,10 +638,10 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
           {/* TAB 7: INTERACTIVE SCENARIOS */}
           {activeTab === 'scenarios' && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <Compass size={16} strokeWidth={1.75} className="text-emerald-600" />
+                <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <Compass size={16} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
                   Interactive Scenario Simulator ({countryData.name})
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -655,23 +649,23 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                 </p>
               </div>
 
-              {/* Scenario selector pills */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Scenario selector buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {scenarios.map((sc, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setSelectedScenario(idx)}
-                    className={`p-3 rounded-xl text-left border transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl text-left border transition-colors cursor-pointer ${
                       selectedScenario === idx
-                        ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-200 ring-2 ring-emerald-500/20 shadow-xs'
-                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
+                        ? 'border-emerald-500/60 bg-emerald-500/10 text-slate-900 dark:text-white'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                    <div className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                       {sc.category}
                     </div>
-                    <div className="text-xs font-black mt-0.5">{sc.title}</div>
+                    <div className="text-xs font-bold mt-0.5">{sc.title}</div>
                   </button>
                 ))}
               </div>
@@ -680,36 +674,36 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
               {(() => {
                 const activeSc = scenarios[selectedScenario] || scenarios[0];
                 return (
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                      <span className="font-bold text-slate-500">Signal Classification:</span>
-                      <span className="font-black">{activeSc.type}</span>
+                  <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3 text-xs">
+                    <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+                      <span className="font-mono text-slate-500">Signal Classification:</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">{activeSc.type}</span>
                     </div>
 
-                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                      <span className="font-bold text-slate-500">Responsible Authority:</span>
-                      <span className="font-black text-slate-900 dark:text-white">{activeSc.targetAgency}</span>
+                    <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+                      <span className="font-mono text-slate-500">Responsible Authority:</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{activeSc.targetAgency}</span>
                     </div>
 
-                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                      <span className="font-bold text-slate-500">Jurisdiction Level:</span>
+                    <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+                      <span className="font-mono text-slate-500">Jurisdiction Level:</span>
                       <span className="font-mono text-slate-700 dark:text-slate-300">{activeSc.jurisdiction}</span>
                     </div>
 
-                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                      <span className="font-bold text-slate-500">Statutory Turnaround SLA:</span>
-                      <span className="font-black text-emerald-600 dark:text-emerald-400">{activeSc.sla}</span>
+                    <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+                      <span className="font-mono text-slate-500">Statutory Turnaround SLA:</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{activeSc.sla}</span>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="font-bold text-slate-500 block">5-Tier Statutory Escalation Path:</span>
-                      <p className="text-[11px] font-mono bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-emerald-800 dark:text-emerald-300">
+                      <span className="font-mono text-slate-500 block">5-Tier Statutory Escalation Path:</span>
+                      <p className="text-[11px] font-mono bg-white dark:bg-[#161a22] p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-emerald-700 dark:text-emerald-300">
                         {activeSc.escalationPath}
                       </p>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="font-bold text-slate-500 block">Expected Public Outcome:</span>
+                      <span className="font-mono text-slate-500 block">Expected Public Outcome:</span>
                       <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
                         {activeSc.outcome}
                       </p>
@@ -722,29 +716,29 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
 
           {/* TAB 8: PRE-FUNDED CSR PERKS & ESCROW VAULT */}
           {activeTab === 'csr_perks' && (
-            <div className="space-y-5">
-              <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-4 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+            <div className="space-y-4">
+              <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-4 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <h4 className="text-sm font-semibold tracking-tight text-slate-950 dark:text-white flex items-center gap-2">
+                  <h4 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     <Gift size={16} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400" />
                     Pre-Funded Digital Utility Perks &amp; Sovereign Escrow Vault
                   </h4>
-                  <span className="text-[10px] mono font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/30">
+                  <span className="text-[10px] font-mono font-semibold uppercase text-amber-600 dark:text-amber-400">
                     Phase 6 Escrow Architecture
                   </span>
                 </div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   In many civic systems, citizen incentives fail because rewards are promises without pre-allocated funds. 
                   CivicDuty solves this through <strong>Pre-Funded Escrow</strong>: civil engineering contractors, government authorities, and utility corporations pre-deposit cryptographic vouchers before rewarding citizens.
                 </p>
-                <div className="pt-2 flex items-center gap-3">
+                <div className="pt-1 flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       onClose();
                       go('perk_vault');
                     }}
-                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <Database size={13} />
                     <span>Open Sovereign Perk Escrow Vault</span>
@@ -754,31 +748,31 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black text-xs flex items-center justify-center border border-amber-500/40">
-                    1
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-[#161a22] text-amber-600 dark:text-amber-400 font-mono font-bold text-xs flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
+                    01
                   </div>
-                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Batch CSV Deposit</h5>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">Batch CSV Deposit</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                     Contractors upload spreadsheets with MTN 2GB data bundles, NWSC water bill tokens, or Umeme Yaka electricity units earmarked from statutory CSR budgets.
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-xs flex items-center justify-center border border-emerald-500/40">
-                    2
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-[#161a22] text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
+                    02
                   </div>
-                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Escrow Locking</h5>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">Escrow Locking</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                     Vouchers are cryptographically secured in the Escrow Ledger (`status: escrow_unassigned`), tracking face value liquidity and donor accountability.
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center justify-center border border-indigo-500/40">
-                    3
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-[#161a22] text-emerald-600 dark:text-emerald-400 font-mono font-bold text-xs flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
+                    03
                   </div>
-                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Instant Citizen Dispatch</h5>
+                  <h5 className="text-xs font-bold text-slate-900 dark:text-white">Instant Citizen Dispatch</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                     When public agency or contractor officers reward watchdog audits, vouchers are atomically drawn from escrow, sending live SMS codes and USSD strings to citizens.
                   </p>
@@ -788,16 +782,16 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-3.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between shrink-0 text-xs">
-          <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
-            <HelpCircle size={13} className="text-emerald-600" />
-            <span>Field manual calibrated to <strong>{countryData.name} ({guideCountry})</strong> sovereign statutes.</span>
+        {/* Studio Footer */}
+        <div className="px-4 sm:px-5 py-3 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between shrink-0 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
+            <HelpCircle size={13} className="text-emerald-600 dark:text-emerald-400" />
+            <span>Field manual calibrated to <strong className="text-slate-900 dark:text-white">{countryData.name} ({guideCountry})</strong> sovereign statutes.</span>
           </div>
 
           <button
             onClick={onClose}
-            className="btn btn-secondary text-xs font-bold px-4 py-1.5 cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#161a22] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold transition-colors cursor-pointer"
           >
             Close Field Manual
           </button>

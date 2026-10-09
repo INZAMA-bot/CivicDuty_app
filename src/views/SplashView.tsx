@@ -7,7 +7,6 @@ import {
   Building2,
   Check,
   Layers,
-  Compass,
 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { TrafficLightLogo } from '../components/TrafficLightLogo';
@@ -19,14 +18,9 @@ export const SplashView: React.FC = () => {
   const {
     go,
     posts,
-    selectedCountry,
     ensureCitizenSession,
-    openGuide,
     t,
   } = useApp();
-
-  const activeCountry = selectedCountry || 'UG';
-  const countryMeta = COUNTRIES[activeCountry] || COUNTRIES.UG;
 
   const total = posts.length;
   const resolved = posts.filter((p) => p.status === 'resolved').length;
@@ -170,46 +164,6 @@ export const SplashView: React.FC = () => {
                   Utilities, Banks &amp; Care
                 </div>
               </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Compact Link to National Civic Platform Pitch · User Journeys & 6 Live Role Simulations */}
-        <div className="px-4 py-3 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-              <Compass size={14} strokeWidth={1.75} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                CivicDuty Pitch &amp; Architecture · User Journey Field Guide ({countryMeta.name})
-              </div>
-              <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                Includes 6 Live Role Simulations (Contractors, Claimed Wall Editor, Superadmin, Line PS, Foreign Visas &amp; Baraza)
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => openGuide('how_it_works')}
-              className="px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-[10.5px] font-mono font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-            >
-              Field Guide
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                try {
-                  localStorage.setItem('cd_docs_initial_tab', 'journeys');
-                } catch {}
-                go('docs');
-              }}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-            >
-              <span>Pitch &amp; 6 Role Demos</span>
-              <ArrowRight size={11} strokeWidth={1.75} />
             </button>
           </div>
         </div>

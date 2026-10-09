@@ -1,34 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   ShieldCheck, 
   CheckCircle2, 
   ArrowLeft, 
   Search, 
-  Landmark, 
-  Building2, 
-  Calendar, 
-  FileText, 
   Printer, 
   Lock, 
   ExternalLink,
-  Layers,
-  Cpu,
-  Clock,
-  Award
+  QrCode,
+  Camera,
+  X,
+  Sparkles,
+  ScanLine,
 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { generateCryptoSealSync } from '../utils/cryptoSeal';
+import { QrCodeModal } from '../components/QrCodeModal';
 
 export const VerifyView: React.FC = () => {
-  const { go, verifyTarget, setVerifyTarget, projects, posts, user, toast } = useApp();
+  const { go, verifyTarget, projects, posts, user, toast } = useApp();
   const [searchCode, setSearchCode] = useState<string>(verifyTarget || 'UG-CERT-8841');
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (verifyTarget) {
       setSearchCode(verifyTarget);
     }
   }, [verifyTarget]);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
+  const startScanner = async () => {
+    setScannerOpen(true);
+    setCameraError(null);
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+        });
+        streamRef.current = stream;
+        setCameraActive(true);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch {
+        setCameraError('Camera access unavailable in this browser frame — use 1-Click Optical Scan Simulation below.');
+        setCameraActive(false);
+      }
+    } else {
+      setCameraError('Camera API unavailable — use 1-Click Optical Scan Simulation below.');
+    }
+  };
+
+  const handleSimulatedQrCapture = (codeToScan: string, label: string) => {
+    stopCamera();
+    setScannerOpen(false);
+    setSearchCode(codeToScan);
+    toast(`QR Seal Decoded: ${label} (${codeToScan})`, 'emerald');
+  };
 
   // Resolves validation data dynamically based on search string
   const getValidationData = () => {
@@ -174,11 +219,98 @@ export const VerifyView: React.FC = () => {
         </div>
       </div>
 
-      {/* Code Search Box */}
-      <div className="p-4 border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] rounded-xl space-y-2.5">
-        <label className="block text-[10px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
-          Enter Audit Hash, Ticket ID or Work Code
-        </label>
+      {/* Code Search & Optical QR Scanner Box */}
+      <div className="p-4 border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] rounded-xl space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <label className="block text-[10px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+            Enter Audit Hash, Ticket ID, Work Code or Scan QR Seal
+          </label>
+          <button
+            type="button"
+            onClick={() => (scannerOpen ? (stopCamera(), setScannerOpen(false)) : startScanner())}
+            className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1.5 border transition-colors cursor-pointer ${
+              scannerOpen
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
+            }`}
+          >
+            {scannerOpen ? <X size={12} /> : <Camera size={12} />}
+            <span>{scannerOpen ? 'Close QR Scanner' : 'Scan QR Seal'}</span>
+          </button>
+        </div>
+
+        {/* Optical QR Scanner Viewfinder Drawer */}
+        {scannerOpen && (
+          <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ScanLine size={15} className="text-emerald-600 dark:text-emerald-400 animate-pulse" />
+                <span className="text-xs font-bold font-mono text-slate-900 dark:text-slate-100">
+                  Optical SHA-256 QR Seal Scanner
+                </span>
+              </div>
+              <span className="text-[9.5px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                {cameraActive ? 'CAMERA LIVE' : 'OPTICAL READY'}
+              </span>
+            </div>
+
+            {cameraActive ? (
+              <div className="relative rounded-lg overflow-hidden bg-slate-950 aspect-video max-h-52 mx-auto flex items-center justify-center border border-emerald-500/40">
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                <div className="absolute inset-6 border-2 border-dashed border-emerald-400/80 rounded-lg pointer-events-none flex items-center justify-center">
+                  <span className="px-2 py-0.5 rounded bg-slate-950/80 text-[10px] font-mono text-emerald-300">
+                    Align Official CivicDuty QR Seal within frame
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-dashed border-[#e3e6ea] dark:border-[#262b36] text-center space-y-1.5">
+                <QrCode size={26} className="mx-auto text-emerald-600 dark:text-emerald-400" />
+                <div className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                  Point camera at any Printed Certificate, Tender Signboard, or Tax Perk QR Code
+                </div>
+                {cameraError && (
+                  <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+                    {cameraError}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <div className="text-[9.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <Sparkles size={11} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Instant Optical QR Scan Presets (Field Verification):</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {[
+                  { code: 'UG-CERT-8841', label: 'Citizen Merit Certificate QR' },
+                  { code: 'PRJ-KCCA-2026', label: 'Road Works BOQ Signboard QR' },
+                  { code: 'CD-PERK-3982', label: 'URA / NWSC Tax Voucher QR' },
+                  { code: posts[0]?.id || 'KLA-102', label: 'Resolved Ticket Seal QR' },
+                ].map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() => handleSimulatedQrCapture(item.code, item.label)}
+                    className="p-2 rounded-lg bg-white dark:bg-[#161a22] hover:border-emerald-500/40 border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-left transition-colors cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                        {item.label}
+                      </div>
+                      <div className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400">
+                        Scan {item.code}
+                      </div>
+                    </div>
+                    <QrCode size={14} className="text-slate-400 shrink-0 ml-2" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
@@ -287,7 +419,14 @@ export const VerifyView: React.FC = () => {
         </div>
 
         {/* Action Controls */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+          <button
+            onClick={() => setQrModalOpen(true)}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 text-[10.5px] font-mono font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <QrCode size={13} className="text-emerald-600 dark:text-emerald-400" />
+            <span>Show QR Seal</span>
+          </button>
           <button
             onClick={() => window.print()}
             className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 text-[10.5px] font-mono font-semibold uppercase tracking-wider transition-colors cursor-pointer"
@@ -309,6 +448,15 @@ export const VerifyView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <QrCodeModal
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        title={validation.title}
+        subtitle={`Holder: ${validation.holder} · ${country.name} Sovereign Ledger`}
+        code={searchCode.trim().toUpperCase()}
+        type={validation.type === 'contract' ? 'project' : validation.type === 'perk' ? 'voucher' : 'certificate'}
+      />
     </div>
   );
 };
