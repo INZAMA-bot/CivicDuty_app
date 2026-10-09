@@ -350,31 +350,40 @@ export const ComposeView: React.FC = () => {
     <div className="px-3.5 sm:px-5 pt-4 pb-16 max-w-2xl mx-auto space-y-4 animate-fade-in text-slate-900 dark:text-slate-100">
       {/* Main Studio Card */}
       <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
-        {/* Top Studio Header Bar */}
+        {/* Top Studio Header Bar — Uncongested Layout */}
         <div className="px-4 py-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                <FileText size={16} strokeWidth={1.75} />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight truncate">
-                  Citizen Speak &amp; Statutory Dispatch Studio
-                </h1>
-                <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                  Permanent SHA-256 public record · Service delivery is your right
-                </p>
-              </div>
+          {/* Row 1: Signal Eyebrow & Guide Button */}
+          <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#e3e6ea] dark:border-[#262b36]">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400 truncate">
+                RED SIGNAL · CITIZEN SPEAKS
+              </span>
             </div>
 
             <button
               type="button"
               onClick={() => openGuide('quickstart')}
-              className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 text-[10.5px] font-mono font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#161a22] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 text-[10.5px] font-mono font-semibold flex items-center gap-1 shrink-0 cursor-pointer transition-colors"
             >
               <HelpCircle size={11} />
-              <span>Guide</span>
+              <span>Field Guide</span>
             </button>
+          </div>
+
+          {/* Row 2: Full-Width Unobstructed Studio Title */}
+          <div className="flex items-start gap-2.5 pt-0.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+              <FileText size={16} strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
+                Citizen Speak &amp; Statutory Dispatch Studio
+              </h1>
+              <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                Permanent SHA-256 public record · Service delivery is your right
+              </p>
+            </div>
           </div>
 
           {/* 4-Step Citizen Reporting Progress Bar */}

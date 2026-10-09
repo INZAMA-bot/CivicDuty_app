@@ -22,6 +22,8 @@ import {
   Bookmark,
   Hash,
   Mic,
+  Video,
+  Camera,
   X
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
@@ -341,39 +343,109 @@ export const FeedView: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. Compact Live Digital Baraza Banner — Google AI Studio Card */}
+      {/* 5. Multi-Room Live Digital Baraza Broadcast Deck — Google AI Studio Card */}
       {townHalls && townHalls.length > 0 && (
-        <div className="mx-3.5 sm:mx-4 mt-2.5 p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#161a22] text-slate-900 dark:text-white border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[8.5px] font-mono font-bold uppercase flex items-center gap-1 shrink-0">
-                <Radio size={9} strokeWidth={2} />
-                <span>LIVE BARAZA</span>
+        <div className="mx-3.5 sm:mx-4 mt-2.5 p-3 sm:p-3.5 rounded-xl bg-white dark:bg-[#161a22] text-slate-900 dark:text-white border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+          {/* Deck Top Header */}
+          <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#e3e6ea] dark:border-[#262b36] flex-wrap">
+            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                <span>LIVE DIGITAL BARAZA BROADCAST DECK</span>
               </span>
-              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold truncate">
-                {townHalls[0].listeners_count} tuned in · {townHalls[0].topic_tag}
+              <span className="text-slate-300 dark:text-slate-700">·</span>
+              <span className="text-[10.5px] font-mono text-slate-600 dark:text-slate-300 font-medium">
+                {townHalls.length} Active Rooms ({townHalls.filter((th) => th.has_video).length} Live Video ·{' '}
+                {townHalls.reduce((acc, th) => acc + th.listeners_count, 0).toLocaleString()} Citizens Tuned In)
               </span>
             </div>
-            <div className="text-xs font-semibold truncate mt-0.5">{townHalls[0].title}</div>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+
             <button
               type="button"
               onClick={() => setHostBarazaModalOpen(true)}
-              title="Start / Host a New Live Digital Baraza"
-              className="px-2 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer"
+              title="Start / Host a New Live Video or Audio Digital Baraza"
+              className="px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer shrink-0"
             >
-              <Plus size={11} strokeWidth={2} />
-              <span>Host</span>
+              <Video size={11} className="text-emerald-600 dark:text-emerald-400" />
+              <Plus size={10} strokeWidth={2} />
+              <span>Host Video / Audio Baraza</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTownHall(townHalls[0])}
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold uppercase flex items-center gap-1 cursor-pointer"
-            >
-              <Mic size={11} strokeWidth={1.75} />
-              <span>Join</span>
-            </button>
+          </div>
+
+          {/* Horizontal Multi-Room Studio Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {townHalls.map((th, idx) => {
+              const isVideo = Boolean(th.has_video);
+              const isFieldCam = th.broadcast_mode === 'field_cam';
+              return (
+                <div
+                  key={th.id}
+                  onClick={() => setActiveTownHall(th)}
+                  className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/70 transition-colors flex flex-col justify-between gap-2 cursor-pointer group"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold uppercase flex items-center gap-1 shrink-0 ${
+                          isFieldCam
+                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                            : isVideo
+                            ? 'bg-rose-600 text-white'
+                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                        }`}
+                      >
+                        {isFieldCam ? (
+                          <>
+                            <Camera size={9} strokeWidth={2} />
+                            <span>LIVE FIELD CAM</span>
+                          </>
+                        ) : isVideo ? (
+                          <>
+                            <Video size={9} strokeWidth={2} />
+                            <span>LIVE VIDEO HD</span>
+                          </>
+                        ) : (
+                          <>
+                            <Radio size={9} strokeWidth={2} />
+                            <span>2G/3G AUDIO</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 font-semibold">
+                        Room #{idx + 1} · {th.listeners_count} tuned in
+                      </span>
+                    </div>
+
+                    <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      {th.title}
+                    </div>
+
+                    <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                      {th.dept_name} · <span className="text-emerald-600 dark:text-emerald-400">{th.topic_tag}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[9.5px] font-mono text-slate-600 dark:text-slate-300 truncate">
+                        Host: {th.host_name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTownHall(th);
+                      }}
+                      className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-mono font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
+                    >
+                      {isVideo ? <Video size={10} /> : <Mic size={10} />}
+                      <span>{isVideo ? 'Watch & Join' : 'Tune In'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

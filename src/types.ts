@@ -145,6 +145,13 @@ export interface ClaimedEntityRecord {
   localCurrencyPrice?: string;
   trialStatus?: 'founding_partner_trial' | 'active_paid' | 'expired';
   trialEndsAt?: string;
+  customLocation?: string;
+  customDescription?: string;
+  customAvatarUrl?: string;
+  customIcon?: string;
+  customHotline?: string;
+  customWebsite?: string;
+  updatedAt?: string;
 }
 
 export interface Department {
@@ -371,6 +378,12 @@ export interface UserProfile {
   upvotes_received?: number;
   avatar_url?: string;
   bio?: string;
+  residency_type?: 'citizen' | 'foreign_resident';
+  home_country?: CountryCode;
+  permit_type?: string;
+  permit_label?: string;
+  permit_number?: string;
+  permit_expiry?: string;
 }
 
 export interface EntityRolePermissions {
@@ -428,6 +441,12 @@ export interface UserSession {
   hierarchy_level?: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_agency' | 'tier5_perm_sec';
   escalation_rank?: number;
   officer_name?: string;
+  residency_type?: 'citizen' | 'foreign_resident';
+  home_country?: CountryCode;
+  permit_type?: string;
+  permit_label?: string;
+  permit_number?: string;
+  permit_expiry?: string;
 }
 
 export interface GovCodeData {
@@ -885,6 +904,14 @@ export interface CitizenDirectMessage {
     sender_name: string;
     body: string;
     created_at: string;
+    media?: Array<{
+      name: string;
+      type: string;
+      size: string;
+      dataUrl?: string;
+    }>;
+    voice_note?: boolean;
+    gps?: { lat: number; lng: number; label?: string };
   }>;
   unread?: number;
 }
@@ -899,10 +926,15 @@ export interface TownHallSession {
   listeners_count: number;
   is_live: boolean;
   topic_tag: string;
+  has_video?: boolean;
+  broadcast_mode?: 'video_stage' | 'field_cam' | 'audio_low_data';
+  video_stream_label?: string;
   speakers: Array<{
     name: string;
     role: string;
     speaking?: boolean;
+    video_on?: boolean;
+    camera_label?: string;
   }>;
 }
 

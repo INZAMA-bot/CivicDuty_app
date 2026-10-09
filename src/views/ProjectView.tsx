@@ -350,6 +350,132 @@ export const ProjectView: React.FC = () => {
         <p className="text-[12px] mono text-slate-600 dark:text-slate-300 mt-1 font-semibold">{proj.contractor}</p>
       </div>
 
+      {/* Interactive 3-Role Contract & Supervision Activity Demo Console */}
+      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold block">
+              Interactive Contract &amp; Supervision Sandbox · 3 Live Perspectives
+            </span>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              Test Every Contract Activity: Contractor, Appointed Supervisor &amp; Resident/Traveler
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-semibold">
+            1-Click Live Simulation
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+          {/* Demo 1: Contractor */}
+          <button
+            type="button"
+            onClick={() => {
+              setSigningRole('contractor');
+              setProgressPct((prev) => Math.min(100, prev + 10));
+              setMilestones((prev) =>
+                prev.map((m, idx) =>
+                  idx === 2
+                    ? {
+                        ...m,
+                        contractorVerified: true,
+                        contractorSignedBy: `${proj.contractor} Lead Site Engineer`,
+                        contractorSignedAt: new Date().toISOString().split('T')[0],
+                        done: Boolean(m.awarderVerified),
+                      }
+                    : m
+                )
+              );
+              setInspectorCapacity(`Lead Site Engineer — ${proj.contractor}`);
+              setCommentText(
+                `[CONTRACTOR BOQ & MILESTONE CLAIM] Phase 3 substructure drainage channel excavation and box culvert bedding completed per engineering drawings. Submitting IPC Certificate #03 for joint verification by the Appointed Supervising Engineer.`
+              );
+              toast('Contractor Demo loaded: Phase 3 signed by Contractor & BOQ claim prepared below!', 'emerald');
+            }}
+            className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <HardHat size={12} /> 1. Contractor Demo
+              </span>
+              <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-amber-500">Run →</span>
+            </div>
+            <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
+              File BOQ Progress &amp; Sign Contractor Slot
+            </div>
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+              Act as {proj.contractor} Site Engineer: advance completion %, sign Phase 3, and prepare Interim Payment Claim.
+            </p>
+          </button>
+
+          {/* Demo 2: Appointed Supervision Official */}
+          <button
+            type="button"
+            onClick={() => {
+              setSigningRole('awarder');
+              setMilestones((prev) =>
+                prev.map((m, idx) =>
+                  idx === 2
+                    ? {
+                        ...m,
+                        awarderVerified: true,
+                        awarderSignedBy: 'Appointed District Supervising Engineer (Gov)',
+                        awarderSignedAt: new Date().toISOString().split('T')[0],
+                        done: Boolean(m.contractorVerified),
+                      }
+                    : m
+                )
+              );
+              setInspectorCapacity(capacityPresets[0] || 'Appointed Government Supervising Engineer / Clerk of Works');
+              setCommentText(
+                `[STATUTORY SUPERVISION AUDIT] Conducted on-site core-drilling and culvert concrete cube strength test (C30 grade verified). Drainage gradient meets MoWT/PPDA specification. Cleared for Dual Sign-Off and Treasury Warrant minting.`
+              );
+              toast('Supervision Official Demo loaded: Gov Engineer verification & audit memo ready!', 'emerald');
+            }}
+            className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <ShieldCheck size={12} /> 2. Appointed Supervisor
+              </span>
+              <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-emerald-500">Run →</span>
+            </div>
+            <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
+              Official Technical Audit &amp; Dual Sign-Off
+            </div>
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+              Act as Appointed Supervising Engineer / CAO Inspector: counter-sign milestone &amp; log technical quality clearance.
+            </p>
+          </button>
+
+          {/* Demo 3: Resident / Traveler / Commuter */}
+          <button
+            type="button"
+            onClick={() => {
+              setInspectorCapacity('Local Resident & Daily Highway Traveler / Commuter Watchdog');
+              setCommentText(
+                `[RESIDENT & TRAVELER FIELD OBSERVATION] Passing through kilometer 4.2 of ${proj.title}: Concrete culverts are installed on the eastern shoulder, but reflective night hazard barriers are needed near the open trench for evening travelers and boda riders.`
+              );
+              toast('Resident / Traveler Supervision Demo loaded! Click "Log Site Inspection Memo" below to publish.', 'emerald');
+            }}
+            className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-indigo-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                <BadgeCheck size={12} /> 3. Resident / Traveler
+              </span>
+              <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-indigo-500">Run →</span>
+            </div>
+            <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
+              Citizen &amp; Traveler Eyewitness Audit
+            </div>
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+              Act as a Local Resident or Road Traveler: file geo-tagged eyewitness supervision feedback &amp; qualify for Perks.
+            </p>
+          </button>
+        </div>
+      </div>
+
       {/* Progress Completion Indicator */}
       <div className="card p-4 space-y-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm rounded-2xl">
         <div className="flex items-center justify-between text-[10px] mono">

@@ -89,11 +89,11 @@ export const CompanyManagementView: React.FC = () => {
   const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
   const [isNewDirectiveModalOpen, setIsNewDirectiveModalOpen] = useState(false);
 
-  // Authentication handler
+  // Authentication handler — Single Sovereign Master Code
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanKey = inputKey.trim().toUpperCase();
-    if (cleanKey === 'CD-CORP-9999' || cleanKey === 'CD-ROOT-2026' || cleanKey === 'CIVICDUTY-INTERNAL') {
+    if (cleanKey === 'CD-CORP-9999') {
       setInternalUnlocked(true);
       setUser({
         id: 'cd-internal-01',
@@ -223,7 +223,7 @@ export const CompanyManagementView: React.FC = () => {
                   type="password"
                   value={inputKey}
                   onChange={(e) => setInputKey(e.target.value)}
-                  placeholder="Enter Internal Key (e.g. CD-CORP-9999)"
+                  placeholder="Enter Sovereign Master Passkey..."
                   className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-emerald-500 rounded-lg px-3 py-2.5 text-xs text-slate-900 dark:text-white font-mono outline-none"
                 />
                 <KeyRound size={15} className="absolute right-3 top-2.5 text-slate-400" />
@@ -238,27 +238,9 @@ export const CompanyManagementView: React.FC = () => {
             </button>
           </form>
 
-          {/* Quick preset for authorized reviewers */}
-          <div className="pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[10.5px] font-mono text-slate-500">
-            <span>Demo Operator Key:</span>
-            <button
-              onClick={() => {
-                setInputKey('CD-CORP-9999');
-                setInternalUnlocked(true);
-                setUser({
-                  id: 'cd-internal-01',
-                  name: 'CivicDuty Platform Engineer',
-                  country: 'UG',
-                  email: 'ops@civicduty.org',
-                  role: 'platform_admin',
-                  is_civicduty_internal: true,
-                } as any);
-                toast('Unlocked CD-Ops Command Studio (CD-CORP-9999)', 'emerald');
-              }}
-              className="px-2.5 py-1 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-emerald-600 dark:text-emerald-400 rounded-md font-semibold transition-colors cursor-pointer"
-            >
-              One-Tap Unlock (CD-CORP-9999)
-            </button>
+          <div className="pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[10px] font-mono text-slate-400 dark:text-slate-500">
+            <span>Public Demo Access Disabled</span>
+            <span>Encrypted Operative Gate</span>
           </div>
         </div>
       </div>

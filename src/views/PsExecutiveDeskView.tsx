@@ -7,6 +7,7 @@ import {
   MinistrySector
 } from '../data/countryMinistries';
 import { CountryCode } from '../types';
+import { getPsMinistryInfo } from '../utils/helpers';
 import {
   Building2,
   Landmark,
@@ -34,7 +35,11 @@ import {
   MapPin,
   Check,
   X,
-  RefreshCw
+  RefreshCw,
+  Lock,
+  UserPlus,
+  HelpCircle,
+  Compass,
 } from 'lucide-react';
 import { TrafficLightLogo } from '../components/TrafficLightLogo';
 
@@ -50,7 +55,11 @@ export const PsExecutiveDeskView: React.FC = () => {
     setSelectedMinistryId
   } = useApp();
 
-  const [currentCountry, setCurrentCountry] = useState<CountryCode>(selectedCountry || user?.country || 'UG');
+  // Strictly lock to the official's commissioned country
+  const currentCountry = (user?.country || selectedCountry || 'UG') as CountryCode;
+  const psInfo = useMemo(() => getPsMinistryInfo(user), [user]);
+  const isStrictLinePs = psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId !== 'PS-OPM';
+  const [showApexExplainer, setShowApexExplainer] = useState<boolean>(true);
   const [sectorFilter, setSectorFilter] = useState<'ALL' | MinistrySector>('ALL');
   const [activeTab, setActiveTab] = useState<'desk_operations' | 'cabinet_league' | 'circulars' | 'inter_ps'>('desk_operations');
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,14 +83,23 @@ export const PsExecutiveDeskView: React.FC = () => {
     );
   }, [currentCountry]);
 
-  // Determine current active ministry (guaranteed to be a dedicated line ministry, never MoLG)
+  // Determine current active ministry (strictly locked to the Line PS's own ministry if logged in as a Line PS)
   const activeMinistry: MinistryProfile = useMemo(() => {
+    if (isStrictLinePs && psInfo.ministryId) {
+      const own = lineMinistries.find(
+        (m) =>
+          m.id === psInfo.ministryId ||
+          m.code === psInfo.ministryId ||
+          m.shortTitle.toLowerCase() === (psInfo.shortTitle || '').toLowerCase()
+      );
+      if (own) return own;
+    }
     if (selectedMinistryId && selectedMinistryId !== 'PS-MOLG') {
       const found = lineMinistries.find((m) => m.id === selectedMinistryId || m.code === selectedMinistryId);
       if (found) return found;
     }
     return lineMinistries[0] || getMinistriesForCountry(currentCountry).find(m => !m.isSuperadmin) || getMinistriesForCountry(currentCountry)[0];
-  }, [lineMinistries, selectedMinistryId, currentCountry]);
+  }, [lineMinistries, selectedMinistryId, currentCountry, isStrictLinePs, psInfo]);
 
   const handleCountryChange = (newCode: CountryCode) => {
     setCurrentCountry(newCode);
@@ -190,89 +208,183 @@ export const PsExecutiveDeskView: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-20 animate-fade-in font-sans">
       {/* EXECUTIVE HEADER */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Left Title & Back Nav */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => go('gov_inbox')}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+              className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
               title="Return to Government Workspace"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
 
             <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-[10px] font-mono font-bold text-slate-800 dark:text-slate-200">
-                  {currentCountry}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>{currentCountry} · {COUNTRIES[currentCountry]?.name}</span>
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                  Apex Line Ministry Desk
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                  Tier 5 · Apex Line Ministry Command
                 </span>
-                <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-mono font-semibold text-slate-500 dark:text-slate-400">
                   {activeMinistry.code}
                 </span>
               </div>
-              <h1 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 {activeMinistry.title}
               </h1>
             </div>
           </div>
 
-          {/* Right Controls: Country Selector & Ministry Switcher */}
+          {/* Right Controls: Strict Jurisdiction Actions (Invite Minister, Ministry Admin, Inter-PS Query) */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Country Selector */}
-            <select
-              value={currentCountry}
-              onChange={(e) => handleCountryChange(e.target.value as CountryCode)}
-              className="bg-slate-100 dark:bg-slate-800 text-xs font-mono font-bold py-1.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none cursor-pointer"
+            <button
+              onClick={() => go('gov_team')}
+              className="text-xs font-mono font-semibold px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              {Object.entries(COUNTRIES).map(([cCode, c]) => (
-                <option key={cCode} value={cCode}>
-                  [{cCode}] {c.name}
-                </option>
-              ))}
-            </select>
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Invite Minister &amp; Team</span>
+            </button>
 
-            {/* Refer to Sister Ministry */}
+            <button
+              onClick={() => go('gov_admin')}
+              className="text-xs font-mono font-semibold px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-slate-800 dark:text-slate-200 rounded-lg flex items-center gap-1.5 transition-colors border border-[#e3e6ea] dark:border-[#262b36] cursor-pointer"
+            >
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Ministry Admin</span>
+            </button>
+
             <button
               onClick={() => setReferralModalOpen(true)}
-              className="text-xs font-black px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl flex items-center gap-1.5 transition-colors border border-slate-300 dark:border-slate-700 cursor-pointer"
+              className="text-xs font-mono font-semibold px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-slate-800 dark:text-slate-200 rounded-lg flex items-center gap-1.5 transition-colors border border-[#e3e6ea] dark:border-[#262b36] cursor-pointer"
             >
-              <Users className="w-3.5 h-3.5" />
-              <span>Inter-PS Query</span>
+              <Send className="w-3.5 h-3.5 text-amber-500" />
+              <span>48h Inter-Ministry Referral</span>
+            </button>
+
+            <button
+              onClick={() => setShowApexExplainer((prev) => !prev)}
+              className="text-xs font-mono font-semibold px-2.5 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 text-emerald-700 dark:text-emerald-400 rounded-lg flex items-center gap-1 transition-colors border border-[#e3e6ea] dark:border-[#262b36] cursor-pointer"
+              title="Toggle Apex Architecture Guide"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>What is Apex?</span>
             </button>
           </div>
         </div>
 
-        {/* HORIZONTAL SISTER MINISTRIES TICKER */}
-        <div className="max-w-7xl mx-auto px-4 py-2 border-t border-slate-100 dark:border-slate-800/60 overflow-x-auto flex items-center gap-2 scrollbar-none">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0 mr-1">
-            Line Permanent Secretaries:
-          </span>
-          {lineMinistries.map((m) => {
-            const isSelected = m.id === activeMinistry.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => handleSelectMinistry(m)}
-                className={`text-xs font-black px-3 py-1 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                  isSelected
-                    ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950 shadow-xs ring-2 ring-emerald-500/40'
-                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {getSectorIcon(m.icon)}
-                <span>{m.shortTitle}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Only show Sister Ministry Switcher if logged in as OPM / Cabinet Secretariat or Superadmin Inspector */}
+        {!isStrictLinePs && (
+          <div className="max-w-7xl mx-auto px-4 py-2 border-t border-[#e3e6ea] dark:border-[#262b36] overflow-x-auto flex items-center gap-2 scrollbar-none bg-[#f8f9fa] dark:bg-[#0e1116]">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0 mr-1">
+              Cabinet Secretariat Inspector ({COUNTRIES[currentCountry]?.name}):
+            </span>
+            {lineMinistries.map((m) => {
+              const isSelected = m.id === activeMinistry.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => handleSelectMinistry(m)}
+                  className={`text-xs font-mono font-semibold px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950'
+                      : 'bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36]'
+                  }`}
+                >
+                  {getSectorIcon(m.icon)}
+                  <span>{m.shortTitle}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* MAIN CONTAINER */}
-      <div className="max-w-7xl mx-auto px-4 py-5 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 py-5 space-y-5">
+        {/* APEX ARCHITECTURE EXPLAINER BANNER: WHO IT IS FOR & ITS 4 CORE FUNCTIONS */}
+        {showApexExplainer && (
+          <div className="p-4 sm:p-5 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>Constitutional Architecture Guide · Understanding the &ldquo;Apex&rdquo; Executive Desk</span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  Who the Apex Desk Is For &amp; How It Differs from the Superadmin (MoLG) Desk
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowApexExplainer(false)}
+                className="text-xs font-mono text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+              >
+                Hide
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              In every country&apos;s government, authority is divided into two distinct constitutional pillars:
+              <strong> (1) Horizontal Territorial Administration</strong> (governed by the country&apos;s <strong>National Superadmin</strong>, e.g., PS Ministry of Local Government / Devolution, who commissions Regional, District/County, and Parish/Ward desks), and
+              <strong> (2) Vertical Sector Line Ministries</strong> (governed by each Ministry&apos;s <strong>Permanent Secretary &amp; Cabinet Minister</strong>).
+              <strong> The &ldquo;Apex&rdquo; Desk is the specialized national command center exclusively for Sector Line Ministries ({activeMinistry.title}).</strong>
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                  1 · Who It Is For
+                </div>
+                <div className="font-semibold text-slate-900 dark:text-white">
+                  Line Ministry PS &amp; Cabinet Minister
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                  Strictly locked to {activeMinistry.title} ({COUNTRIES[currentCountry]?.name}). Never exposes other countries or unrelated ministries.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                  2 · Sector Asset Telemetry
+                </div>
+                <div className="font-semibold text-slate-900 dark:text-white">
+                  {activeMinistry.uniqueFeatureBadge}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                  Controls sector-specific national assets (e.g., Road Graders GPS, Treasury IFMS Freezes, NMS Drug Audits, Borehole Mechanics).
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                  3 · Cabinet &amp; Team Invites
+                </div>
+                <div className="font-semibold text-slate-900 dark:text-white">
+                  Commission Your Minister
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                  Via <strong>Ministry Admin</strong> &amp; <strong>Team</strong>, the PS invites the Cabinet Minister, State Ministers, and Technical Directors.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                  4 · Circulars &amp; Referrals
+                </div>
+                <div className="font-semibold text-slate-900 dark:text-white">
+                  48h Cross-Ministry Link
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                  Broadcast binding Ministerial Circulars to field staff or issue 48-hour statutory referrals to Sister Ministries.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         {/* EXECUTIVE PROFILE & STATUTORY MANDATE BANNER */}
         <div className="p-5 sm:p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-300 dark:border-slate-800 shadow-xs relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">

@@ -636,3 +636,37 @@ export function getSisterMinistriesForCountry(countryCode: CountryCode): SisterM
     },
   ];
 }
+
+export interface CountryRolloutConfig {
+  countryCode: CountryCode;
+  countryName: string;
+  superadmin: {
+    name: string;
+    title: string;
+    ministry: string;
+    code: string;
+  };
+  nodes: RolloutDistrictNode[];
+  sisterMinistries: SisterMinistryNode[];
+}
+
+export function getCountryRolloutConfig(countryCode: CountryCode): CountryRolloutConfig {
+  const code = (countryCode || 'UG').toUpperCase();
+  const arrangement = getNationalRolloutArrangements(code);
+  const countryObj = COUNTRIES[code] || COUNTRIES.UG;
+  const nodes = getRolloutNodesForCountry(code);
+  const sisterMinistries = getSisterMinistriesForCountry(code);
+
+  return {
+    countryCode: code,
+    countryName: countryObj.name,
+    superadmin: {
+      name: arrangement.superadminSubtitle || `${countryObj.name} National Accounting Officer`,
+      title: arrangement.superadminTitle || `Permanent Secretary, Ministry of Local Government (${countryObj.name})`,
+      ministry: arrangement.superadminMinistry || `${countryObj.name} Ministry of Local Government & Devolution`,
+      code: arrangement.superadminRefCode || `PS-MOLG-${code}-2026`,
+    },
+    nodes,
+    sisterMinistries,
+  };
+}

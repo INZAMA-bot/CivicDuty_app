@@ -182,11 +182,16 @@ export interface PsMinistryInfo {
   ministryName: string | null;
   shortTitle: string | null;
   officerTitle: string | null;
+  cabinetMinisterTitle?: string;
+  stateMinisterTitles?: string[];
+  mandateSummary?: string;
 }
 
 /**
  * Determines whether a user session belongs to a Permanent Secretary / Line Ministry executive,
- * distinguishing PS MoLG (Territorial Superadmin) from Line Ministries (Works, Finance, Health, Water, etc.)
+ * distinguishing the National Territorial Superadmin (MoLG / Devolution / PO-RALG / COGTA / Intergovernmental)
+ * from Sector Line Ministries (Works, Finance, Health, Water, Education, ICT, Energy, Agriculture, etc.)
+ * across all 100+ countries.
  */
 export function getPsMinistryInfo(user: any): PsMinistryInfo {
   if (!user) {
@@ -196,6 +201,7 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
   const rawTitle = (user.real_title_short || user.role_label || user.title || user.scope || '').toUpperCase();
   const rawDept = (user.dept || '').toLowerCase();
   const rawName = (user.name || user.officer_name || '').toUpperCase();
+  const rawCode = (user.code || user.id || '').toUpperCase();
 
   const isPs =
     user.hierarchy_level === 'tier5_perm_sec' ||
@@ -204,14 +210,55 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
     rawTitle.includes('PERMANENT SECRETARY') ||
     rawTitle.includes('PRINCIPAL SECRETARY') ||
     rawTitle.includes('SECRETARY TO THE TREASURY') ||
-    rawTitle.includes('CHIEF DIRECTOR');
+    rawTitle.includes('DIRECTOR-GENERAL') ||
+    rawTitle.includes('SECRETARY —') ||
+    rawTitle.includes('CHIEF DIRECTOR') ||
+    rawTitle.includes('UNDERSECRETARY') ||
+    rawCode.startsWith('PS-');
 
   if (!isPs) {
     return { isPs: false, isMoLG: false, ministryId: null, ministryName: null, shortTitle: null, officerTitle: null };
   }
 
-  // Detect specific line ministry
-  if (rawTitle.includes('WORKS') || rawTitle.includes('TRANSPORT') || rawTitle.includes('ROADS') || rawDept === 'works' || rawDept === 'mowt') {
+  // 1. Check if this user is the National Territorial Superadmin (MoLG / Devolution / PO-RALG / COGTA / MINALOC / Intergovernmental)
+  const isTerritorialSuperadmin =
+    Boolean(user.is_superadmin) ||
+    rawTitle.includes('MOLG') ||
+    rawTitle.includes('LOCAL GOV') ||
+    rawTitle.includes('DEVOLUTION') ||
+    rawTitle.includes('PO-RALG') ||
+    rawTitle.includes('TAMISEMI') ||
+    rawTitle.includes('MINALOC') ||
+    rawTitle.includes('COGTA') ||
+    rawTitle.includes('COOPERATIVE GOVERNANCE') ||
+    rawTitle.includes('INTERGOVERNMENTAL') ||
+    rawTitle.includes('SPECIAL DUTIES') ||
+    rawTitle.includes('PANCHAYATI') ||
+    rawTitle.includes('TERRITORIAL') ||
+    rawTitle.includes('DECENTRALIZATION') ||
+    rawTitle.includes('SUPERADMIN') ||
+    rawCode.includes('MOLG') ||
+    rawCode.includes('PS-DEV-') ||
+    rawCode.includes('RALG') ||
+    rawCode.includes('COGTA') ||
+    rawName.includes('KUMUMANYA');
+
+  if (isTerritorialSuperadmin) {
+    return {
+      isPs: true,
+      isMoLG: true,
+      ministryId: 'PS-MOLG',
+      ministryName: user.dept && user.dept.length > 4 ? user.dept : 'Ministry of Local Government & Territorial Administration',
+      shortTitle: 'Territorial Superadmin',
+      officerTitle: user.real_title_short || user.role_label || 'Permanent Secretary (National Superadmin)',
+      cabinetMinisterTitle: 'Cabinet Minister for Local Government & Territorial Administration',
+      stateMinisterTitles: ['Minister of State for Local Government', 'Minister of State for Urban Development'],
+      mandateSummary: 'National Territorial Superadmin — Commissions all regional, district/county, municipal, and sub-county/ward administrative nodes and enforces national SLA compliance.',
+    };
+  }
+
+  // 2. Detect specific sector Line Ministries
+  if (rawTitle.includes('WORKS') || rawTitle.includes('TRANSPORT') || rawTitle.includes('ROADS') || rawTitle.includes('INFRASTRUCTURE') || rawDept === 'works' || rawDept === 'mowt') {
     return {
       isPs: true,
       isMoLG: false,
@@ -219,21 +266,27 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
       ministryName: 'Ministry of Works & Transport',
       shortTitle: 'MoWT',
       officerTitle: user.real_title_short || 'PS Works & Transport',
+      cabinetMinisterTitle: 'Cabinet Minister of Works & Transport',
+      stateMinisterTitles: ['Minister of State for Works (National Roads & Bridges)', 'Minister of State for Transport (Rail, Aviation & Public Transit)'],
+      mandateSummary: 'Accounting Officer & Administrative Head of the Ministry of Works & Transport. Supervises trunk roads, bridges, railway revitalization, public transit concessions, and engineering contractors.',
     };
   }
 
-  if (rawTitle.includes('FINANCE') || rawTitle.includes('TREASURY') || rawTitle.includes('MOFPED') || rawDept === 'mofped') {
+  if (rawTitle.includes('FINANCE') || rawTitle.includes('TREASURY') || rawTitle.includes('MOFPED') || rawTitle.includes('ECONOMIC') || rawDept === 'mofped' || rawDept === 'finance') {
     return {
       isPs: true,
       isMoLG: false,
       ministryId: 'PS-MOFPED',
       ministryName: 'Ministry of Finance, Planning & Economic Development',
       shortTitle: 'MoFPED',
-      officerTitle: user.real_title_short || 'PS Finance (PS/ST)',
+      officerTitle: user.real_title_short || 'PS Finance / Secretary to the Treasury',
+      cabinetMinisterTitle: 'Cabinet Minister of Finance, Planning & Economic Development',
+      stateMinisterTitles: ['Minister of State for Finance (General Duties)', 'Minister of State for Planning', 'Minister of State for Investment & Privatization'],
+      mandateSummary: 'Chief Accounting Officer & Secretary to the Treasury. Controls quarterly budget releases, IFMS treasury warrants, capex milestone audits, and fiscal compliance.',
     };
   }
 
-  if (rawTitle.includes('HEALTH') || rawDept === 'health') {
+  if (rawTitle.includes('HEALTH') || rawTitle.includes('MEDICAL') || rawDept === 'health' || rawDept === 'moh') {
     return {
       isPs: true,
       isMoLG: false,
@@ -241,10 +294,13 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
       ministryName: 'Ministry of Health',
       shortTitle: 'MoH',
       officerTitle: user.real_title_short || 'PS Health',
+      cabinetMinisterTitle: 'Cabinet Minister of Health',
+      stateMinisterTitles: ['Minister of State for Health (General Duties)', 'Minister of State for Primary Health Care'],
+      mandateSummary: 'Accounting Officer for the National Health System. Oversees national & regional referral hospitals, essential medicine supply chains (NMS), and public health emergency response.',
     };
   }
 
-  if (rawTitle.includes('EDUCATION') || rawTitle.includes('SPORTS') || rawDept === 'education' || rawDept === 'moes') {
+  if (rawTitle.includes('EDUCATION') || rawTitle.includes('SPORTS') || rawTitle.includes('SCHOOL') || rawDept === 'education' || rawDept === 'moes') {
     return {
       isPs: true,
       isMoLG: false,
@@ -252,10 +308,13 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
       ministryName: 'Ministry of Education & Sports',
       shortTitle: 'MoES',
       officerTitle: user.real_title_short || 'PS Education & Sports',
+      cabinetMinisterTitle: 'Cabinet Minister of Education & Sports',
+      stateMinisterTitles: ['Minister of State for Higher Education & TVET', 'Minister of State for Primary Education', 'Minister of State for Sports'],
+      mandateSummary: 'Accounting Officer for National Education. Supervises primary, secondary, TVET, and university infrastructure, capitation grants, and teacher deployment.',
     };
   }
 
-  if (rawTitle.includes('WATER') || rawTitle.includes('ENVIRONMENT') || rawDept === 'water' || rawDept === 'mowe' || rawDept === 'nwsc') {
+  if (rawTitle.includes('WATER') || rawTitle.includes('ENVIRONMENT') || rawTitle.includes('SANITATION') || rawDept === 'water' || rawDept === 'mowe' || rawDept === 'nwsc') {
     return {
       isPs: true,
       isMoLG: false,
@@ -263,17 +322,51 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
       ministryName: 'Ministry of Water & Environment',
       shortTitle: 'MoWE',
       officerTitle: user.real_title_short || 'PS Water & Environment',
+      cabinetMinisterTitle: 'Cabinet Minister of Water & Environment',
+      stateMinisterTitles: ['Minister of State for Water', 'Minister of State for Environment & Forestry'],
+      mandateSummary: 'Accounting Officer for Water & Environmental Resources. Supervises National Water utilities (NWSC), piped water schemes, wetlands protection, and sanitation SLAs.',
     };
   }
 
-  if (rawTitle.includes('ICT') || rawTitle.includes('DIGITAL') || rawDept === 'ict' || rawDept === 'moict') {
+  if (rawTitle.includes('ICT') || rawTitle.includes('DIGITAL') || rawTitle.includes('COMMUNICATION') || rawDept === 'ict' || rawDept === 'moict') {
     return {
       isPs: true,
       isMoLG: false,
       ministryId: 'PS-MOICT',
       ministryName: 'Ministry of ICT & National Guidance',
       shortTitle: 'MoICT',
-      officerTitle: user.real_title_short || 'PS ICT & Guidance',
+      officerTitle: user.real_title_short || 'PS ICT & National Guidance',
+      cabinetMinisterTitle: 'Cabinet Minister of ICT & National Guidance',
+      stateMinisterTitles: ['Minister of State for ICT', 'Minister of State for National Guidance'],
+      mandateSummary: 'Accounting Officer for Digital Infrastructure & e-Government. Oversees national backbone fiber (NITA), telecom compliance, and digital identity integration.',
+    };
+  }
+
+  if (rawTitle.includes('ENERGY') || rawTitle.includes('MINERAL') || rawTitle.includes('POWER') || rawTitle.includes('ELECTRIC') || rawDept === 'energy' || rawDept === 'memd') {
+    return {
+      isPs: true,
+      isMoLG: false,
+      ministryId: 'PS-MEMD',
+      ministryName: 'Ministry of Energy & Mineral Development',
+      shortTitle: 'MEMD',
+      officerTitle: user.real_title_short || 'PS Energy & Minerals',
+      cabinetMinisterTitle: 'Cabinet Minister of Energy & Mineral Development',
+      stateMinisterTitles: ['Minister of State for Energy (Grid & Rural Electrification)', 'Minister of State for Minerals'],
+      mandateSummary: 'Accounting Officer for National Power Grid, Rural Electrification, Petroleum Supply, and Mineral Development.',
+    };
+  }
+
+  if (rawTitle.includes('AGRICULTURE') || rawTitle.includes('FISHERIES') || rawTitle.includes('LIVESTOCK') || rawDept === 'agriculture' || rawDept === 'maif') {
+    return {
+      isPs: true,
+      isMoLG: false,
+      ministryId: 'PS-MAAIF',
+      ministryName: 'Ministry of Agriculture, Animal Industry & Fisheries',
+      shortTitle: 'MAAIF',
+      officerTitle: user.real_title_short || 'PS Agriculture (MAAIF)',
+      cabinetMinisterTitle: 'Cabinet Minister of Agriculture, Animal Industry & Fisheries',
+      stateMinisterTitles: ['Minister of State for Agriculture', 'Minister of State for Animal Industry', 'Minister of State for Fisheries'],
+      mandateSummary: 'Accounting Officer for Agricultural Extension, Parish Input Distribution, Irrigation Schemes, and Veterinary Quarantine.',
     };
   }
 
@@ -284,35 +377,25 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
       ministryId: 'PS-OPM',
       ministryName: 'Office of the Prime Minister',
       shortTitle: 'OPM',
-      officerTitle: user.real_title_short || 'PS OPM',
+      officerTitle: user.real_title_short || 'PS Office of the Prime Minister',
+      cabinetMinisterTitle: 'Prime Minister & Leader of Government Business',
+      stateMinisterTitles: ['Minister for General Duties (OPM)', 'Minister for Relief, Disaster Preparedness & Refugees'],
+      mandateSummary: 'Coordinates cross-ministerial service delivery, national disaster response, and cabinet policy execution.',
     };
   }
 
-  const isMoLG =
-    rawTitle.includes('MOLG') ||
-    rawTitle.includes('LOCAL GOV') ||
-    rawTitle.includes('SUPERADMIN') ||
-    rawName.includes('KUMUMANYA');
-
-  if (isMoLG) {
-    return {
-      isPs: true,
-      isMoLG: true,
-      ministryId: 'PS-MOLG',
-      ministryName: 'Ministry of Local Government',
-      shortTitle: 'MoLG',
-      officerTitle: user.real_title_short || 'PS Local Government (MoLG)',
-    };
-  }
-
-  // Fallback for custom or international Permanent Secretaries
+  // Fallback for any other Sector Line Ministry PS across 100+ countries
+  const derivedMinistryName = user.dept && user.dept.length > 3 ? user.dept : (user.real_title_short || user.role_label || 'Sector Line Ministry');
   return {
     isPs: true,
     isMoLG: false,
     ministryId: 'PS-LINE-MINISTRY',
-    ministryName: user.real_title_short || user.role_label || 'Apex Line Ministry',
+    ministryName: derivedMinistryName,
     shortTitle: user.real_title_short || 'Line PS',
     officerTitle: user.real_title_short || user.role_label || 'Permanent Secretary',
+    cabinetMinisterTitle: `Cabinet Minister — ${derivedMinistryName}`,
+    stateMinisterTitles: [`Deputy / State Minister — ${derivedMinistryName}`],
+    mandateSummary: `Chief Accounting Officer & Administrative Head of ${derivedMinistryName}. Strictly scoped to this ministry's sector mandate, directorates, and ministerial cabinet.`,
   };
 }
 

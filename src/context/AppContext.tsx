@@ -197,6 +197,7 @@ interface AppContextType {
   // Private Provider Layer & Claiming
   claimedEntities: Record<string, ClaimedEntityRecord>;
   claimEntity: (data: Omit<ClaimedEntityRecord, 'claimedAt' | 'verified'>) => void;
+  updateClaimedEntityDetails: (deptId: string, updates: Partial<ClaimedEntityRecord>) => void;
   isEntityClaimed: (deptId: string) => boolean;
   getClaimedEntity: (deptId: string) => ClaimedEntityRecord | undefined;
   // CD-Ops & Sovereign Bilateral Feedback Loop
@@ -285,7 +286,15 @@ interface AppContextType {
   dmThreads: CitizenDirectMessage[];
   activeDmThreadId: string | null;
   setActiveDmThreadId: (id: string | null) => void;
-  sendDirectMessage: (threadId: string, body: string) => void;
+  sendDirectMessage: (
+    threadId: string,
+    body: string,
+    attachments?: {
+      media?: Array<{ name: string; type: string; size: string; dataUrl?: string }>;
+      voice_note?: boolean;
+      gps?: { lat: number; lng: number; label?: string };
+    }
+  ) => void;
   openDmWithCitizen: (name: string, role?: string, country?: CountryCode) => void;
   publicProfileCitizen: { name: string; profession?: string; country?: CountryCode; score?: number } | null;
   setPublicProfileCitizen: (c: { name: string; profession?: string; country?: CountryCode; score?: number } | null) => void;
@@ -295,7 +304,16 @@ interface AppContextType {
   setSocialModalPost: (p: Post | null) => void;
   socialModalTab: 'share' | 'quote' | 'community_note' | 'safety';
   setSocialModalTab: (t: 'share' | 'quote' | 'community_note' | 'safety') => void;
-  createQuoteDispatch: (originalPost: Post, quoteTitle: string, quoteBody: string) => void;
+  createQuoteDispatch: (
+    originalPost: Post,
+    quoteTitle: string,
+    quoteBody: string,
+    attachments?: {
+      media?: Array<{ name: string; type: string; size: string; dataUrl?: string }>;
+      voice_note?: boolean;
+      gps?: { lat: number; lng: number };
+    }
+  ) => void;
   repostDispatch: (postId: string) => void;
   addCommunityNote: (postId: string, body: string, sourceUrl?: string) => void;
   voteCivicPoll: (postId: string, optionId: string) => void;
@@ -315,6 +333,8 @@ interface AppContextType {
     topic_tag: string;
     dept_name: string;
     co_host_name?: string;
+    has_video?: boolean;
+    broadcast_mode?: 'video_stage' | 'field_cam' | 'audio_low_data';
   }) => void;
   activeHashtagFilter: string | null;
   setActiveHashtagFilter: (tag: string | null) => void;
@@ -1348,16 +1368,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const userId = user.id;
     const isSupported = supportsMap[userId]?.[postId];
+    const currentPost = posts.find((p) => p.id === postId);
+    const targetUpvotes = currentPost
+      ? isSupported
+        ? Math.max(0, currentPost.upvotes - 1)
+        : currentPost.upvotes + 1
+      : 1;
 
-    let targetUpvotes = 0;
+    if (!isSupported && targetUpvotes === 100) {
+      toast('100 supporters — pinned to the top of the wall', 'emerald');
+    }
+
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
           const newUpvotes = isSupported ? Math.max(0, p.upvotes - 1) : p.upvotes + 1;
-          targetUpvotes = newUpvotes;
-          if (!isSupported && newUpvotes === 100) {
-            toast('100 supporters — pinned to the top of the wall', 'emerald');
-          }
           return { ...p, upvotes: newUpvotes };
         }
         return p;
@@ -1365,7 +1390,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     // Sync upvote counter to Cloud Firestore
-    updatePostUpvotesInCloud(postId, targetUpvotes).catch(console.error);
+    updatePostUpvotesInCloud(
+      postId,
+      targetUpvotes,
+      currentPost ? { ...currentPost, upvotes: targetUpvotes } : undefined
+    ).catch(console.error);
 
     setSupportsMap((prev) => {
       const userMap = { ...(prev[userId] || {}) };
@@ -1400,13 +1429,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       upvotePost(postId);
     }
 
-    let targetDownvotes = 0;
+    const currentPost = posts.find((p) => p.id === postId);
+    const currentDown = currentPost?.downvotes || 0;
+    const targetDownvotes = isDownvoted ? Math.max(0, currentDown - 1) : currentDown + 1;
+
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
-          const currentDown = p.downvotes || 0;
-          const newDown = isDownvoted ? Math.max(0, currentDown - 1) : currentDown + 1;
-          targetDownvotes = newDown;
+          const cur = p.downvotes || 0;
+          const newDown = isDownvoted ? Math.max(0, cur - 1) : cur + 1;
           return { ...p, downvotes: newDown };
         }
         return p;
@@ -1414,7 +1445,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     // Sync downvote counter to Cloud Firestore (SLA escalation priority is never affected)
-    updatePostDownvotesInCloud(postId, targetDownvotes).catch(console.error);
+    updatePostDownvotesInCloud(
+      postId,
+      targetDownvotes,
+      currentPost ? { ...currentPost, downvotes: targetDownvotes } : undefined
+    ).catch(console.error);
 
     setDownvotesMap((prev) => {
       const userMap = { ...(prev[userId] || {}) };
@@ -1465,20 +1500,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markPostSatisfied = (postId: string, satisfied: boolean) => {
+    const currentPost = posts.find((p) => p.id === postId);
+    const nextStatus = satisfied ? 'resolved' : 'pending';
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
           return {
             ...p,
             citizen_satisfied: satisfied,
-            status: satisfied ? 'resolved' : 'pending',
+            status: nextStatus,
           };
         }
         return p;
       })
     );
     // Sync resolution status to Cloud Firestore
-    updatePostResolutionInCloud(postId, satisfied ? 'resolved' : 'pending', satisfied).catch(console.error);
+    updatePostResolutionInCloud(
+      postId,
+      nextStatus,
+      satisfied,
+      currentPost ? { ...currentPost, status: nextStatus, citizen_satisfied: satisfied } : undefined
+    ).catch(console.error);
 
     if (!satisfied) {
       toast('Marked unsatisfied — issue stays open', 'amber');
@@ -2244,6 +2286,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return claimedEntities[deptId];
   };
 
+  const updateClaimedEntityDetails = (deptId: string, updates: Partial<ClaimedEntityRecord>) => {
+    const country = activeDeptCountry || user?.country || 'UG';
+    const baseDept = getDept(country, deptId);
+    const existing = claimedEntities[deptId] || {
+      deptId,
+      country,
+      businessName: baseDept.name,
+      representativeName: user?.name || 'Authorized Desk Officer',
+      officialEmail: user?.email || `desk@${deptId}.org`,
+      phone: '+256 700 000 000',
+      role: 'Managing Director / Desk Administrator',
+      plan: 'district',
+      claimedAt: new Date().toISOString().slice(0, 10),
+      verified: true,
+      monthlyFee: 89,
+    };
+
+    const updatedRecord: ClaimedEntityRecord = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Mutate in-memory DEPARTMENTS entry if present so getDept & allDepts reflect updates immediately
+    const countryDepts = DEPARTMENTS[country] || [];
+    const targetDeptObj = countryDepts.find((item) => item.id === deptId);
+    if (targetDeptObj) {
+      if (updates.businessName) targetDeptObj.name = updates.businessName;
+      if (updates.customDescription) targetDeptObj.full = updates.customDescription;
+      if (updates.customLocation) targetDeptObj.location = updates.customLocation;
+      if (updates.customIcon) targetDeptObj.icon = updates.customIcon;
+    }
+
+    saveClaimToCloud(updatedRecord).catch(console.error);
+
+    setClaimedEntities((prev) => {
+      const next = { ...prev, [deptId]: updatedRecord };
+      try {
+        localStorage.setItem('cd_claimed_entities', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    logAudit(
+      'desk_wall_profile_updated',
+      deptId,
+      `Wall profile updated for ${updatedRecord.businessName} (Location: ${updatedRecord.customLocation || baseDept.location || 'Updated'})`
+    );
+    toast(`Desk wall details for "${updatedRecord.businessName}" saved and published!`, 'emerald');
+  };
+
   // CD-Ops Bilateral Feedback Functions
   const respondToGovFeedback = (
     id: string,
@@ -2559,8 +2652,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
 
+    const targetBefore = posts.find((p) => p.id === targetPostId);
     let autoEscalatedNow = false;
     let updatedTargetPost: Post | null = null;
+
+    if (targetBefore) {
+      const existingReports = targetBefore.compiled_reports || [];
+      const nextReports = [...existingReports, newWitness];
+      const nextCount = Math.max(
+        (targetBefore.compiled_count || existingReports.length + 1) + 1,
+        nextReports.length + 1
+      );
+      const nextUpvotes = (targetBefore.upvotes || 0) + 5;
+      const shouldEscalate =
+        nextCount >= 5 &&
+        !targetBefore.escalated &&
+        targetBefore.status !== 'resolved' &&
+        targetBefore.category !== 'praise';
+
+      if (shouldEscalate) {
+        autoEscalatedNow = true;
+      }
+
+      updatedTargetPost = {
+        ...targetBefore,
+        is_master_dossier: true,
+        compiled_reports: nextReports,
+        compiled_count: nextCount,
+        upvotes: nextUpvotes,
+        escalated: shouldEscalate ? true : targetBefore.escalated,
+        escalation_tier: shouldEscalate ? 'tier3_district_cao' : targetBefore.escalation_tier,
+      };
+    }
 
     setPosts((prev) =>
       prev.map((p) => {
@@ -2571,10 +2694,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const nextUpvotes = (p.upvotes || 0) + 5;
         const shouldEscalate = nextCount >= 5 && !p.escalated && p.status !== 'resolved' && p.category !== 'praise';
 
-        if (shouldEscalate) {
-          autoEscalatedNow = true;
-        }
-
         const nextPost: Post = {
           ...p,
           is_master_dossier: true,
@@ -2584,7 +2703,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           escalated: shouldEscalate ? true : p.escalated,
           escalation_tier: shouldEscalate ? 'tier3_district_cao' : p.escalation_tier,
         };
-        updatedTargetPost = nextPost;
         return nextPost;
       })
     );
@@ -2600,7 +2718,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         postObj.compiled_count || 2,
         postObj.upvotes,
         Boolean(postObj.escalated),
-        postObj.merged_from_ids || []
+        postObj.merged_from_ids || [],
+        postObj
       ).catch(() => {});
 
       const actorId = user?.id || 'usr-9028-UG';
@@ -2632,88 +2751,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const dupPosts = posts.filter((p) => dupSet.has(p.id));
     if (dupPosts.length === 0) return;
 
-    let updatedMaster: Post | null = null;
+    const masterBefore = posts.find((p) => p.id === masterPostId);
+    if (!masterBefore) return;
 
-    setPosts((prev) => {
-      const master = prev.find((p) => p.id === masterPostId);
-      if (!master) return prev;
+    const existingReports = [...(masterBefore.compiled_reports || [])];
+    let addedUpvotes = 0;
 
-      const existingReports = [...(master.compiled_reports || [])];
-      let addedUpvotes = 0;
-
-      dupPosts.forEach((dp) => {
-        addedUpvotes += (dp.upvotes || 0) + 5;
-        existingReports.push({
-          id: `wr-merged-${dp.id}`,
-          citizen_id: dp.citizen_id,
-          citizen_name: dp.anonymous ? 'Verified Citizen' : dp.citizen_name,
-          author_profession: dp.author_profession,
-          anonymous: dp.anonymous,
-          body: `[Merged Ticket #${dp.id.slice(-6).toUpperCase()}: ${dp.title}] — ${dp.body}`,
-          gps: dp.gps,
-          media: dp.media,
-          created_at: dp.created_at,
-          source: dp.source,
-        });
-        if (dp.compiled_reports && dp.compiled_reports.length > 0) {
-          existingReports.push(...dp.compiled_reports);
-        }
+    dupPosts.forEach((dp) => {
+      addedUpvotes += (dp.upvotes || 0) + 5;
+      existingReports.push({
+        id: `wr-merged-${dp.id}`,
+        citizen_id: dp.citizen_id,
+        citizen_name: dp.anonymous ? 'Verified Citizen' : dp.citizen_name,
+        author_profession: dp.author_profession,
+        anonymous: dp.anonymous,
+        body: `[Merged Ticket #${dp.id.slice(-6).toUpperCase()}: ${dp.title}] — ${dp.body}`,
+        gps: dp.gps,
+        media: dp.media,
+        created_at: dp.created_at,
+        source: dp.source,
       });
-
-      const nextCount = existingReports.length + 1;
-      const nextMergedIds = Array.from(new Set([...(master.merged_from_ids || []), ...cleanDupIds]));
-      const shouldEscalate = nextCount >= 5 && !master.escalated && master.status !== 'resolved' && master.category !== 'praise';
-
-      const nextMaster: Post = {
-        ...master,
-        is_master_dossier: true,
-        compiled_reports: existingReports,
-        compiled_count: nextCount,
-        upvotes: (master.upvotes || 0) + addedUpvotes,
-        merged_from_ids: nextMergedIds,
-        escalated: shouldEscalate ? true : master.escalated,
-        escalation_tier: shouldEscalate ? 'tier3_district_cao' : master.escalation_tier,
-      };
-
-      updatedMaster = nextMaster;
-
-      return prev
-        .filter((p) => !dupSet.has(p.id))
-        .map((p) => (p.id === masterPostId ? nextMaster : p));
+      if (dp.compiled_reports && dp.compiled_reports.length > 0) {
+        existingReports.push(...dp.compiled_reports);
+      }
     });
 
-    if (updatedMaster) {
-      const mObj = updatedMaster as Post;
-      if (activePost?.id === masterPostId || dupSet.has(activePost?.id || '')) {
-        setActivePost(mObj);
-      }
+    const nextCount = existingReports.length + 1;
+    const nextMergedIds = Array.from(new Set([...(masterBefore.merged_from_ids || []), ...cleanDupIds]));
+    const shouldEscalate =
+      nextCount >= 5 && !masterBefore.escalated && masterBefore.status !== 'resolved' && masterBefore.category !== 'praise';
 
-      updatePostCompilationInCloud(
-        mObj.id,
-        mObj.compiled_reports || [],
-        mObj.compiled_count || 2,
-        mObj.upvotes,
-        Boolean(mObj.escalated),
-        mObj.merged_from_ids || []
-      ).catch(() => {});
+    const updatedMaster: Post = {
+      ...masterBefore,
+      is_master_dossier: true,
+      compiled_reports: existingReports,
+      compiled_count: nextCount,
+      upvotes: (masterBefore.upvotes || 0) + addedUpvotes,
+      merged_from_ids: nextMergedIds,
+      escalated: shouldEscalate ? true : masterBefore.escalated,
+      escalation_tier: shouldEscalate ? 'tier3_district_cao' : masterBefore.escalation_tier,
+    };
 
-      cleanDupIds.forEach((dupId) => {
-        deletePostFromCloud(dupId).catch(() => {});
-      });
+    setPosts((prev) =>
+      prev
+        .filter((p) => !dupSet.has(p.id))
+        .map((p) => (p.id === masterPostId ? updatedMaster : p))
+    );
 
-      logAudit(
-        'master_dossier_tickets_merged',
-        mObj.id,
-        `Consolidated ${cleanDupIds.length} duplicate ticket(s) (${cleanDupIds.join(', ')}) into Master Dossier #${mObj.id.slice(-6).toUpperCase()} (${mObj.compiled_count} total compiled reports).`,
-        mObj.country,
-        mObj.dept
-      );
-
-      toast(
-        `Merged ${cleanDupIds.length} duplicate report(s) into Master Dossier #${mObj.id.slice(-6).toUpperCase()} (${mObj.compiled_count} total witnesses)!`,
-        'emerald'
-      );
+    if (activePost?.id === masterPostId || dupSet.has(activePost?.id || '')) {
+      setActivePost(updatedMaster);
     }
+
+    updatePostCompilationInCloud(
+      updatedMaster.id,
+      updatedMaster.compiled_reports || [],
+      updatedMaster.compiled_count || 2,
+      updatedMaster.upvotes,
+      Boolean(updatedMaster.escalated),
+      updatedMaster.merged_from_ids || [],
+      updatedMaster
+    ).catch(() => {});
+
+    cleanDupIds.forEach((dupId) => {
+      deletePostFromCloud(dupId).catch(() => {});
+    });
+
+    logAudit(
+      'master_dossier_tickets_merged',
+      updatedMaster.id,
+      `Consolidated ${cleanDupIds.length} duplicate ticket(s) (${cleanDupIds.join(', ')}) into Master Dossier #${updatedMaster.id.slice(-6).toUpperCase()} (${updatedMaster.compiled_count} total compiled reports).`,
+      updatedMaster.country,
+      updatedMaster.dept
+    );
+
+    toast(
+      `Merged ${cleanDupIds.length} duplicate report(s) into Master Dossier #${updatedMaster.id.slice(-6).toUpperCase()} (${updatedMaster.compiled_count} total witnesses)!`,
+      'emerald'
+    );
   };
 
   // --- GLOBAL SOCIAL MEDIA PLATFORM CAPABILITIES ---
@@ -2861,7 +2975,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [activeDmThreadId, setActiveDmThreadId] = useState<string | null>('th-grace');
 
-  const sendDirectMessage = (threadId: string, body: string) => {
+  const sendDirectMessage = (
+    threadId: string,
+    body: string,
+    attachments?: {
+      media?: Array<{ name: string; type: string; size: string; dataUrl?: string }>;
+      voice_note?: boolean;
+      gps?: { lat: number; lng: number; label?: string };
+    }
+  ) => {
     setDmThreads((prev) =>
       prev.map((th) => {
         if (th.thread_id !== threadId) return th;
@@ -2874,14 +2996,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: `msg-${Date.now()}`,
               sender: 'me',
               sender_name: user?.name || 'Citizen Watchdog',
-              body,
+              body: body || (attachments?.voice_note ? 'Voice Note Dispatch' : 'Media Attachment'),
               created_at: 'Just now',
+              media: attachments?.media && attachments.media.length > 0 ? attachments.media : undefined,
+              voice_note: attachments?.voice_note || undefined,
+              gps: attachments?.gps || undefined,
             },
           ],
         };
       })
     );
-    toast('Direct message sent over encrypted civic channel', 'emerald');
+    toast('Direct message & media dispatched over encrypted civic channel', 'emerald');
   };
 
   const openDmWithCitizen = (name: string, role: string = 'Community Watchdog', country?: CountryCode) => {
@@ -2960,7 +3085,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addPoints(user?.id || 'usr-9028-UG', 10, '+10 Civic Pts · Dispatch Amplified & Reposted!');
   };
 
-  const createQuoteDispatch = (originalPost: Post, quoteTitle: string, quoteBody: string) => {
+  const createQuoteDispatch = (
+    originalPost: Post,
+    quoteTitle: string,
+    quoteBody: string,
+    attachments?: {
+      media?: Array<{ name: string; type: string; size: string; dataUrl?: string }>;
+      voice_note?: boolean;
+      gps?: { lat: number; lng: number };
+    }
+  ) => {
     const origDept = getDept(originalPost.country, originalPost.dept);
     const extractedTags = quoteBody.match(/#[a-zA-Z0-9_]+/g) || [];
     const newQuotePost: Post = {
@@ -2977,9 +3111,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: quoteTitle,
       body: quoteBody,
       location: originalPost.location,
-      gps: originalPost.gps,
+      gps: attachments?.gps || originalPost.gps,
       source: 'web',
-      media: [],
+      media: attachments?.media || [],
+      voice_note: attachments?.voice_note || false,
       status: 'pending',
       gov_status: 'pending',
       created_at: new Date().toISOString(),
@@ -3119,26 +3254,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const activeCountryCode = user?.country || selectedCountry || 'UG';
   const activeCountryObj = COUNTRIES[activeCountryCode] || COUNTRIES.UG;
 
-  const defaultTownHall: TownHallSession = {
-    id: `th-live-${activeCountryCode}`,
-    title: `${activeCountryObj.name} National Service Delivery & Q3 Budget Accountability Baraza`,
-    host_name: 'Permanent Secretary & Municipal Engineering Corps',
-    host_title: 'Statutory Accounting Officers',
-    dept_name: 'Ministry of Local Government & Public Works',
-    country: activeCountryCode,
-    listeners_count: 348,
-    is_live: true,
-    topic_tag: '#QuarterlyAccountabilityBaraza',
-    speakers: [
-      { name: 'Permanent Secretary', role: 'Host · Accounting Officer', speaking: true },
-      { name: 'Chief Municipal Engineer', role: 'Co-Host · Roads & Water', speaking: false },
-      { name: 'Grace Akello', role: 'Citizen Watchdog Lead', speaking: false },
-    ],
-  };
+  const defaultTownHalls: TownHallSession[] = [
+    {
+      id: `th-live-1-${activeCountryCode}`,
+      title: `${activeCountryObj.name} National Service Delivery & Q3 Budget Accountability Baraza`,
+      host_name: 'Permanent Secretary & Municipal Engineering Corps',
+      host_title: 'Statutory Accounting Officers',
+      dept_name: 'Ministry of Local Government & Public Works',
+      country: activeCountryCode,
+      listeners_count: 348,
+      is_live: true,
+      has_video: true,
+      broadcast_mode: 'video_stage',
+      video_stream_label: 'LIVE 1080p STUDIO & TREASURY SCREEN SHARE',
+      topic_tag: '#QuarterlyAccountabilityBaraza',
+      speakers: [
+        { name: 'Permanent Secretary', role: 'Host · Accounting Officer', speaking: true, video_on: true, camera_label: 'Ministry Studio Cam 1' },
+        { name: 'Chief Municipal Engineer', role: 'Co-Host · Roads & Water', speaking: false, video_on: true, camera_label: 'Field Inspection Feed' },
+        { name: 'Grace Akello', role: 'Citizen Watchdog Lead', speaking: false, video_on: true, camera_label: 'Parish Watchdog Cam' },
+      ],
+    },
+    {
+      id: `th-live-2-${activeCountryCode}`,
+      title: `Live Field Inspection: Urban Roads, Drainage & Kayoola Transit Corridor Audit`,
+      host_name: 'Eng. Ronald Ssemakula & Works Inspectorate',
+      host_title: 'Directorate of Engineering & Works',
+      dept_name: 'Public Works & Urban Transit Authority',
+      country: activeCountryCode,
+      listeners_count: 214,
+      is_live: true,
+      has_video: true,
+      broadcast_mode: 'field_cam',
+      video_stream_label: 'ON-SITE FIELD CAMERA · GPS VERIFIED',
+      topic_tag: '#LiveRoadAudit',
+      speakers: [
+        { name: 'Eng. Ronald Ssemakula', role: 'Host · Chief Road Inspector', speaking: true, video_on: true, camera_label: 'Drone & Culvert Cam' },
+        { name: 'Boda Stage Chairman', role: 'Co-Host · Commuter Scout', speaking: false, video_on: true, camera_label: 'Stage Mobile Cam' },
+        { name: 'District Auditor', role: 'Statutory Fiscal Observer', speaking: false, video_on: false },
+      ],
+    },
+    {
+      id: `th-live-3-${activeCountryCode}`,
+      title: `Grassroots Parish Water, Power & Health Center III Drug Stock Watchdog Assembly`,
+      host_name: 'Parish Development Committee & Utility Desks',
+      host_title: 'Grassroots Citizen & Utility Liaison',
+      dept_name: 'Water, Electricity & District Health Desk',
+      country: activeCountryCode,
+      listeners_count: 162,
+      is_live: true,
+      has_video: false,
+      broadcast_mode: 'audio_low_data',
+      video_stream_label: '2G/3G LOW-DATA AUDIO + TELEMETRY',
+      topic_tag: '#ParishServiceWatch',
+      speakers: [
+        { name: 'Parish Chief Moderator', role: 'Host · Tier 1 Convenor', speaking: true, video_on: false },
+        { name: 'Utility Rapid Response', role: 'Co-Host · Grid Engineer', speaking: false, video_on: false },
+        { name: 'Health Center In-Charge', role: 'Medical Stores Liaison', speaking: false, video_on: false },
+      ],
+    },
+  ];
 
   const townHalls: TownHallSession[] = [
     ...customTownHalls.filter((th) => th.country === activeCountryCode),
-    defaultTownHall,
+    ...defaultTownHalls,
   ];
 
   const createTownHall = ({
@@ -3146,11 +3324,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     topic_tag,
     dept_name,
     co_host_name,
+    has_video = true,
+    broadcast_mode = 'video_stage',
   }: {
     title: string;
     topic_tag: string;
     dept_name: string;
     co_host_name?: string;
+    has_video?: boolean;
+    broadcast_mode?: 'video_stage' | 'field_cam' | 'audio_low_data';
   }) => {
     const activeU = user || DEFAULT_CITIZEN_USER;
     const hostName =
@@ -3171,25 +3353,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       host_title: hostTitle,
       dept_name: dept_name.trim() || 'Municipal Accountability Desk',
       country: activeCountryCode,
-      listeners_count: 14,
+      listeners_count: 18,
       is_live: true,
+      has_video,
+      broadcast_mode,
+      video_stream_label:
+        broadcast_mode === 'field_cam'
+          ? 'ON-SITE FIELD CAMERA · GPS VERIFIED'
+          : broadcast_mode === 'video_stage'
+          ? 'LIVE HD MULTI-SPEAKER VIDEO STAGE'
+          : '2G/3G LOW-DATA VOICE ROOM',
       topic_tag: cleanTag,
       speakers: [
-        { name: hostName, role: `Host · ${hostTitle}`, speaking: true },
+        { name: hostName, role: `Host · ${hostTitle}`, speaking: true, video_on: has_video, camera_label: 'Host Live Cam' },
         {
           name: co_host_name?.trim() || 'Duty Desk Engineer',
           role: 'Co-Host · Technical Liaison',
           speaking: false,
+          video_on: has_video,
+          camera_label: 'Desk Liaison Cam',
         },
-        { name: 'Community Floor', role: 'Open Citizen Mic', speaking: false },
+        { name: 'Community Floor', role: 'Open Citizen Mic & Video', speaking: false, video_on: false },
       ],
     };
 
     setCustomTownHalls((prev) => [newSession, ...prev]);
     setHostBarazaModalOpen(false);
     setActiveTownHall(newSession);
-    logAudit('HOST_BARAZA', newSession.id, `${hostName} launched Live Digital Baraza: "${newSession.title}" (${cleanTag})`);
-    toast('Live Digital Baraza audio room launched!', 'emerald');
+    logAudit('HOST_BARAZA', newSession.id, `${hostName} launched Live Digital Baraza (${has_video ? 'Video + Audio' : 'Audio'}): "${newSession.title}" (${cleanTag})`);
+    toast(`Live Digital Baraza (${has_video ? 'Video + Audio Stage' : 'Audio Stage'}) launched!`, 'emerald');
   };
 
   return (
@@ -3289,6 +3481,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         closeLegalCenter,
         claimedEntities,
         claimEntity,
+        updateClaimedEntityDetails,
         isEntityClaimed,
         getClaimedEntity,
         govFeedbackMessages,

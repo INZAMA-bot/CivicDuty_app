@@ -13,12 +13,26 @@ import {
   Check,
   ShieldCheck,
   ChevronDown,
+  ChevronUp,
   Lock,
   Landmark,
+  Terminal,
+  Cpu,
+  RefreshCw,
 } from 'lucide-react';
 import { GovFeedbackMessage } from '../../data/partnerships';
 import { COUNTRIES } from '../../data/countries';
 import { useApp } from '../../context/AppContext';
+
+interface AiRecommendationOption {
+  id: string;
+  tierLabel: string;
+  title: string;
+  impactSummary: string;
+  estimatedTurnaround: string;
+  recommendedPrompt: string;
+  officialReplyDraft: string;
+}
 
 interface CdOpsOfficialDirectiveCardProps {
   message: GovFeedbackMessage;
@@ -34,8 +48,115 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
   const [copiedText, setCopiedText] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
 
+  // AI Recommendation Engine States
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDiagnosis, setAiDiagnosis] = useState<string>('');
+  const [aiModelUsed, setAiModelUsed] = useState<string>('');
+  const [aiOptions, setAiOptions] = useState<AiRecommendationOption[]>([]);
+  const [selectedOptionId, setSelectedOptionId] = useState<string>('');
+  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+
   const countryObj = COUNTRIES[message.countryCode];
   const isAwaiting = message.status === 'sent' || !message.cdOpsResponse;
+
+  const handleGenerateAiRecommendations = async () => {
+    if (aiPanelOpen && aiOptions.length > 0) {
+      setAiPanelOpen(false);
+      return;
+    }
+    setAiPanelOpen(true);
+    if (aiOptions.length > 0) return;
+
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/cd-ops/ai-recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: message.id,
+          countryCode: message.countryCode,
+          countryName: message.countryName,
+          senderMinistry: message.senderMinistry,
+          senderOfficer: message.senderOfficer,
+          senderTitle: message.senderTitle,
+          subject: message.subject,
+          message: message.message,
+          priority: message.priority,
+          superadminNotes: message.superadminNotes,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.recommendations)) {
+        setAiDiagnosis(data.executiveDiagnosis || '');
+        setAiModelUsed(data.modelUsed || 'gemini-3.8-flash');
+        setAiOptions(data.recommendations);
+        if (data.recommendations[1]) {
+          setSelectedOptionId(data.recommendations[1].id);
+        } else if (data.recommendations[0]) {
+          setSelectedOptionId(data.recommendations[0].id);
+        }
+      } else {
+        toast('Could not synthesize AI recommendations', 'amber');
+      }
+    } catch {
+      toast('Error connecting to AI Recommendation Engine', 'rose');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleRefreshAiRecommendations = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/cd-ops/ai-recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: message.id,
+          countryCode: message.countryCode,
+          countryName: message.countryName,
+          senderMinistry: message.senderMinistry,
+          senderOfficer: message.senderOfficer,
+          senderTitle: message.senderTitle,
+          subject: message.subject,
+          message: message.message,
+          priority: message.priority,
+          superadminNotes: message.superadminNotes,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.recommendations)) {
+        setAiDiagnosis(data.executiveDiagnosis || '');
+        setAiModelUsed(data.modelUsed || 'gemini-3.8-flash');
+        setAiOptions(data.recommendations);
+        toast('Refreshed AI engineering & prompt recommendations', 'emerald');
+      }
+    } catch {
+      toast('Failed to refresh AI recommendations', 'rose');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleCopyAiPrompt = (opt: AiRecommendationOption) => {
+    navigator.clipboard.writeText(opt.recommendedPrompt);
+    setCopiedPromptId(opt.id);
+    toast(`Copied "${opt.tierLabel}" AI Studio prompt! Paste into AI Studio chat to execute.`, 'emerald');
+    setTimeout(() => setCopiedPromptId(null), 2500);
+  };
+
+  const handleDispatchSelectedReply = (opt: AiRecommendationOption) => {
+    respondToGovFeedback(
+      message.id,
+      opt.officialReplyDraft,
+      `${activeCdOpsOperator.name} (${activeCdOpsOperator.role})`,
+      'actioned',
+      opt.title,
+      `Executed via AI Studio Prompt Recommendation (${opt.tierLabel})`
+    );
+    toast(`Official bilateral reply dispatched to ${message.senderOfficer}`, 'emerald');
+  };
 
   const handleCopyHash = () => {
     if (message.dispatchReceiptHash) {
@@ -243,6 +364,184 @@ export const CdOpsOfficialDirectiveCard: React.FC<CdOpsOfficialDirectiveCardProp
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           {message.message}
         </p>
+      </div>
+
+      {/* ==================================================================== */}
+      {/* AI ENGINEERING & PROMPT RECOMMENDATION ENGINE (GEMINI POWERED)      */}
+      {/* ==================================================================== */}
+      <div className="rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] overflow-hidden">
+        <div className="px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-6 h-6 rounded-md bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+              <Cpu size={13} strokeWidth={1.75} />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-mono font-bold text-slate-900 dark:text-white">
+                  AI Engineering &amp; Prompt Recommendation Engine
+                </span>
+                <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400">
+                  · Superadmin Directive Solver
+                </span>
+              </div>
+              <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                Generates 3 execution options &amp; copy-ready AI Studio prompts for your team
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {aiOptions.length > 0 && (
+              <button
+                type="button"
+                onClick={handleRefreshAiRecommendations}
+                disabled={aiLoading}
+                className="p-1.5 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                title="Re-synthesize AI options"
+              >
+                <RefreshCw size={11} className={aiLoading ? 'animate-spin text-emerald-500' : ''} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleGenerateAiRecommendations}
+              className="px-2.5 py-1.5 rounded-md bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-[10.5px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Terminal size={11} />
+              <span>
+                {aiLoading
+                  ? 'Synthesizing Options...'
+                  : aiPanelOpen && aiOptions.length > 0
+                  ? 'Hide AI Options'
+                  : 'Generate AI Execution Prompts'}
+              </span>
+              {aiPanelOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            </button>
+          </div>
+        </div>
+
+        {aiPanelOpen && (
+          <div className="p-3 border-t border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] space-y-3 animate-fade-in">
+            {aiLoading ? (
+              <div className="py-5 text-center space-y-1.5 font-mono">
+                <RefreshCw size={16} className="animate-spin text-emerald-600 dark:text-emerald-400 mx-auto" />
+                <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Analyzing National Superadmin Directive #[{message.id}]...
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  Synthesizing architectural options and optimal AI Studio prompts
+                </div>
+              </div>
+            ) : (
+              <>
+                {aiDiagnosis && (
+                  <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-mono">
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400 uppercase">
+                        Executive Architectural Diagnosis
+                      </span>
+                      <span className="text-slate-400">{aiModelUsed}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                      {aiDiagnosis}
+                    </p>
+                  </div>
+                )}
+
+                {/* Option Selector Tabs */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {aiOptions.map((opt) => {
+                    const isSelected = selectedOptionId === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setSelectedOptionId(opt.id)}
+                        className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer space-y-1 ${
+                          isSelected
+                            ? 'bg-emerald-500/10 border-emerald-500/50 text-slate-900 dark:text-white'
+                            : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:border-slate-400'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[9.5px] font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase truncate">
+                            {opt.tierLabel}
+                          </span>
+                          <span className="text-[9px] font-mono text-slate-400 shrink-0">
+                            {opt.estimatedTurnaround}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
+                          {opt.title}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Selected Option Detail & Copyable AI Studio Prompt */}
+                {(() => {
+                  const activeOpt =
+                    aiOptions.find((o) => o.id === selectedOptionId) || aiOptions[0];
+                  if (!activeOpt) return null;
+                  const isPromptCopied = copiedPromptId === activeOpt.id;
+
+                  return (
+                    <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase block">
+                            {activeOpt.tierLabel} · {activeOpt.estimatedTurnaround}
+                          </span>
+                          <h5 className="text-xs font-bold text-slate-900 dark:text-white">
+                            {activeOpt.title}
+                          </h5>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyAiPrompt(activeOpt)}
+                            className="px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            {isPromptCopied ? <Check size={11} /> : <Copy size={11} />}
+                            <span>
+                              {isPromptCopied
+                                ? 'Prompt Copied to Clipboard!'
+                                : 'Copy Prompt for AI Studio'}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDispatchSelectedReply(activeOpt)}
+                            className="px-2.5 py-1.5 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-[10.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Send size={10} />
+                            <span>Send Official Reply</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {activeOpt.impactSummary}
+                      </p>
+
+                      {/* Copy-Ready Prompt Box */}
+                      <div className="p-2.5 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                        <div className="flex items-center justify-between text-[9.5px] font-mono text-slate-400 uppercase">
+                          <span>Recommended Prompt to Give AI Engineer (Click Copy Above)</span>
+                          <span>AI Studio Build</span>
+                        </div>
+                        <p className="text-[11px] font-mono text-slate-800 dark:text-slate-200 leading-relaxed select-all">
+                          &ldquo;{activeOpt.recommendedPrompt}&rdquo;
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Response Section */}

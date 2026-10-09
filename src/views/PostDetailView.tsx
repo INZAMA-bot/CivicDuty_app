@@ -46,6 +46,8 @@ import {
   HardHat,
   Landmark,
   Check,
+  Image as ImageIcon,
+  Video,
 } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { RichCivicText } from '../components/RichCivicText';
@@ -59,6 +61,7 @@ import { QrCodeModal } from '../components/QrCodeModal';
 export const PostDetailView: React.FC = () => {
   const {
     user,
+    ensureCitizenSession,
     activePost,
     go,
     prevView,
@@ -304,16 +307,13 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
   };
 
   const handlePostCitizenComment = () => {
-    if (!citizenReplyText.trim() && stagedMedia.length === 0) {
-      toast('Provide a reply message or attach evidence', 'red');
+    if (!citizenReplyText.trim() && stagedMedia.length === 0 && !acquiredGps) {
+      toast('Provide a reply message, GPS pin, or attach multimedia evidence', 'red');
       return;
     }
-    if (!user || user.role !== 'citizen') {
-      toast('Sign in as a citizen to reply', 'amber');
-      return;
-    }
+    const activeCitizen = user || ensureCitizenSession();
 
-    const senderName = replyAnon ? 'Verified Citizen (Anonymous)' : user.name || 'Citizen';
+    const senderName = replyAnon ? 'Verified Citizen (Anonymous)' : activeCitizen.name || 'Citizen Watchdog';
 
     let locTag = '';
     if (locationMode === 'parish') {
@@ -1632,25 +1632,25 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
           </button>
         )}
 
-        {/* Upgraded Rich Citizen Reply Box */}
-        {user && user.role === 'citizen' && (
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <label className="text-xs mono text-slate-900 dark:text-slate-100 uppercase tracking-widest block font-black">
-                Add Field Note / Citizen Contribution
+        {/* Upgraded Rich Multi-Media Citizen Reply Studio (aistudio.google Pattern) */}
+        {(!user || user.role === 'citizen') && (
+          <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+              <label className="text-xs font-mono text-slate-900 dark:text-slate-100 uppercase tracking-wider block font-bold">
+                Add Multimedia Field Note / Citizen Reply
               </label>
-              <span className="text-[8.5px] mono text-emerald-900 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full font-black border border-emerald-300 dark:border-emerald-700">
-                SOVEREIGN LEDGER
+              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                5-Channel Multimedia Enabled
               </span>
             </div>
 
             {replyToSender && (
-              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-xs font-mono text-indigo-800 dark:text-indigo-300">
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-indigo-600 dark:text-indigo-400">
                 <span>↪ Replying to <strong>@{replyToSender}</strong></span>
                 <button
                   type="button"
                   onClick={() => setReplyToSender(null)}
-                  className="text-slate-500 hover:text-rose-600 font-bold cursor-pointer flex items-center gap-1"
+                  className="text-slate-500 hover:text-rose-600 font-semibold cursor-pointer flex items-center gap-1"
                 >
                   <span>Cancel</span>
                   <X size={11} />
@@ -1662,74 +1662,156 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
               rows={3}
               value={citizenReplyText}
               onChange={(e) => setCitizenReplyText(e.target.value)}
-              placeholder="What has changed? Provide on-ground updates, progress observations, or photo evidence..."
-              className="w-full p-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-950 dark:text-white font-medium focus:outline-none focus:border-emerald-500 leading-relaxed resize-none"
+              placeholder="What has changed on the ground? Attach photos, video, voice note, PDF documents, or GPS coordinates..."
+              className="w-full p-3 text-xs rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500 leading-relaxed resize-none"
             />
 
-            {/* Evidence & Voice Note Toolbar */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
-              <label className="cursor-pointer bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-emerald-500 text-slate-800 dark:text-slate-200 px-3 py-1.5 rounded-xl text-[10.5px] mono font-black flex items-center gap-1.5 transition-colors shadow-2xs">
+            {/* Full 5-Channel Multimedia Toolbar (Photo · Video · Voice Note · Document · GPS Pin) */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#e3e6ea] dark:border-[#262b36]">
+              {/* 1. Photo */}
+              <label className="cursor-pointer bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors">
                 <input
                   type="file"
-                  accept="image/*,video/*,.pdf,.doc"
+                  accept="image/*"
                   className="hidden"
                   multiple
                   onChange={handleFileSelect}
                 />
-                <Upload size={13} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Attach Evidence</span>
+                <ImageIcon size={12} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Photo</span>
               </label>
 
+              {/* 2. Video */}
+              <label className="cursor-pointer bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors">
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  multiple
+                  onChange={handleFileSelect}
+                />
+                <Video size={12} className="text-rose-600 dark:text-rose-400" />
+                <span>Video</span>
+              </label>
+
+              {/* 3. Voice Note */}
               <button
+                type="button"
                 onClick={handleSimulateVoiceNote}
                 disabled={isRecordingVoice}
-                className={`px-3 py-1.5 rounded-xl text-[10.5px] mono font-black flex items-center gap-1.5 transition-all border shadow-2xs ${
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors border cursor-pointer ${
                   isRecordingVoice
-                    ? 'bg-rose-100 dark:bg-rose-950 border-rose-500 text-rose-900 dark:text-rose-300 animate-pulse'
-                    : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-emerald-500'
+                    ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-300 animate-pulse'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500'
                 }`}
               >
-                <Mic size={13} className={isRecordingVoice ? 'text-rose-600' : 'text-emerald-600 dark:text-emerald-400'} />
+                <Mic size={12} className={isRecordingVoice ? 'text-rose-600' : 'text-amber-600 dark:text-amber-400'} />
                 <span>{isRecordingVoice ? 'Recording (0:03)...' : 'Voice Note'}</span>
               </button>
 
+              {/* 4. Document / PDF */}
+              <label className="cursor-pointer bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors">
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf"
+                  className="hidden"
+                  multiple
+                  onChange={handleFileSelect}
+                />
+                <FileText size={12} className="text-indigo-600 dark:text-indigo-400" />
+                <span>Doc / PDF</span>
+              </label>
+
+              {/* 5. Live GPS Pin */}
               <button
-                onClick={() => setReplyAnon(!replyAnon)}
-                className={`px-3 py-1.5 rounded-xl text-[10.5px] mono font-black flex items-center gap-1.5 transition-all border ml-auto shadow-2xs ${
-                  replyAnon
-                    ? 'bg-amber-100 dark:bg-amber-950 border-amber-400 text-amber-950 dark:text-amber-300'
-                    : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                type="button"
+                onClick={handleAcquireGps}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors border cursor-pointer ${
+                  acquiredGps
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500'
                 }`}
               >
-                {replyAnon ? <EyeOff size={13} /> : <Eye size={13} />}
+                <MapPin size={12} className="text-emerald-600 dark:text-emerald-400" />
+                <span>{acquiredGps ? `${acquiredGps.lat}, ${acquiredGps.lng}` : 'GPS Pin'}</span>
+              </button>
+
+              {/* Public vs Anonymous Toggle */}
+              <button
+                type="button"
+                onClick={() => setReplyAnon(!replyAnon)}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors border ml-auto cursor-pointer ${
+                  replyAnon
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                }`}
+              >
+                {replyAnon ? <EyeOff size={12} /> : <Eye size={12} />}
                 <span>{replyAnon ? 'Anonymous' : 'Public Name'}</span>
               </button>
             </div>
 
-            {/* Staged Media Preview */}
-            {stagedMedia.length > 0 && (
+            {/* Staged Media & GPS Preview */}
+            {(stagedMedia.length > 0 || acquiredGps) && (
               <div className="space-y-1.5 pt-1">
-                <p className="text-[9px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest font-black">
-                  Attachments ({stagedMedia.length})
+                <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                  Staged Reply Multimedia ({stagedMedia.length + (acquiredGps ? 1 : 0)})
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {acquiredGps && (
+                    <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] p-2 rounded-lg flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded shrink-0">
+                        <MapPin size={13} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10.5px] font-bold text-slate-900 dark:text-slate-100 truncate">
+                          Verified GPS Pin
+                        </p>
+                        <p className="text-[9px] font-mono text-slate-500">
+                          {acquiredGps.lat}, {acquiredGps.lng}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAcquiredGps(null);
+                          setLocationMode('parish');
+                        }}
+                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  )}
+
                   {stagedMedia.map((m, idx) => (
-                    <div key={idx} className="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 p-2 rounded-xl flex items-center gap-2 overflow-hidden">
+                    <div key={idx} className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] p-2 rounded-lg flex items-center gap-2 overflow-hidden">
                       {m.type === 'image' && (
-                        <img src={m.url} alt="" className="w-8 h-8 object-cover rounded flex-shrink-0" />
+                        <img src={m.url} alt="" className="w-8 h-8 object-cover rounded shrink-0" />
+                      )}
+                      {m.type === 'video' && (
+                        <div className="p-1.5 bg-rose-500/15 text-rose-600 dark:text-rose-400 rounded shrink-0">
+                          <Video size={13} />
+                        </div>
                       )}
                       {m.type === 'voice' && (
-                        <div className="p-1.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded flex-shrink-0">
-                          <Mic size={14} />
+                        <div className="p-1.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded shrink-0">
+                          <Mic size={13} />
+                        </div>
+                      )}
+                      {m.type === 'doc' && (
+                        <div className="p-1.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded shrink-0">
+                          <FileText size={13} />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10.5px] font-black text-slate-900 dark:text-slate-100 truncate">{m.name}</p>
-                        <p className="text-[8.5px] mono text-slate-600">{m.type} · {m.size || m.duration}</p>
+                        <p className="text-[10.5px] font-bold text-slate-900 dark:text-slate-100 truncate">{m.name}</p>
+                        <p className="text-[9px] font-mono text-slate-500">{m.type} · {m.size || m.duration}</p>
                       </div>
                       <button
+                        type="button"
                         onClick={() => setStagedMedia(stagedMedia.filter((_, i) => i !== idx))}
-                        className="text-slate-500 hover:text-rose-600 p-1 text-xs mono font-black"
+                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                       >
                         <X size={12} />
                       </button>
@@ -1740,10 +1822,11 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
             )}
 
             <button
+              type="button"
               onClick={handlePostCitizenComment}
-              className="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-black rounded-2xl py-3 text-xs uppercase tracking-widest mono transition-all active:scale-[.98] shadow-md"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg py-2.5 text-xs uppercase tracking-wider font-mono transition-colors cursor-pointer"
             >
-              Post Field Contribution
+              Post Multimedia Field Contribution
             </button>
           </div>
         )}

@@ -79,11 +79,11 @@ export const Footer: React.FC<FooterProps> = ({ isSplash = false }) => {
 
         {/* Bottom Row: Legal & Governance Links + CD-Ops */}
         <div className="pt-4 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-mono text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap justify-center sm:justify-start">
+          <div className="flex items-center gap-x-2 gap-y-1.5 flex-wrap justify-center sm:justify-start">
             <button
               type="button"
               onClick={() => openLegalCenter('about')}
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer py-1"
+              className="px-2 py-1 rounded-md hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-slate-100 border border-transparent hover:border-[#e3e6ea] dark:hover:border-[#262b36] transition-colors cursor-pointer font-medium"
             >
               About CivicDuty
             </button>
@@ -91,7 +91,7 @@ export const Footer: React.FC<FooterProps> = ({ isSplash = false }) => {
             <button
               type="button"
               onClick={() => openLegalCenter('privacy')}
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer py-1"
+              className="px-2 py-1 rounded-md hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-slate-100 border border-transparent hover:border-[#e3e6ea] dark:hover:border-[#262b36] transition-colors cursor-pointer font-medium"
             >
               Privacy Charter
             </button>
@@ -99,7 +99,7 @@ export const Footer: React.FC<FooterProps> = ({ isSplash = false }) => {
             <button
               type="button"
               onClick={() => openLegalCenter('terms')}
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer py-1"
+              className="px-2 py-1 rounded-md hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-slate-100 border border-transparent hover:border-[#e3e6ea] dark:hover:border-[#262b36] transition-colors cursor-pointer font-medium"
             >
               Terms of Use
             </button>
@@ -107,7 +107,7 @@ export const Footer: React.FC<FooterProps> = ({ isSplash = false }) => {
             <button
               type="button"
               onClick={() => openLegalCenter('ethics')}
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer py-1"
+              className="px-2 py-1 rounded-md hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-slate-100 border border-transparent hover:border-[#e3e6ea] dark:hover:border-[#262b36] transition-colors cursor-pointer font-medium"
             >
               Ethics Covenant
             </button>

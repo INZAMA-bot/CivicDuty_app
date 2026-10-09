@@ -58,22 +58,16 @@ export const Navigation: React.FC<NavigationProps> = () => {
   const isAdmin =
     activeUser.role === 'platform_admin' ||
     activeUser.hierarchy_level === 'tier5_perm_sec' ||
+    psInfo.isPs ||
+    Boolean(activeUser.is_admin) ||
     (activeUser.role === 'node_admin' && (activeUser.scope === 'UG' || activeUser.scope === activeUser.country));
-  const isNode = activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin;
+  const isNode = activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin || psInfo.isPs;
 
-  const adminTargetView: ViewType =
-    psInfo.isPs && !psInfo.isMoLG ? 'ps_executive_desk' : psInfo.isMoLG ? 'ps_molg_rollout' : 'gov_admin';
-  const isAdminActive = view === 'gov_admin' || view === 'ps_executive_desk' || view === 'ps_molg_rollout';
-
-  const handleAdminClick = () => {
-    if (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId) {
+  const handleApexClick = () => {
+    if (psInfo.ministryId) {
       setSelectedMinistryId(psInfo.ministryId);
-      go('ps_executive_desk');
-    } else if (psInfo.isMoLG) {
-      go('ps_molg_rollout');
-    } else {
-      go('gov_admin');
     }
+    go('ps_executive_desk');
   };
 
   const citizenWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType }[] = [
@@ -86,17 +80,59 @@ export const Navigation: React.FC<NavigationProps> = () => {
   const govWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
     { id: 'gov_inbox', label: 'Official Inbox', icon: Inbox },
     { id: 'gov_projects', label: 'Public Works', icon: Building2 },
-    ...(isNode ? [{ id: 'gov_team' as ViewType, label: 'Team Roster', icon: Users }] : []),
-    ...(isAdmin
+    ...(isNode
       ? [
           {
-            id: adminTargetView,
-            label: psInfo.isPs ? 'Apex Executive' : 'Superadmin',
-            icon: SlidersHorizontal,
-            onClick: handleAdminClick,
-            active: isAdminActive,
+            id: 'gov_team' as ViewType,
+            label: psInfo.isPs && !psInfo.isMoLG ? 'Ministry Team' : 'Team Roster',
+            icon: Users,
           },
         ]
+      : []),
+    ...(isAdmin
+      ? psInfo.isPs && !psInfo.isMoLG
+        ? [
+            {
+              id: 'gov_admin' as ViewType,
+              label: 'Ministry Admin',
+              icon: SlidersHorizontal,
+              onClick: () => go('gov_admin'),
+              active: view === 'gov_admin',
+            },
+            {
+              id: 'ps_executive_desk' as ViewType,
+              label: 'Apex Executive',
+              icon: Landmark,
+              onClick: handleApexClick,
+              active: view === 'ps_executive_desk',
+            },
+          ]
+        : psInfo.isMoLG
+          ? [
+              {
+                id: 'gov_admin' as ViewType,
+                label: 'Superadmin',
+                icon: SlidersHorizontal,
+                onClick: () => go('gov_admin'),
+                active: view === 'gov_admin',
+              },
+              {
+                id: 'ps_molg_rollout' as ViewType,
+                label: 'Rollout Matrix',
+                icon: Landmark,
+                onClick: () => go('ps_molg_rollout'),
+                active: view === 'ps_molg_rollout',
+              },
+            ]
+          : [
+              {
+                id: 'gov_admin' as ViewType,
+                label: 'Admin Console',
+                icon: SlidersHorizontal,
+                onClick: () => go('gov_admin'),
+                active: view === 'gov_admin',
+              },
+            ]
       : []),
     { id: 'gov_audit', label: 'Audit Chain', icon: Scale },
     { id: 'feed', label: 'Public Feed', icon: Eye },
@@ -370,15 +406,28 @@ export const Navigation: React.FC<NavigationProps> = () => {
               )}
               {isAdmin && (
                 <button
-                  onClick={handleAdminClick}
+                  onClick={() => go('gov_admin')}
                   className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                    isAdminActive
+                    view === 'gov_admin'
                       ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                       : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   <SlidersHorizontal size={18} strokeWidth={1.75} />
-                  <span className="text-[9.5px] font-mono">{psInfo.isPs ? 'Apex' : 'Admin'}</span>
+                  <span className="text-[9.5px] font-mono">Admin</span>
+                </button>
+              )}
+              {psInfo.isPs && !psInfo.isMoLG && (
+                <button
+                  onClick={handleApexClick}
+                  className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                    view === 'ps_executive_desk'
+                      ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <Landmark size={18} strokeWidth={1.75} />
+                  <span className="text-[9.5px] font-mono">Apex</span>
                 </button>
               )}
               <button

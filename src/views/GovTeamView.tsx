@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { getDept, allDepts, makeCode, copyToClipboard } from '../utils/helpers';
+import { getDept, allDepts, makeCode, copyToClipboard, getPsMinistryInfo } from '../utils/helpers';
 import { COUNTRIES, TERRITORY } from '../data/countries';
+import { getCountryRolloutConfig } from '../data/nationalRolloutNodes';
 import {
   roleTreeFor,
   scopeName,
@@ -254,6 +255,10 @@ export const GovTeamView: React.FC = () => {
   }
 
   const country = user?.country || 'UG';
+  const countryMeta = COUNTRIES[country] || COUNTRIES.UG;
+  const rolloutConfig = useMemo(() => getCountryRolloutConfig(country), [country]);
+  const psInfo = useMemo(() => getPsMinistryInfo(user), [user]);
+  const isLinePs = psInfo.isPs && !psInfo.isMoLG;
   const dists = user ? TERRITORY[user.country] || [] : [];
 
   // Compute exact statutory supervisory context
@@ -445,8 +450,77 @@ export const GovTeamView: React.FC = () => {
 
   // Tailored presets and statutory designations for the officer's exact supervisory mandate per jurisdiction
   const jurisdictionDesignations = useMemo(() => {
+    if (isLinePs) {
+      const mName = psInfo.ministryName || 'Line Ministry';
+      const mShort = psInfo.shortTitle || 'Ministry';
+      const stateMins = (psInfo.stateMinisterTitles || [`Minister of State — ${mName}`]).map(
+        (stTitle, idx) => ({
+          id: `line-statemin-${idx}`,
+          label: stTitle.split('(')[0].trim(),
+          title: stTitle,
+          role: 'node_admin' as RoleType,
+          desc: `Political portfolio oversight and parliamentary accountability for ${mName}.`,
+          legalBasis: `Constitutional Ministerial Mandate (${countryMeta.name})`,
+          defaultDutyStation: `${mName} Headquarters`,
+          isUtility: false,
+        })
+      );
+      return [
+        {
+          id: 'line-cabinet-minister',
+          label: `Cabinet Minister (${mShort})`,
+          title: psInfo.cabinetMinisterTitle || `Cabinet Minister — ${mName}`,
+          role: 'platform_admin' as RoleType,
+          desc: `Apex Political Head of ${mName}. Receives executive policy briefs, capex audits, and cabinet escalations.`,
+          legalBasis: `Constitutional Cabinet Mandate (${countryMeta.name})`,
+          defaultDutyStation: `${mName} Cabinet Office`,
+          isUtility: false,
+        },
+        ...stateMins,
+        {
+          id: 'line-undersecretary',
+          label: `Undersecretary (F&A — ${mShort})`,
+          title: `Undersecretary (Finance & Administration) — ${mName}`,
+          role: 'node_admin' as RoleType,
+          desc: `Deputizes the Permanent Secretary on ministry administration, vote accounting, and human resource management.`,
+          legalBasis: `Public Finance Management & Civil Service Act`,
+          defaultDutyStation: `${mName} Headquarters`,
+          isUtility: false,
+        },
+        {
+          id: 'line-director-tech',
+          label: `Director Technical Services (${mShort})`,
+          title: `Director of Technical Operations & Engineering — ${mName}`,
+          role: 'node_admin' as RoleType,
+          desc: `Directs national sector engineering, field inspections, and statutory contractor supervision.`,
+          legalBasis: `Sectoral Statutory Mandate (${mShort})`,
+          defaultDutyStation: `${mName} Technical Directorate`,
+          isUtility: false,
+        },
+        {
+          id: 'line-commissioner-qa',
+          label: `Commissioner Policy & QA (${mShort})`,
+          title: `Commissioner of Policy, Planning & Quality Assurance — ${mName}`,
+          role: 'spokesperson' as RoleType,
+          desc: `Supervises departmental SLA compliance, citizen petition responses, and quarterly budget performance.`,
+          legalBasis: `Public Service Standing Orders`,
+          defaultDutyStation: `${mName} Planning Unit`,
+          isUtility: false,
+        },
+        {
+          id: 'line-internal-auditor',
+          label: `Chief Internal Auditor (${mShort})`,
+          title: `Chief Internal Auditor — ${mName}`,
+          role: 'read_only' as RoleType,
+          desc: `Audits capex contract disbursements, IFMS warrants, and whistle-blower integrity flags.`,
+          legalBasis: `Public Finance Management Act (Internal Audit)`,
+          defaultDutyStation: `${mName} Audit Chambers`,
+          isUtility: false,
+        },
+      ];
+    }
     return getJurisdictionDesignations(user.country as CountryCode, tier, user.scope);
-  }, [user.country, tier, user.scope]);
+  }, [user.country, tier, user.scope, isLinePs, psInfo, countryMeta.name]);
 
   const presetsToDisplay = jurisdictionDesignations;
 
@@ -463,9 +537,11 @@ export const GovTeamView: React.FC = () => {
       toast('Enter their official title', 'red');
       return;
     }
-    const finalScope = parish || subcounty || district;
+    const finalScope = isLinePs
+      ? user.country
+      : parish || subcounty || district || user.country;
     if (!finalScope) {
-      toast('Select a district, division or parish', 'red');
+      toast('Select a jurisdiction station', 'red');
       return;
     }
 
@@ -698,83 +774,97 @@ export const GovTeamView: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="text-[10.5px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700 shadow-2xs">
-              {tier === 5
-                ? 'Tier 5: Permanent Secretary / Apex National Accounting Officer'
+            <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25">
+              {isLinePs
+                ? `Tier 5 · ${psInfo.ministryName} (${countryMeta.name}) · Strict Ministry Jurisdiction`
+                : tier === 5
+                ? `Tier 5 · ${rolloutConfig.superadmin.title} (${countryMeta.name})`
                 : tier === 3
-                ? `Tier 3: CAO "${districtObj.name} District"`
+                ? `Tier 3: CAO "${districtObj?.name || countryMeta.name} District"`
                 : tier === 2
                 ? `Tier 2: SAS / Sub-County Accounting Officer "${subcountyObj?.name || 'Sub-County'}"`
                 : `Tier 1: Parish Administrative Officer "${parishObj?.name || 'Parish'}"`}
             </span>
-            <span className="text-[9px] font-mono text-slate-400">
-              {scopeName(user.country, user.scope || user.country)}
+            <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
+              <Lock size={11} />
+              <span>{countryMeta.name} ({user.country})</span>
             </span>
           </div>
 
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-            {tier === 5
-              ? 'Ministry of Local Government — National Team Roster'
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">
+            {isLinePs
+              ? `${psInfo.ministryName} — Ministerial Cabinet & Sector Team Roster`
+              : tier === 5
+              ? `${rolloutConfig.superadmin.ministry} (${countryMeta.name}) — National Supervisory Roster`
               : tier === 3
-              ? `Tier 3: CAO "${districtObj.name} District" — Administration Roster`
+              ? `Tier 3: CAO "${districtObj?.name || 'District'}" — Administration Roster`
               : tier === 2
               ? `Tier 2: SAS "${subcountyObj?.name || 'Sub-County'}" — LLG Administration Roster`
               : `Tier 1: "${parishObj?.name || 'Parish'}" — Administrative Unit Roster`}
           </h1>
 
           <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-            Official civil service roster, desk delegation, successor handovers, and supervisory oversight.
+            {isLinePs
+              ? `Strictly scoped to ${psInfo.ministryName} (${countryMeta.name}). Invite and commission your Cabinet Minister, Ministers of State, Undersecretary, Technical Directors, and Internal Auditors.`
+              : `Official civil service roster, desk delegation, successor handovers, and supervisory oversight for ${countryMeta.name}.`}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="text-right hidden sm:block">
             <div className="text-xs font-bold text-slate-900 dark:text-white">{user.real_title_short || roleLabels[user.role]}</div>
-            <div className="text-[10px] text-teal-700 dark:text-teal-400 font-mono">{user.officer_name || user.name || 'Supervisor'}</div>
+            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">{user.officer_name || user.name || 'Supervisor'}</div>
           </div>
-          <span className="text-[10px] font-black mono px-3 py-1.5 rounded-xl bg-teal-600 text-white uppercase tracking-widest shadow-2xs">
-            TIER {tier} NODE
+          <span className="text-[10px] font-mono font-bold px-3 py-1.5 rounded-lg bg-emerald-600 text-white uppercase tracking-wider">
+            {isLinePs ? `${psInfo.shortTitle} PS` : `TIER ${tier} NODE`}
           </span>
         </div>
       </div>
 
       {/* Official Mandate Banner */}
-      <div className="card-gov p-4 bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800/60 space-y-2 rounded-xl">
+      <div className="p-4 bg-[#f8f9fa] dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2 rounded-xl">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-teal-800 dark:text-teal-300 font-bold text-xs mono uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs font-mono uppercase tracking-wider">
             <Shield size={15} />
-            <span>Statutory Supervisory Mandate &amp; Accounting Jurisdiction</span>
+            <span>Statutory Supervisory Mandate &amp; Strict Jurisdiction Lock</span>
           </div>
-          <span className="text-[9px] mono text-teal-800 dark:text-teal-300 bg-teal-100 dark:bg-teal-900/60 px-2 py-0.5 rounded border border-teal-300 dark:border-teal-700 font-bold">
-            {tier === 5
-              ? 'National Oversight (Sovereign)'
+          <span className="text-[10px] font-mono text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25 font-semibold">
+            {isLinePs
+              ? `Ministry Mandate Only (${psInfo.shortTitle})`
+              : tier === 5
+              ? `National Territorial Oversight (${countryMeta.name})`
               : tier === 3
-              ? `Local Governments Act S.64 (${districtObj.name})`
+              ? `District Accounting Officer (${districtObj?.name || 'District'})`
               : tier === 2
-              ? `Local Governments Act S.69 (${subcountyObj?.name || 'Sub-County'})`
-              : `Parish Development Model S.15 (${parishObj?.name || 'Parish'})`}
+              ? `Sub-County Accounting Officer (${subcountyObj?.name || 'Sub-County'})`
+              : `Grassroots Node (${parishObj?.name || 'Parish'})`}
           </span>
         </div>
 
         <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-          {tier === 5 && (
+          {isLinePs && (
             <>
-              As <strong>Permanent Secretary, Ministry of Local Government</strong>, you oversee national local government administration across all 146 districts, including appointment of Chief Administrative Officers (CAOs), City Town Clerks, and coordination with sister agencies.
+              As <strong>{psInfo.officerTitle}</strong> (Chief Accounting Officer of <strong>{psInfo.ministryName}</strong> in {countryMeta.name}), your team roster and commissioning authority are strictly isolated to your Ministry. Use the presets below to invite your <strong>Cabinet Minister ({psInfo.cabinetMinisterTitle})</strong>, <strong>Ministers of State</strong>, <strong>Undersecretary</strong>, and <strong>Technical Directors</strong>.
             </>
           )}
-          {tier === 3 && (
+          {!isLinePs && tier === 5 && (
             <>
-              Under Section 64 of the Local Governments Act (Cap. 243), the <strong>Chief Administrative Officer (CAO)</strong> is the head of the civil service and accounting officer of <strong>{districtObj.name}</strong>. Your dashboard and invitation authority are strictly restricted to officers you are mandated to supervise directly: Senior Assistant Secretaries (Sub-County Chiefs), Division Town Clerks, and District Technical Heads.
+              As <strong>{rolloutConfig.superadmin.title} ({rolloutConfig.superadmin.name})</strong>, you oversee national territorial decentralization across <strong>{countryMeta.name}</strong> ({rolloutConfig.nodes.length} regional/district nodes), including commissioning of Regional/District Accounting Officers and coordination with {countryMeta.name}&apos;s Sister Ministries.
             </>
           )}
-          {tier === 2 && (
+          {!isLinePs && tier === 3 && (
             <>
-              Under Section 69 of the Local Governments Act (Cap. 243), the <strong>Senior Assistant Secretary (Sub-County Chief)</strong> is the accounting officer of <strong>{subcountyObj?.name}</strong>. You directly supervise Parish Chiefs, Community Development Officers, and field extension personnel within your sub-county.
+              Under the Local Governments Act, the <strong>Chief Administrative Officer (CAO)</strong> is the head of the civil service and accounting officer of <strong>{districtObj?.name}</strong>. Your dashboard and invitation authority are strictly restricted to officers you supervise directly.
             </>
           )}
-          {tier === 1 && (
+          {!isLinePs && tier === 2 && (
             <>
-              As <strong>Parish Chief / Ward Agent</strong> of <strong>{parishObj?.name}</strong>, you coordinate the Parish Development Committee (PDC), supervising LC1 Village Chairpersons, VHT coordinators, and PDM enterprise leaders.
+              As <strong>Sub-County Accounting Officer</strong> of <strong>{subcountyObj?.name}</strong>, you directly supervise Parish/Ward Chiefs, Community Development Officers, and field extension personnel within your sub-county.
+            </>
+          )}
+          {!isLinePs && tier === 1 && (
+            <>
+              As <strong>Parish Chief / Ward Administrator</strong> of <strong>{parishObj?.name}</strong>, you coordinate the grassroots committee, supervising village chairpersons and community monitors.
             </>
           )}
         </p>
@@ -821,7 +911,7 @@ export const GovTeamView: React.FC = () => {
       ) : (
         <>
           {/* TIER-TAILORED SUPERVISION MATRIX */}
-          {tier === 5 ? (
+          {isLinePs ? null : tier === 5 ? (
             <RolloutSupervisionStructure onPrefillManualForm={handlePrefillManual} />
           ) : tier === 3 ? (
             <DistrictSupervisionStructure districtId={districtObj.id} onPrefillManualForm={handlePrefillManual} />
@@ -842,11 +932,11 @@ export const GovTeamView: React.FC = () => {
 
           {/* ========================================================================= */}
           {/* SECTION 1: APPOINTMENT / INVITATION SECTION                                */}
-          {/* Tier 5 (Superadmin): Handled natively inside RolloutSupervisionStructure   */}
-          {/* Tier 1-3 (Local Gov): Direct-Report Statutory Appointment Form            */}
+          {/* Tier 5 (MoLG Territorial Superadmin): Handled inside RolloutSupervision   */}
+          {/* Line Ministry PS OR Tier 1-3: Direct-Report Statutory Appointment Form    */}
           {/* ========================================================================= */}
-          {tier === 5 ? null : (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+          {tier === 5 && !isLinePs ? null : (
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
         <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">

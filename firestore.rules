@@ -46,7 +46,7 @@ service cloud.firestore {
         && data.title is string && data.title.size() <= 256
         && data.body is string && data.body.size() <= 4000
         && data.source is string && (data.source == 'web' || data.source == 'sms' || data.source == 'ussd')
-        && data.status is string
+        && data.status is string && data.status.size() <= 64
         && data.created_at is string && data.created_at.size() <= 64;
     }
 
@@ -56,13 +56,16 @@ service cloud.firestore {
       allow create: if isValidId(postId) && isValidPost(incoming());
       allow update: if isValidId(postId) && (
         isAdmin() ||
-        // Action: Upvote or Downvote
-        incoming().diff(existing()).affectedKeys().hasOnly(['upvotes']) ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['downvotes']) ||
-        // Action: Compile witness reports & co-sign Master Dossier
-        incoming().diff(existing()).affectedKeys().hasOnly(['compiled_reports', 'compiled_count', 'upvotes', 'escalated', 'is_master_dossier', 'merged_from_ids']) ||
-        // Action: Status update by official or citizen resolution feedback
-        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'gov_status', 'comments', 'citizen_satisfied']))
+        isValidPost(incoming()) ||
+        (resource != null && (
+          // Action: Upvote or Downvote
+          incoming().diff(existing()).affectedKeys().hasOnly(['upvotes']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['downvotes']) ||
+          // Action: Compile witness reports & co-sign Master Dossier
+          incoming().diff(existing()).affectedKeys().hasOnly(['compiled_reports', 'compiled_count', 'upvotes', 'escalated', 'is_master_dossier', 'merged_from_ids']) ||
+          // Action: Status update by official or citizen resolution feedback
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'gov_status', 'comments', 'citizen_satisfied'])
+        ))
       );
       allow delete: if isValidId(postId);
     }
@@ -81,13 +84,13 @@ service cloud.firestore {
       allow create: if isAdmin() || (isValidId(deptId) && isValidDepartment(incoming()));
       allow update: if isValidId(deptId) && (
         isAdmin() ||
-        // Action: Claim desk verification
-        incoming().diff(existing()).affectedKeys().hasOnly(['isClaimed', 'claimedPlan', 'claimedBy', 'trustScore'])
+        isValidDepartment(incoming()) ||
+        (resource != null && incoming().diff(existing()).affectedKeys().hasOnly(['isClaimed', 'claimedPlan', 'claimedBy', 'trustScore', 'name', 'full']))
       );
       allow delete: if isAdmin();
     }
 
-    // --- CLAIMS (Commercial Desk Subscriptions) ---
+    // --- CLAIMS (Commercial Desk Subscriptions & Wall Profile Customization) ---
     function isValidClaim(data) {
       return data.deptId is string && data.deptId.size() <= 128
         && data.country is string && data.country.size() <= 8
@@ -101,7 +104,7 @@ service cloud.firestore {
       allow get: if isValidId(claimId);
       allow list: if true;
       allow create: if isValidId(claimId) && isValidClaim(incoming());
-      allow update: if isAdmin();
+      allow update: if isValidId(claimId) && (isAdmin() || isValidClaim(incoming()));
       allow delete: if isAdmin();
     }
 
@@ -119,8 +122,9 @@ service cloud.firestore {
       allow create: if isValidId(userId) && isValidUser(incoming());
       allow update: if isValidId(userId) && (
         isAdmin() ||
+        isValidUser(incoming()) ||
         (isSignedIn() && request.auth.uid == userId) ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['civic_score', 'posts', 'resolved', 'rank'])
+        (resource != null && incoming().diff(existing()).affectedKeys().hasOnly(['civic_score', 'posts', 'resolved', 'rank']))
       );
       allow delete: if isAdmin();
     }

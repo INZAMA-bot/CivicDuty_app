@@ -31,7 +31,10 @@ import {
   Check,
   X,
   QrCode,
-  Megaphone
+  Megaphone,
+  Edit3,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import { DeptIcon } from '../components/DeptIcon';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
@@ -57,6 +60,7 @@ export const DeptWallView: React.FC = () => {
     toast,
     isEntityClaimed,
     getClaimedEntity,
+    updateClaimedEntityDetails,
     nudgeCounts,
     nudgeEntity,
     showDemos,
@@ -64,6 +68,7 @@ export const DeptWallView: React.FC = () => {
 
   const [rewardModalOpen, setRewardModalOpen] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showEditWallModal, setShowEditWallModal] = useState(false);
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [showPlacardModal, setShowPlacardModal] = useState(false);
   const [copiedBadge, setCopiedBadge] = useState(false);
@@ -92,11 +97,74 @@ export const DeptWallView: React.FC = () => {
   const isClaimed = isEntityClaimed(did);
   const claimRecord = getClaimedEntity(did);
 
+  const displayWallName = claimRecord?.businessName || d.name;
+  const displayWallDesc = claimRecord?.customDescription || d.full;
+  const displayWallLocation = claimRecord?.customLocation || d.location || `${COUNTRIES[country]?.name || 'National'} Service Network`;
+  const displayWallAvatar = claimRecord?.customAvatarUrl || '';
+  const displayWallWebsite = claimRecord?.customWebsite || '';
+
+  // Edit Wall Modal Form State
+  const [editBusinessName, setEditBusinessName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [editHotline, setEditHotline] = useState('');
+  const [editWebsite, setEditWebsite] = useState('');
+  const [editRepName, setEditRepName] = useState('');
+  const [editRepRole, setEditRepRole] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+
+  const openEditWallStudio = () => {
+    setEditBusinessName(claimRecord?.businessName || d.name);
+    setEditLocation(claimRecord?.customLocation || d.location || `${COUNTRIES[country]?.name || 'National'} Headquarters`);
+    setEditDescription(claimRecord?.customDescription || d.full);
+    setEditAvatarUrl(claimRecord?.customAvatarUrl || '');
+    setEditHotline(claimRecord?.customHotline || (isConsumer ? '0800 200 900' : '0800 100 066'));
+    setEditWebsite(claimRecord?.customWebsite || `https://www.${did.replace(/[^a-z0-9]/gi, '').toLowerCase()}.org`);
+    setEditRepName(claimRecord?.representativeName || accountingOfficer.name);
+    setEditRepRole(claimRecord?.role || accountingOfficer.role);
+    setEditEmail(claimRecord?.officialEmail || accountingOfficer.email);
+    setShowEditWallModal(true);
+  };
+
+  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setEditAvatarUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveWallEdits = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editBusinessName.trim()) {
+      toast('Business / Desk name cannot be empty.', 'amber');
+      return;
+    }
+    updateClaimedEntityDetails(did, {
+      businessName: editBusinessName.trim(),
+      customLocation: editLocation.trim(),
+      customDescription: editDescription.trim(),
+      customAvatarUrl: editAvatarUrl.trim(),
+      customHotline: editHotline.trim(),
+      customWebsite: editWebsite.trim(),
+      representativeName: editRepName.trim(),
+      role: editRepRole.trim(),
+      officialEmail: editEmail.trim(),
+      phone: editHotline.trim(),
+    });
+    setShowEditWallModal(false);
+  };
+
   const deptProjects = projects.filter((p) => p.dept === did);
 
   // Dynamic Official & Service Metadata based on category
   const ussdCode = `*3030*${(did.charCodeAt(0) % 50) + 10}#`;
-  const tollFree = isConsumer ? '0800 200 900' : '0800 100 066';
+  const tollFree = claimRecord?.customHotline || (isConsumer ? '0800 200 900' : '0800 100 066');
   const whatsappDesk = isConsumer ? '+256 701 889 000' : '+256 772 100 044';
 
   const isEducation = d.category === 'education';
@@ -322,52 +390,117 @@ export const DeptWallView: React.FC = () => {
         </div>
 
         {/* Full-Width Unobstructed Entity Identity Header */}
-        <div className="flex items-start gap-3.5 mb-4">
-          <div className="w-12 h-12 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0 mt-0.5">
-            <DeptIcon dept={d} size={22} />
-          </div>
-          <div className="flex-1 min-w-0 space-y-0.5">
-            <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 dark:text-slate-400 flex-wrap">
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold uppercase">
-                {isConsumer ? 'Verified Private Provider' : 'Sovereign Public Desk'}
-              </span>
-              {d.ministry && (
-                <>
-                  <span>·</span>
-                  <span>{d.ministry}</span>
-                </>
+        <div className="flex items-start justify-between gap-3.5 mb-4 flex-wrap">
+          <div className="flex items-start gap-3.5 min-w-0 flex-1">
+            <div className="relative group shrink-0 mt-0.5">
+              {displayWallAvatar ? (
+                <img
+                  src={displayWallAvatar}
+                  alt={displayWallName}
+                  className="w-14 h-14 rounded-xl object-cover border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116]"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300">
+                  <DeptIcon dept={d} size={24} />
+                </div>
+              )}
+              {isClaimed && (
+                <button
+                  type="button"
+                  onClick={openEditWallStudio}
+                  title="Change Wall Profile Picture & Details"
+                  className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xs border-2 border-white dark:border-[#161a22] cursor-pointer"
+                >
+                  <Camera size={11} />
+                </button>
               )}
             </div>
-            <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
-              {d.name}
-            </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{d.full}</p>
+            <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 dark:text-slate-400 flex-wrap">
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold uppercase">
+                  {isConsumer ? 'Verified Private Provider' : 'Sovereign Public Desk'}
+                </span>
+                {d.ministry && (
+                  <>
+                    <span>·</span>
+                    <span>{d.ministry}</span>
+                  </>
+                )}
+                {isClaimed && (
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[9.5px] font-semibold">
+                    CLAIMED DESK
+                  </span>
+                )}
+              </div>
+              <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white leading-snug">
+                {displayWallName}
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{displayWallDesc}</p>
+              <div className="flex items-center gap-3 pt-0.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300 font-medium">
+                  <MapPin size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>{displayWallLocation}</span>
+                </span>
+                {displayWallWebsite && (
+                  <a
+                    href={displayWallWebsite}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    <Globe size={11} />
+                    <span>{displayWallWebsite.replace(/^https?:\/\//, '')}</span>
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
+
+          {isClaimed && (
+            <button
+              type="button"
+              onClick={openEditWallStudio}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold bg-[#f8f9fa] hover:bg-emerald-500/10 dark:bg-[#0e1116] dark:hover:bg-emerald-500/15 text-slate-800 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/40 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            >
+              <Edit3 size={12} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Edit Wall Details</span>
+            </button>
+          )}
         </div>
 
         {/* Private-First Provider Claim & Subscription Status Banner */}
         {isConsumer ? (
           isClaimed ? (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-2xl mb-4 flex items-center justify-between flex-wrap gap-2.5 shadow-2xs">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-xl mb-4 flex items-center justify-between flex-wrap gap-2.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="chip ch-resolved text-[9px] font-black flex items-center gap-1">
-                  <CheckCircle2 size={11} /> Verified Founding Partner · {claimRecord?.plan?.toUpperCase()} Plan (30-Day Free Trial)
+                  <CheckCircle2 size={11} /> Verified Founding Partner · {(claimRecord?.plan || 'DISTRICT').toUpperCase()} Plan
                 </span>
                 <span className="text-xs text-emerald-950 dark:text-emerald-200 font-semibold">
-                  Desk: {claimRecord?.representativeName} · Guaranteed {d.sla || 24}h SLA Active
+                  Desk Lead: {claimRecord?.representativeName || accountingOfficer.name} · Guaranteed {d.sla || 24}h SLA Active
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
+                  type="button"
+                  onClick={openEditWallStudio}
+                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-white dark:bg-[#161a22] border border-emerald-400 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1 cursor-pointer"
+                >
+                  <Edit3 size={11} />
+                  <span>Edit Wall Profile &amp; Location</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setShowEmbedModal(true)}
-                  className="px-2.5 py-1 rounded-xl text-[10.5px] mono font-black bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 transition-all cursor-pointer"
                 >
                   <Code size={12} />
                   <span>Embed Trust Badge</span>
                 </button>
                 <button
-                  onClick={() => go('entity_gateway')}
-                  className="px-2.5 py-1 rounded-xl text-[10.5px] mono font-bold bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1 cursor-pointer"
+                  type="button"
+                  onClick={() => go('entity')}
+                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1 cursor-pointer"
                 >
                   <span>Provider Portal</span>
                 </button>
@@ -437,15 +570,24 @@ export const DeptWallView: React.FC = () => {
                 Provisioned via National Treasury &amp; MoLG Statutory Vote Allocation · Whole-of-Government SLA Active
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
+                type="button"
+                onClick={openEditWallStudio}
+                className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-white dark:bg-[#161a22] border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center gap-1 cursor-pointer"
+              >
+                <Edit3 size={11} />
+                <span>Edit Wall Profile</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => go('ps_molg_rollout')}
-                className="px-2.5 py-1 rounded-xl text-[10.5px] mono font-black bg-blue-700 hover:bg-blue-800 text-white flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-blue-700 hover:bg-blue-800 text-white flex items-center gap-1 transition-all cursor-pointer"
               >
                 <FileText size={12} />
                 <span>MoLG National Rollout Docket</span>
               </button>
-              <span className="text-[10px] mono font-black text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 border border-blue-300 dark:border-blue-700">
+              <span className="text-[10px] font-mono font-bold text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/60 border border-blue-300 dark:border-blue-700">
                 {d.sla || 48}h Statutory SLA
               </span>
             </div>
@@ -788,7 +930,215 @@ export const DeptWallView: React.FC = () => {
         isOpen={showClaimModal}
         onClose={() => setShowClaimModal(false)}
         targetDept={d}
+        onSuccessClaim={() => {
+          setShowClaimModal(false);
+          openEditWallStudio();
+        }}
       />
+
+      {/* Claimed Desk — Edit Wall & Business Profile Studio Modal */}
+      {showEditWallModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100 max-h-[90vh] flex flex-col">
+            <div className="px-5 py-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between bg-[#f8f9fa] dark:bg-[#0e1116]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <Edit3 size={15} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
+                    Claimed Entity Wall Customization Studio
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Edit Wall Details, Location &amp; Profile Picture
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditWallModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-[#e3e6ea]/50 dark:hover:bg-[#1e232d] cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveWallEdits} className="p-5 space-y-4 overflow-y-auto flex-1">
+              {/* Profile Picture / Brand Logo Section */}
+              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                  1. Wall Profile Picture / Official Brand Emblem
+                </label>
+                <div className="flex items-center gap-3.5 flex-wrap">
+                  {editAvatarUrl ? (
+                    <img
+                      src={editAvatarUrl}
+                      alt="Preview"
+                      className="w-16 h-16 rounded-xl object-cover border border-emerald-500/40 bg-white dark:bg-[#161a22]"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-500">
+                      <DeptIcon dept={d} size={26} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-[200px] space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-colors">
+                        <Upload size={12} />
+                        <span>Upload Photo / Logo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {editAvatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setEditAvatarUrl('')}
+                          className="px-2.5 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-[10.5px] font-mono text-slate-600 dark:text-slate-400 hover:text-rose-600 cursor-pointer"
+                        >
+                          Reset Default Icon
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={editAvatarUrl}
+                      onChange={(e) => setEditAvatarUrl(e.target.value)}
+                      placeholder="Or paste image URL (https://...)"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Business / Wall Name & Location */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1">
+                    2. Business / Institution Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editBusinessName}
+                    onChange={(e) => setEditBusinessName(e.target.value)}
+                    placeholder="Official Business or Desk Name"
+                    className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1">
+                    3. Business Location / Headquarters *
+                  </label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      required
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      placeholder="e.g., Plot 14 Kampala Road, Central Division"
+                      className="flex-1 px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditLocation(`Plot 24 Central Boulevard, ${COUNTRIES[country]?.name || 'Metropolitan'} HQ (GPS Verified)`);
+                        toast('GPS coordinates & street address pinned.', 'emerald');
+                      }}
+                      title="Pin Current GPS Coordinates"
+                      className="px-2.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-semibold cursor-pointer shrink-0"
+                    >
+                      <MapPin size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Public Wall Description / Charter */}
+              <div>
+                <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1">
+                  4. Wall Bio / Public Service Mandate &amp; Operating Hours
+                </label>
+                <textarea
+                  rows={2}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Describe your services, customer care SLA commitment, and operating hours..."
+                  className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Desk Lead & Contact Channels */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1">
+                    5. Desk Administrator / Officer Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editRepName}
+                    onChange={(e) => setEditRepName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1">
+                    6. Official Title / Role
+                  </label>
+                  <input
+                    type="text"
+                    value={editRepRole}
+                    onChange={(e) => setEditRepRole(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1">
+                    7. Customer Care Hotline
+                  </label>
+                  <input
+                    type="text"
+                    value={editHotline}
+                    onChange={(e) => setEditHotline(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10.5px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-1">
+                    8. Official Website URL
+                  </label>
+                  <input
+                    type="text"
+                    value={editWebsite}
+                    onChange={(e) => setEditWebsite(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditWallModal(false)}
+                  className="px-4 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Save &amp; Publish Wall Details</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Embed Trust Badge Modal */}
       {showEmbedModal && (

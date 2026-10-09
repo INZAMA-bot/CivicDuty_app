@@ -39,6 +39,7 @@ import {
 
 export const PerkVaultView: React.FC = () => {
   const { user, profiles, addPoints, go, toast, logAudit } = useApp();
+  const studioSectionRef = React.useRef<HTMLDivElement | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(user?.country || 'UG');
   const [vouchers, setVouchers] = useState<EscrowPerkVoucher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,10 +255,14 @@ export const PerkVaultView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voucherId: voucher.id,
+          brand: voucher.brand,
+          category: voucher.category,
           recipientName: user?.name || 'Verified Citizen Watchdog',
           recipientContact: user?.phone || '+256 770 000 000',
           dispatchedBy: 'Citizen Self-Redemption Store (CivicScore XP)',
           ticketId: `XP-REDEEM-${xpCost}PTS`,
+          selfRedeem: true,
+          xpSpent: xpCost,
           note: `Citizen redeemed ${xpCost} CivicScore XP for ${voucher.reimbursementFraming || 'Field Cost Reimbursement'}`,
         }),
       });
@@ -443,39 +448,43 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
     }
   };
 
-  // Quick Seed Pack
-  const handleSeedPack = async (packType: 'mtn' | 'nwsc' | 'yaka') => {
+  // Quick Seed Pack (Country-Adaptive + Includes Boda Bounty Pool)
+  const handleSeedPack = async (packType: 'mtn' | 'nwsc' | 'yaka' | 'boda') => {
+    const isKe = selectedCountry === 'KE';
+    const isNg = selectedCountry === 'NG';
+    const currency = isKe ? 'KES' : isNg ? 'NGN' : 'UGX';
+
     let seedRows: any[] = [];
     let sponsorName = 'Seyani Brothers Construction Ltd (CSR Allocation)';
     let batchTitle = 'Corporate CSR Allocation';
 
     if (packType === 'mtn') {
       sponsorName = 'Seyani Brothers Construction Ltd (CSR Allocation)';
-      batchTitle = 'Seyani Bros CSR - MTN 2GB Data Seed';
+      batchTitle = `Seyani Bros CSR - ${isKe ? 'Safaricom' : 'MTN'} 2GB Data Seed`;
       for (let i = 1; i <= 5; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `MTN-2GB-${rand}-CIVIC`,
+          voucherCode: `${isKe ? 'SAF' : 'MTN'}-2GB-${rand}-CIVIC`,
           pin: `${rand}`,
-          brand: 'MTN Uganda',
+          brand: isKe ? 'Safaricom' : isNg ? 'MTN Nigeria' : 'MTN Uganda',
           category: 'telco_data',
-          faceValue: 10000,
-          currency: 'UGX',
+          faceValue: isKe ? 360 : isNg ? 3500 : 10000,
+          currency,
           expiryDate: '2026-12-31',
         });
       }
     } else if (packType === 'nwsc') {
-      sponsorName = 'KCCA Urban Infrastructure Division';
-      batchTitle = 'KCCA Leakage Audit Incentives';
+      sponsorName = isKe ? 'Nairobi City County Infrastructure Desk' : 'KCCA Urban Infrastructure Division';
+      batchTitle = 'Municipal Water Leakage Audit Incentives';
       for (let i = 1; i <= 3; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `NWSC-10K-${rand}-UG`,
+          voucherCode: `WATER-10K-${rand}-${selectedCountry}`,
           pin: `${rand}`,
-          brand: 'NWSC Uganda',
+          brand: isKe ? 'Nairobi Water (NCWSC)' : 'NWSC Uganda',
           category: 'water_utility',
-          faceValue: 10000,
-          currency: 'UGX',
+          faceValue: isKe ? 300 : isNg ? 3000 : 10000,
+          currency,
           expiryDate: '2026-12-31',
         });
       }
@@ -485,12 +494,27 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       for (let i = 1; i <= 3; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `YAKA-15K-${rand}-UG`,
+          voucherCode: `POWER-15K-${rand}-${selectedCountry}`,
           pin: `${rand}`,
-          brand: 'Umeme Power',
+          brand: isKe ? 'Kenya Power (KPLC)' : 'Umeme Power',
           category: 'electricity',
-          faceValue: 15000,
-          currency: 'UGX',
+          faceValue: isKe ? 500 : isNg ? 5000 : 15000,
+          currency,
+          expiryDate: '2026-12-31',
+        });
+      }
+    } else if (packType === 'boda') {
+      sponsorName = 'SafeBoda & National Stage Scout Mobility Pool';
+      batchTitle = 'Frontline Scout & Bodaboda Road Safety Bounty Pool';
+      for (let i = 1; i <= 5; i++) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        seedRows.push({
+          voucherCode: `BODA-FUEL-${rand}-${selectedCountry}`,
+          pin: `${rand}`,
+          brand: 'SafeBoda',
+          category: 'transit_credit',
+          faceValue: isKe ? 250 : isNg ? 2500 : 5000,
+          currency,
           expiryDate: '2026-12-31',
         });
       }
@@ -504,10 +528,14 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         body: JSON.stringify({
           batchName: batchTitle,
           sponsorName,
-          sponsorType: 'contractor',
+          sponsorType: packType === 'boda' ? 'corporate_csr' : 'contractor',
+          projectName:
+            packType === 'boda'
+              ? 'Frontline Scout & Bodaboda Road Safety Bounty Pool'
+              : 'Municipal Infrastructure Watchdog Pool',
           country: selectedCountry,
           vouchers: seedRows,
-          isDemo: true,
+          isDemo: false,
           sourceMethod: 'seed',
         }),
       });
@@ -516,7 +544,12 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       if (data.success && data.vouchers) {
         savePerkVoucherBatchToCloud(data.vouchers).catch(() => {});
         setVouchers((prev) => [...data.vouchers, ...prev]);
-        toast(`Deposited ${data.uploadedCount} vouchers into escrow!`, 'emerald');
+        logAudit(
+          'BODA_BOUNTY_ESCROW_SEEDED',
+          data.batchId || 'BATCH-BODA',
+          `Deposited ${data.uploadedCount}x ${batchTitle} vouchers into [${selectedCountry}] Sovereign Perk Escrow.`
+        );
+        toast(`Deposited ${data.uploadedCount} pre-funded vouchers (${batchTitle}) into Escrow Vault!`, 'emerald');
       }
     } catch {
       toast('Failed to deposit pack', 'rose');
@@ -736,37 +769,34 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
   };
 
   return (
-    <div className="p-4 space-y-5 animate-fade-in pb-20 text-slate-800 dark:text-slate-100 max-w-5xl mx-auto">
-      {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+    <div className="p-4 space-y-4 animate-fade-in pb-20 text-slate-900 dark:text-slate-100 max-w-5xl mx-auto">
+      {/* Top Studio Header Bar — Google AI Studio Aesthetic */}
+      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => go('feed')}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+            className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} />
           </button>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 mono">
-                CSR Pre-Funding & Civic Rewards
-              </span>
-              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-bold">
-                Phase 6 Sovereign Vault
-              </span>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">
+              <span>CSR Pre-Funding &amp; Civic Field Cost Reimbursements</span>
+              <span aria-hidden="true">·</span>
+              <span>Sovereign Escrow Vault</span>
             </div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-              Digital Utility Perk Escrow Vault
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+              Digital Utility Perk Escrow Vault ({COUNTRIES[selectedCountry]?.name || selectedCountry})
             </h1>
           </div>
         </div>
 
-        {/* Country Selector */}
+        {/* Country Selector & Ledger Refresh */}
         <div className="flex items-center gap-2">
           <select
             value={selectedCountry}
             onChange={(e) => setSelectedCountry(e.target.value as CountryCode)}
-            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500 shadow-xs"
+            className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
           >
             {Object.entries(COUNTRIES).map(([code, info]) => (
               <option key={code} value={code}>
@@ -778,114 +808,137 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           <button
             onClick={loadVaultData}
             title="Refresh Vault Ledger"
-            className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+            className="p-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
           >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'animate-spin text-emerald-500' : ''} />
           </button>
         </div>
       </div>
 
-      {/* Escrow Health & Inventory Overview Cards */}
+      {/* Escrow Health & Inventory Overview Cards — AI Studio Matte Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="card p-3.5 bg-amber-500/10 border-amber-500/30">
-          <div className="flex items-center justify-between text-amber-700 dark:text-amber-400">
-            <span className="text-[10px] mono font-bold uppercase tracking-wider">Unassigned in Escrow</span>
-            <Ticket size={16} />
+        <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider">Unassigned in Escrow</span>
+            <Ticket size={14} className="text-amber-500" />
           </div>
-          <div className="text-2xl font-black text-amber-950 dark:text-amber-100 mt-1 mono">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1 tabular-nums">
             {stats.unassignedCount}
           </div>
-          <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Pre-funded vouchers ready for instant dispatch
+          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+            Ready for instant dispatch
           </div>
         </div>
 
-        <div className="card p-3.5 bg-emerald-500/10 border-emerald-500/30">
-          <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400">
-            <span className="text-[10px] mono font-bold uppercase tracking-wider">Escrow Liquidity Value</span>
-            <ShieldCheck size={16} />
+        <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider">Escrow Liquidity</span>
+            <ShieldCheck size={14} className="text-emerald-500" />
           </div>
-          <div className="text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-1 mono truncate">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1 truncate tabular-nums">
             {stats.currency} {stats.totalEscrowFaceValue.toLocaleString()}
           </div>
-          <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Contractor & public CSR face value locked
+          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+            Locked CSR face value
           </div>
         </div>
 
-        <div className="card p-3.5 bg-indigo-500/10 border-indigo-500/30">
-          <div className="flex items-center justify-between text-indigo-700 dark:text-indigo-400">
-            <span className="text-[10px] mono font-bold uppercase tracking-wider">Dispatched Perks</span>
-            <Gift size={16} />
+        <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider">Dispatched Perks</span>
+            <Gift size={14} className="text-emerald-500" />
           </div>
-          <div className="text-2xl font-black text-indigo-950 dark:text-indigo-100 mt-1 mono">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1 tabular-nums">
             {stats.dispatchedCount}
           </div>
-          <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Delivered to active watchdog citizens via SMS
+          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+            Delivered via SMS / XP Store
           </div>
         </div>
 
-        <div className="card p-3.5 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
-            <span className="text-[10px] mono font-bold uppercase tracking-wider">Sponsoring Entities</span>
-            <Building2 size={16} />
+        <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider">Sponsoring Entities</span>
+            <Building2 size={14} className="text-slate-400" />
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-1 mono">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1 tabular-nums">
             {stats.uniqueSponsors}
           </div>
-          <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Contractors, KCCA, NWSC, and Ministries
+          <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+            Contractors, Utilities &amp; Patrons
           </div>
         </div>
       </div>
 
-      {/* Bodaboda & Frontline Scout Bounty Pool Spotlight Banner */}
-      <div className="p-4 rounded-3xl bg-amber-500/10 border-2 border-amber-400 dark:border-amber-600 space-y-2.5 shadow-sm">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-2xl bg-amber-500 text-slate-950 font-black shadow-xs shrink-0">
-              <Bike size={20} />
+      {/* Bodaboda & Frontline Scout Bounty Pool Spotlight Card — Responsive & Actionable */}
+      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Bike size={18} strokeWidth={1.75} />
             </span>
-            <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                <span>Frontline Scout &amp; Bodaboda Road Safety Bounty Pools</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-200 font-bold">
-                  Profession Targeted
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                  Frontline Scout &amp; Bodaboda Road Safety Bounty Pools
+                </h3>
+                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                  · Profession Targeted ({ vouchers.filter(v => v.country.toUpperCase() === selectedCountry.toUpperCase() && v.category === 'transit_credit' && v.status === 'escrow_unassigned').length } Boda Vouchers in Escrow)
                 </span>
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-xl">
-                Corporate sponsors, logistics operators, and municipal partners deposit targeted MoMo fuel &amp; airtime bounties reserved for verified Bodaboda riders and public transit drivers who report street hazards, uncollected waste, and broken infrastructure.
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+                Corporate sponsors, logistics operators, and municipal partners deposit targeted MoMo fuel &amp; transit bounties reserved for verified Bodaboda riders and public transit drivers who report street hazards, uncollected waste, and broken infrastructure.
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setPayPackage('safeboda_10');
-              setActiveTab('pay');
-            }}
-            className="px-3.5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-2xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
-          >
-            <span>Fund Boda Bounty Pool →</span>
-          </button>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              disabled={isUploading}
+              onClick={() => handleSeedPack('boda')}
+              className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Plus size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span>{isUploading ? 'Depositing...' : 'Instant Seed 5x Boda Pool ($0)'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPayPackage('safeboda_10');
+                setPaySponsorType('corporate_csr');
+                setPayProjectName('Frontline Scout & Bodaboda Road Safety Bounty Pool');
+                setPaymentReceipt(null);
+                setActiveTab('pay');
+                toast('Boda Bounty Pool (10x SafeBoda Transit Credits) selected below — ready to authorize!', 'emerald');
+                setTimeout(() => {
+                  studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+              }}
+              className="px-3.5 py-2 rounded-lg text-xs font-mono font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Bike size={13} />
+              <span>Fund Boda Bounty Pool →</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Ethical Governance & Field Cost Reimbursement Covenant Banner */}
-      <div className="p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5 shadow-2xs">
-        <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="p-2.5 rounded-2xl bg-emerald-600 text-white font-black shadow-xs shrink-0 mt-0.5">
-              <Scale size={19} />
+            <span className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Scale size={17} strokeWidth={1.75} />
             </span>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 mono">
-                  Ethical Civic Stewardship Covenant · Field Cost Reimbursement Standard
-                </span>
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-bold">
-                  ISO 26000 &amp; Public Ethics Compliant
-                </span>
+              <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">
+                <span>Ethical Civic Stewardship Covenant</span>
+                <span aria-hidden="true">·</span>
+                <span>Field Cost Reimbursement Standard</span>
+                <span aria-hidden="true">·</span>
+                <span>ISO 26000 Compliant</span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
                 Every utility token in this vault is governed by three strict ethical rules: <strong>(1) Field Cost Reimbursement Framing</strong>—vouchers compensate citizens for mobile data, transit, and inspection costs incurred during community service, never as cash bribes; <strong>(2) Anti-Hush-Money Covenant</strong>—accepting a voucher <em>never</em> closes, locks, or mutes a ticket, preserving 100% of the citizen&apos;s right to dispute shoddy repairs; and <strong>(3) Dual-Path Transparency</strong>—separating pre-loaded <code>DEMO</code> showcase tokens from <code>LIVE</code> sponsor-funded escrow vouchers.
@@ -896,75 +949,87 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => setActiveTab('redeem_xp')}
-              className="px-3 py-1.5 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+              onClick={() => {
+                setActiveTab('redeem_xp');
+                studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-950 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Gift size={13} strokeWidth={1.75} />
               <span>Redeem Civic XP ({citizenXp} XP)</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('csr_leaderboard')}
-              className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs flex items-center gap-1.5 transition cursor-pointer"
+              onClick={() => {
+                setActiveTab('csr_leaderboard');
+                studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Award size={13} />
+              <Award size={13} className="text-emerald-600 dark:text-emerald-400" />
               <span>CSR Leaderboard &amp; Certs</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Upload / Deposit Box */}
-      <div className="card p-4 space-y-4 border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+      {/* Main Upload / Deposit Studio Card */}
+      <div
+        ref={studioSectionRef}
+        className="p-4 rounded-xl space-y-4 border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22]"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Upload size={18} className="text-amber-600 dark:text-amber-400" />
-              Pre-Funded Voucher Deposit, XP Redemption &amp; CSR Governance
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Upload size={16} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Pre-Funded Voucher Deposit, XP Redemption &amp; CSR Governance</span>
             </h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Bring Your Own Voucher (BYOV 0% Fee during 30-Day Founding Trial), Instant Aggregator Mint, Citizen XP Store, and CSR Impact Certificates.
+            <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+              BYOV 0% Fee (30-Day Founding Trial) · Instant Aggregator Mint · Citizen XP Store · CSR Impact Certificates
             </p>
           </div>
 
-          {/* Upload Method Tabs */}
-          <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          {/* Upload Method Tabs — AI Studio Segmented Controls */}
+          <div className="flex flex-wrap items-center gap-1 bg-[#f8f9fa] dark:bg-[#0e1116] p-1 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
             <button
               onClick={() => setActiveTab('packs')}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
                 activeTab === 'packs'
-                  ? 'bg-emerald-600 text-white font-black shadow-xs'
-                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Demo Seed Packs ($0)
+              Seed Packs ($0)
             </button>
             <button
               onClick={() => setActiveTab('csv')}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
                 activeTab === 'csv'
-                  ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              BYOV CSV Batch (0% Fee)
+              BYOV CSV (0% Fee)
             </button>
             <button
               onClick={() => setActiveTab('manual')}
-              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
                 activeTab === 'manual'
-                  ? 'bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              BYOV Single PIN
+              Single PIN
             </button>
             <button
-              onClick={() => { setActiveTab('pay'); setPaymentReceipt(null); }}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              onClick={() => {
+                setActiveTab('pay');
+                setPaymentReceipt(null);
+              }}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
                 activeTab === 'pay'
-                  ? 'bg-amber-500 text-slate-950 font-black shadow-xs'
-                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
               }`}
             >
               <CreditCard size={12} />
@@ -972,10 +1037,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             </button>
             <button
               onClick={() => setActiveTab('redeem_xp')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
                 activeTab === 'redeem_xp'
-                  ? 'bg-indigo-600 text-white font-black shadow-xs'
-                  : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Gift size={12} strokeWidth={1.75} />
@@ -983,10 +1048,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             </button>
             <button
               onClick={() => setActiveTab('csr_leaderboard')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
                 activeTab === 'csr_leaderboard'
-                  ? 'bg-teal-600 text-white font-black shadow-xs'
-                  : 'text-teal-600 dark:text-teal-400 hover:bg-teal-500/10'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Award size={12} />
@@ -2186,67 +2251,87 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         {/* TAB 3: QUICK SEED CSR PACKS */}
         {activeTab === 'packs' && (
           <div className="space-y-3">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              One-click pre-load certified batches for sandbox demonstration and live field tests:
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              One-click pre-load certified batches for sandbox demonstration and live field tests in [{selectedCountry}]:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-2 flex flex-col justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-xs">
-                    <Smartphone size={16} />
-                    <span>5x MTN 2GB Data Packs</span>
+                  <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
+                    <Smartphone size={15} className="text-amber-500" />
+                    <span>5x Telco 2GB Data Packs</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-1">
-                    Sponsored by Seyani Brothers (50,000 UGX CSR Allocation). Pre-funded for project watchdogs.
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    Sponsored by Seyani Brothers CSR Allocation. Pre-funded for citizen project watchdogs.
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleSeedPack('mtn')}
                   disabled={isUploading}
-                  className="w-full py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                  className="w-full py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Deposit 5x MTN Pack
+                  Deposit 5x Data Pack
                 </button>
               </div>
 
-              <div className="p-3 rounded-xl border border-cyan-500/30 bg-cyan-500/5 space-y-2 flex flex-col justify-between">
+              <div className="p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400 font-bold text-xs">
-                    <Droplet size={16} />
-                    <span>3x NWSC 10,000 UGX Tokens</span>
+                  <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
+                    <Droplet size={15} className="text-cyan-500" />
+                    <span>3x Water Utility Tokens</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-1">
-                    National Water leak whistleblower pool (30,000 UGX Water Token Pool).
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    National Water leak &amp; pipe-burst whistleblower reimbursement pool.
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleSeedPack('nwsc')}
                   disabled={isUploading}
-                  className="w-full py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                  className="w-full py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Deposit 3x NWSC Pack
+                  Deposit 3x Water Pack
                 </button>
               </div>
 
-              <div className="p-3 rounded-xl border border-yellow-500/30 bg-yellow-500/5 space-y-2 flex flex-col justify-between">
+              <div className="p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 font-bold text-xs">
-                    <Zap size={16} />
-                    <span>3x Umeme Yaka 15,000 UGX</span>
+                  <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
+                    <Zap size={15} className="text-yellow-500" />
+                    <span>3x Prepaid Power Units</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 mt-1">
-                    Ministry of Energy Prepaid Stima Units (45,000 UGX Power Allocation).
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    Ministry of Energy prepaid electricity tokens for streetlight &amp; grid audits.
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleSeedPack('yaka')}
                   disabled={isUploading}
-                  className="w-full py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                  className="w-full py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Deposit 3x Yaka Pack
+                  Deposit 3x Power Pack
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-emerald-500/40 bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs">
+                    <Bike size={15} />
+                    <span>5x Boda Fuel &amp; Ride Pool</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    SafeBoda &amp; Stage Scout fuel/transit credits for verified road safety reports.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSeedPack('boda')}
+                  disabled={isUploading}
+                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Deposit 5x Boda Bounty
                 </button>
               </div>
             </div>
@@ -2255,7 +2340,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       </div>
 
       {/* Escrow Inventory Ledger */}
-      <div className="card p-4 space-y-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+      <div className="p-4 rounded-xl space-y-3 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">

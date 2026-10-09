@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -22,6 +23,49 @@ import {
   CdOpsPromotionalAd,
   CompiledWitnessReport,
 } from '../types';
+import { INITIAL_POSTS } from '../data/initialData';
+
+function buildPostPayload(post: Post) {
+  return {
+    id: post.id,
+    country: post.country || 'UG',
+    dept: post.dept || 'civic_desk',
+    lane: post.lane || 'civic',
+    citizen_id: post.citizen_id || 'anonymous',
+    citizen_name: post.anonymous ? 'Masked Citizen' : (post.citizen_name || 'Citizen'),
+    citizen_rank: post.citizen_rank || 'Observer',
+    anonymous: Boolean(post.anonymous),
+    category: post.category || 'other',
+    title: (post.title || 'Civic Dispatch').slice(0, 256),
+    body: (post.body || '').slice(0, 4000),
+    location: post.location ? post.location.slice(0, 256) : '',
+    source: post.source || 'web',
+    status: post.status || 'pending',
+    gov_status: post.gov_status || post.status || 'pending',
+    citizen_satisfied: post.citizen_satisfied ?? null,
+    is_corruption: Boolean(post.is_corruption),
+    created_at: post.created_at || new Date().toISOString(),
+    upvotes: Number(post.upvotes || 0),
+    downvotes: Number(post.downvotes || 0),
+    author_profession: post.author_profession || '',
+    crypto_seal_hash: post.crypto_seal_hash || '',
+    compiled_reports: (post.compiled_reports || []).slice(0, 50).map((r) => ({
+      id: r.id,
+      citizen_id: r.citizen_id,
+      citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
+      author_profession: (r.author_profession || '').slice(0, 128),
+      anonymous: Boolean(r.anonymous),
+      body: (r.body || '').slice(0, 2000),
+      gps: r.gps || null,
+      created_at: r.created_at,
+      source: r.source || 'web',
+    })),
+    compiled_count: Number(post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1)),
+    escalated: Boolean(post.escalated),
+    is_master_dossier: Boolean(post.is_master_dossier),
+    merged_from_ids: (post.merged_from_ids || []).slice(0, 50),
+  };
+}
 
 /**
  * Persists a new or updated citizen post to Cloud Firestore,
@@ -30,46 +74,25 @@ import {
 export async function savePostToCloud(post: Post): Promise<void> {
   const postPath = `posts/${post.id}`;
   try {
-    const postPayload = {
-      id: post.id,
-      country: post.country || 'UG',
-      dept: post.dept || 'civic_desk',
-      lane: post.lane || 'civic',
-      citizen_id: post.citizen_id || 'anonymous',
-      citizen_name: post.anonymous ? 'Masked Citizen' : (post.citizen_name || 'Citizen'),
-      citizen_rank: post.citizen_rank || 'Observer',
-      anonymous: Boolean(post.anonymous),
-      category: post.category || 'other',
-      title: post.title.slice(0, 256),
-      body: post.body.slice(0, 4000),
-      location: post.location ? post.location.slice(0, 256) : '',
-      source: post.source || 'web',
-      status: post.status || 'pending',
-      is_corruption: Boolean(post.is_corruption),
-      created_at: post.created_at || new Date().toISOString(),
-      upvotes: Number(post.upvotes || 0),
-      downvotes: Number(post.downvotes || 0),
-      author_profession: post.author_profession || '',
-      crypto_seal_hash: post.crypto_seal_hash || '',
-      compiled_reports: post.compiled_reports || [],
-      compiled_count: Number(post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1)),
-      is_master_dossier: Boolean(post.is_master_dossier),
-      merged_from_ids: post.merged_from_ids || [],
-    };
+    const postPayload = buildPostPayload(post);
 
-    await setDoc(doc(db, 'posts', post.id), postPayload);
+    await setDoc(doc(db, 'posts', post.id), postPayload, { merge: true });
 
-    // If a cryptographic seal hash is present, record in the immutable audit ledger
+    // If a cryptographic seal hash is present, record in the immutable audit ledger if not already sealed
     if (post.crypto_seal_hash) {
       const receiptId = `receipt_${post.id}`;
-      const auditPayload = {
-        ticketId: post.id,
-        hash: post.crypto_seal_hash,
-        country: post.country || 'UG',
-        dept: post.dept || 'civic_desk',
-        timestamp: new Date().toISOString(),
-      };
-      await setDoc(doc(db, 'audit_ledger', receiptId), auditPayload);
+      const receiptRef = doc(db, 'audit_ledger', receiptId);
+      const existingReceipt = await getDoc(receiptRef);
+      if (!existingReceipt.exists()) {
+        const auditPayload = {
+          ticketId: post.id,
+          hash: post.crypto_seal_hash,
+          country: post.country || 'UG',
+          dept: post.dept || 'civic_desk',
+          timestamp: new Date().toISOString(),
+        };
+        await setDoc(receiptRef, auditPayload);
+      }
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, postPath);
@@ -77,40 +100,86 @@ export async function savePostToCloud(post: Post): Promise<void> {
 }
 
 /**
- * Updates upvotes count on a post in Cloud Firestore
+ * Updates upvotes count on a post in Cloud Firestore.
+ * Automatically seeds the post document first if it is an in-memory initial/demo post.
  */
-export async function updatePostUpvotesInCloud(postId: string, upvotes: number): Promise<void> {
+export async function updatePostUpvotesInCloud(
+  postId: string,
+  upvotes: number,
+  fullPost?: Post
+): Promise<void> {
   const path = `posts/${postId}`;
   try {
-    await updateDoc(doc(db, 'posts', postId), { upvotes });
+    const docRef = doc(db, 'posts', postId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      const seed = fullPost || INITIAL_POSTS.find((p) => p.id === postId);
+      if (seed) {
+        await setDoc(docRef, buildPostPayload({ ...seed, upvotes: Number(upvotes) }));
+      }
+      return;
+    }
+    await updateDoc(docRef, { upvotes: Number(upvotes) });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
 }
 
 /**
- * Updates downvotes count on a post in Cloud Firestore
+ * Updates downvotes count on a post in Cloud Firestore.
+ * Automatically seeds the post document first if it is an in-memory initial/demo post.
  */
-export async function updatePostDownvotesInCloud(postId: string, downvotes: number): Promise<void> {
+export async function updatePostDownvotesInCloud(
+  postId: string,
+  downvotes: number,
+  fullPost?: Post
+): Promise<void> {
   const path = `posts/${postId}`;
   try {
-    await updateDoc(doc(db, 'posts', postId), { downvotes });
+    const docRef = doc(db, 'posts', postId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      const seed = fullPost || INITIAL_POSTS.find((p) => p.id === postId);
+      if (seed) {
+        await setDoc(docRef, buildPostPayload({ ...seed, downvotes: Number(downvotes) }));
+      }
+      return;
+    }
+    await updateDoc(docRef, { downvotes: Number(downvotes) });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
 }
 
 /**
- * Updates post status or citizen resolution feedback in Cloud Firestore
+ * Updates post status or citizen resolution feedback in Cloud Firestore.
+ * Automatically seeds the post document first if it is an in-memory initial/demo post.
  */
 export async function updatePostResolutionInCloud(
   postId: string,
   status: string,
-  citizenSatisfied: boolean | null
+  citizenSatisfied: boolean | null,
+  fullPost?: Post
 ): Promise<void> {
   const path = `posts/${postId}`;
   try {
-    await updateDoc(doc(db, 'posts', postId), {
+    const docRef = doc(db, 'posts', postId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      const seed = fullPost || INITIAL_POSTS.find((p) => p.id === postId);
+      if (seed) {
+        await setDoc(
+          docRef,
+          buildPostPayload({
+            ...seed,
+            status: status as Post['status'],
+            citizen_satisfied: citizenSatisfied,
+          })
+        );
+      }
+      return;
+    }
+    await updateDoc(docRef, {
       status,
       citizen_satisfied: citizenSatisfied,
     });
@@ -167,13 +236,17 @@ export async function saveClaimToCloud(claim: ClaimedEntityRecord): Promise<void
       verified: Boolean(claim.verified),
       monthlyFee: Number(claim.monthlyFee || 0),
     };
-    await setDoc(doc(db, 'claims', claim.deptId), payload);
+    await setDoc(doc(db, 'claims', claim.deptId), payload, { merge: true });
 
-    // Also update department claimed state
+    // Also update department claimed state with required schema fields
     await setDoc(
       doc(db, 'departments', claim.deptId),
       {
         id: claim.deptId,
+        name: claim.businessName.slice(0, 128),
+        full: claim.businessName.slice(0, 256),
+        country: claim.country || 'UG',
+        sla: 48,
         isClaimed: true,
         claimedPlan: claim.plan,
         claimedBy: claim.businessName,
@@ -292,13 +365,24 @@ export async function fetchOfficialQueriesFromCloud(): Promise<any[]> {
 }
 
 /**
- * Persists an audit ledger entry to Cloud Firestore
+ * Persists an audit ledger entry to Cloud Firestore (append-only immutable ledger)
  */
 export async function saveAuditEntryToCloud(entry: any): Promise<void> {
   const entryId = entry.id || `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const path = `audit_ledger/${entryId}`;
   try {
-    await setDoc(doc(db, 'audit_ledger', entryId), { ...entry, id: entryId }, { merge: true });
+    const auditRef = doc(db, 'audit_ledger', entryId);
+    const existingSnap = await getDoc(auditRef);
+    if (!existingSnap.exists()) {
+      await setDoc(auditRef, {
+        id: entryId,
+        ticketId: String(entry.ticketId || 'SYSTEM').slice(0, 128),
+        hash: String(entry.hash || 'SHA256-CD').slice(0, 128),
+        country: String(entry.country || 'UG').slice(0, 8),
+        dept: String(entry.dept || 'civic_desk').slice(0, 128),
+        timestamp: String(entry.timestamp || new Date().toISOString()).slice(0, 64),
+      });
+    }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -318,7 +402,8 @@ export async function fetchPerkVouchersFromCloud(): Promise<EscrowPerkVoucher[]>
 }
 
 /**
- * Updates a Master Dossier post with compiled witness reports and co-signers in Cloud Firestore
+ * Updates a Master Dossier post with compiled witness reports and co-signers in Cloud Firestore.
+ * Automatically seeds the post document first if it is an in-memory initial/demo post.
  */
 export async function updatePostCompilationInCloud(
   postId: string,
@@ -326,18 +411,39 @@ export async function updatePostCompilationInCloud(
   compiledCount: number,
   upvotes: number,
   escalated: boolean,
-  mergedFromIds: string[] = []
+  mergedFromIds: string[] = [],
+  fullPost?: Post
 ): Promise<void> {
   const path = `posts/${postId}`;
   try {
-    await updateDoc(doc(db, 'posts', postId), {
+    const docRef = doc(db, 'posts', postId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      const seed = fullPost || INITIAL_POSTS.find((p) => p.id === postId);
+      if (seed) {
+        await setDoc(
+          docRef,
+          buildPostPayload({
+            ...seed,
+            compiled_reports: compiledReports,
+            compiled_count: Number(compiledCount),
+            upvotes: Number(upvotes),
+            escalated: Boolean(escalated),
+            is_master_dossier: true,
+            merged_from_ids: mergedFromIds,
+          })
+        );
+      }
+      return;
+    }
+    await updateDoc(docRef, {
       compiled_reports: compiledReports.slice(0, 50).map((r) => ({
         id: r.id,
         citizen_id: r.citizen_id,
-        citizen_name: r.anonymous ? 'Verified Citizen' : r.citizen_name.slice(0, 128),
+        citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
         author_profession: (r.author_profession || '').slice(0, 128),
         anonymous: Boolean(r.anonymous),
-        body: r.body.slice(0, 2000),
+        body: (r.body || '').slice(0, 2000),
         gps: r.gps || null,
         created_at: r.created_at,
         source: r.source || 'web',
@@ -354,12 +460,15 @@ export async function updatePostCompilationInCloud(
 }
 
 /**
- * Deletes a merged duplicate post from Cloud Firestore
+ * Deletes a merged duplicate post from Cloud Firestore if it exists in Cloud Firestore
  */
 export async function deletePostFromCloud(postId: string): Promise<void> {
   const path = `posts/${postId}`;
   try {
-    await deleteDoc(doc(db, 'posts', postId));
+    const docRef = doc(db, 'posts', postId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return;
+    await deleteDoc(docRef);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
