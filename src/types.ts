@@ -776,7 +776,14 @@ export interface TelecomWebhookPayload {
   networkCode?: string; // MTN, AIRTEL, SAFARICOM
 }
 
-// --- PHASE 6: DIGITAL UTILITY PERK VOUCHERS & ESCROW VAULT ---
+// --- PHASE 6: DIGITAL UTILITY PERK VOUCHERS & FIVE-VAULT ESCROW ARCHITECTURE ---
+export type VaultKind =
+  | 'parish_vault'
+  | 'provider_vault'
+  | 'contractor_vault'
+  | 'scout_bounty_vault'
+  | 'individual_vault';
+
 export interface EscrowPerkVoucher {
   id: string;
   voucherCode: string;
@@ -789,6 +796,17 @@ export interface EscrowPerkVoucher {
   country: string;
   sponsoredBy: string;
   sponsorType: 'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron';
+  vaultType?: VaultKind;
+  jurisdictionId?: string;
+  jurisdictionLabel?: string;
+  rankedSlot?: 1 | 2 | 3;
+  rankingScoreAtDispatch?: number;
+  authorizedDispatcherRole?:
+    | 'parish_chief'
+    | 'provider_owner'
+    | 'contractor_or_authority'
+    | 'scout_corridor_coordinator'
+    | 'citizen_peer';
   projectId?: string;
   projectName?: string;
   batchId: string;
@@ -816,6 +834,10 @@ export interface EscrowPerkVoucher {
     postOrProjectId?: string;
     smsDeliveryStatus?: 'sent' | 'delivered';
     ethicalNonInterferenceAck?: boolean;
+    vaultType?: VaultKind;
+    jurisdictionLabel?: string;
+    rankedSlot?: 1 | 2 | 3;
+    rankingScore?: number;
   };
   redemptionUssdString?: string;
   expiryDate: string;

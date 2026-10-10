@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { EscrowPerkVoucher, CountryCode } from '../types';
-import { COUNTRIES } from '../data/countries';
-import { savePerkVoucherBatchToCloud, fetchPerkVouchersFromCloud, saveGatewayTransactionToCloud } from '../services/firestoreSync';
+import { EscrowPerkVoucher, CountryCode, VaultKind } from '../types';
+import { COUNTRIES, TERRITORY } from '../data/countries';
+import { allDepts } from '../utils/helpers';
+import { savePerkVoucherBatchToCloud, savePerkVoucherToCloud, saveGatewayTransactionToCloud } from '../services/firestoreSync';
 import {
   ArrowLeft,
   Upload,
@@ -34,11 +35,29 @@ import {
   Scale,
   Printer,
   Lock,
-  SlidersHorizontal
+  SlidersHorizontal,
+  MapPin,
+  Store,
+  Users,
+  Send,
+  Sparkles
 } from 'lucide-react';
 
+export interface RankedJurisdictionCitizen {
+  rank: 1 | 2 | 3;
+  name: string;
+  contact: string;
+  roleOrProfession: string;
+  score: number;
+  reportsCount: number;
+  resolvedOrVerifiedCount: number;
+  upvotesCount: number;
+  citationReason: string;
+  samplePostId?: string;
+}
+
 export const PerkVaultView: React.FC = () => {
-  const { user, profiles, addPoints, go, toast, logAudit, selectedCountry: ctxCountry } = useApp();
+  const { user, posts, projects, profiles, addPoints, go, toast, logAudit, selectedCountry: ctxCountry } = useApp();
   const studioSectionRef = React.useRef<HTMLDivElement | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>((user?.country || ctxCountry || 'UG') as CountryCode);
 
@@ -48,11 +67,34 @@ export const PerkVaultView: React.FC = () => {
       setSelectedCountry(nextC);
     }
   }, [user?.country, ctxCountry]);
+
+  // --- FIVE-VAULT ARCHITECTURE STATE ---
+  const [activeVaultKind, setActiveVaultKind] = useState<VaultKind>('parish_vault');
+  const [selectedParish, setSelectedParish] = useState<string>('Wandegeya Parish');
+  const [selectedProviderDept, setSelectedProviderDept] = useState<string>('umeme');
+  const [selectedContractId, setSelectedContractId] = useState<string>('PRJ-UG-01');
+  const [selectedScoutCorridor, setSelectedScoutCorridor] = useState<string>('corridor_northern_bypass');
+  const [individualTargetPostId, setIndividualTargetPostId] = useState<string>('');
+  const [individualRecipientName, setIndividualRecipientName] = useState<string>('Amina Nabatanzi');
+  const [individualRecipientPhone, setIndividualRecipientPhone] = useState<string>('+256 774 819 203');
+  const [individualCitationNote, setIndividualCitationNote] = useState<string>(
+    'Rewarding your outstanding field post and photo evidence from my Individual Vault!'
+  );
+  const [isBatchDispatching, setIsBatchDispatching] = useState<boolean>(false);
+  const [lastBatchDispatchReceipt, setLastBatchDispatchReceipt] = useState<{
+    vaultKind: VaultKind;
+    jurisdictionLabel: string;
+    dispatcherLabel: string;
+    dispatchedAt: string;
+    recipients: Array<{ rank: number; name: string; contact: string; voucherCode: string; brand: string; faceValue: number; currency: string; score: number }>;
+  } | null>(null);
+
   const [vouchers, setVouchers] = useState<EscrowPerkVoucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard'>('packs');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterDemoMode, setFilterDemoMode] = useState<'all' | 'live' | 'demo'>('all');
+  const [filterVaultKind, setFilterVaultKind] = useState<'all' | VaultKind>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [uploadAsLive, setUploadAsLive] = useState<boolean>(true);
   const [redeemedVoucherCard, setRedeemedVoucherCard] = useState<EscrowPerkVoucher | null>(null);
@@ -87,7 +129,7 @@ export const PerkVaultView: React.FC = () => {
   const [payCardNumber, setPayCardNumber] = useState('4242 •••• •••• 4242');
   const [payCardExpiry, setPayCardExpiry] = useState('12/28');
   const [payCardCvc, setPayCardCvc] = useState('892');
-  const [customQuantity, setCustomQuantity] = useState(5);
+  const [customQuantity, setCustomQuantity] = useState(3);
   const [customFaceValue, setCustomFaceValue] = useState(10000);
   const [customBrand, setCustomBrand] = useState('MTN Uganda');
   const [customCategory, setCustomCategory] = useState<'telco_data' | 'water_utility' | 'electricity' | 'transit_credit'>('telco_data');
@@ -112,6 +154,718 @@ export const PerkVaultView: React.FC = () => {
   const [manualSponsor, setManualSponsor] = useState(user?.name ? `${user.name} (Civic Patron)` : 'Seyani Brothers Construction Ltd');
   const [manualSponsorType, setManualSponsorType] = useState<'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron'>('citizen_patron');
   const [manualExpiry, setManualExpiry] = useState('2026-12-31');
+
+  // --- JURISDICTION OPTIONS PER COUNTRY ---
+  const parishOptions = useMemo(() => {
+    const fromPosts = Array.from(
+      new Set(
+        posts
+          .filter((p) => p.country === selectedCountry && p.territory?.parish)
+          .map((p) => p.territory.parish)
+      )
+    );
+    const terrNodes = TERRITORY[selectedCountry]?.nodes || [];
+    const fromTree: string[] = [];
+    terrNodes.forEach((d) => {
+      (d.children || []).forEach((sc) => {
+        (sc.children || []).forEach((par) => {
+          if (par.name) fromTree.push(par.name);
+        });
+      });
+    });
+    const combined = Array.from(new Set([...fromPosts, ...fromTree]));
+    if (combined.length > 0) return combined.slice(0, 18);
+    return selectedCountry === 'KE'
+      ? ['Kilimani Ward', 'Westlands Ward', 'Kibera Lindi Ward', 'Embakasi Central Ward']
+      : ['Wandegeya Parish', 'Nakasero II Parish', 'Kisenyi II Parish', 'Ntinda Parish', 'Bwaise III Parish'];
+  }, [posts, selectedCountry]);
+
+  const providerOptions = useMemo(() => {
+    const depts = allDepts(selectedCountry);
+    const consumerOrPrivate = depts.filter(
+      (d) => d.lane === 'consumer' || d.category !== 'government' || d.isEnterprise
+    );
+    const base = consumerOrPrivate.length > 0 ? consumerOrPrivate : depts.slice(0, 8);
+    return [
+      ...base,
+      {
+        id: 'shop_quality_supermarket',
+        name: selectedCountry === 'KE' ? 'Naivas Supermarket Community Desk' : 'Quality Supermarket Community Desk',
+        full: 'Retail & Supermarket Patron Service Desk',
+        sla: 24,
+        lane: 'consumer' as const,
+        category: 'retail_shops' as const,
+      },
+      {
+        id: 'shop_javahouse_acacia',
+        name: 'Java House & Hospitality Desk',
+        full: 'Food, Dining & Patron Experience Desk',
+        sla: 24,
+        lane: 'consumer' as const,
+        category: 'food_dining' as const,
+      },
+    ];
+  }, [selectedCountry]);
+
+  const contractOptions = useMemo(() => {
+    const countryProjects = projects.filter((pr) => (pr.country || 'UG') === selectedCountry);
+    if (countryProjects.length > 0) return countryProjects;
+    return projects.slice(0, 5);
+  }, [projects, selectedCountry]);
+
+  const scoutCorridorOptions = useMemo(() => {
+    if (selectedCountry === 'KE') {
+      return [
+        { id: 'corridor_thika_superhighway', label: 'Thika Superhighway & Roysambu Bodaboda / Matatu Stage', authority: 'KeNHA / NTSA Road Safety Desk' },
+        { id: 'corridor_mombasa_road', label: 'Mombasa Road & Nyayo Stadium Transit Corridor', authority: 'KURA / Nairobi Transit Watch' },
+        { id: 'corridor_waiyaki_way', label: 'Waiyaki Way & Westlands Stage Scout Zone', authority: 'NTSA Frontline Riders Pool' },
+      ];
+    }
+    if (selectedCountry === 'NG') {
+      return [
+        { id: 'corridor_lekki_epe', label: 'Lekki-Epe Expressway & Marwa/Okada Scout Corridor', authority: 'LASG / FRSC Road Safety Pool' },
+        { id: 'corridor_third_mainland', label: 'Third Mainland & Ikeja Along Transit Stage', authority: 'LAMATA / FRSC Corridor Watch' },
+      ];
+    }
+    return [
+      { id: 'corridor_northern_bypass', label: 'Kampala Northern Bypass & Bwaise Bodaboda Stage', authority: 'UNRA / MoWT & SafeBoda Stage Safety' },
+      { id: 'corridor_jinja_highway', label: 'Jinja Road, Nakawa & Mukono Highway Scout Corridor', authority: 'KCCA / Traffic Police Road Safety Pool' },
+      { id: 'corridor_entebbe_express', label: 'Entebbe Road, Kibuye & Kajjansi Stage Scout Zone', authority: 'MoWT / Frontline Bodaboda Union' },
+      { id: 'corridor_gulu_highway', label: 'Bombo-Gulu Highway & Kawempe Stage Corridor', authority: 'UNRA Northern Corridor Scout Pool' },
+    ];
+  }, [selectedCountry]);
+
+  useEffect(() => {
+    if (parishOptions.length > 0 && !parishOptions.includes(selectedParish)) {
+      setSelectedParish(parishOptions[0]);
+    }
+  }, [parishOptions, selectedParish]);
+
+  useEffect(() => {
+    if (providerOptions.length > 0 && !providerOptions.some((d) => d.id === selectedProviderDept)) {
+      setSelectedProviderDept(providerOptions[0].id);
+    }
+  }, [providerOptions, selectedProviderDept]);
+
+  useEffect(() => {
+    if (contractOptions.length > 0 && !contractOptions.some((c) => c.id === selectedContractId)) {
+      setSelectedContractId(contractOptions[0].id);
+    }
+  }, [contractOptions, selectedContractId]);
+
+  useEffect(() => {
+    if (scoutCorridorOptions.length > 0 && !scoutCorridorOptions.some((s) => s.id === selectedScoutCorridor)) {
+      setSelectedScoutCorridor(scoutCorridorOptions[0].id);
+    }
+  }, [scoutCorridorOptions, selectedScoutCorridor]);
+
+  const countryFeedPosts = useMemo(
+    () => posts.filter((p) => p.country === selectedCountry),
+    [posts, selectedCountry]
+  );
+
+  useEffect(() => {
+    if (countryFeedPosts.length > 0 && !individualTargetPostId) {
+      const first = countryFeedPosts[0];
+      setIndividualTargetPostId(first.id);
+      setIndividualRecipientName(first.anonymous ? 'Verified Citizen Author' : first.citizen_name);
+    }
+  }, [countryFeedPosts, individualTargetPostId]);
+
+  // --- DETERMINISTIC TOP-3 RANKING ENGINE PER VAULT JURISDICTION ---
+  const activeJurisdictionTop3: RankedJurisdictionCitizen[] = useMemo(() => {
+    const phonePrefix = selectedCountry === 'KE' ? '+254 7' : selectedCountry === 'NG' ? '+234 80' : '+256 77';
+
+    // Helper to aggregate citizen standing from a filtered subset of posts
+    const buildTop3FromPosts = (
+      matchingPosts: typeof posts,
+      fallbackSeeds: Array<{ name: string; role: string; baseScore: number; reports: number; resolved: number; upvotes: number; reason: string }>
+    ): RankedJurisdictionCitizen[] => {
+      const map = new Map<
+        string,
+        {
+          name: string;
+          role: string;
+          reports: number;
+          resolved: number;
+          upvotes: number;
+          score: number;
+          reason: string;
+          postId?: string;
+        }
+      >();
+
+      matchingPosts.forEach((p) => {
+        const name = p.anonymous ? `Verified Resident (#${p.id.slice(-4).toUpperCase()})` : p.citizen_name || 'Citizen Watchdog';
+        const existing = map.get(name) || {
+          name,
+          role: p.author_profession || p.citizen_rank || 'Verified Parish Citizen',
+          reports: 0,
+          resolved: 0,
+          upvotes: 0,
+          score: 0,
+          reason: p.title,
+          postId: p.id,
+        };
+        const isResolved = p.status === 'resolved' || p.citizen_satisfied === true || p.category === 'praise';
+        const witnessBonus = (p.compiled_count || 1) * 8;
+        existing.reports += 1;
+        if (isResolved) existing.resolved += 1;
+        existing.upvotes += p.upvotes || 0;
+        existing.score += 30 + (isResolved ? 45 : 0) + (p.upvotes || 0) * 3 + witnessBonus;
+        map.set(name, existing);
+
+        // Also credit corroborating witnesses on this post
+        (p.compiled_reports || []).forEach((wr) => {
+          const wName = wr.anonymous ? `Witness (#${wr.id.slice(-4).toUpperCase()})` : wr.citizen_name;
+          const wEx = map.get(wName) || {
+            name: wName,
+            role: wr.author_profession || 'Corroborating Witness',
+            reports: 0,
+            resolved: 0,
+            upvotes: 0,
+            score: 0,
+            reason: `Corroborated: ${p.title}`,
+            postId: p.id,
+          };
+          wEx.reports += 1;
+          wEx.score += 25;
+          map.set(wName, wEx);
+        });
+      });
+
+      const sorted = Array.from(map.values()).sort((a, b) => b.score - a.score);
+      for (const seed of fallbackSeeds) {
+        if (sorted.length >= 3) break;
+        if (!sorted.some((s) => s.name.toLowerCase() === seed.name.toLowerCase())) {
+          sorted.push({
+            name: seed.name,
+            role: seed.role,
+            reports: seed.reports,
+            resolved: seed.resolved,
+            upvotes: seed.upvotes,
+            score: seed.baseScore,
+            reason: seed.reason,
+          });
+        }
+      }
+
+      return sorted.slice(0, 3).map((item, idx) => ({
+        rank: (idx + 1) as 1 | 2 | 3,
+        name: item.name,
+        contact: `${phonePrefix}${200 + idx * 137} ${410 + idx * 119}`,
+        roleOrProfession: item.role,
+        score: item.score,
+        reportsCount: item.reports,
+        resolvedOrVerifiedCount: item.resolved,
+        upvotesCount: item.upvotes,
+        citationReason: item.reason,
+        samplePostId: item.postId,
+      }));
+    };
+
+    if (activeVaultKind === 'parish_vault') {
+      const parishPosts = countryFeedPosts.filter(
+        (p) =>
+          p.territory?.parish?.toLowerCase() === selectedParish.toLowerCase() ||
+          p.location?.toLowerCase().includes(selectedParish.toLowerCase().replace(' parish', '').replace(' ward', ''))
+      );
+      return buildTop3FromPosts(parishPosts, [
+        {
+          name: selectedCountry === 'KE' ? 'Wanjiku Mwangi' : 'Sarah Namukasa',
+          role: `Lead Parish Reputation Citizen · ${selectedParish}`,
+          baseScore: 340,
+          reports: 6,
+          resolved: 4,
+          upvotes: 48,
+          reason: `Top Parish Reputation Standing in ${selectedParish} (6 verified local reports & 4 community fixes)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'Brian Otieno' : 'Ronald Kizza',
+          role: `Parish Infrastructure Monitor · ${selectedParish}`,
+          baseScore: 285,
+          reports: 5,
+          resolved: 3,
+          upvotes: 36,
+          reason: `2nd Highest Parish Standing in ${selectedParish} (drainage & water point audits)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'Faith Chepkoech' : 'Grace Akello',
+          role: `Community Health & Sanitation Steward · ${selectedParish}`,
+          baseScore: 240,
+          reports: 4,
+          resolved: 3,
+          upvotes: 29,
+          reason: `3rd Highest Parish Standing in ${selectedParish} (clinic & street lighting verifications)`,
+        },
+      ]);
+    }
+
+    if (activeVaultKind === 'provider_vault') {
+      const providerObj = providerOptions.find((d) => d.id === selectedProviderDept);
+      const pName = providerObj?.name || selectedProviderDept;
+      const shopPosts = countryFeedPosts.filter((p) => p.dept === selectedProviderDept);
+      return buildTop3FromPosts(shopPosts, [
+        {
+          name: selectedCountry === 'KE' ? 'Kevin Kamau' : 'ivan Mugisha',
+          role: `Verified Customer & Quality Auditor · ${pName}`,
+          baseScore: 310,
+          reports: 5,
+          resolved: 4,
+          upvotes: 42,
+          reason: `Highest strict interaction score with ${pName} (service feedback, quality audit & resolution ratification)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'Mercy Njoroge' : 'Brenda Nakato',
+          role: `Frequent Patron & Service Reviewer · ${pName}`,
+          baseScore: 265,
+          reports: 4,
+          resolved: 3,
+          upvotes: 31,
+          reason: `2nd highest business interaction rank on ${pName} wall (verified patron commendation & feedback)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'Daniel Mutua' : 'Denis Ocen',
+          role: `Community Consumer Watchdog · ${pName}`,
+          baseScore: 220,
+          reports: 3,
+          resolved: 2,
+          upvotes: 24,
+          reason: `3rd highest business interaction rank on ${pName} wall (constructive billing & queue turnaround audit)`,
+        },
+      ]);
+    }
+
+    if (activeVaultKind === 'contractor_vault') {
+      const contractObj = contractOptions.find((c) => c.id === selectedContractId);
+      const cTitle = contractObj?.title || 'Public Works Contract';
+      const contractPosts = countryFeedPosts.filter(
+        (p) =>
+          p.project === selectedContractId ||
+          (contractObj && p.title.toLowerCase().includes(contractObj.title.split(' ')[0].toLowerCase()))
+      );
+      return buildTop3FromPosts(contractPosts, [
+        {
+          name: selectedCountry === 'KE' ? 'Eng. Samuel Kariuki (Citizen Inspector)' : 'Moses Byaruhanga',
+          role: `Lead Contract Watchdog · ${cTitle}`,
+          baseScore: 390,
+          reports: 7,
+          resolved: 5,
+          upvotes: 64,
+          reason: `#1 Contract Watchdog on ${cTitle} (geotagged culvert & asphalt thickness verification dossier)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'Esther Wambui' : 'Juliet Babirye',
+          role: `Corridor Resident Watchdog · ${cTitle}`,
+          baseScore: 325,
+          reports: 5,
+          resolved: 4,
+          upvotes: 49,
+          reason: `#2 Contract Watchdog on ${cTitle} (milestone progress photo proof & drainage inspection)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'Peter Omondi' : 'Patrick Opio',
+          role: `Site Safety & Materials Auditor · ${cTitle}`,
+          baseScore: 275,
+          reports: 4,
+          resolved: 3,
+          upvotes: 38,
+          reason: `#3 Contract Watchdog on ${cTitle} (defects liability verification & community ratification)`,
+        },
+      ]);
+    }
+
+    if (activeVaultKind === 'scout_bounty_vault') {
+      const corridorObj = scoutCorridorOptions.find((c) => c.id === selectedScoutCorridor);
+      const cLabel = corridorObj?.label || 'Transit Road Safety Corridor';
+      const scoutPosts = countryFeedPosts.filter(
+        (p) =>
+          p.author_profession?.toLowerCase().includes('boda') ||
+          p.author_profession?.toLowerCase().includes('driver') ||
+          p.category === 'pothole' ||
+          p.category === 'transport'
+      );
+      return buildTop3FromPosts(scoutPosts, [
+        {
+          name: selectedCountry === 'KE' ? 'John Macharia (Stage Captain)' : 'Suleiman Wasswa (Bodaboda Scout)',
+          role: `Bodaboda Frontline Road Scout · ${cLabel}`,
+          baseScore: 415,
+          reports: 9,
+          resolved: 6,
+          upvotes: 78,
+          reason: `#1 Frontline Road Safety Scout on ${cLabel} (9 geotagged pothole, open manhole & flood hazard alerts)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'hassan Ali (Matatu Scout)' : 'Robert Ssempijja (Stage Chairman)',
+          role: `Bodaboda Stage Safety Lead · ${cLabel}`,
+          baseScore: 350,
+          reports: 7,
+          resolved: 5,
+          upvotes: 55,
+          reason: `#2 Frontline Road Safety Scout on ${cLabel} (broken traffic signal & washed-out culvert warnings)`,
+        },
+        {
+          name: selectedCountry === 'KE' ? 'vincent Kiprop (Rider Watch)' : 'Emmanuel Okello (Highway Rider)',
+          role: `Transit Corridor Hazard Reporter · ${cLabel}`,
+          baseScore: 295,
+          reports: 5,
+          resolved: 4,
+          upvotes: 41,
+          reason: `#3 Frontline Road Safety Scout on ${cLabel} (nighttime road obstruction & emergency ambulance clearance)`,
+        },
+      ]);
+    }
+
+    return [];
+  }, [
+    activeVaultKind,
+    selectedCountry,
+    selectedParish,
+    selectedProviderDept,
+    selectedContractId,
+    selectedScoutCorridor,
+    countryFeedPosts,
+    providerOptions,
+    contractOptions,
+    scoutCorridorOptions,
+  ]);
+
+  const currentVaultJurisdictionMeta = useMemo(() => {
+    if (activeVaultKind === 'parish_vault') {
+      const lowestTitle =
+        selectedCountry === 'KE'
+          ? 'Ward Administrator'
+          : selectedCountry === 'NG'
+          ? 'Supervisory Councillor / Ward Head'
+          : 'Parish Chief (Lowest Accounting Officer)';
+      return {
+        vaultTitle: `Parish Vault · ${selectedParish}`,
+        jurisdictionId: selectedParish,
+        jurisdictionLabel: selectedParish,
+        dispatcherTitle: `${lowestTitle} — ${selectedParish}`,
+        AuthorizedRoleTag: 'parish_chief' as const,
+        rankingRule:
+          'Automatically selects the Top 3 citizens in this Parish by Reputation Standing (local reports filed, verified fixes, and community upvotes). Recipient list is strictly locked and dispatched by the Parish Chief on behalf of Parish citizens.',
+      };
+    }
+    if (activeVaultKind === 'provider_vault') {
+      const prov = providerOptions.find((d) => d.id === selectedProviderDept);
+      const label = prov?.name || selectedProviderDept;
+      return {
+        vaultTitle: `Private Provider Vault · ${label}`,
+        jurisdictionId: selectedProviderDept,
+        jurisdictionLabel: label,
+        dispatcherTitle: `${label} — Shop / Business Community Service System`,
+        AuthorizedRoleTag: 'provider_owner' as const,
+        rankingRule:
+          'Shop/Business owners deposit into their Vault as a gesture of community service. Systematically selects and splits rewards evenly across the Top 3 citizens ranked strictly by verified interactions with this business.',
+      };
+    }
+    if (activeVaultKind === 'contractor_vault') {
+      const proj = contractOptions.find((c) => c.id === selectedContractId);
+      const label = proj ? `${proj.title} (${proj.contractor})` : selectedContractId;
+      return {
+        vaultTitle: `Contractor Watchdog Vault · ${proj?.title || selectedContractId}`,
+        jurisdictionId: selectedContractId,
+        jurisdictionLabel: label,
+        dispatcherTitle: `${proj?.contractor || 'Contracting Firm'} & Supervising Engineer Escrow`,
+        AuthorizedRoleTag: 'contractor_or_authority' as const,
+        rankingRule:
+          'Automatically selects and splits rewards evenly across the Top 3 Contract Watchdogs based strictly on geotagged site inspections, compiled witness dossiers, and milestone verifications for this contract.',
+      };
+    }
+    if (activeVaultKind === 'scout_bounty_vault') {
+      const corr = scoutCorridorOptions.find((c) => c.id === selectedScoutCorridor);
+      const label = corr?.label || selectedScoutCorridor;
+      return {
+        vaultTitle: `Frontline Scout & Bodaboda Vault · ${label}`,
+        jurisdictionId: selectedScoutCorridor,
+        jurisdictionLabel: label,
+        dispatcherTitle: `${corr?.authority || 'Stage Safety Coordinator'} — Automated Bounty Pool`,
+        AuthorizedRoleTag: 'scout_corridor_coordinator' as const,
+        rankingRule:
+          'Automatically selects and splits road-safety bounties evenly across the Top 3 Frontline Scouts & Bodaboda Riders in this corridor based on verified pothole, flood, and road hazard alerts.',
+      };
+    }
+    return {
+      vaultTitle: `Individual Citizen Vault · ${user?.name || 'Personal Peer Tipping Vault'}`,
+      jurisdictionId: user?.id || 'usr-citizen',
+      jurisdictionLabel: `${user?.name || 'Citizen'} Personal Vault`,
+      dispatcherTitle: `${user?.name || 'Verified Citizen'} (100% Personal Discretion)`,
+      AuthorizedRoleTag: 'citizen_peer' as const,
+      rankingRule:
+        'Personal citizen vault: deposit utility vouchers and personally decide who to reward (e.g., an author for a great post or helpful evidence) either right here or via the "Reward" button on any feed post.',
+    };
+  }, [
+    activeVaultKind,
+    selectedCountry,
+    selectedParish,
+    selectedProviderDept,
+    selectedContractId,
+    selectedScoutCorridor,
+    providerOptions,
+    contractOptions,
+    scoutCorridorOptions,
+    user?.id,
+    user?.name,
+  ]);
+
+  // Execute One-Click Locked Top-3 Institutional Batch Dispatch (or Individual Discretionary Dispatch)
+  const handleExecuteVaultDispatch = async () => {
+    const unassignedInCountry = vouchers.filter(
+      (v) => v.country.toUpperCase() === selectedCountry.toUpperCase() && v.status === 'escrow_unassigned'
+    );
+    const matchingVaultUnassigned = unassignedInCountry.filter(
+      (v) => !v.vaultType || v.vaultType === activeVaultKind
+    );
+    const poolToUse = matchingVaultUnassigned.length >= 3 ? matchingVaultUnassigned : unassignedInCountry;
+
+    setIsBatchDispatching(true);
+    try {
+      const isKe = selectedCountry === 'KE';
+      const defaultCurrency = isKe ? 'KES' : selectedCountry === 'NG' ? 'NGN' : 'UGX';
+      const defaultBrand = isKe ? 'Safaricom' : selectedCountry === 'NG' ? 'MTN Nigeria' : 'MTN Uganda';
+      const defaultFaceValue = isKe ? 360 : selectedCountry === 'NG' ? 3500 : 10000;
+      const nowIso = new Date().toISOString();
+
+      if (activeVaultKind === 'individual_vault') {
+        if (!individualRecipientName.trim()) {
+          toast('Please select a post author or enter a citizen recipient name', 'amber');
+          setIsBatchDispatching(false);
+          return;
+        }
+        const sourceVoucher = poolToUse[0];
+        const code =
+          sourceVoucher?.voucherCode ||
+          `PEER-${Math.floor(1000 + Math.random() * 9000)}-${selectedCountry}`;
+        const pin = sourceVoucher?.pin || `${Math.floor(100000 + Math.random() * 900000)}`;
+        const updatedVoucher: EscrowPerkVoucher = sourceVoucher
+          ? {
+              ...sourceVoucher,
+              vaultType: 'individual_vault',
+              jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+              jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+              authorizedDispatcherRole: 'citizen_peer',
+              status: 'dispatched',
+              dispatchedTo: {
+                recipientName: individualRecipientName.trim(),
+                recipientContact: individualRecipientPhone.trim() || '+256 770 000 000',
+                dispatchedAt: nowIso,
+                dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
+                citationNote: individualCitationNote.trim(),
+                postOrProjectId: individualTargetPostId || 'PEER-POST-REWARD',
+                smsDeliveryStatus: 'delivered',
+                ethicalNonInterferenceAck: true,
+                vaultType: 'individual_vault',
+                jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+              },
+            }
+          : {
+              id: `vch-peer-${Date.now()}`,
+              voucherCode: code,
+              pin,
+              category: 'telco_data',
+              brand: defaultBrand,
+              title: `${defaultBrand} Peer Appreciation Voucher`,
+              faceValue: defaultFaceValue,
+              currency: defaultCurrency,
+              country: selectedCountry,
+              sponsoredBy: `${user?.name || 'Citizen'} (Individual Vault)`,
+              sponsorType: 'citizen_patron',
+              vaultType: 'individual_vault',
+              jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+              jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+              authorizedDispatcherRole: 'citizen_peer',
+              batchId: `BATCH-PEER-${Date.now().toString(36).toUpperCase()}`,
+              status: 'dispatched',
+              createdAt: nowIso,
+              expiryDate: '2026-12-31',
+              redemptionUssdString: `*303*${code}#`,
+              dispatchedTo: {
+                recipientName: individualRecipientName.trim(),
+                recipientContact: individualRecipientPhone.trim() || '+256 770 000 000',
+                dispatchedAt: nowIso,
+                dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
+                citationNote: individualCitationNote.trim(),
+                postOrProjectId: individualTargetPostId || 'PEER-POST-REWARD',
+                smsDeliveryStatus: 'delivered',
+                ethicalNonInterferenceAck: true,
+                vaultType: 'individual_vault',
+                jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+              },
+            };
+
+        savePerkVoucherToCloud(updatedVoucher).catch(() => {});
+        setVouchers((prev) =>
+          sourceVoucher
+            ? prev.map((v) => (v.id === sourceVoucher.id ? updatedVoucher : v))
+            : [updatedVoucher, ...prev]
+        );
+        logAudit(
+          'INDIVIDUAL_VAULT_PEER_DISPATCH',
+          individualTargetPostId || updatedVoucher.id,
+          `${currentVaultJurisdictionMeta.dispatcherTitle} rewarded ${individualRecipientName} with ${updatedVoucher.brand} voucher (${updatedVoucher.voucherCode}) from Individual Vault.`
+        );
+        setLastBatchDispatchReceipt({
+          vaultKind: 'individual_vault',
+          jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+          dispatcherLabel: currentVaultJurisdictionMeta.dispatcherTitle,
+          dispatchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          recipients: [
+            {
+              rank: 1,
+              name: individualRecipientName,
+              contact: individualRecipientPhone,
+              voucherCode: updatedVoucher.voucherCode,
+              brand: updatedVoucher.brand,
+              faceValue: updatedVoucher.faceValue,
+              currency: updatedVoucher.currency,
+              score: 100,
+            },
+          ],
+        });
+        toast(`Dispatched ${updatedVoucher.brand} voucher from your Individual Vault to ${individualRecipientName}!`, 'emerald');
+        setIsBatchDispatching(false);
+        return;
+      }
+
+      // Institutional Vaults (Parish, Private Provider, Contractor, Frontline Scout): Locked Top-3 Even Split
+      const top3 = activeJurisdictionTop3;
+      const updatedOrMinted: EscrowPerkVoucher[] = [];
+      const receiptRows: Array<{
+        rank: number;
+        name: string;
+        contact: string;
+        voucherCode: string;
+        brand: string;
+        faceValue: number;
+        currency: string;
+        score: number;
+      }> = [];
+
+      top3.forEach((citizen, idx) => {
+        const existingVoucher = poolToUse[idx];
+        const slot = (idx + 1) as 1 | 2 | 3;
+        const fallbackCode = `TOP${slot}-${Math.floor(1000 + Math.random() * 9000)}-${selectedCountry}`;
+        const vObj: EscrowPerkVoucher = existingVoucher
+          ? {
+              ...existingVoucher,
+              vaultType: activeVaultKind,
+              jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+              jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+              rankedSlot: slot,
+              rankingScoreAtDispatch: citizen.score,
+              authorizedDispatcherRole: currentVaultJurisdictionMeta.AuthorizedRoleTag,
+              status: 'dispatched',
+              dispatchedTo: {
+                recipientName: citizen.name,
+                recipientContact: citizen.contact,
+                dispatchedAt: nowIso,
+                dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
+                citationNote: `[Locked Rank #${slot} · ${citizen.score} pts] ${citizen.citationReason}`,
+                postOrProjectId: citizen.samplePostId || currentVaultJurisdictionMeta.jurisdictionId,
+                smsDeliveryStatus: 'delivered',
+                ethicalNonInterferenceAck: true,
+                vaultType: activeVaultKind,
+                jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+                rankedSlot: slot,
+                rankingScore: citizen.score,
+              },
+            }
+          : {
+              id: `vch-${activeVaultKind}-${Date.now()}-${slot}`,
+              voucherCode: fallbackCode,
+              pin: `${Math.floor(100000 + Math.random() * 900000)}`,
+              category: activeVaultKind === 'scout_bounty_vault' ? 'transit_credit' : 'telco_data',
+              brand: activeVaultKind === 'scout_bounty_vault' ? 'SafeBoda' : defaultBrand,
+              title:
+                activeVaultKind === 'scout_bounty_vault'
+                  ? `SafeBoda Road Safety Bounty (Rank #${slot})`
+                  : `${defaultBrand} Top-3 Jurisdiction Split (Rank #${slot})`,
+              faceValue: defaultFaceValue,
+              currency: defaultCurrency,
+              country: selectedCountry,
+              sponsoredBy: currentVaultJurisdictionMeta.jurisdictionLabel,
+              sponsorType:
+                activeVaultKind === 'contractor_vault'
+                  ? 'contractor'
+                  : activeVaultKind === 'parish_vault'
+                  ? 'authority'
+                  : 'corporate_csr',
+              vaultType: activeVaultKind,
+              jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+              jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+              rankedSlot: slot,
+              rankingScoreAtDispatch: citizen.score,
+              authorizedDispatcherRole: currentVaultJurisdictionMeta.AuthorizedRoleTag,
+              batchId: `SPLIT3-${Date.now().toString(36).toUpperCase()}`,
+              status: 'dispatched',
+              createdAt: nowIso,
+              expiryDate: '2026-12-31',
+              redemptionUssdString: `*303*${fallbackCode}#`,
+              dispatchedTo: {
+                recipientName: citizen.name,
+                recipientContact: citizen.contact,
+                dispatchedAt: nowIso,
+                dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
+                citationNote: `[Locked Rank #${slot} · ${citizen.score} pts] ${citizen.citationReason}`,
+                postOrProjectId: citizen.samplePostId || currentVaultJurisdictionMeta.jurisdictionId,
+                smsDeliveryStatus: 'delivered',
+                ethicalNonInterferenceAck: true,
+                vaultType: activeVaultKind,
+                jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+                rankedSlot: slot,
+                rankingScore: citizen.score,
+              },
+            };
+
+        updatedOrMinted.push(vObj);
+        receiptRows.push({
+          rank: slot,
+          name: citizen.name,
+          contact: citizen.contact,
+          voucherCode: vObj.voucherCode,
+          brand: vObj.brand,
+          faceValue: vObj.faceValue,
+          currency: vObj.currency,
+          score: citizen.score,
+        });
+      });
+
+      savePerkVoucherBatchToCloud(updatedOrMinted).catch(() => {});
+
+      const updatedIds = new Set(updatedOrMinted.map((u) => u.id));
+      setVouchers((prev) => {
+        const replaced = prev.map((v) => {
+          const match = updatedOrMinted.find((u) => u.id === v.id);
+          return match || v;
+        });
+        const brandNew = updatedOrMinted.filter((u) => !prev.some((p) => p.id === u.id));
+        return [...brandNew, ...replaced];
+      });
+
+      logAudit(
+        'VAULT_TOP3_BATCH_DISPATCH',
+        currentVaultJurisdictionMeta.jurisdictionId,
+        `${currentVaultJurisdictionMeta.dispatcherTitle} executed Locked Top-3 Split Dispatch from [${currentVaultJurisdictionMeta.vaultTitle}] to #1 ${top3[0]?.name}, #2 ${top3[1]?.name}, #3 ${top3[2]?.name}`
+      );
+
+      setLastBatchDispatchReceipt({
+        vaultKind: activeVaultKind,
+        jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+        dispatcherLabel: currentVaultJurisdictionMeta.dispatcherTitle,
+        dispatchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        recipients: receiptRows,
+      });
+
+      toast(
+        `Locked Top-3 Batch Dispatched (${receiptRows.map((r) => `#${r.rank} ${r.name}`).join(', ')})!`,
+        'emerald'
+      );
+    } finally {
+      setIsBatchDispatching(false);
+    }
+  };
 
   // Load vouchers from server and Cloud Firestore
   const loadVaultData = async () => {
@@ -158,17 +912,19 @@ export const PerkVaultView: React.FC = () => {
       if (filterStatus !== 'all' && v.status !== filterStatus) return false;
       if (filterDemoMode === 'live' && v.isDemo) return false;
       if (filterDemoMode === 'demo' && !v.isDemo) return false;
+      if (filterVaultKind !== 'all' && v.vaultType && v.vaultType !== filterVaultKind) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesCode = v.voucherCode.toLowerCase().includes(q);
         const matchesBrand = v.brand.toLowerCase().includes(q);
         const matchesSponsor = v.sponsoredBy.toLowerCase().includes(q);
+        const matchesJurisdiction = (v.jurisdictionLabel || '').toLowerCase().includes(q);
         const matchesRecipient = v.dispatchedTo?.recipientName.toLowerCase().includes(q) || v.dispatchedTo?.recipientContact.includes(q);
-        if (!matchesCode && !matchesBrand && !matchesSponsor && !matchesRecipient) return false;
+        if (!matchesCode && !matchesBrand && !matchesSponsor && !matchesJurisdiction && !matchesRecipient) return false;
       }
       return true;
     });
-  }, [vouchers, selectedCountry, filterStatus, filterDemoMode, searchQuery]);
+  }, [vouchers, selectedCountry, filterStatus, filterDemoMode, filterVaultKind, searchQuery]);
 
   // CSR Sponsor Leaderboard aggregation
   const sponsorLeaderboard = useMemo(() => {
@@ -549,14 +1305,21 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
       const data = await res.json();
       if (data.success && data.vouchers) {
-        savePerkVoucherBatchToCloud(data.vouchers).catch(() => {});
-        setVouchers((prev) => [...data.vouchers, ...prev]);
+        const targetVault: VaultKind = packType === 'boda' ? 'scout_bounty_vault' : activeVaultKind;
+        const taggedVouchers = data.vouchers.map((v: EscrowPerkVoucher) => ({
+          ...v,
+          vaultType: targetVault,
+          jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+          jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+        }));
+        savePerkVoucherBatchToCloud(taggedVouchers).catch(() => {});
+        setVouchers((prev) => [...taggedVouchers, ...prev]);
         logAudit(
           'BODA_BOUNTY_ESCROW_SEEDED',
           data.batchId || 'BATCH-BODA',
-          `Deposited ${data.uploadedCount}x ${batchTitle} vouchers into [${selectedCountry}] Sovereign Perk Escrow.`
+          `Deposited ${data.uploadedCount}x ${batchTitle} vouchers into [${selectedCountry}] ${currentVaultJurisdictionMeta.vaultTitle}.`
         );
-        toast(`Deposited ${data.uploadedCount} pre-funded vouchers (${batchTitle}) into Escrow Vault!`, 'emerald');
+        toast(`Deposited ${data.uploadedCount} pre-funded vouchers into ${currentVaultJurisdictionMeta.vaultTitle}!`, 'emerald');
       }
     } catch {
       toast('Failed to deposit pack', 'rose');
@@ -723,14 +1486,20 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
       const batchData = await batchRes.json();
       if (batchData.success && batchData.vouchers) {
+        const taggedBatch = batchData.vouchers.map((v: EscrowPerkVoucher) => ({
+          ...v,
+          vaultType: activeVaultKind,
+          jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+          jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+        }));
         // Sync to Cloud Firestore
-        savePerkVoucherBatchToCloud(batchData.vouchers).catch(() => {});
+        savePerkVoucherBatchToCloud(taggedBatch).catch(() => {});
         if (verifyData.transaction) {
           saveGatewayTransactionToCloud(verifyData.transaction).catch(() => {});
         }
 
         // Update local state
-        setVouchers((prev) => [...batchData.vouchers, ...prev]);
+        setVouchers((prev) => [...taggedBatch, ...prev]);
 
         // Audit Trail
         logAudit(
@@ -877,58 +1646,519 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         </div>
       </div>
 
-      {/* Bodaboda & Frontline Scout Bounty Pool Spotlight Card — Responsive & Actionable */}
-      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <span className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-              <Bike size={18} strokeWidth={1.75} />
-            </span>
-            <div className="space-y-1">
+      {/* FIVE-VAULT CIVIC & COMMUNITY REWARD ARCHITECTURE STUDIO */}
+      <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+          <div>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">
+              <Sparkles size={12} />
+              <span>Five-Vault Jurisdictional &amp; Peer Escrow Architecture</span>
+              <span>·</span>
+              <span>Locked Top-3 Merit Split + Discretionary Citizen Tipping</span>
+            </div>
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-0.5">
+              Select Vault Type &amp; Jurisdiction Scope
+            </h2>
+          </div>
+          <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold self-start sm:self-auto">
+            Zero Cherry-Picking · Deterministic Jurisdiction Ranking
+          </span>
+        </div>
+
+        {/* 5-Vault Selector Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+          {[
+            {
+              id: 'parish_vault' as VaultKind,
+              title: '1. Parish Vault',
+              subtitle: 'Grassroots Territorial',
+              badge: 'Parish Chief Dispatch',
+              desc: 'Open to all sponsors. Auto-selects Top 3 citizens by Parish Reputation Standing. Dispatched by Parish Chief.',
+              icon: MapPin,
+              accent: 'emerald',
+            },
+            {
+              id: 'provider_vault' as VaultKind,
+              title: '2. Private Provider Vault',
+              subtitle: 'Shop / Business Service',
+              badge: 'Strict Shop Rank',
+              desc: 'Shop owner deposits for community service. Systematically rewards Top 3 citizens strictly by interactions with the business.',
+              icon: Store,
+              accent: 'teal',
+            },
+            {
+              id: 'contractor_vault' as VaultKind,
+              title: '3. Contractor Vault',
+              subtitle: 'Public Works Escrow',
+              badge: 'Top 3 Watchdogs',
+              desc: 'Contractors & agencies fund project escrow. Automatically splits rewards across the Top 3 Contract Watchdogs.',
+              icon: HardHat,
+              accent: 'indigo',
+            },
+            {
+              id: 'scout_bounty_vault' as VaultKind,
+              title: '4. Scout & Bodaboda Vault',
+              subtitle: 'Road Safety Bounties',
+              badge: 'Top 3 Road Scouts',
+              desc: 'Frontline Scout & Bodaboda Road Safety Bounty Pools. Splits rewards across Top 3 hazard-reporting riders per corridor.',
+              icon: Bike,
+              accent: 'amber',
+            },
+            {
+              id: 'individual_vault' as VaultKind,
+              title: '5. Individual Vault',
+              subtitle: 'Citizen Peer Tipping',
+              badge: 'Personal Choice',
+              desc: 'Citizens deposit into their personal vault and freely choose who to reward (e.g. someone for a great post).',
+              icon: Gift,
+              accent: 'rose',
+            },
+          ].map((vCard) => {
+            const Icon = vCard.icon;
+            const isSelected = activeVaultKind === vCard.id;
+            return (
+              <button
+                key={vCard.id}
+                type="button"
+                onClick={() => {
+                  setActiveVaultKind(vCard.id);
+                  setLastBatchDispatchReceipt(null);
+                }}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                  isSelected
+                    ? 'border-emerald-600 dark:border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/40'
+                    : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600'
+                }`}
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <Icon size={14} />
+                    </span>
+                    <span className="text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300">
+                      {vCard.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                      {vCard.title}
+                    </div>
+                    <div className="text-[9.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                      {vCard.subtitle}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {vCard.desc}
+                  </p>
+                </div>
+                <div className="pt-1.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[9.5px] font-mono font-bold">
+                  <span className={isSelected ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500'}>
+                    {isSelected ? 'Active Vault' : 'Select Vault →'}
+                  </span>
+                  {isSelected && <Check size={12} className="text-emerald-600 dark:text-emerald-400" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active Vault Jurisdiction Control & Live Ranking / Dispatch Engine */}
+        <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+          {/* Top Bar: Jurisdiction Picker + Fiduciary Dispatcher Info */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#e3e6ea] dark:border-[#262b36]">
+            <div className="space-y-1 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                  Frontline Scout &amp; Bodaboda Road Safety Bounty Pools
-                </h3>
-                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                  · Profession Targeted ({ vouchers.filter(v => v.country.toUpperCase() === selectedCountry.toUpperCase() && v.category === 'transit_credit' && v.status === 'escrow_unassigned').length } Boda Vouchers in Escrow)
+                <span className="px-2 py-0.5 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-[9.5px] font-mono font-bold uppercase">
+                  {currentVaultJurisdictionMeta.vaultTitle}
                 </span>
+                {activeVaultKind !== 'individual_vault' ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[9.5px] font-mono font-bold">
+                    <Lock size={10} />
+                    <span>Locked Top-3 Even Split (33.3% Each)</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[9.5px] font-mono font-bold">
+                    <Users size={10} />
+                    <span>100% Citizen Discretionary Peer Tipping</span>
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-                Corporate sponsors, logistics operators, and municipal partners deposit targeted MoMo fuel &amp; transit bounties reserved for verified Bodaboda riders and public transit drivers who report street hazards, uncollected waste, and broken infrastructure.
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {currentVaultJurisdictionMeta.rankingRule}
               </p>
+              <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+                Designated Dispatcher:{' '}
+                <strong className="text-slate-900 dark:text-white">
+                  {currentVaultJurisdictionMeta.dispatcherTitle}
+                </strong>
+              </div>
+            </div>
+
+            {/* Dynamic Jurisdiction Selector per Vault Kind */}
+            <div className="w-full lg:w-80 shrink-0 space-y-1">
+              {activeVaultKind === 'parish_vault' && (
+                <>
+                  <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
+                    Select Parish / Ward Jurisdiction ({selectedCountry})
+                  </label>
+                  <select
+                    value={selectedParish}
+                    onChange={(e) => setSelectedParish(e.target.value)}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    {parishOptions.map((par) => (
+                      <option key={par} value={par}>
+                        {par}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+
+              {activeVaultKind === 'provider_vault' && (
+                <>
+                  <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
+                    Select Private Provider / Shop Jurisdiction
+                  </label>
+                  <select
+                    value={selectedProviderDept}
+                    onChange={(e) => setSelectedProviderDept(e.target.value)}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    {providerOptions.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.full})
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+
+              {activeVaultKind === 'contractor_vault' && (
+                <>
+                  <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
+                    Select Public Works Contract Jurisdiction
+                  </label>
+                  <select
+                    value={selectedContractId}
+                    onChange={(e) => setSelectedContractId(e.target.value)}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    {contractOptions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        [{c.code || c.id}] {c.title} — {c.contractor}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+
+              {activeVaultKind === 'scout_bounty_vault' && (
+                <>
+                  <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
+                    Select Transit Stage / Road Safety Corridor
+                  </label>
+                  <select
+                    value={selectedScoutCorridor}
+                    onChange={(e) => setSelectedScoutCorridor(e.target.value)}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    {scoutCorridorOptions.map((corr) => (
+                      <option key={corr.id} value={corr.id}>
+                        {corr.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+
+              {activeVaultKind === 'individual_vault' && (
+                <>
+                  <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
+                    Pick Great Feed Post to Reward (Or Enter Citizen Below)
+                  </label>
+                  <select
+                    value={individualTargetPostId}
+                    onChange={(e) => {
+                      const pid = e.target.value;
+                      setIndividualTargetPostId(pid);
+                      const found = countryFeedPosts.find((p) => p.id === pid);
+                      if (found) {
+                        setIndividualRecipientName(found.anonymous ? 'Verified Citizen Author' : found.citizen_name);
+                        setIndividualCitationNote(`Rewarding your great post: "${found.title}"`);
+                      }
+                    }}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    {countryFeedPosts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.anonymous ? 'Verified Citizen' : p.citizen_name}: {p.title.slice(0, 48)}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="button"
-              disabled={isUploading}
-              onClick={() => handleSeedPack('boda')}
-              className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <Plus size={13} className="text-emerald-600 dark:text-emerald-400" />
-              <span>{isUploading ? 'Depositing...' : 'Instant Seed 5x Boda Pool ($0)'}</span>
-            </button>
+          {/* Batch Dispatch Receipt Confirmation Banner */}
+          {lastBatchDispatchReceipt && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2 animate-fade-in">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                  <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>
+                    {lastBatchDispatchReceipt.vaultKind === 'individual_vault'
+                      ? 'Individual Vault Peer Reward Dispatched via SMS/USSD!'
+                      : `Locked Top-3 Split Dispatched for ${lastBatchDispatchReceipt.jurisdictionLabel}!`}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">
+                  Signed by: {lastBatchDispatchReceipt.dispatcherLabel} · {lastBatchDispatchReceipt.dispatchedAt}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                {lastBatchDispatchReceipt.recipients.map((rec) => (
+                  <div
+                    key={`${rec.rank}-${rec.voucherCode}`}
+                    className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-emerald-500/30 text-[11px] font-mono space-y-0.5"
+                  >
+                    <div className="flex items-center justify-between font-bold text-slate-900 dark:text-white">
+                      <span>
+                        Rank #{rec.rank}: {rec.name}
+                      </span>
+                      <span className="text-emerald-600 dark:text-emerald-400">{rec.score} pts</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500">{rec.contact}</div>
+                    <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 pt-0.5">
+                      {rec.brand} ({rec.currency} {rec.faceValue.toLocaleString()}) · Code: {rec.voucherCode}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-            <button
-              type="button"
-              onClick={() => {
-                setPayPackage('safeboda_10');
-                setPaySponsorType('corporate_csr');
-                setPayProjectName('Frontline Scout & Bodaboda Road Safety Bounty Pool');
-                setPaymentReceipt(null);
-                setActiveTab('pay');
-                toast('Boda Bounty Pool (10x SafeBoda Transit Credits) selected below — ready to authorize!', 'emerald');
-                setTimeout(() => {
-                  studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 80);
-              }}
-              className="px-3.5 py-2 rounded-lg text-xs font-mono font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Bike size={13} />
-              <span>Fund Boda Bounty Pool →</span>
-            </button>
-          </div>
+          {/* Institutional Vaults (1-4): Locked Top-3 Ranked Citizens Grid */}
+          {activeVaultKind !== 'individual_vault' ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Award size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    Auto-Selected Top 3 Ranked Recipients in {currentVaultJurisdictionMeta.jurisdictionLabel} (Strictly Locked)
+                  </span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">
+                  Every deposit splits 1/3 each across Rank #1, Rank #2, and Rank #3
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {activeJurisdictionTop3.map((cit) => (
+                  <div
+                    key={cit.rank}
+                    className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col justify-between gap-2.5"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[9.5px] font-mono font-bold uppercase ${
+                            cit.rank === 1
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                              : cit.rank === 2
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                              : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30'
+                          }`}
+                        >
+                          Rank #{cit.rank} · 33.3% Split Share
+                        </span>
+                        <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {cit.score} pts
+                        </span>
+                      </div>
+
+                      <div>
+                        <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span>{cit.name}</span>
+                          <Lock size={11} className="text-slate-400 shrink-0" title="Auto-selected by jurisdiction ranking; cannot be manually altered" />
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          {cit.roleOrProfession} · {cit.contact}
+                        </div>
+                      </div>
+
+                      <p className="text-[10.5px] text-slate-600 dark:text-slate-300 leading-snug bg-[#f8f9fa] dark:bg-[#0e1116] p-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
+                        {cit.citationReason}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] grid grid-cols-3 gap-1 text-center text-[9.5px] font-mono">
+                      <div>
+                        <span className="text-slate-400 block">Reports</span>
+                        <strong className="text-slate-800 dark:text-slate-200">{cit.reportsCount}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Verified</span>
+                        <strong className="text-emerald-600 dark:text-emerald-400">{cit.resolvedOrVerifiedCount}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Upvotes</span>
+                        <strong className="text-slate-800 dark:text-slate-200">{cit.upvotesCount}</strong>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Bar for Institutional Vaults (1-4) */}
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={isBatchDispatching}
+                    onClick={handleExecuteVaultDispatch}
+                    className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Send size={13} />
+                    <span>
+                      {isBatchDispatching
+                        ? 'Dispatching Top-3 Batch...'
+                        : activeVaultKind === 'parish_vault'
+                        ? `Parish Chief Dispatch: Release Top-3 ${selectedParish} Batch`
+                        : `One-Click Batch Dispatch to Top 3 (${currentVaultJurisdictionMeta.jurisdictionLabel.slice(0, 28)})`}
+                    </span>
+                  </button>
+
+                  {activeVaultKind === 'scout_bounty_vault' && (
+                    <button
+                      type="button"
+                      disabled={isUploading}
+                      onClick={() => handleSeedPack('boda')}
+                      className="px-3 py-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Bike size={13} className="text-amber-500" />
+                      <span>{isUploading ? 'Depositing...' : 'Instant Seed 5x Boda Pool ($0)'}</span>
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeVaultKind === 'scout_bounty_vault') {
+                      setPayPackage('safeboda_10');
+                      setPaySponsorType('corporate_csr');
+                    } else if (activeVaultKind === 'contractor_vault') {
+                      setPayPackage('mtn_5');
+                      setPaySponsorType('contractor');
+                    } else if (activeVaultKind === 'provider_vault') {
+                      setPayPackage('mtn_5');
+                      setPaySponsorType('corporate_csr');
+                    } else {
+                      setPayPackage('mtn_5');
+                      setPaySponsorType('citizen_patron');
+                    }
+                    setPayProjectName(currentVaultJurisdictionMeta.vaultTitle);
+                    setPaymentReceipt(null);
+                    setActiveTab('pay');
+                    toast(`Ready to deposit into ${currentVaultJurisdictionMeta.vaultTitle} below!`, 'emerald');
+                    setTimeout(() => {
+                      studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 80);
+                  }}
+                  className="px-3.5 py-2.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus size={13} />
+                  <span>Deposit Into {currentVaultJurisdictionMeta.vaultTitle.split('·')[0].trim()} →</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Individual Citizen Vault (5): Discretionary Peer-to-Peer Tipping Studio */
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] font-mono font-bold uppercase text-slate-500 block mb-1">
+                    Citizen Recipient Name
+                  </label>
+                  <input
+                    type="text"
+                    value={individualRecipientName}
+                    onChange={(e) => setIndividualRecipientName(e.target.value)}
+                    placeholder="e.g. Amina Nabatanzi"
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono font-bold uppercase text-slate-500 block mb-1">
+                    Recipient Phone / Wallet Contact
+                  </label>
+                  <input
+                    type="text"
+                    value={individualRecipientPhone}
+                    onChange={(e) => setIndividualRecipientPhone(e.target.value)}
+                    placeholder="+256 774 819 203"
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-mono font-bold uppercase text-slate-500 block mb-1">
+                    Appreciation Note / Post Citation
+                  </label>
+                  <input
+                    type="text"
+                    value={individualCitationNote}
+                    onChange={(e) => setIndividualCitationNote(e.target.value)}
+                    placeholder="Thank you for this great post!"
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+                <button
+                  type="button"
+                  disabled={isBatchDispatching}
+                  onClick={handleExecuteVaultDispatch}
+                  className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Gift size={14} />
+                  <span>
+                    {isBatchDispatching
+                      ? 'Sending Peer Reward...'
+                      : `Send Individual Vault Reward to ${individualRecipientName || 'Citizen'}`}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPayPackage('mtn_5');
+                    setPaySponsorType('citizen_patron');
+                    setPaySponsorName(`${user?.name || 'Verified Citizen'} (Individual Vault)`);
+                    setPayProjectName(`${user?.name || 'Citizen'} Personal Individual Vault`);
+                    setPaymentReceipt(null);
+                    setActiveTab('pay');
+                    toast('Ready to deposit vouchers into your Individual Citizen Vault below!', 'emerald');
+                    setTimeout(() => {
+                      studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 80);
+                  }}
+                  className="px-3.5 py-2.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus size={13} />
+                  <span>Deposit Into My Individual Vault →</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2373,6 +3603,19 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             </div>
 
             <select
+              value={filterVaultKind}
+              onChange={(e) => setFilterVaultKind(e.target.value as 'all' | VaultKind)}
+              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="all">All 5 Vaults</option>
+              <option value="parish_vault">1. Parish Vault</option>
+              <option value="provider_vault">2. Private Provider (Shop) Vault</option>
+              <option value="contractor_vault">3. Contractor Watchdog Vault</option>
+              <option value="scout_bounty_vault">4. Scout &amp; Bodaboda Vault</option>
+              <option value="individual_vault">5. Individual Citizen Vault</option>
+            </select>
+
+            <select
               value={filterDemoMode}
               onChange={(e) => setFilterDemoMode(e.target.value as 'all' | 'live' | 'demo')}
               className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-amber-500"
@@ -2409,7 +3652,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   <th className="py-2.5 px-3">Voucher Serial Code</th>
                   <th className="py-2.5 px-3">Utility Brand</th>
                   <th className="py-2.5 px-3">Face Value</th>
-                  <th className="py-2.5 px-3">Sponsoring Entity / Project</th>
+                  <th className="py-2.5 px-3">Vault &amp; Jurisdiction Scope</th>
                   <th className="py-2.5 px-3">Escrow Status</th>
                   <th className="py-2.5 px-3">Recipient / Dispatch</th>
                   <th className="py-2.5 px-3 text-right">Actions</th>
@@ -2451,24 +3694,24 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         <div>{v.currency} {v.faceValue.toLocaleString()}</div>
                         {v.commissionBreakdown && (
                           <div className="text-[8.5px] text-slate-400 font-normal">
-                            {v.commissionBreakdown.csrEscrowFee > 0
+                            {(v.commissionBreakdown as any).csrEscrowFee > 0 || v.commissionBreakdown.csrPlatformFee > 0
                               ? `+10% CSR Fee · 6% Spread`
                               : `BYOV 0% Trial Fee`}
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-3 max-w-xs">
-                        <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
-                          {v.sponsoredBy}
+                      <td className="py-3 px-3 max-w-xs space-y-0.5">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 uppercase">
+                            {(v.vaultType || (v.category === 'transit_credit' ? 'scout_bounty_vault' : v.sponsorType === 'contractor' ? 'contractor_vault' : v.sponsorType === 'authority' ? 'parish_vault' : 'provider_vault')).replace('_', ' ')}
+                          </span>
                         </div>
-                        {v.projectName && (
-                          <div className="text-[9.5px] text-slate-400 truncate">
-                            {v.projectName}
-                          </div>
-                        )}
-                        <span className="text-[8px] mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">
-                          {v.sponsorType}
-                        </span>
+                        <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {v.jurisdictionLabel || v.projectName || v.sponsoredBy}
+                        </div>
+                        <div className="text-[9.5px] text-slate-400 truncate">
+                          Sponsor: {v.sponsoredBy}
+                        </div>
                       </td>
                       <td className="py-3 px-3">
                         {isUnassigned ? (
@@ -2490,14 +3733,19 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       <td className="py-3 px-3">
                         {v.dispatchedTo ? (
                           <div>
-                            <div className="font-bold text-slate-900 dark:text-slate-100 text-[11px]">
-                              {v.dispatchedTo.recipientName}
+                            <div className="font-bold text-slate-900 dark:text-slate-100 text-[11px] flex items-center gap-1 flex-wrap">
+                              <span>{v.dispatchedTo.recipientName}</span>
+                              {(v.rankedSlot || v.dispatchedTo.rankedSlot) && (
+                                <span className="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                  Locked Rank #{v.rankedSlot || v.dispatchedTo.rankedSlot}
+                                </span>
+                              )}
                             </div>
                             <div className="text-[10px] mono text-slate-500">
                               {v.dispatchedTo.recipientContact}
                             </div>
                             <div className="text-[8.5px] text-emerald-600 dark:text-emerald-400 font-bold">
-                              SMS Delivered
+                              SMS Delivered · {v.dispatchedTo.dispatchedBy?.slice(0, 28)}
                             </div>
                           </div>
                         ) : (

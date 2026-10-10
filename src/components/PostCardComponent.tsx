@@ -31,8 +31,10 @@ import {
   BarChart3,
   Eye,
   UserCheck,
+  Gift,
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
+import { RewardModal } from './RewardModal';
 
 interface PostCardComponentProps {
   post?: Post;
@@ -60,6 +62,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
     setActiveHashtagFilter,
   } = useApp();
   const [showQr, setShowQr] = useState<boolean>(false);
+  const [rewardOpen, setRewardOpen] = useState<boolean>(false);
   const [playingVoice, setPlayingVoice] = useState<boolean>(false);
 
   if (!post) return null;
@@ -595,6 +598,20 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
             <Share2 size={11} />
           </button>
 
+          {/* Direct Individual Vault Peer Reward Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRewardOpen(true);
+            }}
+            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700/70 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition font-bold cursor-pointer"
+            title="Reward Author from your Individual Citizen Vault"
+          >
+            <Gift size={10} />
+            <span>Reward</span>
+          </button>
+
           {/* QR Code Action */}
           <button
             onClick={(e) => {
@@ -637,6 +654,19 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
         type="ticket"
         post={post}
       />
+
+      {/* Individual Citizen Vault Peer Reward Modal */}
+      {rewardOpen && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <RewardModal
+            isOpen={rewardOpen}
+            onClose={() => setRewardOpen(false)}
+            targetCitizenName={post.anonymous ? 'Verified Citizen' : post.citizen_name}
+            postId={post.id}
+            contextTitle={post.title}
+          />
+        </div>
+      )}
     </article>
   );
 };
