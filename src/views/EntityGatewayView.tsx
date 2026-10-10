@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 export const EntityGatewayView: React.FC = () => {
-  const { go, execGovLoginByData, toast, selectedCountry, openLegalCenter } = useApp();
+  const { go, execGovLoginByData, toast, selectedCountry, openLegalCenter, showDemos } = useApp();
 
   const [activeTab, setActiveTab] = useState<'signin' | 'register_info'>('signin');
   const [code, setCode] = useState('');
@@ -228,100 +228,111 @@ export const EntityGatewayView: React.FC = () => {
               </p>
             </div>
 
-            {/* Verified Provider Presets Directory */}
-            <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white">
-                  <Building2 size={14} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Verified Provider Desks ({profile.countryName})</span>
-                </div>
-                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                  {combinedProviders.length} active desks · Tap to mount
-                </span>
-              </div>
-
-              {/* Category Filter Strip */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                {categories.map((cat) => {
-                  const Icon = cat.icon;
-                  const isSelected = selectedCategory === cat.id;
-                  return (
-                    <button
-                      type="button"
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-semibold whitespace-nowrap transition-colors border cursor-pointer ${
-                        isSelected
-                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
-                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
-                      }`}
-                    >
-                      <Icon size={11} />
-                      <span>{cat.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative flex items-center">
-                <Search size={13} className="absolute left-3 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={`Search ${profile.countryName} schools, hospitals, banks, transit SACCOs, utilities...`}
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-8 pr-8 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-
-              {/* Provider Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-0.5">
-                {combinedProviders.map((item, idx) => (
-                  <div
-                    key={`${item.code}-${idx}`}
-                    className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/60 transition-colors flex flex-col justify-between gap-2.5"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                          {item.code}
-                        </span>
-                        <span>
-                          {activeCountry} · {item.category.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-snug line-clamp-1">
-                        {item.orgName}
-                      </p>
-                      {item.officerName && (
-                        <p className="text-[10.5px] text-slate-500 dark:text-slate-400 line-clamp-1">
-                          {item.officerName} · {item.slaHours}h SLA
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleMountCode(item.code)}
-                      className="w-full py-1.5 px-2.5 rounded-md bg-white dark:bg-[#161a22] hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-600 text-[10.5px] font-mono font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between transition-colors cursor-pointer"
-                    >
-                      <span>Mount Provider Desk</span>
-                      <ArrowRight size={11} />
-                    </button>
+            {/* Verified Provider Presets Directory (Controlled by CD-Ops Master Demo Switch) */}
+            {showDemos ? (
+              <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white">
+                    <Building2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Verified Provider Desks ({profile.countryName})</span>
                   </div>
-                ))}
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                    {combinedProviders.length} active desks · Tap to mount
+                  </span>
+                </div>
+
+                {/* Category Filter Strip */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {categories.map((cat) => {
+                    const Icon = cat.icon;
+                    const isSelected = selectedCategory === cat.id;
+                    return (
+                      <button
+                        type="button"
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-semibold whitespace-nowrap transition-colors border cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
+                            : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
+                        }`}
+                      >
+                        <Icon size={11} />
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative flex items-center">
+                  <Search size={13} className="absolute left-3 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Search ${profile.countryName} schools, hospitals, banks, transit SACCOs, utilities...`}
+                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-8 pr-8 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Provider Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-0.5">
+                  {combinedProviders.map((item, idx) => (
+                    <div
+                      key={`${item.code}-${idx}`}
+                      className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/60 transition-colors flex flex-col justify-between gap-2.5"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                            {item.code}
+                          </span>
+                          <span>
+                            {activeCountry} · {item.category.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-snug line-clamp-1">
+                          {item.orgName}
+                        </p>
+                        {item.officerName && (
+                          <p className="text-[10.5px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                            {item.officerName} · {item.slaHours}h SLA
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleMountCode(item.code)}
+                        className="w-full py-1.5 px-2.5 rounded-md bg-white dark:bg-[#161a22] hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-600 text-[10.5px] font-mono font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between transition-colors cursor-pointer"
+                      >
+                        <span>Mount Provider Desk</span>
+                        <ArrowRight size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3">
+                <div className="text-xs text-slate-600 dark:text-slate-300">
+                  <span className="font-bold text-slate-900 dark:text-white font-mono uppercase block mb-0.5">
+                    Production Live Mode Active · Direct Access Code Required
+                  </span>
+                  Demo provider preset cards are hidden by the CD-Ops Master Switch. Enter your assigned Entity Access Code above or register for a 30-Day Free Trial.
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -51,6 +51,7 @@ export const PsMolgRolloutView: React.FC = () => {
     go,
     toast,
     user,
+    setUser,
     selectedCountry,
     setSelectedCountry,
     selectedMinistryId,
@@ -63,7 +64,7 @@ export const PsMolgRolloutView: React.FC = () => {
     endorseModificationForCdOps,
     rejectModificationBySuperadmin,
   } = useApp();
-  const [currentCountry, setCurrentCountry] = useState<CountryCode>(selectedCountry || user?.country || 'UG');
+  const currentCountry = (user?.country || selectedCountry || 'UG') as CountryCode;
   const [activeTab, setActiveTab] = useState<'cascade' | 'batch_mint' | 'districts' | 'inter_ps' | 'circulars' | 'pdm'>('cascade');
   const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
   const [districtSearch, setDistrictSearch] = useState('');
@@ -258,28 +259,16 @@ export const PsMolgRolloutView: React.FC = () => {
           </button>
           <button
             onClick={() => go('gov_inbox')}
-            className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800/70 transition-colors"
+            className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800/70 transition-colors cursor-pointer"
           >
             <span>Gov Inbox</span>
-          </button>
-          <button
-            onClick={() => go('ps_opm_analytics')}
-            className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/60 transition-colors"
-          >
-            <span>PS OPM Analytics</span>
           </button>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <CountrySelector
-            variant="compact"
-            value={currentCountry}
-            onChange={(newCode) => {
-              setCurrentCountry(newCode);
-              setSelectedCountry(newCode);
-              toast(`Switched Superadmin Command to ${newCode}`, 'emerald');
-            }}
-          />
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-800 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36]">
+            <span>{currentCountry} · Jurisdiction Locked</span>
+          </span>
           <span className="inline-flex items-center gap-1.5 text-[10px] mono font-black px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-950 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
             <Radio className="w-3 h-3 animate-pulse text-emerald-600" />
             National Superadmin
@@ -1304,14 +1293,18 @@ export const PsMolgRolloutView: React.FC = () => {
             <div className="pt-2 flex items-center justify-end gap-2">
               <button
                 onClick={() => {
-                  setSelectedMinistryId(inspectingMinistry.id);
+                  const targetLabel = inspectingMinistry.shortTitle || inspectingMinistry.title;
                   setInspectingMinistry(null);
-                  toast(`Mounting ${inspectingMinistry.title} Executive Workspace...`, 'emerald');
-                  go('ps_executive_desk');
+                  setUser(null);
+                  toast(
+                    `Strict Warrant Lock: Enter ${targetLabel}'s official access code to sign in to its desk.`,
+                    'amber'
+                  );
+                  go('ob2');
                 }}
                 className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <span>Mount {inspectingMinistry.shortTitle || inspectingMinistry.title} Apex Desk →</span>
+                <span>Sign Out to Enter {inspectingMinistry.shortTitle || inspectingMinistry.title} Access Code →</span>
               </button>
               <button
                 onClick={() => {

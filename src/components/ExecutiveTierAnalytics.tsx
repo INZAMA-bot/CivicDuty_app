@@ -297,32 +297,38 @@ Civic Duty Sovereign Digital Infrastructure`;
           </div>
         </div>
 
-        {/* Dynamic Scope Selectors (For Tier 3 & Tier 2 Drilldown) */}
+        {/* Dynamic Scope Selectors (Strict Jurisdiction Lock for Tier 3 & Tier 2) */}
         {effectiveTier >= 3 && (
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-3 text-xs">
             <span className="font-bold text-slate-500 dark:text-slate-400 text-[11px] uppercase mono">
               Supervised Jurisdiction:
             </span>
 
-            {/* District Selector (If user has multiple or superadmin view) */}
+            {/* District Selector (Locked to own district for Tier 3 CAO; selectable only for Tier 4 National Superadmin) */}
             <div className="flex items-center gap-1.5">
               <Building2 size={14} className="text-emerald-600 dark:text-emerald-400" />
-              <select
-                value={selectedDistrictId}
-                onChange={(e) => {
-                  setSelectedDistrictId(e.target.value);
-                  const newD = districts.find(d => d.id === e.target.value);
-                  setSelectedSubcountyId(newD?.children?.[0]?.id || '');
-                }}
-                className="bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none"
-              >
-                {districts.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+              {effectiveTier >= 4 ? (
+                <select
+                  value={selectedDistrictId}
+                  onChange={(e) => {
+                    setSelectedDistrictId(e.target.value);
+                    const newD = districts.find(d => d.id === e.target.value);
+                    setSelectedSubcountyId(newD?.children?.[0]?.id || '');
+                  }}
+                  className="bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none"
+                >
+                  {districts.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs">
+                  {activeDistrict?.name || user?.scope_label || user?.scope} · Locked
+                </span>
+              )}
             </div>
 
-            {/* Subcounty Selector (If Tier <= 3) */}
+            {/* Subcounty Selector (Within the CAO's own locked district) */}
             {subcounties.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <MapPin size={14} className="text-teal-600 dark:text-teal-400" />

@@ -61,56 +61,88 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
   className = '',
   onModalClose,
 }) => {
-  const { selectedCountry: ctxCountry, setSelectedCountry: setCtxCountry, user, setUser, toast, view } = useApp();
-  const currentCode = (value || ctxCountry || 'UG').toUpperCase();
+  const {
+    selectedCountry: ctxCountry,
+    setSelectedCountry: setCtxCountry,
+    user,
+    setUser,
+    toast,
+    view,
+    go,
+    showDemos,
+  } = useApp();
+  const isAuthOrSplashView = [
+    'splash',
+    'gov_login',
+    'ob2',
+    'ob1',
+    'onboarding_citizen',
+    'ob_home',
+    'ob3',
+    'entity',
+    'entity_gateway',
+    'entity_register',
+  ].includes(view);
+  const isGovUser = Boolean(
+    user && ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(user.role)
+  );
+  const currentCode = (
+    value ||
+    (isGovUser && !isAuthOrSplashView ? user?.country : ctxCountry || user?.country) ||
+    'UG'
+  ).toUpperCase();
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRegion, setSelectedRegion] = useState<Region>('ALL');
   const [pendingForeignCode, setPendingForeignCode] = useState<CountryCode | null>(null);
+  const [pendingGovSwitchCode, setPendingGovSwitchCode] = useState<CountryCode | null>(null);
+  const [gateAuthMode, setGateAuthMode] = useState<'national_id' | 'foreign_permit'>('national_id');
+  const [nationalIdType, setNationalIdType] = useState<'nid' | 'passport'>('nid');
+  const [nationalIdInput, setNationalIdInput] = useState('');
   const [foreignDocType, setForeignDocType] = useState<IdentityDocumentType>('work_permit');
   const [foreignPermitNo, setForeignPermitNo] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const isGlobalSwitcher = !onChange && view !== 'splash' && view !== 'gov_login' && view !== 'ob1';
+  const isGlobalSwitcher = !onChange && !isAuthOrSplashView;
   const homeCountry = (user?.verifiedCountryCode || user?.country || currentCode).toUpperCase();
   const authorizedForeign = user?.authorizedForeignCountries || [];
 
   const completeCountrySwitch = (code: CountryCode) => {
+    if (isAuthOrSplashView && isGovUser && user && user.country !== code) {
+      // Clear any previous government warrant session when switching country on Splash or Auth gates
+      setUser(null);
+    }
+    setCtxCountry(code);
     if (onChange) {
       onChange(code);
-    } else {
-      setCtxCountry(code);
     }
     setPendingForeignCode(null);
+    setPendingGovSwitchCode(null);
     setIsOpen(false);
     setSearchQuery('');
     onModalClose?.();
+    toast(`Active Sovereign Jurisdiction: ${COUNTRIES[code]?.name || code} (${code})`, 'emerald');
   };
 
   const handleSelect = (code: CountryCode) => {
-    // 1. If in a local form/onboarding/login selector, allow freely
-    if (!isGlobalSwitcher || !user) {
+    // 1. If on Splash or an Onboarding/Login screen, switch active jurisdiction immediately
+    if (!isGlobalSwitcher) {
       completeCountrySwitch(code);
       return;
     }
 
-    // 2. If logged in as a Statutory Government Official, enforce strict sovereign country lock
-    if (user.role === 'gov' && code !== user.country) {
-      toast(
-        `Strict Sovereign Jurisdiction Lock: Statutory Government Desks are bound to ${COUNTRIES[user.country]?.name || user.country}. Sign out to Portal to access another country's government terminal.`,
-        'amber'
-      );
+    // 2. If logged in as ANY Statutory Government or Entity Official, enforce strict sovereign country & access code lock
+    if (isGovUser && user && code !== user.country) {
+      setPendingGovSwitchCode(code);
       return;
     }
 
-    // 3. If logged in as Citizen and selecting a foreign country not yet authorized via Foreigner Permit
-    if (
-      user.role === 'citizen' &&
-      code !== homeCountry &&
-      !authorizedForeign.includes(code)
-    ) {
+    // 3. If in Citizen Workspace and selecting another country not yet onboarded / authorized
+    if (code !== homeCountry && !authorizedForeign.includes(code)) {
       setPendingForeignCode(code);
       setForeignPermitNo('');
+      setNationalIdInput('');
       return;
     }
 
@@ -119,27 +151,87 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
 
   const handleAuthorizeForeignEntry = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pendingForeignCode || !user) return;
-    const permit = foreignPermitNo.trim().toUpperCase();
-    if (!permit) {
-      toast('Please enter your Foreigner Permit / Visa number or click "Auto-Fill Demo Permit".', 'amber');
+    if (!pendingForeignCode) return;
+
+    if (gateAuthMode === 'national_id') {
+      const nid = nationalIdInput.trim().toUpperCase();
+      if (!nid) {
+        toast(
+          showDemos
+            ? `Please enter your ${COUNTRIES[pendingForeignCode]?.name} National ID / Passport number or click "Auto-Fill Demo ID".`
+            : `Please enter a valid ${COUNTRIES[pendingForeignCode]?.name} National ID or Citizen Passport number.`,
+          'amber'
+        );
+        return;
+      }
+      const baseUser = user || {
+        id: `usr-${nid.slice(-4) || '9028'}-${pendingForeignCode}`,
+        name: `Citizen #${nid.slice(-4) || '9028'}`,
+        country: pendingForeignCode,
+        role: 'citizen' as const,
+      };
+      const nextAuth = Array.from(new Set([...(baseUser.authorizedForeignCountries || []), pendingForeignCode]));
+      setCtxCountry(pendingForeignCode);
+      setUser({
+        ...baseUser,
+        country: pendingForeignCode,
+        verifiedCountryCode: pendingForeignCode,
+        citizenshipStatus: 'citizen',
+        identityDocumentType: nationalIdType,
+        originCountryCode: pendingForeignCode,
+        authorizedForeignCountries: nextAuth,
+        nodeTag: COUNTRIES[pendingForeignCode]?.node || `${pendingForeignCode}_NODE_01`,
+      });
+      toast(
+        `${COUNTRIES[pendingForeignCode]?.name} National Identity (${nationalIdType.toUpperCase()}: ${nid}) verified · Switched to ${COUNTRIES[pendingForeignCode]?.name}`,
+        'emerald'
+      );
+      setPendingForeignCode(null);
+      setPendingGovSwitchCode(null);
+      setIsOpen(false);
+      setSearchQuery('');
+      onModalClose?.();
       return;
     }
-    const nextAuth = Array.from(new Set([...(user.authorizedForeignCountries || []), pendingForeignCode]));
+
+    const permit = foreignPermitNo.trim().toUpperCase();
+    if (!permit) {
+      toast(
+        showDemos
+          ? 'Please enter your Foreigner Permit / Visa number or click "Auto-Fill Demo Permit".'
+          : 'Please enter a valid Foreigner Permit / Visa serial number to access this jurisdiction.',
+        'amber'
+      );
+      return;
+    }
+    const baseUser = user || {
+      id: 'cit_' + Date.now(),
+      name: 'Verified Resident',
+      country: pendingForeignCode,
+      role: 'citizen' as const,
+      verifiedCountryCode: homeCountry as CountryCode,
+    };
+    const nextAuth = Array.from(new Set([...(baseUser.authorizedForeignCountries || []), pendingForeignCode]));
+    setCtxCountry(pendingForeignCode);
     setUser({
-      ...user,
+      ...baseUser,
       country: pendingForeignCode,
       citizenshipStatus: 'foreign_resident',
       identityDocumentType: foreignDocType,
       permitNumber: permit,
       originCountryCode: homeCountry as CountryCode,
       authorizedForeignCountries: nextAuth,
+      nodeTag: COUNTRIES[pendingForeignCode]?.node || `${pendingForeignCode}_NODE_01`,
     });
     toast(
       `Foreign Resident Extension (${foreignDocType.replace('_', ' ').toUpperCase()}: ${permit}) verified · Entered ${COUNTRIES[pendingForeignCode]?.name}`,
       'emerald'
     );
-    completeCountrySwitch(pendingForeignCode);
+    setPendingForeignCode(null);
+    setPendingGovSwitchCode(null);
+    setIsOpen(false);
+    setSearchQuery('');
+    onModalClose?.();
   };
 
   useEffect(() => {
@@ -298,7 +390,10 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
       {isOpen &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
+          <div
+            data-country-portal-modal="true"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-slate-950/60 backdrop-blur-xs animate-fade-in"
+          >
             <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
 
           <div className="relative w-full max-w-2xl max-h-[86vh] flex flex-col bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl shadow-2xl overflow-hidden z-10">
@@ -416,21 +511,100 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
               )}
             </div>
 
-            {/* Scrollable Country Grid OR Foreign Jurisdiction Entry Gate */}
-            {pendingForeignCode ? (
+            {/* Scrollable Country Grid OR Strict Country / Official Access Gates */}
+            {pendingGovSwitchCode ? (
               <div className="p-4 sm:p-5 overflow-y-auto flex-1 bg-[#f8f9fa] dark:bg-[#0e1116] space-y-4">
-                <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-amber-500/40 space-y-3">
+                <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-rose-500/40 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                      <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
                         <Lock size={17} />
                       </div>
                       <div>
-                        <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                          Strict Country Access Gate · Foreign Jurisdiction Extension
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                          Strict Sovereign Jurisdiction &amp; Warrant Lock
                         </div>
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                          Entering {COUNTRIES[pendingForeignCode]?.name} ({pendingForeignCode}) Civic Experience
+                          Zero Cross-Country Access Without Official Onboarding ({COUNTRIES[pendingGovSwitchCode]?.name})
+                        </h4>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPendingGovSwitchCode(null)}
+                      className="text-xs font-mono text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                    >
+                      ← Back
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Your current account (<strong>{user?.real_title_short || user?.role_label}</strong>) is strictly restricted to{' '}
+                    <strong className="text-slate-900 dark:text-white">
+                      {user?.scope_label || user?.scope} · {COUNTRIES[user?.country || 'UG']?.name} ({user?.country})
+                    </strong>
+                    . Every Minister, Permanent Secretary, CAO, Sub-County Chief, Parish Chief, and Technical Officer has <strong>zero access</strong> to another jurisdiction or country without signing out and authenticating with that country&apos;s <strong>Official Access Code</strong> or <strong>Citizen Identification Documents</strong>.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = pendingGovSwitchCode;
+                        setCtxCountry(target);
+                        setUser(null);
+                        setPendingGovSwitchCode(null);
+                        setIsOpen(false);
+                        onModalClose?.();
+                        go('ob2');
+                        toast(
+                          `Signed out of ${user?.country} warrant · Enter your ${COUNTRIES[target]?.name} Official Access Code`,
+                          'emerald'
+                        );
+                      }}
+                      className="py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Lock size={13} />
+                      <span>Sign Out &amp; Enter {pendingGovSwitchCode} Access Code →</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = pendingGovSwitchCode;
+                        setUser(null);
+                        setCtxCountry(target);
+                        setPendingGovSwitchCode(null);
+                        setIsOpen(false);
+                        onModalClose?.();
+                        go('ob1');
+                        toast(
+                          `Signed out · Complete ${COUNTRIES[target]?.name} Citizen ID Onboarding`,
+                          'emerald'
+                        );
+                      }}
+                      className="py-2.5 px-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>Sign Out &amp; {pendingGovSwitchCode} Citizen ID Gate →</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : pendingForeignCode ? (
+              <div className="p-4 sm:p-5 overflow-y-auto flex-1 bg-[#f8f9fa] dark:bg-[#0e1116] space-y-4">
+                <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-emerald-500/40 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <Lock size={17} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                          Strict Country Access Gate · Identification Onboarding Required
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Entering {COUNTRIES[pendingForeignCode]?.name} ({pendingForeignCode}) Civic Workspace
                         </h4>
                       </div>
                     </div>
@@ -444,89 +618,180 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
                   </div>
 
                   <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Your Citizen Identity is strictly bound to{' '}
+                    No access into another country&apos;s data is permitted without proper identification onboarding. Verify either your{' '}
                     <strong className="text-slate-900 dark:text-white">
-                      {COUNTRIES[homeCountry]?.name || homeCountry} ({homeCountry})
-                    </strong>
-                    . Under CivicDuty&apos;s Sovereign Jurisdiction Charter, non-citizens cannot enter another country&apos;s civic walls without a verified{' '}
-                    <strong className="text-slate-900 dark:text-white">Foreigner Extension Document</strong> (Alien Card, Work Permit, Green Card, Resident Permit, Student Visa, or Entry Visa).
+                      {COUNTRIES[pendingForeignCode]?.name} National ID / Passport
+                    </strong>{' '}
+                    or a{' '}
+                    <strong className="text-slate-900 dark:text-white">
+                      Foreigner Extension Document
+                    </strong>{' '}
+                    (Work Permit, Alien Card, Green Card, Resident Permit, or Visa) below:
                   </p>
 
+                  {/* 2-Tab Mode Switcher: National Citizen ID vs Foreign Resident Permit */}
+                  <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                    <button
+                      type="button"
+                      onClick={() => setGateAuthMode('national_id')}
+                      className={`py-2 px-2.5 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer ${
+                        gateAuthMode === 'national_id'
+                          ? 'bg-emerald-600 text-white'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      1. {pendingForeignCode} National ID / Passport
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGateAuthMode('foreign_permit')}
+                      className={`py-2 px-2.5 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer ${
+                        gateAuthMode === 'foreign_permit'
+                          ? 'bg-amber-600 text-white'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      2. Foreigner Permit / Visa
+                    </button>
+                  </div>
+
                   <form onSubmit={handleAuthorizeForeignEntry} className="space-y-3 pt-1">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500">
-                          1. Select Foreigner Immigration Document
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const prefixMap: Record<string, string> = {
-                              work_permit: 'WP',
-                              alien_card: 'ALN',
-                              green_card: 'GC',
-                              resident_permit: 'RP',
-                              student_visa: 'STU',
-                              visitor_visa: 'VISA',
-                            };
-                            const pref = prefixMap[foreignDocType] || 'WP';
-                            setForeignPermitNo(`${pref}-${pendingForeignCode}-2026-8841`);
-                          }}
-                          className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 underline cursor-pointer"
-                        >
-                          Auto-Fill Demo Permit
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {[
-                          { id: 'work_permit', label: 'Work Permit', code: 'WP' },
-                          { id: 'alien_card', label: 'Alien Card', code: 'ALN' },
-                          { id: 'green_card', label: 'Green Card', code: 'GC' },
-                          { id: 'resident_permit', label: 'Resident Permit', code: 'RP' },
-                          { id: 'student_visa', label: 'Student Visa', code: 'STU' },
-                          { id: 'visitor_visa', label: 'Entry / Tourist Visa', code: 'VISA' },
-                        ].map((doc) => (
+                    {gateAuthMode === 'national_id' ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
                           <button
-                            key={doc.id}
                             type="button"
-                            onClick={() => setForeignDocType(doc.id as IdentityDocumentType)}
-                            className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
-                              foreignDocType === doc.id
+                            onClick={() => setNationalIdType('nid')}
+                            className={`p-2 rounded-lg border text-xs font-mono font-semibold transition-colors cursor-pointer ${
+                              nationalIdType === 'nid'
                                 ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
                                 : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400'
                             }`}
                           >
-                            <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              {doc.code}
-                            </div>
-                            <div className="text-[11px] font-semibold truncate">{doc.label}</div>
+                            National ID (NIN)
                           </button>
-                        ))}
-                      </div>
-                    </div>
+                          <button
+                            type="button"
+                            onClick={() => setNationalIdType('passport')}
+                            className={`p-2 rounded-lg border text-xs font-mono font-semibold transition-colors cursor-pointer ${
+                              nationalIdType === 'passport'
+                                ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                                : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            Citizen e-Passport
+                          </button>
+                        </div>
 
-                    <div>
-                      <label className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500 block mb-1">
-                        2. {COUNTRIES[pendingForeignCode]?.name} Permit / Visa Serial Number
-                      </label>
-                      <input
-                        type="text"
-                        value={foreignPermitNo}
-                        onChange={(e) => setForeignPermitNo(e.target.value)}
-                        placeholder={`e.g. WP-${pendingForeignCode}-2026-8841`}
-                        className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500">
+                              {COUNTRIES[pendingForeignCode]?.name} {nationalIdType === 'passport' ? 'Citizen Passport Number' : 'National ID Number (NIN)'}
+                            </label>
+                            {showDemos && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const sample =
+                                    nationalIdType === 'passport'
+                                      ? `P-${pendingForeignCode}-884920`
+                                      : `${pendingForeignCode}-NIN-9028491`;
+                                  setNationalIdInput(sample);
+                                }}
+                                className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 underline cursor-pointer"
+                              >
+                                Auto-Fill Demo ID
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={nationalIdInput}
+                            onChange={(e) => setNationalIdInput(e.target.value)}
+                            placeholder={`e.g. ${pendingForeignCode}-NIN-9028491`}
+                            className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500">
+                              1. Select Foreigner Immigration Document
+                            </label>
+                            {showDemos && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const prefixMap: Record<string, string> = {
+                                    work_permit: 'WP',
+                                    alien_card: 'ALN',
+                                    green_card: 'GC',
+                                    resident_permit: 'RP',
+                                    student_visa: 'STU',
+                                    visitor_visa: 'VISA',
+                                  };
+                                  const pref = prefixMap[foreignDocType] || 'WP';
+                                  setForeignPermitNo(`${pref}-${pendingForeignCode}-2026-8841`);
+                                }}
+                                className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 underline cursor-pointer"
+                              >
+                                Auto-Fill Demo Permit
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                            {[
+                              { id: 'work_permit', label: 'Work Permit', code: 'WP' },
+                              { id: 'alien_card', label: 'Alien Card', code: 'ALN' },
+                              { id: 'green_card', label: 'Green Card', code: 'GC' },
+                              { id: 'resident_permit', label: 'Resident Permit', code: 'RP' },
+                              { id: 'student_visa', label: 'Student Visa', code: 'STU' },
+                              { id: 'visitor_visa', label: 'Entry / Tourist Visa', code: 'VISA' },
+                            ].map((doc) => (
+                              <button
+                                key={doc.id}
+                                type="button"
+                                onClick={() => setForeignDocType(doc.id as IdentityDocumentType)}
+                                className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                                  foreignDocType === doc.id
+                                    ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                                    : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400'
+                                }`}
+                              >
+                                <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                  {doc.code}
+                                </div>
+                                <div className="text-[11px] font-semibold truncate">{doc.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500 block mb-1">
+                            2. {COUNTRIES[pendingForeignCode]?.name} Permit / Visa Serial Number
+                          </label>
+                          <input
+                            type="text"
+                            value={foreignPermitNo}
+                            onChange={(e) => setForeignPermitNo(e.target.value)}
+                            placeholder={`e.g. WP-${pendingForeignCode}-2026-8841`}
+                            className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </>
+                    )}
 
                     <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-2 text-[10.5px] font-mono text-slate-600 dark:text-slate-400">
                       <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <span>
-                        Origin Passport: <strong>{homeCountry}</strong> · Host Jurisdiction:{' '}
-                        <strong>{pendingForeignCode}</strong> · Zero-Knowledge SHA-256 Tokenized
+                        Target Jurisdiction: <strong>{COUNTRIES[pendingForeignCode]?.name} ({pendingForeignCode})</strong> · Zero-Knowledge SHA-256 Tokenized
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
                       <button
                         type="button"
                         onClick={() => setPendingForeignCode(null)}
@@ -535,11 +800,30 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
                         Cancel
                       </button>
                       <button
+                        type="button"
+                        onClick={() => {
+                          const target = pendingForeignCode;
+                          setCtxCountry(target);
+                          setPendingForeignCode(null);
+                          setIsOpen(false);
+                          onModalClose?.();
+                          go('ob1');
+                          toast(`Switched to ${COUNTRIES[target]?.name} 3-Step Citizen Onboarding`, 'emerald');
+                        }}
+                        className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+                      >
+                        Full 3-Step Onboarding →
+                      </button>
+                      <button
                         type="submit"
                         className="flex-1 py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <FileCheck2 size={14} />
-                        <span>Verify Permit &amp; Enter {COUNTRIES[pendingForeignCode]?.name} →</span>
+                        <span>
+                          {gateAuthMode === 'national_id'
+                            ? `Verify ID & Enter ${COUNTRIES[pendingForeignCode]?.name} →`
+                            : `Verify Permit & Enter ${COUNTRIES[pendingForeignCode]?.name} →`}
+                        </span>
                       </button>
                     </div>
                   </form>

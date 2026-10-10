@@ -38,9 +38,16 @@ import {
 } from 'lucide-react';
 
 export const PerkVaultView: React.FC = () => {
-  const { user, profiles, addPoints, go, toast, logAudit } = useApp();
+  const { user, profiles, addPoints, go, toast, logAudit, selectedCountry: ctxCountry } = useApp();
   const studioSectionRef = React.useRef<HTMLDivElement | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(user?.country || 'UG');
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>((user?.country || ctxCountry || 'UG') as CountryCode);
+
+  useEffect(() => {
+    const nextC = (user?.country || ctxCountry || 'UG') as CountryCode;
+    if (nextC && nextC !== selectedCountry) {
+      setSelectedCountry(nextC);
+    }
+  }, [user?.country, ctxCountry]);
   const [vouchers, setVouchers] = useState<EscrowPerkVoucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard'>('packs');

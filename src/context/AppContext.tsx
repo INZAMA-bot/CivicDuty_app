@@ -419,15 +419,32 @@ const generateUniqueAuditId = (): string => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserSession | null>(() => {
     try {
+      const savedCountry = localStorage.getItem('cd_selected_country') as CountryCode | null;
+      const validSavedCountry = savedCountry && COUNTRIES[savedCountry] ? savedCountry : 'UG';
       const saved = localStorage.getItem('cd_user');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.dept === 'molg' && parsed.organization_name === 'Local Gov (LG) · District') {
-          delete parsed.organization_name;
+        if (parsed) {
+          if (parsed.dept === 'molg' && parsed.organization_name === 'Local Gov (LG) · District') {
+            delete parsed.organization_name;
+          }
+          if (parsed.role === 'citizen' && savedCountry && COUNTRIES[savedCountry] && parsed.country !== savedCountry) {
+            return {
+              ...parsed,
+              country: savedCountry,
+              nodeTag: COUNTRIES[savedCountry]?.node || `${savedCountry}_NODE_01`,
+            };
+          }
+          return parsed;
         }
-        return parsed;
       }
-      return DEFAULT_CITIZEN_USER;
+      return {
+        ...DEFAULT_CITIZEN_USER,
+        id: `usr-9028-${validSavedCountry}`,
+        country: validSavedCountry,
+        nodeTag: COUNTRIES[validSavedCountry]?.node || DEFAULT_CITIZEN_USER.nodeTag,
+        followed: allDepts(validSavedCountry).slice(0, 4).map((d) => d.id),
+      };
     } catch {
       return DEFAULT_CITIZEN_USER;
     }
@@ -500,11 +517,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [showDemos, setShowDemosState] = useState<boolean>(() => {
+    const envDefault = (import.meta as any).env?.VITE_SANDBOX_MODE !== 'false';
     try {
       const saved = localStorage.getItem('cd_show_demos_v1');
-      return saved !== null ? JSON.parse(saved) : true;
+      return saved !== null ? JSON.parse(saved) : envDefault;
     } catch {
-      return true;
+      return envDefault;
     }
   });
 
@@ -880,12 +898,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setSelectedCountry = (c: CountryCode) => {
     setSelectedCountryState(c);
     setActiveDeptCountry(c);
+    const defaultFollowed = allDepts(c).slice(0, 4).map((d) => d.id);
+    if (defaultFollowed[0]) {
+      setActiveDept(defaultFollowed[0]);
+    }
     setUser((prev) => {
-      if (prev && prev.role === 'citizen') {
+      if (!prev) {
+        return {
+          ...DEFAULT_CITIZEN_USER,
+          id: `usr-9028-${c}`,
+          country: c,
+          nodeTag: COUNTRIES[c]?.node || `${c}_NODE_01`,
+          followed: defaultFollowed,
+        };
+      }
+      if (prev.role === 'citizen') {
         return {
           ...prev,
           country: c,
           nodeTag: COUNTRIES[c]?.node || `${c}_NODE_01`,
+          followed: prev.country !== c ? defaultFollowed : prev.followed,
         };
       }
       return prev;
@@ -1078,18 +1110,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const ensureCitizenSession = (): UserSession => {
-    if (user) return user;
+    const targetCountry = selectedCountry || user?.country || DEFAULT_CITIZEN_USER.country;
+    if (user) {
+      if (user.role === 'citizen' && user.country !== targetCountry) {
+        return {
+          ...user,
+          country: targetCountry,
+          nodeTag: COUNTRIES[targetCountry]?.node || `${targetCountry}_NODE_01`,
+        };
+      }
+      return user;
+    }
     return {
       ...DEFAULT_CITIZEN_USER,
-      country: selectedCountry || DEFAULT_CITIZEN_USER.country,
-      nodeTag: COUNTRIES[selectedCountry]?.node || DEFAULT_CITIZEN_USER.nodeTag,
+      id: `usr-9028-${targetCountry}`,
+      country: targetCountry,
+      nodeTag: COUNTRIES[targetCountry]?.node || DEFAULT_CITIZEN_USER.nodeTag,
+      followed: allDepts(targetCountry).slice(0, 4).map((d) => d.id),
     };
   };
 
   const go = (v: ViewType) => {
     if (['feed', 'depts', 'compose', 'profile', 'post_detail', 'dept_wall', 'gov_projects'].includes(v)) {
-      if (!user) {
-        ensureCitizenSession();
+      if (!user || (user.role === 'citizen' && user.country !== selectedCountry)) {
+        setUser(ensureCitizenSession());
       }
     }
     setPrevView(view);
@@ -1950,7 +1994,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dept: data.dept,
       scope: data.scope,
       is_utility: data.is_utility,
-      is_admin: data.is_admin ?? (data.entity_type === 'non_government_entity' ? true : ['node_admin', 'platform_admin'].includes(data.role)),
+      is_admin:
+        data.is_admin ??
+        (data.entity_type === 'non_government_entity'
+          ? true
+          : data.role === 'platform_admin' || data.dept === 'molg'),
       role_label: data.role_label || titleObj.role_label,
       real_title_short: data.real_title_short || data.professional_identity || titleObj.short,
       scope_label: scopeMap[data.scope] || titleObj.scope_label,

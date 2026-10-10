@@ -30,15 +30,18 @@ export const ComposeView: React.FC = () => {
     addPost,
     toast,
     isOnline,
+    offlineQueue,
+    syncOfflineQueue,
     queueOfflinePost,
     openGuide,
     activeDept,
     posts,
     compileWitnessIntoPost,
     setActivePost,
+    selectedCountry,
   } = useApp();
 
-  const country = user?.country || 'UG';
+  const country = user?.country || selectedCountry || 'UG';
   const depts = allDepts(country);
   const territory = TERRITORY[country] || [];
 
@@ -238,7 +241,7 @@ export const ComposeView: React.FC = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (forceOfflineQueue = false) => {
     if (!dept) {
       toast('Select a department wall', 'red');
       return;
@@ -335,7 +338,7 @@ export const ComposeView: React.FC = () => {
       escalated: false,
     };
 
-    if (!isOnline) {
+    if (!isOnline || forceOfflineQueue) {
       queueOfflinePost(post);
     } else {
       addPost(post);
@@ -962,13 +965,43 @@ export const ComposeView: React.FC = () => {
             </label>
           </div>
 
-          <button
-            onClick={handleSubmit}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-3 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <Send size={14} />
-            <span>Dispatch Report to Public Wall →</span>
-          </button>
+          {/* Offline 3G Queue Sync Indicator Strip (when items are queued or offline) */}
+          {(!isOnline || offlineQueue.length > 0) && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs">
+              <div className="text-amber-800 dark:text-amber-300 font-mono text-[11px]">
+                <strong>Offline 3G Field Queue:</strong> {offlineQueue.length} pending report(s) staged locally with SHA-256 integrity.
+              </div>
+              {offlineQueue.length > 0 && (
+                <button
+                  type="button"
+                  onClick={syncOfflineQueue}
+                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold shrink-0 cursor-pointer"
+                >
+                  Sync {offlineQueue.length} Now
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => handleSubmit(true)}
+              className="bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 font-mono font-semibold rounded-lg py-3 px-3 text-[11px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              title="Save photo/GPS evidence locally for intermittent rural 3G networks and sync later"
+            >
+              <span>Stage in Offline 3G Queue ({offlineQueue.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSubmit(false)}
+              className="sm:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-3 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Send size={14} />
+              <span>Dispatch Report to Public Wall →</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

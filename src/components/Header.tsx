@@ -50,6 +50,7 @@ export const Header: React.FC = () => {
   const {
     user,
     ensureCitizenSession,
+    selectedCountry,
     view,
     go,
     profiles,
@@ -84,40 +85,53 @@ export const Header: React.FC = () => {
 
   const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
   const profile = profiles[activeUser.id] || { civic_score: 50 };
-  const currentCountry = activeUser.country || 'UG';
+  const currentCountry = (isGov && !isPortalAuthView ? activeUser.country : selectedCountry || activeUser.country || 'UG').toUpperCase();
   const rolloutData = getNationalRolloutArrangements(currentCountry);
   const psInfo = getPsMinistryInfo(activeUser);
 
-  const roleColors: Record<string, string> = {
-    platform_admin: 'ch-corrupt',
-    node_admin: 'ch-budget',
-    spokesperson: 'ch-budget',
-    read_only: 'ch-ro',
-  };
-
   const dept = activeUser.dept ? getDept(activeUser.country, activeUser.dept) : null;
   const viewInfo = VIEW_LABELS[view] || { section: 'Workspace', title: 'CivicDuty Studio' };
+
+  const handleOpenGovHomeDesk = () => {
+    if (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId) {
+      setSelectedMinistryId(psInfo.ministryId);
+      go('ps_executive_desk');
+    } else if (psInfo.isMoLG) {
+      go('ps_molg_rollout');
+    } else {
+      go(activeUser.role === 'platform_admin' ? 'gov_admin' : 'gov_team');
+    }
+  };
 
   return (
     <header
       id="hdr"
       className="sticky top-0 z-30 backdrop-blur-md border-b border-[#e3e6ea] dark:border-[#262b36] bg-white/95 dark:bg-[#161a22]/95 transition-colors"
     >
-      {/* Mobile-First Single-Row Top App Bar */}
-      <div className="h-13 px-3 sm:px-5 flex items-center justify-between gap-2">
-        {/* Left: Green Light Logo + Brand & Breadcrumb */}
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Mobile-First Uncongested Top App Bar */}
+      <div className="h-13 px-2.5 sm:px-5 flex items-center justify-between gap-2 max-w-full overflow-hidden">
+        {/* Left: Green Light Logo + Brand & Compact Jurisdiction Subtitle */}
+        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           <div
             onClick={() => go(isPortalAuthView ? 'splash' : isGov ? 'gov_inbox' : 'feed')}
-            className="flex items-center gap-2 cursor-pointer shrink-0"
+            className="flex items-center gap-2 cursor-pointer min-w-0"
           >
             <TrafficLightLogo size="sm" variant="green-only" />
-            <div className="flex flex-col leading-none">
-              <span className="text-xs font-black tracking-tight text-slate-900 dark:text-slate-100">
-                CIVICDUTY
-              </span>
-              <span className="text-[8px] font-mono text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-tight mt-0.5 whitespace-nowrap">
-                Speak · Serve · Be Heard
+            <div className="flex flex-col leading-none min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-black tracking-tight text-slate-900 dark:text-slate-100 shrink-0">
+                  CIVICDUTY
+                </span>
+                {!isPortalAuthView && isGov && (
+                  <span className="text-[9px] font-mono font-bold text-emerald-700 dark:text-emerald-400 truncate max-w-[115px] sm:max-w-[180px]">
+                    · {activeUser.real_title_short || activeUser.role_label || 'GOV'}
+                  </span>
+                )}
+              </div>
+              <span className="text-[7.5px] sm:text-[8px] font-mono text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-tight mt-0.5 truncate">
+                {!isPortalAuthView && isGov
+                  ? `${activeUser.scope_label || activeUser.scope || currentCountry} · Locked`
+                  : 'Speak · Serve · Be Heard'}
               </span>
             </div>
           </div>
@@ -132,14 +146,6 @@ export const Header: React.FC = () => {
               {viewInfo.title}
             </span>
           </div>
-
-          {!isPortalAuthView && isGov && dept && (
-            <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono text-slate-600 dark:text-slate-300 truncate max-w-[200px]">
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">{dept.name}</span>
-              <span>·</span>
-              <span className="truncate">{activeUser.scope_label || activeUser.scope}</span>
-            </span>
-          )}
         </div>
 
         {/* Center: Compact 3-Signal Sovereign Filter Pill (Desktop Only, hidden on Auth gates) */}
@@ -149,23 +155,23 @@ export const Header: React.FC = () => {
           </div>
         )}
 
-        {/* Right: Clean Mobile-First Action Strip + Gear / 3-Dots Dropdown */}
+        {/* Right: Uncongested Action Strip + Gear / 3-Dots Dropdown */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {isPortalAuthView ? (
             <button
               type="button"
               onClick={() => go('splash')}
-              className="px-2.5 h-[34px] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-600 text-[11px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+              className="px-2.5 h-8 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-600 text-[11px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             >
               <span>← Home</span>
             </button>
           ) : (
             <>
-              {/* Offline / Cloud Sync Status Indicator */}
+              {/* Offline / Pending Queue Sync Action (only shown when offline or queue has items) */}
               {!isOnline ? (
                 <div
                   onClick={syncOfflineQueue}
-                  className="flex items-center gap-1 min-h-[34px] px-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[10px] font-mono font-semibold cursor-pointer"
+                  className="flex items-center gap-1 h-8 px-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[10px] font-mono font-semibold cursor-pointer"
                   title="Offline Mode — Reports stored locally"
                 >
                   <WifiOff size={12} strokeWidth={1.75} />
@@ -174,75 +180,39 @@ export const Header: React.FC = () => {
               ) : offlineQueue.length > 0 ? (
                 <button
                   onClick={syncOfflineQueue}
-                  className="flex items-center gap-1 min-h-[34px] px-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-mono font-semibold hover:bg-emerald-500/25 transition-all cursor-pointer"
+                  className="flex items-center gap-1 h-8 px-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-mono font-semibold hover:bg-emerald-500/25 transition-all cursor-pointer"
                   title="Sync pending offline reports"
                 >
                   <CheckCircle2 size={12} strokeWidth={1.75} />
                   <span>{offlineQueue.length}</span>
                 </button>
-              ) : (
-                <div
-                  className="hidden xl:flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-300 text-[10px] font-mono font-medium"
-                  title="Cloud Firestore Persistent & Synced"
-                >
-                  <Cloud size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Synced</span>
-                </div>
-              )}
+              ) : null}
 
-              {/* User Role Badge / Desk Switcher */}
+              {/* Desk / Watchdog Button (Compact icon on mobile, full label on sm+) */}
               {isGov ? (
-                <div className="flex items-center gap-1">
-                  {(psInfo.isMoLG || (activeUser.role === 'platform_admin' && !psInfo.isPs && view !== 'ps_executive_desk')) && (
-                    <button
-                      onClick={() => go('ps_molg_rollout')}
-                      title={`Direct link: ${rolloutData.superadminTitle || 'National Superadmin Desk'}`}
-                      className="hidden lg:inline-flex items-center gap-1 h-8 px-2 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-semibold hover:bg-emerald-500/15 transition-colors cursor-pointer"
-                    >
-                      <Building size={11} strokeWidth={1.75} />
-                      <span>{rolloutData.superadminShort || 'Superadmin'}</span>
-                    </button>
-                  )}
-
-                  {psInfo.isPs && !psInfo.isMoLG && (
-                    <button
-                      onClick={() => {
-                        if (psInfo.ministryId) setSelectedMinistryId(psInfo.ministryId);
-                        go('ps_executive_desk');
-                      }}
-                      title={`Direct link: ${psInfo.ministryName || 'Apex Executive Desk'}`}
-                      className="hidden lg:inline-flex items-center gap-1 h-8 px-2 rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 text-[10px] font-mono font-semibold hover:opacity-90 transition-opacity cursor-pointer"
-                    >
-                      <Building size={11} strokeWidth={1.75} />
-                      <span>{psInfo.shortTitle || 'Executive Desk'}</span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      if (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId) {
-                        setSelectedMinistryId(psInfo.ministryId);
-                        go('ps_executive_desk');
-                      } else if (psInfo.isMoLG) {
-                        go('ps_molg_rollout');
-                      } else {
-                        go(activeUser.role === 'platform_admin' ? 'gov_admin' : 'gov_team');
-                      }
-                    }}
-                    title={psInfo.isPs ? 'Apex Executive Desk' : activeUser.role === 'platform_admin' ? 'Go to Admin Hub' : 'Go to Node Team'}
-                    className={`chip ${roleColors[activeUser.role] || 'ch-budget'} cursor-pointer hover:opacity-90 transition-opacity`}
-                  >
-                    <Building size={11} strokeWidth={1.75} />
-                    <span className="max-w-[72px] sm:max-w-none truncate">
-                      {activeUser.real_title_short || activeUser.role_label || 'GOV'}
-                    </span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenGovHomeDesk}
+                  title={
+                    psInfo.isPs && !psInfo.isMoLG
+                      ? `Open ${psInfo.ministryName || 'Apex Executive Desk'}`
+                      : psInfo.isMoLG
+                      ? `Open ${rolloutData.superadminTitle || 'National Superadmin Desk'}`
+                      : 'Open Official Jurisdiction Desk'
+                  }
+                  className="h-8 px-2 sm:px-2.5 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/50 text-slate-800 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Building size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="hidden sm:inline max-w-[110px] truncate">
+                    {activeUser.real_title_short || activeUser.role_label || 'Desk'}
+                  </span>
+                </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => go('profile')}
                   title="View Watchdog Profile & Civic Reputation"
-                  className="flex items-center gap-1 px-2 min-h-[34px] rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-600 transition-all cursor-pointer font-medium"
+                  className="flex items-center gap-1 px-2 h-8 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-600 transition-all cursor-pointer font-medium"
                 >
                   {profile.avatar_url || activeUser.avatar_url ? (
                     <img
@@ -254,7 +224,7 @@ export const Header: React.FC = () => {
                   ) : (
                     <ShieldCheck size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   )}
-                  <span className="text-[10.5px] font-mono tabular-nums font-semibold">{profile.civic_score || 0}pts</span>
+                  <span className="text-[10px] font-mono tabular-nums font-semibold">{profile.civic_score || 0}pt</span>
                 </button>
               )}
 

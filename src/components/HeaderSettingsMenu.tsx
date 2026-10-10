@@ -39,12 +39,33 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const isPortalAuthView = [
+    'gov_login',
+    'ob2',
+    'entity',
+    'entity_gateway',
+    'entity_portal',
+    'entity_register',
+    'ob1',
+    'onboarding_citizen',
+    'ob_home',
+    'ob3',
+  ].includes(useApp().view);
+
   const activeUser = user || ensureCitizenSession();
-  const currentCountry = (selectedCountry || activeUser?.country || 'UG').toUpperCase();
   const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser?.role);
+  const currentCountry = (
+    isGov && !isSplash && !isPortalAuthView
+      ? activeUser?.country || selectedCountry || 'UG'
+      : selectedCountry || activeUser?.country || 'UG'
+  ).toUpperCase();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (target && typeof target.closest === 'function' && target.closest('[data-country-portal-modal="true"]')) {
+        return;
+      }
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
       }

@@ -55,12 +55,11 @@ export const Navigation: React.FC<NavigationProps> = () => {
   const psInfo = getPsMinistryInfo(activeUser);
 
   const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
-  const isAdmin =
+  // Strictly restrict the National "Admin" / "Superadmin" console (gov_admin) to the National Territorial Superadmin (e.g. PS MoLG)
+  const isSuperAdmin =
     activeUser.role === 'platform_admin' ||
-    activeUser.hierarchy_level === 'tier5_perm_sec' ||
-    psInfo.isPs ||
-    Boolean(activeUser.is_admin) ||
-    (activeUser.role === 'node_admin' && (activeUser.scope === 'UG' || activeUser.scope === activeUser.country));
+    psInfo.isMoLG ||
+    activeUser.dept === 'molg';
   const isNode = activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin || psInfo.isPs;
 
   const handleApexClick = () => {
@@ -89,50 +88,34 @@ export const Navigation: React.FC<NavigationProps> = () => {
           },
         ]
       : []),
-    ...(isAdmin
-      ? psInfo.isPs && !psInfo.isMoLG
-        ? [
-            {
-              id: 'gov_admin' as ViewType,
-              label: 'Ministry Admin',
-              icon: SlidersHorizontal,
-              onClick: () => go('gov_admin'),
-              active: view === 'gov_admin',
-            },
-            {
-              id: 'ps_executive_desk' as ViewType,
-              label: 'Apex Executive',
-              icon: Landmark,
-              onClick: handleApexClick,
-              active: view === 'ps_executive_desk',
-            },
-          ]
-        : psInfo.isMoLG
-          ? [
-              {
-                id: 'gov_admin' as ViewType,
-                label: 'Superadmin',
-                icon: SlidersHorizontal,
-                onClick: () => go('gov_admin'),
-                active: view === 'gov_admin',
-              },
-              {
-                id: 'ps_molg_rollout' as ViewType,
-                label: 'Rollout Matrix',
-                icon: Landmark,
-                onClick: () => go('ps_molg_rollout'),
-                active: view === 'ps_molg_rollout',
-              },
-            ]
-          : [
-              {
-                id: 'gov_admin' as ViewType,
-                label: 'Admin Console',
-                icon: SlidersHorizontal,
-                onClick: () => go('gov_admin'),
-                active: view === 'gov_admin',
-              },
-            ]
+    ...(psInfo.isPs && !psInfo.isMoLG
+      ? [
+          {
+            id: 'ps_executive_desk' as ViewType,
+            label: 'Apex Executive',
+            icon: Landmark,
+            onClick: handleApexClick,
+            active: view === 'ps_executive_desk',
+          },
+        ]
+      : []),
+    ...(isSuperAdmin
+      ? [
+          {
+            id: 'gov_admin' as ViewType,
+            label: 'Superadmin',
+            icon: SlidersHorizontal,
+            onClick: () => go('gov_admin'),
+            active: view === 'gov_admin',
+          },
+          {
+            id: 'ps_molg_rollout' as ViewType,
+            label: 'Rollout Matrix',
+            icon: Landmark,
+            onClick: () => go('ps_molg_rollout'),
+            active: view === 'ps_molg_rollout',
+          },
+        ]
       : []),
     { id: 'gov_audit', label: 'Audit Chain', icon: Scale },
     { id: 'feed', label: 'Public Feed', icon: Eye },
@@ -404,7 +387,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
                   <span className="text-[9.5px] font-mono">Team</span>
                 </button>
               )}
-              {isAdmin && (
+              {isSuperAdmin && (
                 <button
                   onClick={() => go('gov_admin')}
                   className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
@@ -414,7 +397,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
                   }`}
                 >
                   <SlidersHorizontal size={18} strokeWidth={1.75} />
-                  <span className="text-[9.5px] font-mono">Admin</span>
+                  <span className="text-[9.5px] font-mono">Superadmin</span>
                 </button>
               )}
               {psInfo.isPs && !psInfo.isMoLG && (

@@ -2,10 +2,35 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
-import { primaryNodes, primaryTier, primaryUnit, tiersFor, GOV_CODES, getBusinessTitlePresets } from '../data/tiers';
+import { primaryNodes, primaryUnit, tiersFor, GOV_CODES, getBusinessTitlePresets } from '../data/tiers';
 import { copyToClipboard } from '../utils/helpers';
-import { ChevronLeft, Search, Check, Copy, CreditCard, Smartphone, Building2, ShieldCheck, ArrowRight, Zap, CheckCircle2, Printer, Download, FileText, User, Briefcase, Users, Store, Beer, Pill, Wrench, Utensils, GraduationCap, HeartPulse, Landmark, Bus, Layers, PlusCircle } from 'lucide-react';
-import { NoteBox } from '../components/NoteBox';
+import {
+  ChevronLeft,
+  Search,
+  Copy,
+  CreditCard,
+  Smartphone,
+  Building2,
+  ShieldCheck,
+  ArrowRight,
+  Zap,
+  CheckCircle2,
+  Download,
+  Briefcase,
+  Users,
+  Store,
+  Beer,
+  Pill,
+  Wrench,
+  Utensils,
+  GraduationCap,
+  HeartPulse,
+  Landmark,
+  Bus,
+  Layers,
+  PlusCircle,
+  SlidersHorizontal,
+} from 'lucide-react';
 
 export interface EntityTierDef {
   id: string;
@@ -116,34 +141,34 @@ export function getEntityTiersForCountry(country: CountryCode): EntityTierDef[] 
   return [
     {
       id: 'free',
-      name: `Community (1 ${primary})`,
+      name: `Single-Unit (${primary})`,
       price: 'Free',
       sub: `1 ${primary} desk · Multi-Seat Admin`,
-      note: 'Unlimited desks & staff invites. Registration required.',
+      note: 'Free forever for single-branch shops, clinics & schools.',
       min: 1,
       max: 1,
     },
     {
       id: 'community',
-      name: `Community (${primary}s)`,
+      name: `Multi-${primary} Cluster`,
       price: '$100',
-      sub: `per ${primary}, 2 to 50 ${primary}s`,
-      note: 'Self-serve. Mobile money (MTN / Airtel) & Cards.',
+      sub: `per ${primary} / yr (2 to 50 ${primary}s)`,
+      note: 'Self-serve. Mobile Money (MTN / Airtel / M-Pesa) & Cards.',
       min: 2,
       max: 50,
     },
     {
       id: 'branch',
-      name: `Branch / Multi-${primary}`,
+      name: `Branch Network`,
       price: '$7,200',
       sub: `51 to 150 ${primary}s`,
-      note: 'Monthly or annual billing available.',
+      note: 'Multi-branch SLA routing & regional supervisor desk.',
       min: 51,
       max: 150,
     },
     {
       id: 'district',
-      name: `${l1Unit} (${countryName})`,
+      name: `${l1Unit} Coverage`,
       price: '$18,000',
       sub: `151 to 500 ${primary}s`,
       note: `Full ${l1Unit} executive dashboard & priority SLA.`,
@@ -155,7 +180,7 @@ export function getEntityTiersForCountry(country: CountryCode): EntityTierDef[] 
       name: `Regional (${countryName})`,
       price: '$34,000',
       sub: `501 to 2,000 ${primary}s`,
-      note: `Multi-node central oversight & reporting.`,
+      note: `Multi-node central oversight & analytics ledger.`,
       min: 501,
       max: 2000,
     },
@@ -164,7 +189,7 @@ export function getEntityTiersForCountry(country: CountryCode): EntityTierDef[] 
       name: `National (${countryName})`,
       price: '$58,000',
       sub: `2,001+ ${primary}s`,
-      note: `Full countrywide enterprise integration.`,
+      note: `Full countrywide enterprise integration & API.`,
       min: 2001,
       max: null,
     },
@@ -183,10 +208,11 @@ function annualUsd(n: number, kind: string, country: CountryCode): number {
   if (n <= 1) return 0;
   if (n <= 50) return n * 100;
   if (kind === 'consumer') {
-    const k = Object.keys(CONSUMER_BANDS)
-      .map(Number)
-      .filter((x) => n >= x)
-      .pop() || 51;
+    const k =
+      Object.keys(CONSUMER_BANDS)
+        .map(Number)
+        .filter((x) => n >= x)
+        .pop() || 51;
     return CONSUMER_BANDS[k];
   }
   const tier = tierForParishes(n, country);
@@ -204,34 +230,45 @@ function fmtUsd(v: number): string {
 
 function entityPrice(n: number, kind: string, iv: 'annual' | 'monthly', country: CountryCode): string {
   const v = intervalUsd(n, kind || 'utility', iv || 'annual', country);
-  if (v === 0) return 'Free';
+  if (v === 0) return 'Free Forever';
   return fmtUsd(v) + ((iv || 'annual') === 'annual' ? '/yr' : '/mo');
 }
 
 export const EntityRegisterView: React.FC = () => {
-  const { go, registerNewEntity, toast } = useApp();
+  const { go, registerNewEntity, toast, selectedCountry } = useApp();
 
-  const [country, setCountry] = useState<CountryCode>('UG');
+  const [country, setCountry] = useState<CountryCode>((selectedCountry || 'UG') as CountryCode);
+
+  React.useEffect(() => {
+    if (selectedCountry && selectedCountry !== country) {
+      setCountry(selectedCountry as CountryCode);
+      setDistrict('');
+      setSubcounty('');
+      setParish('');
+    }
+  }, [selectedCountry]);
+
   const [name, setName] = useState('');
   const [reg, setReg] = useState('');
   const [kind, setKind] = useState<'utility' | 'consumer'>('consumer');
-  
+
   // Categorization & Professional Identity States
   const [selectedSector, setSelectedSector] = useState<string>('retail_shops');
   const [customSectorSpecify, setCustomSectorSpecify] = useState<string>('');
-  
+
   const [selectedTypology, setSelectedTypology] = useState<string>('Corner Grocery & Convenience Store');
   const [customTypologySpecify, setCustomTypologySpecify] = useState<string>('');
-  
+
   const [officerName, setOfficerName] = useState<string>('');
   const [selectedTitle, setSelectedTitle] = useState<string>('Proprietor & General Merchant');
   const [customTitleSpecify, setCustomTitleSpecify] = useState<string>('');
-  
+
   const [staffSeats, setStaffSeats] = useState<number>(5);
 
   const [district, setDistrict] = useState('');
   const [subcounty, setSubcounty] = useState('');
   const [parish, setParish] = useState('');
+  const [manualUnitsOverride, setManualUnitsOverride] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [interval, setInterval] = useState<'annual' | 'monthly'>('annual');
 
@@ -250,13 +287,15 @@ export const EntityRegisterView: React.FC = () => {
   const subs = district ? dists.find((x) => x.id === district)?.children || [] : [];
   const parishes = subcounty ? subs.find((x) => x.id === subcounty)?.children || [] : [];
 
-  const covered = parish
+  const territoryCovered = parish
     ? 1
     : subcounty
     ? parishes.length
     : district
     ? subs.reduce((a, s) => a + (s.children?.length || 0), 0)
-    : 0;
+    : 1;
+
+  const covered = manualUnitsOverride !== null ? manualUnitsOverride : Math.max(territoryCovered, 1);
 
   const currentTiers = getEntityTiersForCountry(country);
   const tier = tierForParishes(Math.max(covered, 1), country);
@@ -271,9 +310,10 @@ export const EntityRegisterView: React.FC = () => {
   const titlePresets = getBusinessTitlePresets(selectedSector);
   const typologyPresets = TYPOLOGY_PRESETS[selectedSector] || TYPOLOGY_PRESETS.other;
 
-  const searchHits = searchQuery.trim().length >= 2
-    ? primaryNodesList.filter((n) => n.name.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 5)
-    : [];
+  const searchHits =
+    searchQuery.trim().length >= 2
+      ? primaryNodesList.filter((n) => n.name.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 5)
+      : [];
 
   const pickPrimaryNode = (id: string) => {
     for (const d of TERRITORY[country] || []) {
@@ -283,6 +323,7 @@ export const EntityRegisterView: React.FC = () => {
             setDistrict(d.id);
             setSubcounty(s.id);
             setParish(p.id);
+            setManualUnitsOverride(null);
             setSearchQuery('');
             return;
           }
@@ -291,35 +332,52 @@ export const EntityRegisterView: React.FC = () => {
     }
   };
 
-  const effectiveProfessionalTitle = selectedTitle === 'Other (Specify Exact Title)'
-    ? (customTitleSpecify.trim() || 'Proprietor & Managing Director')
-    : selectedTitle;
+  const effectiveProfessionalTitle =
+    selectedTitle === 'Other (Specify Exact Title)'
+      ? customTitleSpecify.trim() || 'Proprietor & Managing Director'
+      : selectedTitle;
 
-  const effectiveSectorName = selectedSector === 'other'
-    ? (customSectorSpecify.trim() || 'Commercial Enterprise')
-    : (ENTITY_SECTORS.find((s) => s.id === selectedSector)?.label || 'Commercial Enterprise');
+  const effectiveSectorName =
+    selectedSector === 'other'
+      ? customSectorSpecify.trim() || 'Commercial Enterprise'
+      : ENTITY_SECTORS.find((s) => s.id === selectedSector)?.label || 'Commercial Enterprise';
 
-  const effectiveTypologyName = selectedTypology === 'Other (Specify Exact Typology)'
-    ? (customTypologySpecify.trim() || 'Business Operation')
-    : selectedTypology;
+  const effectiveTypologyName =
+    selectedTypology === 'Other (Specify Exact Typology)'
+      ? customTypologySpecify.trim() || 'Business Operation'
+      : selectedTypology;
 
   const priceVal = intervalUsd(Math.max(covered, 1), kind, interval, country);
 
-  const handleStartSubmit = () => {
+  const validateForm = (): boolean => {
     if (!name.trim()) {
       toast('Please enter your business or organisation name', 'amber');
-      return;
+      return false;
     }
     if (selectedSector === 'other' && !customSectorSpecify.trim()) {
       toast('Please specify your custom sector / trade category', 'amber');
-      return;
+      return false;
     }
     if (selectedTitle === 'Other (Specify Exact Title)' && !customTitleSpecify.trim()) {
       toast('Please specify your exact professional title', 'amber');
+      return false;
+    }
+    return true;
+  };
+
+  const handleStartTrialSubmit = () => {
+    if (!validateForm()) return;
+    completeRegistration('FOUNDING-TRIAL-30D');
+  };
+
+  const handleProceedToPaymentGateway = () => {
+    if (!validateForm()) return;
+    if (priceVal === 0) {
+      completeRegistration('FREE-COMMUNITY-TIER');
       return;
     }
-    // All private providers & businesses receive a 30-Day Founding Partner Free Trial during public launch
-    completeRegistration('FOUNDING-TRIAL-30D');
+    setStep('payment');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const completeRegistration = (paymentRef: string) => {
@@ -369,657 +427,883 @@ export const EntityRegisterView: React.FC = () => {
       setIsProcessing(false);
       toast('Registration confirmed & Entity Admin desk mounted!', 'emerald');
       go('entity_done');
-    }, 1000);
+    }, 800);
   };
 
-  const exchangeRateUgx = 3700;
-  const priceUgx = priceVal * exchangeRateUgx;
+  const exchangeRateLocal = country === 'KE' ? 129 : country === 'NG' ? 1600 : country === 'GH' ? 15.5 : 3700;
+  const localCurrencyCode = country === 'KE' ? 'KES' : country === 'NG' ? 'NGN' : country === 'GH' ? 'GHS' : 'UGX';
+  const priceLocal = Math.round(priceVal * exchangeRateLocal);
 
   return (
-    <div className="p-5 space-y-5 pt-6 animate-fade-in pb-12">
-      <div>
-        <button
-          onClick={() => {
-            if (step === 'payment') {
-              setStep('details');
-            } else {
-              go('splash');
-            }
-          }}
-          className="flex items-center gap-1 text-[10px] mono text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200 mb-4 transition-colors font-bold"
-        >
-          <ChevronLeft size={14} /> {step === 'payment' ? 'Back to Registration Form' : 'Back'}
-        </button>
-        <div className="tagline mb-1.5 text-emerald-700 dark:text-emerald-400 font-bold">
-          {step === 'payment' ? 'Checkout Gateway' : 'Entity & Business Desk Onboarding'}
-        </div>
-        <h2 className="text-[26px] font-black text-slate-900 dark:text-emerald-400 tracking-tight leading-tight">
-          {step === 'payment' ? 'Complete Subscription Payment' : 'Register your business or entity'}
-        </h2>
-        <p className="text-[13px] text-slate-600 dark:text-zinc-400 mt-1.5 leading-relaxed font-medium">
-          {step === 'payment'
-            ? `Secure checkout powered by Mobile Money & Card gateway for ${countryName}.`
-            : `Empower any enterprise — from retail shops, bars, and pharmacies to garages and schools — to mount a verified public response wall with full admin team management.`}
-        </p>
-      </div>
-
-      {step === 'details' && (
-        <>
-          {/* Quick Sign In Banner */}
-          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 flex items-center justify-between shadow-xs">
-            <div className="flex items-center gap-2">
-              <Building2 size={15} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
-              <div className="text-left">
-                <span className="text-[11px] font-bold text-emerald-900 dark:text-emerald-200 block">Already have an Entity Access Code?</span>
-                <span className="text-[9px] text-emerald-700 dark:text-emerald-400">Sign in to your shop, bar, pharmacy, clinic, or utility desk console.</span>
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-slate-100 pb-20 animate-fade-in">
+      <div className="max-w-4xl mx-auto px-3.5 sm:px-5 pt-4 space-y-4">
+        {/* Studio Header Card — Google AI Studio Aesthetics */}
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
             <button
-              onClick={() => go('entity_gateway')}
-              className="px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-[9.5px] mono font-bold uppercase transition-all shadow-2xs whitespace-nowrap"
+              type="button"
+              onClick={() => {
+                if (step === 'payment') {
+                  setStep('details');
+                } else {
+                  go('entity');
+                }
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              Sign In →
+              <ChevronLeft size={14} />
+              <span>{step === 'payment' ? 'Back to Onboarding Form' : 'Provider Gateway'}</span>
             </button>
-          </div>
 
-          {/* Section 1: Business Category & Sector */}
-          <div className="card p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <label className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest block font-bold">
-                1. Select Industry / Sector
-              </label>
-              <span className="text-[8.5px] mono text-emerald-700 dark:text-emerald-400 font-bold">
-                All Categorizations Support "Other"
+            <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                {step === 'payment' ? 'Subscription Checkout Gateway' : 'Entity & Business Desk Onboarding'}
               </span>
+              <span aria-hidden="true">·</span>
+              <span>[{country}] {countryName}</span>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {ENTITY_SECTORS.map((sec) => {
-                const IconComponent = sec.icon;
-                const isSelected = selectedSector === sec.id;
-                return (
-                  <button
-                    key={sec.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedSector(sec.id);
-                      // Update defaults based on chosen sector
-                      const presets = TYPOLOGY_PRESETS[sec.id] || TYPOLOGY_PRESETS.other;
-                      setSelectedTypology(presets[0]);
-                      const tPresets = getBusinessTitlePresets(sec.id);
-                      setSelectedTitle(tPresets[0]);
-                    }}
-                    className={`p-2.5 rounded-xl text-left border transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-950 dark:text-emerald-200 shadow-xs'
-                        : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 text-slate-700 dark:text-zinc-400 hover:border-slate-300 dark:hover:border-zinc-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <IconComponent size={14} className={isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'} />
-                      <span className="text-[11px] font-bold leading-tight line-clamp-1">{sec.label}</span>
-                    </div>
-                    <span className="text-[8px] text-slate-500 dark:text-zinc-500 mt-1 line-clamp-1">{sec.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Custom Sector Specify Input if "Other" is chosen */}
-            {selectedSector === 'other' && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/60 rounded-xl space-y-1.5 animate-fade-in">
-                <label className="text-[9px] mono text-amber-900 dark:text-amber-300 uppercase tracking-wider font-bold flex items-center gap-1">
-                  <PlusCircle size={12} /> Specify Your Exact Industry / Sector:
-                </label>
-                <input
-                  type="text"
-                  value={customSectorSpecify}
-                  onChange={(e) => setCustomSectorSpecify(e.target.value)}
-                  placeholder="e.g. Artisanal Coffee Roastery, Solar Equipment Importer, Event Production Hub"
-                  className="bg-white dark:bg-zinc-900 border-amber-300 dark:border-amber-700 text-sm font-medium"
-                />
-              </div>
-            )}
           </div>
 
-          {/* Section 2: Specific Business Typology */}
-          <div className="card p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <label className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest block font-bold">
-                2. Business Typology / Operation Model
-              </label>
-              <span className="text-[8.5px] mono text-slate-500">Tailored to {effectiveSectorName}</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {typologyPresets.map((typeOption) => {
-                const isSelected = selectedTypology === typeOption;
-                return (
-                  <button
-                    key={typeOption}
-                    type="button"
-                    onClick={() => setSelectedTypology(typeOption)}
-                    className={`py-2 px-3 rounded-lg text-left text-[10.5px] mono font-bold border transition-all ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 shadow-xs'
-                        : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-700 dark:text-zinc-400 hover:border-slate-300'
-                    }`}
-                  >
-                    {isSelected ? '[Selected] ' : '• '} {typeOption}
-                  </button>
-                );
-              })}
-            </div>
-
-            {selectedTypology === 'Other (Specify Exact Typology)' && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/60 rounded-xl space-y-1.5 animate-fade-in">
-                <label className="text-[9px] mono text-amber-900 dark:text-amber-300 uppercase tracking-wider font-bold">
-                  Specify Exact Business Typology:
-                </label>
-                <input
-                  type="text"
-                  value={customTypologySpecify}
-                  onChange={(e) => setCustomTypologySpecify(e.target.value)}
-                  placeholder="e.g. 24-Hour Express Tyre & Battery Workshop, Rooftop Lounge & Tapas"
-                  className="bg-white dark:bg-zinc-900 border-amber-300 dark:border-amber-700 text-sm font-medium"
-                />
+          <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 flex-wrap">
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Entity &amp; Business Desk Onboarding
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>1st {primaryUnitName} Free Forever</span>
+                <span aria-hidden="true">·</span>
+                <span>30-Day Founding Trial</span>
               </div>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {step === 'payment' ? 'Complete Subscription Payment' : 'Register your business or entity'}
+              </h1>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
+                {step === 'payment'
+                  ? `Secure B2B checkout powered by Mobile Money (${localCurrencyCode}), Visa/Mastercard & RTGS Wire for ${countryName}.`
+                  : `Mount a verified public accountability & customer care wall for any enterprise — from single-branch shops, clinics, and schools to national utilities and banks.`}
+              </p>
+            </div>
+
+            {step === 'details' && (
+              <button
+                type="button"
+                onClick={() => go('entity_gateway')}
+                className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+              >
+                <Building2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Have a Code? Sign In →</span>
+              </button>
             )}
           </div>
+        </div>
 
-          {/* Section 3: Entity Details & Identity */}
-          <div className="card p-4 space-y-3">
-            <label className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest block font-bold">
-              3. Business & Registrant Identity
-            </label>
-
-            <div>
-              <label className="text-[8.5px] mono text-slate-600 dark:text-zinc-400 block mb-1 font-bold">
-                Official Business or Organisation Name:
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Kikuubo Wholesale & Retail Traders Hub / Havana Bar & Lounge"
-                className="text-sm font-semibold"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-[8.5px] mono text-slate-600 dark:text-zinc-400 block mb-1 font-bold">
-                  Tax TIN / Registration / Trading License No:
-                </label>
-                <input
-                  type="text"
-                  value={reg}
-                  onChange={(e) => setReg(e.target.value)}
-                  placeholder="e.g. URSB / KCCA / URA-99201"
-                  className="mono text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-[8.5px] mono text-slate-600 dark:text-zinc-400 block mb-1 font-bold">
-                  Registrant Full Name (Primary Admin):
-                </label>
-                <input
-                  type="text"
-                  value={officerName}
-                  onChange={(e) => setOfficerName(e.target.value)}
-                  placeholder="e.g. Godfrey Kayongo / Sarah Nakamya"
-                  className="text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Professional Identity & Title Selection */}
-            <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-[8.5px] mono text-slate-600 dark:text-zinc-400 uppercase tracking-wider font-bold flex items-center gap-1">
-                  <Briefcase size={12} /> Your Professional Identity & Title in this Entity:
-                </label>
-                <span className="text-[8px] mono text-emerald-700 dark:text-emerald-400 font-bold">
-                  Displayed on Public Response Wall
+        {step === 'details' && (
+          <>
+            {/* Section 1: Business Category & Sector */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                  01. Select Industry / Sector
+                </span>
+                <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                  13 Sectors + Custom Specify
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {titlePresets.map((tOpt) => {
-                  const isSel = selectedTitle === tOpt;
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {ENTITY_SECTORS.map((sec) => {
+                  const IconComponent = sec.icon;
+                  const isSelected = selectedSector === sec.id;
                   return (
                     <button
-                      key={tOpt}
+                      key={sec.id}
                       type="button"
-                      onClick={() => setSelectedTitle(tOpt)}
-                      className={`py-1.5 px-2.5 rounded-lg text-left text-[10px] mono font-bold border transition-all ${
-                        isSel
-                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-200'
-                          : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 text-slate-700 dark:text-zinc-400'
+                      onClick={() => {
+                        setSelectedSector(sec.id);
+                        const presets = TYPOLOGY_PRESETS[sec.id] || TYPOLOGY_PRESETS.other;
+                        setSelectedTypology(presets[0]);
+                        const tPresets = getBusinessTitlePresets(sec.id);
+                        setSelectedTitle(tPresets[0]);
+                        if (sec.id === 'private_utility_telecom') {
+                          setKind('utility');
+                        } else {
+                          setKind('consumer');
+                        }
+                      }}
+                      className={`p-3 rounded-lg text-left border transition-colors flex flex-col justify-between gap-1 cursor-pointer ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-600'
                       }`}
                     >
-                      {isSel ? '[Selected] ' : '• '} {tOpt}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <IconComponent
+                            size={14}
+                            className={isSelected ? 'text-emerald-600 dark:text-emerald-400 shrink-0' : 'text-slate-500 shrink-0'}
+                          />
+                          <span className="text-xs font-semibold leading-tight truncate">{sec.label}</span>
+                        </div>
+                        {isSelected && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                      </div>
+                      <span className="text-[10.5px] text-slate-500 dark:text-slate-400 line-clamp-1">{sec.desc}</span>
                     </button>
                   );
                 })}
               </div>
 
-              {selectedTitle === 'Other (Specify Exact Title)' && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/60 rounded-xl space-y-1.5 animate-fade-in">
-                  <label className="text-[9px] mono text-amber-900 dark:text-amber-300 uppercase tracking-wider font-bold">
-                    Specify Your Exact Professional Title:
+              {selectedSector === 'other' && (
+                <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg space-y-1.5">
+                  <label className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                    <PlusCircle size={12} />
+                    <span>Specify Your Exact Industry / Sector</span>
                   </label>
                   <input
                     type="text"
-                    value={customTitleSpecify}
-                    onChange={(e) => setCustomTitleSpecify(e.target.value)}
-                    placeholder="e.g. Lead Clinical Pharmacist, Master Auto Electrician, Managing Partner"
-                    className="bg-white dark:bg-zinc-900 border-amber-300 dark:border-amber-700 text-sm font-medium"
+                    value={customSectorSpecify}
+                    onChange={(e) => setCustomSectorSpecify(e.target.value)}
+                    placeholder="e.g. Artisanal Coffee Roastery, Solar Equipment Importer, Event Production Hub"
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              {[
-                ['consumer', 'Commercial Enterprise (Shop, Bar, Clinic, etc.)'],
-                ['utility', 'Utility / Infrastructure Service (Water, Power, Solar)'],
-              ].map(([k, l]) => (
-                <button
-                  key={k}
-                  onClick={() => setKind(k as any)}
-                  className={`py-2 px-2 rounded-xl text-[9px] mono font-bold border transition-all ${
-                    kind === k
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 shadow-xs'
-                      : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 4: Entity Administration & Multi-Seat Team Setup */}
-          <div className="card p-4 space-y-3 bg-slate-50/50 dark:bg-zinc-900/50 border border-slate-200 dark:border-zinc-800">
-            <div className="flex justify-between items-center">
-              <label className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest block font-bold flex items-center gap-1.5">
-                <Users size={14} className="text-emerald-600" />
-                4. Entity Admin & Team Seat Management
-              </label>
-              <span className="text-[8.5px] mono text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded font-bold">
-                Admin Console Included
-              </span>
-            </div>
-
-            <p className="text-[10.5px] text-slate-600 dark:text-zinc-400 leading-relaxed font-medium">
-              As the <span className="font-bold text-slate-900 dark:text-zinc-200">{effectiveProfessionalTitle || 'Entity Admin'}</span>, you have master permissions to invite staff members (e.g. duty managers, cashiers, customer care clerks, field technicians) and manage their active desk access.
-            </p>
-
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { count: 3, label: '3 Staff Seats', note: 'Small shop or bar' },
-                { count: 5, label: '5 Staff Seats (Default)', note: 'Medium retail/clinic' },
-                { count: 12, label: '12 Staff Seats', note: 'Large team & branches' },
-              ].map((seatOpt) => (
-                <button
-                  key={seatOpt.count}
-                  type="button"
-                  onClick={() => setStaffSeats(seatOpt.count)}
-                  className={`p-2.5 rounded-xl text-left border transition-all ${
-                    staffSeats === seatOpt.count
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 shadow-xs'
-                      : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400'
-                  }`}
-                >
-                  <span className="text-[10px] font-bold block">{seatOpt.label}</span>
-                  <span className="text-[8px] text-slate-500">{seatOpt.note}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 5: Country & Coverage Scope */}
-          <div className="card p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <label className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest block font-bold">
-                5. Location & Country Scope
-              </label>
-              <span className="text-[8.5px] mono text-emerald-700 dark:text-emerald-400 font-bold">
-                [{country}] {countryName}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-5 gap-1.5">
-              {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([c, d]) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setCountry(c);
-                    setDistrict('');
-                    setSubcounty('');
-                    setParish('');
-                  }}
-                  className={`py-2 rounded-lg text-[9.5px] mono font-bold border transition-all ${
-                    country === c
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 shadow-sm'
-                      : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-
-            <div className="sw">
-              <Search size={15} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Search for your local ${primaryUnitName} (e.g. Kololo, Kikuubo, Wandegeya)…`}
-                className="mono text-sm"
-              />
-            </div>
-
-            {searchQuery.trim().length >= 2 && (
-              <div className="space-y-1">
-                {searchHits.length === 0 ? (
-                  <p className="text-[9.5px] mono text-slate-500 dark:text-zinc-400 py-2">No {primaryUnitName} matches that.</p>
-                ) : (
-                  searchHits.map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => pickPrimaryNode(n.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                        parish === n.id
-                          ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30'
-                          : 'bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="text-[12px] font-bold text-slate-900 dark:text-zinc-200">{n.name}</div>
-                      <div className="path-crumb text-slate-500 dark:text-zinc-400">{n.path}</div>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <select
-                className="mono text-xs"
-                value={district}
-                onChange={(e) => {
-                  setDistrict(e.target.value);
-                  setSubcounty('');
-                  setParish('');
-                  setSearchQuery('');
-                }}
-              >
-                <option value="">Select {l1Name}…</option>
-                {dists.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="mono text-xs"
-                disabled={!district}
-                value={subcounty}
-                style={{ opacity: district ? 1 : 0.4 }}
-                onChange={(e) => {
-                  setSubcounty(e.target.value);
-                  setParish('');
-                }}
-              >
-                <option value="">Select {l2Name}…</option>
-                {subs.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="mono text-xs"
-                disabled={!subcounty}
-                value={parish}
-                style={{ opacity: subcounty ? 1 : 0.4 }}
-                onChange={(e) => setParish(e.target.value)}
-              >
-                <option value="">Select {primaryUnitName}…</option>
-                {parishes.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <p className="text-[9.5px] mono text-slate-500 dark:text-zinc-400 pt-1 font-bold">
-              {covered > 0 ? `${covered} ${primaryUnitName}${covered > 1 ? 's' : ''} covered` : 'Location not pinpointed yet (will default to primary district node)'}
-            </p>
-          </div>
-
-          {/* Plan Summary Card */}
-          <div className="card-civic p-4 space-y-2.5 a-fade bg-emerald-50/70 dark:bg-emerald-950/30 border-2 border-emerald-400 dark:border-emerald-700 rounded-2xl shadow-sm">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[9px] mono text-emerald-800 dark:text-emerald-300 uppercase tracking-widest font-black flex items-center gap-1">
-                  <ShieldCheck size={11} /> Founding Partner Public Launch Trial
-                </p>
-                <p className="text-[16px] font-black text-slate-900 dark:text-zinc-100 mt-1">
-                  {tier.name} · 30-Day Free Trial
-                </p>
-                <p className="text-[10px] mono text-slate-600 dark:text-zinc-400 mt-0.5 font-medium">
-                  {Math.max(covered, 1)} {primaryUnitName} · {staffSeats} Staff Seats · Entity Admin Console
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-black mono text-emerald-600 dark:text-emerald-400">
-                  $0 Today
-                </p>
-                {priceVal > 0 && (
-                  <p className="text-[10px] mono line-through text-slate-400">
-                    {entityPrice(Math.max(covered, 1), kind, interval, country)} post-trial
-                  </p>
-                )}
-              </div>
-            </div>
-            <p className="text-[10.5px] text-slate-700 dark:text-slate-300 leading-relaxed border-t border-emerald-200 dark:border-emerald-800/60 pt-2">
-              <strong>Zero Payment Required Today:</strong> During CivicDuty&apos;s public launch rollout, all private businesses and service providers receive a full <strong>30-Day Founding Partner Trial</strong> with instant access to SLA tools, multi-seat team management, and Counter QR Placards.
-            </p>
-          </div>
-
-          <NoteBox
-            tone="emerald"
-            title="Public Verification & Multi-Seat Team"
-            text={`Your entity will be indexed with ${effectiveProfessionalTitle} as Primary Administrator. You can delegate dispute resolutions, assign floor staff, and reply to citizen queries with verified badges.`}
-          />
-
-          <button
-            onClick={handleStartSubmit}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-          >
-            <span>Activate 30-Day Founding Partner Trial — $0 Due Today</span>
-            <ArrowRight size={16} />
-          </button>
-        </>
-      )}
-
-      {step === 'payment' && (
-        <div className="space-y-4 animate-fade-in">
-          {/* Order Summary */}
-          <div className="card-gov p-4 space-y-3 bg-white dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-[8.5px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest font-bold">Subscription Order Summary</p>
-                <h3 className="text-[17px] font-black text-slate-900 dark:text-zinc-100 mt-0.5">{name || 'Your Organisation'}</h3>
-                <p className="text-[10.5px] mono text-slate-600 dark:text-zinc-400 mt-0.5 font-medium">
-                  {effectiveSectorName} · {effectiveProfessionalTitle} · {staffSeats} Staff Seats
-                </p>
-              </div>
-              <span className="chip ch-ro">Pending Payment</span>
-            </div>
-
-            <div className="pt-2.5 border-t border-slate-200 dark:border-zinc-800/80 flex items-baseline justify-between">
-              <div>
-                <span className="text-[10px] mono text-slate-500 dark:text-zinc-400 block font-bold">Total Amount ({interval})</span>
-                {country === 'UG' && (
-                  <span className="text-[9.5px] mono text-amber-700 dark:text-amber-400 font-bold">
-                    ~ UGX {priceUgx.toLocaleString()} (Rate: 1 USD = 3,700 UGX)
-                  </span>
-                )}
-              </div>
-              <div className="text-right">
-                <span className="text-2xl font-black mono text-emerald-600 dark:text-emerald-400">
-                  {entityPrice(covered, kind, interval, country)}
+            {/* Section 2: Specific Business Typology */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                  02. Business Typology &amp; Operation Model
+                </span>
+                <span className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+                  {effectiveSectorName}
                 </span>
               </div>
-            </div>
-          </div>
 
-          {/* Payment Method Tabs */}
-          <div className="card p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <label className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest font-bold">
-                Select Payment Channel ({countryName})
-              </label>
-              <span className="text-[8.5px] mono text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-bold">
-                <ShieldCheck size={12} /> Gateway Protected
-              </span>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {typologyPresets.map((typeOption) => {
+                  const isSelected = selectedTypology === typeOption;
+                  return (
+                    <button
+                      key={typeOption}
+                      type="button"
+                      onClick={() => setSelectedTypology(typeOption)}
+                      className={`py-2 px-3 rounded-lg text-left text-xs font-mono font-medium border transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white font-semibold'
+                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      <span className="truncate">{typeOption}</span>
+                      {isSelected && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
 
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPayMethod('momo')}
-                className={`py-2.5 px-2 rounded-xl text-[9.5px] mono font-bold border transition-all flex flex-col items-center gap-1 ${
-                  payMethod === 'momo'
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 shadow-sm'
-                    : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
-                }`}
-              >
-                <Smartphone size={16} />
-                <span>Mobile Money</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPayMethod('gateway')}
-                className={`py-2.5 px-2 rounded-xl text-[9.5px] mono font-bold border transition-all flex flex-col items-center gap-1 ${
-                  payMethod === 'gateway'
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 shadow-sm'
-                    : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
-                }`}
-              >
-                <CreditCard size={16} />
-                <span>Card / Web</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPayMethod('bank')}
-                className={`py-2.5 px-2 rounded-xl text-[9.5px] mono font-bold border transition-all flex flex-col items-center gap-1 ${
-                  payMethod === 'bank'
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 shadow-sm'
-                    : 'border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
-                }`}
-              >
-                <Building2 size={16} />
-                <span>Bank Wire</span>
-              </button>
-            </div>
-
-            {payMethod === 'momo' && (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 space-y-3 animate-fade-in shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10.5px] font-bold text-amber-900 dark:text-amber-300 mono">MTN MoMo & Airtel Money Gateway</span>
-                  <span className="chip text-[8px] bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 font-bold">
-                    Instant USSD Prompt
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setMomoProvider('mtn')}
-                    className={`py-2 px-3 rounded-lg text-[9.5px] mono font-bold border text-left transition-all ${
-                      momoProvider === 'mtn'
-                        ? 'border-amber-500 bg-amber-100/70 dark:bg-amber-500/10 text-amber-900 dark:text-amber-300'
-                        : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 text-slate-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    MTN Mobile Money
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMomoProvider('airtel')}
-                    className={`py-2 px-3 rounded-lg text-[9.5px] mono font-bold border text-left transition-all ${
-                      momoProvider === 'airtel'
-                        ? 'border-rose-500 bg-rose-100/70 dark:bg-red-500/10 text-rose-900 dark:text-red-300'
-                        : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 text-slate-600 dark:text-zinc-400'
-                    }`}
-                  >
-                    Airtel Money
-                  </button>
-                </div>
-
-                <div>
-                  <label className="text-[8.5px] mono text-slate-500 dark:text-zinc-400 block mb-1 font-bold">
-                    Mobile Money Phone Number ({countryName})
+              {selectedTypology === 'Other (Specify Exact Typology)' && (
+                <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg space-y-1.5">
+                  <label className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-semibold block">
+                    Specify Exact Business Typology
                   </label>
                   <input
                     type="text"
-                    value={momoPhone}
-                    onChange={(e) => setMomoPhone(e.target.value)}
-                    placeholder="e.g. 0772 123 456 / 0701 987 654"
-                    className="mono text-sm"
+                    value={customTypologySpecify}
+                    onChange={(e) => setCustomTypologySpecify(e.target.value)}
+                    placeholder="e.g. 24-Hour Express Tyre & Battery Workshop, Rooftop Lounge & Tapas"
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Section 3: Entity Details & Identity */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                  03. Business &amp; Registrant Identity
+                </span>
+                <span className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+                  Verified Public Response Wall
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="text-[10.5px] font-mono text-slate-600 dark:text-slate-400 block mb-1 font-semibold">
+                    Official Business / Entity Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Kikuubo Retail Hub / Acacia Clinic"
+                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10.5px] font-mono text-slate-600 dark:text-slate-400 block mb-1 font-semibold">
+                    Tax TIN / Registration License No
+                  </label>
+                  <input
+                    type="text"
+                    value={reg}
+                    onChange={(e) => setReg(e.target.value)}
+                    placeholder="e.g. URSB / KCCA / URA-99201"
+                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10.5px] font-mono text-slate-600 dark:text-slate-400 block mb-1 font-semibold">
+                    Registrant Full Name (Primary Admin)
+                  </label>
+                  <input
+                    type="text"
+                    value={officerName}
+                    onChange={(e) => setOfficerName(e.target.value)}
+                    placeholder="e.g. Godfrey Kayongo / Sarah Nakamya"
+                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
-            )}
 
-            {payMethod === 'gateway' && (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 space-y-3 animate-fade-in shadow-sm">
-                <span className="text-[10.5px] font-bold text-emerald-800 dark:text-emerald-300 mono">Card & Online Payment</span>
+              <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-[10.5px] font-mono text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+                    <Briefcase size={12} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Your Executive / Professional Title in this Entity</span>
+                  </label>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                    Displayed on Official Replies
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {titlePresets.map((tOpt) => {
+                    const isSel = selectedTitle === tOpt;
+                    return (
+                      <button
+                        key={tOpt}
+                        type="button"
+                        onClick={() => setSelectedTitle(tOpt)}
+                        className={`py-2 px-3 rounded-lg text-left text-xs font-mono border transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                          isSel
+                            ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white font-semibold'
+                            : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                        }`}
+                      >
+                        <span className="truncate">{tOpt}</span>
+                        {isSel && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedTitle === 'Other (Specify Exact Title)' && (
+                  <div className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg space-y-1.5">
+                    <label className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-semibold block">
+                      Specify Your Exact Professional Title
+                    </label>
+                    <input
+                      type="text"
+                      value={customTitleSpecify}
+                      onChange={(e) => setCustomTitleSpecify(e.target.value)}
+                      placeholder="e.g. Lead Clinical Pharmacist, Master Auto Electrician, Managing Partner"
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Section 4: Entity Administration & Multi-Seat Team Setup */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                  <Users size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>04. Entity Admin &amp; Team Seat Allocation</span>
+                </span>
+                <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Multi-Seat Admin Console Included
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                As <strong className="text-slate-900 dark:text-white">{effectiveProfessionalTitle}</strong>, you hold primary administrative permissions to invite duty managers, customer care leads, and field technicians to your entity desk.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  { count: 3, label: '3 Staff Seats', note: 'Single shop, pharmacy or café' },
+                  { count: 5, label: '5 Staff Seats (Standard)', note: 'Clinic, school or medium enterprise' },
+                  { count: 12, label: '12 Staff Seats', note: 'Multi-branch network & utility care' },
+                ].map((seatOpt) => {
+                  const isActive = staffSeats === seatOpt.count;
+                  return (
+                    <button
+                      key={seatOpt.count}
+                      type="button"
+                      onClick={() => setStaffSeats(seatOpt.count)}
+                      className={`p-3 rounded-lg text-left border transition-colors cursor-pointer ${
+                        isActive
+                          ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono font-semibold">{seatOpt.label}</span>
+                        {isActive && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />}
+                      </div>
+                      <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block mt-0.5">{seatOpt.note}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Section 5: Country & Territorial Scope */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                  05. Jurisdiction &amp; Territorial Footprint
+                </span>
+                <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                  [{country}] {countryName} · {covered} {primaryUnitName}{covered > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
+                {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([c]) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => {
+                      setCountry(c);
+                      setDistrict('');
+                      setSubcounty('');
+                      setParish('');
+                      setManualUnitsOverride(null);
+                    }}
+                    className={`py-1.5 rounded-lg text-[10.5px] font-mono font-semibold border transition-colors cursor-pointer ${
+                      country === c
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 hover:border-slate-400'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative flex items-center">
+                <Search size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  placeholder="Card Number"
-                  className="mono text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={`Search your primary ${primaryUnitName} in ${countryName} (e.g. Kololo, Kikuubo, Wandegeya)...`}
+                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-8 pr-3 py-2 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
                 />
               </div>
-            )}
 
-            {payMethod === 'bank' && (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 space-y-3 animate-fade-in shadow-sm">
-                <span className="text-[10.5px] font-bold text-amber-900 dark:text-amber-300 mono">EFT / Direct Bank Voucher</span>
-                <input
-                  type="text"
-                  value={bankRef}
-                  onChange={(e) => setBankRef(e.target.value)}
-                  placeholder="Bank Voucher Ref"
-                  className="mono text-sm"
-                />
+              {searchQuery.trim().length >= 2 && (
+                <div className="space-y-1">
+                  {searchHits.length === 0 ? (
+                    <p className="text-[11px] font-mono text-slate-500 py-1.5">No matching {primaryUnitName} found.</p>
+                  ) : (
+                    searchHits.map((n) => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => pickPrimaryNode(n.id)}
+                        className="w-full text-left px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 transition-colors cursor-pointer"
+                      >
+                        <div className="text-xs font-semibold text-slate-900 dark:text-white">{n.name}</div>
+                        <div className="text-[10.5px] font-mono text-slate-500">{n.path}</div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <select
+                  className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  value={district}
+                  onChange={(e) => {
+                    setDistrict(e.target.value);
+                    setSubcounty('');
+                    setParish('');
+                    setManualUnitsOverride(null);
+                    setSearchQuery('');
+                  }}
+                >
+                  <option value="">Select {l1Name}...</option>
+                  {dists.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40"
+                  disabled={!district}
+                  value={subcounty}
+                  onChange={(e) => {
+                    setSubcounty(e.target.value);
+                    setParish('');
+                    setManualUnitsOverride(null);
+                  }}
+                >
+                  <option value="">Select {l2Name}...</option>
+                  {subs.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40"
+                  disabled={!subcounty}
+                  value={parish}
+                  onChange={(e) => {
+                    setParish(e.target.value);
+                    setManualUnitsOverride(null);
+                  }}
+                >
+                  <option value="">Select {primaryUnitName}...</option>
+                  {parishes.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            )}
+            </div>
+
+            {/* Section 6: Interactive Pricing & Subscription Matrix (Google AI Studio Aesthetics) */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3.5">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 text-[10.5px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <SlidersHorizontal size={12} />
+                    <span>06. Sovereign Pricing &amp; Subscription Matrix</span>
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    Transparent Per-{primaryUnit(country)} Tier Pricing · 1st Unit Free Forever
+                  </h3>
+                </div>
+
+                {/* Segmented Controls: Billing Cycle & Entity Rate Class */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1 p-1 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
+                    <button
+                      type="button"
+                      onClick={() => setInterval('annual')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                        interval === 'annual'
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Annual (Save 12%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInterval('monthly')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                        interval === 'monthly'
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1 p-1 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
+                    <button
+                      type="button"
+                      onClick={() => setKind('consumer')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                        kind === 'consumer'
+                          ? 'bg-emerald-600 text-white'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Commercial Rate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKind('utility')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                        kind === 'utility'
+                          ? 'bg-emerald-600 text-white'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Utility / Public Service
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive 6-Tier Pricing Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {currentTiers.map((tItem) => {
+                  const isCurrentTier = tier.id === tItem.id;
+                  const sampleUnits = tItem.min;
+                  const computedTierPrice = entityPrice(sampleUnits, kind, interval, country);
+                  const computedUsdNum = intervalUsd(sampleUnits, kind, interval, country);
+                  const computedLocalNum = Math.round(computedUsdNum * exchangeRateLocal);
+
+                  return (
+                    <button
+                      key={tItem.id}
+                      type="button"
+                      onClick={() => setManualUnitsOverride(tItem.min)}
+                      className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-2.5 cursor-pointer ${
+                        isCurrentTier
+                          ? 'border-emerald-500 bg-emerald-500/10'
+                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{tItem.name}</span>
+                          {isCurrentTier && (
+                            <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                              Active Tier
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-base font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                          {tItem.id === 'community'
+                            ? `${fmtUsd(intervalUsd(1, kind, interval, country) || (interval === 'annual' ? 100 : 9))} / ${primaryUnitName}`
+                            : computedTierPrice}
+                        </div>
+                        {computedUsdNum > 0 && (
+                          <div className="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400">
+                            ≈ {localCurrencyCode} {computedLocalNum.toLocaleString()} {interval === 'annual' ? '/yr' : '/mo'}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-0.5">
+                        <div className="text-[10.5px] font-mono font-semibold text-slate-700 dark:text-slate-300">
+                          {tItem.sub}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                          {tItem.note}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Coverage Unit Slider / Adjuster */}
+              <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Active Coverage Footprint:</span>
+                    <span className="font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {covered} {primaryUnitName}{covered > 1 ? 's' : ''} ({tier.name})
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Click any tier card above or adjust your exact {primaryUnitName} branch count to calculate post-trial billing.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="text-[10.5px] font-mono text-slate-500">Units:</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5000}
+                    value={covered}
+                    onChange={(e) => setManualUnitsOverride(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="w-24 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold tabular-nums text-center text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Founding Partner Trial + Direct Checkout Summary Box */}
+              <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/40 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-[10.5px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <ShieldCheck size={13} />
+                      <span>Founding Partner Launch Program · $0 Due Today</span>
+                    </div>
+                    <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                      {tier.name} · {Math.max(covered, 1)} {primaryUnitName}{covered > 1 ? 's' : ''} · {staffSeats} Staff Seats
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
+                      Single-branch community entities (1 {primaryUnitName}) are <strong>Free Forever ($0)</strong>. Multi-branch &amp; enterprise tiers receive a full <strong>30-Day Founding Partner Free Trial</strong> with instant access to SLA tools, multi-seat team management, and Counter QR Placards.
+                    </p>
+                  </div>
+
+                  <div className="text-left sm:text-right shrink-0">
+                    <div className="text-xl sm:text-2xl font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                      $0 Today
+                    </div>
+                    <div className="text-[11px] font-mono tabular-nums text-slate-500 dark:text-slate-400">
+                      {priceVal === 0
+                        ? 'Free Forever (1 Unit)'
+                        : `Post-trial: ${entityPrice(Math.max(covered, 1), kind, interval, country)} (≈ ${localCurrencyCode} ${priceLocal.toLocaleString()})`}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={handleStartTrialSubmit}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-mono font-semibold rounded-lg py-3 px-4 text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <span>
+                      {isProcessing
+                        ? 'Commissioning Entity Desk...'
+                        : priceVal === 0
+                        ? 'Activate Free Community Entity Desk ($0 Forever)'
+                        : 'Activate 30-Day Founding Partner Trial ($0 Due Today)'}
+                    </span>
+                    <ArrowRight size={14} />
+                  </button>
+
+                  {priceVal > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleProceedToPaymentGateway}
+                      className="px-4 py-3 rounded-lg bg-white dark:bg-[#161a22] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                    >
+                      <CreditCard size={13} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>Direct Checkout ({entityPrice(Math.max(covered, 1), kind, interval, country)})</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 'payment' && (
+          <div className="space-y-4 animate-fade-in">
+            {/* Order Summary Card */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+                    Subscription Order Summary
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                    {name || 'Your Organisation'}
+                  </h3>
+                  <p className="text-xs font-mono text-slate-600 dark:text-slate-400 mt-0.5">
+                    {effectiveSectorName} · {effectiveProfessionalTitle} · {staffSeats} Staff Seats · {covered} {primaryUnitName}{covered > 1 ? 's' : ''}
+                  </p>
+                </div>
+                <span className="text-[10.5px] font-mono font-semibold text-amber-600 dark:text-amber-400">
+                  Pending Settlement
+                </span>
+              </div>
+
+              <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-baseline justify-between">
+                <div>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 block font-semibold">
+                    Total Subscription ({interval === 'annual' ? 'Annual Billing' : 'Monthly Billing'})
+                  </span>
+                  <span className="text-[11px] font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                    ≈ {localCurrencyCode} {priceLocal.toLocaleString()} (1 USD = {exchangeRateLocal.toLocaleString()} {localCurrencyCode})
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold font-mono tabular-nums text-slate-900 dark:text-white">
+                    {entityPrice(covered, kind, interval, country)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Method Tabs */}
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono text-slate-700 dark:text-slate-200 uppercase tracking-wider font-semibold">
+                  Select Payment Channel ({countryName})
+                </span>
+                <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                  <ShieldCheck size={12} />
+                  <span>SHA-256 Gateway Protected</span>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPayMethod('momo')}
+                  className={`py-2.5 px-3 rounded-lg text-xs font-mono font-semibold border transition-colors flex flex-col items-center gap-1 cursor-pointer ${
+                    payMethod === 'momo'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <Smartphone size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Mobile Money</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPayMethod('gateway')}
+                  className={`py-2.5 px-3 rounded-lg text-xs font-mono font-semibold border transition-colors flex flex-col items-center gap-1 cursor-pointer ${
+                    payMethod === 'gateway'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <CreditCard size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Card / Web</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPayMethod('bank')}
+                  className={`py-2.5 px-3 rounded-lg text-xs font-mono font-semibold border transition-colors flex flex-col items-center gap-1 cursor-pointer ${
+                    payMethod === 'bank'
+                      ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <Building2 size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Bank Wire</span>
+                </button>
+              </div>
+
+              {payMethod === 'momo' && (
+                <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      Mobile Money STK Push ({countryName})
+                    </span>
+                    <span className="text-[10.5px] text-emerald-600 dark:text-emerald-400">
+                      Instant USSD Prompt
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMomoProvider('mtn')}
+                      className={`py-2 px-3 rounded-lg text-xs font-mono font-semibold border text-left transition-colors cursor-pointer ${
+                        momoProvider === 'mtn'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      MTN MoMo / M-Pesa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMomoProvider('airtel')}
+                      className={`py-2 px-3 rounded-lg text-xs font-mono font-semibold border text-left transition-colors cursor-pointer ${
+                        momoProvider === 'airtel'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      Airtel Money
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 block mb-1 font-semibold">
+                      Registered Mobile Money Number ({countryName})
+                    </label>
+                    <input
+                      type="text"
+                      value={momoPhone}
+                      onChange={(e) => setMomoPhone(e.target.value)}
+                      placeholder="e.g. 0772 123 456"
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {payMethod === 'gateway' && (
+                <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                  <span className="text-xs font-mono font-semibold text-slate-900 dark:text-white block">
+                    3D-Secure Card Checkout (Visa / Mastercard)
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <input
+                      type="text"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value)}
+                      placeholder="Card Number"
+                      className="sm:col-span-1 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white"
+                    />
+                    <input
+                      type="text"
+                      value={cardExpiry}
+                      onChange={(e) => setCardExpiry(e.target.value)}
+                      placeholder="MM/YY"
+                      className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white"
+                    />
+                    <input
+                      type="text"
+                      value={cardCvc}
+                      onChange={(e) => setCardCvc(e.target.value)}
+                      placeholder="CVC"
+                      className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {payMethod === 'bank' && (
+                <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                  <span className="text-xs font-mono font-semibold text-slate-900 dark:text-white block">
+                    RTGS / Corporate EFT Bank Voucher Reference
+                  </span>
+                  <input
+                    type="text"
+                    value={bankRef}
+                    onChange={(e) => setBankRef(e.target.value)}
+                    placeholder="Bank Voucher Reference"
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white"
+                  />
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={() =>
+                completeRegistration(
+                  payMethod === 'momo' ? `MOMO-${momoPhone}` : payMethod === 'gateway' ? 'CARD-CONFIRMED' : bankRef
+                )
+              }
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-mono font-semibold rounded-xl py-3.5 text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <span>
+                {isProcessing
+                  ? 'Connecting Settlement Gateway...'
+                  : `Confirm & Mount Entity Desk (${entityPrice(covered, kind, interval, country)})`}
+              </span>
+              <ArrowRight size={15} />
+            </button>
           </div>
-
-          <button
-            type="button"
-            disabled={isProcessing}
-            onClick={() => completeRegistration(payMethod === 'momo' ? `MOMO-${momoPhone}` : payMethod === 'gateway' ? 'CARD-CONFIRMED' : bankRef)}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] flex items-center justify-center gap-2 shadow-sm"
-          >
-            {isProcessing ? 'Connecting Gateway…' : `Confirm & Mount Desk (${entityPrice(covered, kind, interval, country)})`}
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
@@ -1035,7 +1319,7 @@ export const EntityDoneView: React.FC = () => {
     price: 0,
     invoiceNo: 'INV-2026-UG-9011',
     country: 'UG',
-    paymentRef: 'MOMO-CONFIRMED',
+    paymentRef: 'FOUNDING-TRIAL-30D',
     paymentMethod: 'momo',
     professionalTitle: 'Proprietor & General Merchant',
     sectorName: 'Retail Shops & Supermarkets',
@@ -1057,58 +1341,77 @@ export const EntityDoneView: React.FC = () => {
   };
 
   return (
-    <div className="p-5 space-y-5 pt-8 animate-fade-in pb-12">
-      <div className="text-center space-y-2">
-        <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 shadow-sm">
-          <CheckCircle2 size={32} />
-        </div>
-        <h2 className="text-[22px] font-black text-slate-900 dark:text-zinc-100 tracking-tight">{res.name} is registered</h2>
-        <p className="text-[12px] text-slate-600 dark:text-zinc-400 leading-relaxed font-medium">
-          {res.professionalTitle} · {res.staffSeats || 5} Team Seats Allocated · {countryName}
-        </p>
-      </div>
-
-      <div className="card-gov p-4 space-y-2 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-sm">
-        <p className="text-[8.5px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest font-bold">Your Primary Access Code — tap to copy</p>
-        <button
-          onClick={() => copyToClipboard(res.code, 'Access code', (msg) => toast(msg))}
-          className="flex items-center justify-between w-full bg-slate-50 dark:bg-zinc-900/80 rounded-lg px-3.5 py-3 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 transition-colors"
-        >
-          <span className="text-sm mono font-black text-amber-800 dark:text-amber-300 tracking-widest">{res.code}</span>
-          <Copy size={14} className="text-slate-500 dark:text-zinc-500" />
-        </button>
-        <p className="text-[8.5px] mono text-slate-500 dark:text-zinc-400 leading-relaxed">
-          Use this code to mount the Executive Administrator Desk. From your desk console, you can invite team members and assign custom staff titles.
-        </p>
-      </div>
-
-      <div className="card p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[9px] mono text-slate-500 dark:text-zinc-400 uppercase tracking-widest font-bold">Registration & Plan Status</p>
-          <span className="text-[8.5px] mono text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-500/20 font-bold">
-            Active · 30-Day Founding Partner Trial ($0 Billed Today)
-          </span>
+    <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-slate-100 pb-20 animate-fade-in">
+      <div className="max-w-2xl mx-auto px-3.5 sm:px-5 pt-6 space-y-4">
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-5 sm:p-6 text-center space-y-2.5">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 size={24} />
+          </div>
+          <div className="text-[10.5px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
+            Entity Desk Commissioned · [{res.country}] {countryName}
+          </div>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            {res.name} is Registered &amp; Live
+          </h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            {res.professionalTitle} · {res.staffSeats || 5} Staff Seats Allocated · {res.sectorName}
+          </p>
         </div>
 
-        <div className="space-y-1.5 text-[10px] mono border-t border-b border-slate-200 dark:border-zinc-800/80 py-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500 dark:text-zinc-400">Professional Identity</span>
-            <span className="text-slate-900 dark:text-zinc-200 font-bold">{res.professionalTitle}</span>
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-2.5">
+          <div className="flex items-center justify-between text-[10.5px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+            <span>Primary Entity Access Code</span>
+            <span className="text-emerald-600 dark:text-emerald-400">Tap to Copy</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500 dark:text-zinc-400">Industry / Sector</span>
-            <span className="text-emerald-700 dark:text-emerald-400 font-bold">{res.sectorName || 'Commercial'}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-slate-500 dark:text-zinc-400">Admin Authority</span>
-            <span className="text-amber-800 dark:text-amber-300 font-bold">Full Multi-Seat Team Management</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 pt-1">
           <button
-            onClick={() => {
-              const textContent = `
+            type="button"
+            onClick={() => copyToClipboard(res.code, 'Access code', (msg) => toast(msg))}
+            className="flex items-center justify-between w-full bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg px-4 py-3 hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] transition-colors cursor-pointer"
+          >
+            <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">
+              {res.code}
+            </span>
+            <Copy size={14} className="text-slate-500" />
+          </button>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Use this cryptographic access code at the Provider Gateway to mount your Executive Administrator Desk and invite team members.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
+              Subscription &amp; Plan Status
+            </span>
+            <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+              {res.paymentRef === 'FOUNDING-TRIAL-30D'
+                ? 'Active · 30-Day Founding Partner Trial ($0 Today)'
+                : res.price === 0
+                ? 'Active · Free Community Tier ($0 Forever)'
+                : `Active · Settled (${res.paymentRef})`}
+            </span>
+          </div>
+
+          <div className="space-y-2 text-xs font-mono border-t border-b border-[#e3e6ea] dark:border-[#262b36] py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Professional Identity</span>
+              <span className="text-slate-900 dark:text-white font-semibold">{res.professionalTitle}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Industry / Sector</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{res.sectorName || 'Commercial'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Admin Authority</span>
+              <span className="text-slate-900 dark:text-white font-semibold">Multi-Seat Team Management ({res.staffSeats || 5} Seats)</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                const textContent = `
 ================================================================================
           CIVICDUTY PLATFORM - ENTITY ONBOARDING & TAX RECEIPT
 ================================================================================
@@ -1123,44 +1426,33 @@ Team Seats:      ${res.staffSeats || 5} Allocated Staff Desks
 Access Key Code: ${res.code}
 ================================================================================
 `;
-              const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `CivicDuty_Entity_Voucher_${res.invoiceNo || 'Receipt'}.txt`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-              toast('Downloaded Voucher!', 'emerald');
-            }}
-            className="flex items-center justify-center gap-1.5 bg-slate-50 dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 rounded-xl py-2.5 text-[10px] font-bold mono transition-all active:scale-[.98] shadow-sm"
-          >
-            <Download size={13} /> Export Voucher (.txt)
-          </button>
+                const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `CivicDuty_Entity_Voucher_${res.invoiceNo || 'Receipt'}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                toast('Downloaded Entity Registration Voucher!', 'emerald');
+              }}
+              className="flex items-center justify-center gap-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-slate-800 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36] rounded-lg py-2.5 text-xs font-mono font-semibold transition-colors cursor-pointer"
+            >
+              <Download size={13} />
+              <span>Export Voucher (.txt)</span>
+            </button>
 
-          <button
-            onClick={handleOpenDesk}
-            className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-2.5 text-[10px] font-bold mono transition-all active:scale-[.98] shadow-sm"
-          >
-            Launch Desk →
-          </button>
+            <button
+              type="button"
+              onClick={handleOpenDesk}
+              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg py-2.5 text-xs font-mono font-semibold transition-colors cursor-pointer"
+            >
+              <span>Open Entity Desk &amp; Team →</span>
+            </button>
+          </div>
         </div>
       </div>
-
-      <button
-        onClick={handleOpenDesk}
-        className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black rounded-2xl py-4 text-sm uppercase tracking-widest mono transition-all active:scale-[.98] shadow-sm"
-      >
-        Open my desk & manage team →
-      </button>
-      <button
-        onClick={() => go('splash')}
-        className="w-full text-slate-500 hover:text-slate-800 dark:text-zinc-500 dark:hover:text-zinc-300 font-bold rounded-2xl py-2 text-[10px] uppercase tracking-widest mono transition-all"
-      >
-        Return Home
-      </button>
     </div>
   );
 };
-

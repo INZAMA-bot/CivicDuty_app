@@ -20,6 +20,9 @@ import {
   UserPlus,
   Copy,
   Compass,
+  Eye,
+  ShieldCheck,
+  ArrowRight,
 } from 'lucide-react';
 
 interface CommissionedCabinetMember {
@@ -30,15 +33,18 @@ interface CommissionedCabinetMember {
   passcode: string;
   tierLabel: string;
   status: 'Active' | 'Invited · Pending First Mount';
+  accessMode: 'read_only' | 'policy_advisory';
 }
 
 export const GovAdminView: React.FC = () => {
   const {
     user,
+    setUser,
     posts,
     teamMembers,
     invites,
     addInvite,
+    mintGovAccessCode,
     officialQueries,
     audit,
     logAudit,
@@ -47,6 +53,7 @@ export const GovAdminView: React.FC = () => {
     setActiveDept,
     setActiveDeptCountry,
     setSelectedMinistryId,
+    showDemos,
   } = useApp();
 
   // Strictly lock to the official's commissioned country
@@ -144,6 +151,7 @@ export const GovAdminView: React.FC = () => {
   const [inviteRole, setInviteRole] = useState<string>(inviteRoleOptions[0] || 'Cabinet Minister');
   const [inviteName, setInviteName] = useState<string>('');
   const [inviteContact, setInviteContact] = useState<string>('');
+  const [inviteAccessMode, setInviteAccessMode] = useState<'read_only' | 'policy_advisory'>('read_only');
   const [commissionedCabinet, setCommissionedCabinet] = useState<CommissionedCabinetMember[]>(() => [
     {
       id: 'cab-minister-1',
@@ -156,7 +164,8 @@ export const GovAdminView: React.FC = () => {
       contact: `minister.${(psInfo.shortTitle || 'gov').toLowerCase()}@${activeCountry.toLowerCase()}.gov`,
       passcode: `MIN-${(psInfo.shortTitle || activeCountry).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4)}-${activeCountry}-2026`,
       tierLabel: 'Cabinet Policy & Political Oversight',
-      status: 'Invited · Pending First Mount',
+      status: 'Active',
+      accessMode: 'read_only',
     },
     ...(psInfo.stateMinisterTitles || []).slice(0, 2).map((stTitle, idx) => ({
       id: `state-min-${idx}`,
@@ -168,8 +177,51 @@ export const GovAdminView: React.FC = () => {
       status: (idx === 0 ? 'Active' : 'Invited · Pending First Mount') as
         | 'Active'
         | 'Invited · Pending First Mount',
+      accessMode: 'read_only' as const,
     })),
   ]);
+
+  const handleToggleMinisterAccessMode = (cabId: string) => {
+    setCommissionedCabinet((prev) =>
+      prev.map((c) => {
+        if (c.id !== cabId) return c;
+        const nextMode = c.accessMode === 'read_only' ? 'policy_advisory' : 'read_only';
+        logAudit(
+          'PS_MINISTER_ACCESS_MODE_UPDATED',
+          c.passcode,
+          `Permanent Secretary updated ${c.officialName} (${c.roleTitle}) warrant privilege to [${
+            nextMode === 'read_only'
+              ? 'STRICT READ-ONLY EXECUTIVE OVERSIGHT'
+              : 'READ-ONLY ACCOUNTING + POLICY ADVISORY DIRECTIVES'
+          }].`,
+          activeCountry
+        );
+        toast(
+          `${c.officialName} privilege set to: ${
+            nextMode === 'read_only' ? 'Strict Read-Only Oversight' : 'Read-Only + Policy Advisory'
+          }`,
+          'emerald'
+        );
+        return { ...c, accessMode: nextMode };
+      })
+    );
+  };
+
+  const handleExperienceAsMinister = (cab: CommissionedCabinetMember) => {
+    navigator.clipboard?.writeText(cab.passcode);
+    logAudit(
+      'MINISTER_WARRANT_CODE_COPIED',
+      cab.passcode,
+      `Copied ${cab.officialName} (${cab.roleTitle}) warrant key [${cab.passcode}] for strict access-code authentication.`,
+      activeCountry
+    );
+    toast(
+      `Strict Warrant Lock: Copied ${cab.passcode}. Paste it at the Official Desk to sign in as ${cab.officialName}.`,
+      'emerald'
+    );
+    setUser(null);
+    go('ob2');
+  };
 
   const handleCommissionMinisterOrOfficial = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +229,8 @@ export const GovAdminView: React.FC = () => {
     const cleanContact =
       inviteContact.trim() || `official.${Date.now().toString().slice(-3)}@${activeCountry.toLowerCase()}.gov`;
     const rand = Math.floor(1000 + Math.random() * 9000);
-    const prefix = inviteRole.toUpperCase().includes('MINISTER')
+    const isMinisterRole = inviteRole.toUpperCase().includes('MINISTER');
+    const prefix = isMinisterRole
       ? 'MIN'
       : inviteRole.toUpperCase().includes('DIRECTOR')
       ? 'DIR'
@@ -187,16 +240,19 @@ export const GovAdminView: React.FC = () => {
       .replace(/[^A-Z0-9]/g, '')
       .slice(0, 4)}-${rand}`;
 
+    const assignedRole = isMinisterRole ? 'read_only' : 'node_admin';
+
     const newCab: CommissionedCabinetMember = {
       id: `cab-${Date.now()}`,
       roleTitle: inviteRole,
       officialName: cleanName,
       contact: cleanContact,
       passcode: generatedCode,
-      tierLabel: inviteRole.toLowerCase().includes('minister')
-        ? 'Ministerial Cabinet Warrant'
+      tierLabel: isMinisterRole
+        ? 'Ministerial Cabinet Warrant (PFMA Read-Only Accounting)'
         : 'Directorate / Agency Warrant',
-      status: 'Invited · Pending First Mount',
+      status: 'Active',
+      accessMode: inviteAccessMode,
     };
 
     setCommissionedCabinet((prev) => [newCab, ...prev]);
@@ -205,7 +261,7 @@ export const GovAdminView: React.FC = () => {
       code: generatedCode,
       name: cleanName,
       title: inviteRole,
-      role: 'node_admin',
+      role: assignedRole,
       scope: isLinePs ? psInfo.ministryId || 'MINISTRY' : activeCountry,
       dept: isLinePs ? psInfo.ministryId || 'ministry' : 'molg',
       is_utility: false,
@@ -216,10 +272,21 @@ export const GovAdminView: React.FC = () => {
       invited_at: new Date().toISOString(),
     });
 
+    mintGovAccessCode(generatedCode, {
+      country: activeCountry,
+      dept: isLinePs ? psInfo.ministryId?.toLowerCase() || 'mowt' : 'molg',
+      scope: isLinePs ? psInfo.ministryId || activeCountry : activeCountry,
+      scope_label: isLinePs ? psInfo.ministryName || 'Line Ministry' : superadminMinistryName,
+      role: assignedRole,
+      role_label: `${cleanName} — ${inviteRole} (${
+        inviteAccessMode === 'read_only' ? 'Read-Only Executive Oversight' : 'Policy Advisory Mode'
+      })`,
+    });
+
     logAudit(
       'MINISTERIAL_OFFICIAL_COMMISSIONED',
       `${cleanName} (${inviteRole})`,
-      `Commissioned ${inviteRole} (${cleanName}) with passcode [${generatedCode}] strictly within ${
+      `Commissioned ${inviteRole} (${cleanName}) with passcode [${generatedCode}] and mode [${inviteAccessMode.toUpperCase()}] strictly within ${
         isLinePs ? psInfo.ministryName : superadminMinistryName
       } (${countryMeta.name}).`
     );
@@ -227,18 +294,20 @@ export const GovAdminView: React.FC = () => {
     setInviteName('');
     setInviteContact('');
     toast(
-      `Invited ${cleanName} (${inviteRole}) · Passcode: ${generatedCode}`,
+      `Invited ${cleanName} (${inviteRole}) · Mode: ${
+        inviteAccessMode === 'read_only' ? 'Read-Only Executive' : 'Policy Advisory'
+      } · Key: ${generatedCode}`,
       'emerald'
     );
   };
 
   const scopedPosts = useMemo(() => {
-    const countryPosts = posts.filter((p) => (p.country || 'UG') === activeCountry);
+    const countryPosts = posts.filter((p) => (p.country || 'UG') === activeCountry && (showDemos || !p.is_demo));
     if (!isLinePs) return countryPosts;
     const deptIds = new Set(scopedDepts.map((d) => d.id));
     const filtered = countryPosts.filter((p) => deptIds.has(p.dept));
     return filtered.length > 0 ? filtered : countryPosts.slice(0, 4);
-  }, [posts, activeCountry, isLinePs, scopedDepts]);
+  }, [posts, activeCountry, isLinePs, scopedDepts, showDemos]);
 
   const resolvedPosts = scopedPosts.filter(
     (p) => p.status === 'resolved' || p.status.toUpperCase().includes('RESOLVED')
@@ -289,6 +358,61 @@ export const GovAdminView: React.FC = () => {
 
     return Object.values(map);
   }, [rolloutNodes]);
+
+  const isNationalSuperadmin =
+    user?.role === 'platform_admin' ||
+    psInfo.isMoLG ||
+    user?.dept === 'molg';
+
+  // If any non-Superadmin Accounting Officer (e.g. Line Ministry PS, CAO, Town Clerk, Subcounty Chief, Parish Chief)
+  // navigates directly to gov_admin, enforce strict jurisdictional isolation and route them to their own jurisdiction desk.
+  if (!isNationalSuperadmin) {
+    return (
+      <div className="px-3.5 sm:px-5 pt-6 pb-24 max-w-2xl mx-auto animate-fade-in text-slate-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-[#161a22] p-5 sm:p-6 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+          <div className="flex items-center gap-2 text-xs font-mono font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            <Lock size={14} />
+            <span>Strict Jurisdictional Isolation Enforced</span>
+          </div>
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+            National Superadmin Console Restricted
+          </h1>
+          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            The National Superadmin Console is reserved exclusively for the National Territorial Superadmin ({superadminOfficerTitle}). As <strong>{user?.real_title_short || user?.role_label || 'Accounting Officer'}</strong>, your warrant is strictly locked to <strong>{isLinePs ? psInfo.ministryName : user?.scope_label || user?.dept_label || activeCountry}</strong> with zero cross-jurisdiction access.
+          </p>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            {isLinePs ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (psInfo.ministryId) setSelectedMinistryId(psInfo.ministryId);
+                  go('ps_executive_desk');
+                }}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer transition-colors"
+              >
+                Open My {psInfo.shortTitle} Executive Apex Desk →
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => go('gov_inbox')}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer transition-colors"
+              >
+                Return to My Jurisdiction Inbox →
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => go('gov_team')}
+              className="px-4 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold cursor-pointer transition-colors"
+            >
+              Open My Jurisdiction Team Roster →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-3.5 sm:px-5 pt-4 pb-24 max-w-5xl mx-auto space-y-4 animate-fade-in text-slate-900 dark:text-slate-100">
@@ -519,23 +643,34 @@ export const GovAdminView: React.FC = () => {
 
             <div>
               <label className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold block mb-1">
-                3. Official Gov Email / SMS Dispatch
+                3. PS Statutory Warrant Mode &amp; Email Dispatch
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inviteContact}
-                  onChange={(e) => setInviteContact(e.target.value)}
-                  placeholder={`minister@${activeCountry.toLowerCase()}.gov`}
-                  className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                />
-                <button
-                  type="submit"
-                  className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={inviteAccessMode}
+                  onChange={(e) => setInviteAccessMode(e.target.value as 'read_only' | 'policy_advisory')}
+                  className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  title="Under the Public Finance Management Act (PFMA), the PS sets the Minister's operational warrant scope"
                 >
-                  <Send size={12} />
-                  <span>Invite</span>
-                </button>
+                  <option value="read_only">Read-Only Executive Oversight (PFMA Default)</option>
+                  <option value="policy_advisory">Read-Only Accounting + Policy Advisory</option>
+                </select>
+                <div className="flex flex-1 gap-2">
+                  <input
+                    type="text"
+                    value={inviteContact}
+                    onChange={(e) => setInviteContact(e.target.value)}
+                    placeholder={`minister@${activeCountry.toLowerCase()}.gov`}
+                    className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <Send size={12} />
+                    <span>Invite</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -545,9 +680,9 @@ export const GovAdminView: React.FC = () => {
           {commissionedCabinet.map((cab) => (
             <div
               key={cab.id}
-              className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col justify-between gap-2"
+              className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col justify-between gap-2.5"
             >
-              <div>
+              <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-400">
                     {cab.tierLabel}
@@ -556,28 +691,60 @@ export const GovAdminView: React.FC = () => {
                     {cab.status === 'Active' ? 'Active' : 'Invited'}
                   </span>
                 </div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                <div className="text-xs font-bold text-slate-900 dark:text-white">
                   {cab.roleTitle}
                 </div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                <div className="text-[11px] text-slate-600 dark:text-slate-400">
                   {cab.officialName} · <span className="font-mono">{cab.contact}</span>
+                </div>
+
+                {/* PS Warrant Privilege Badge & Toggle */}
+                <div className="pt-1.5 flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-amber-700 dark:text-amber-400">
+                    <Eye size={11} />
+                    <span>
+                      {cab.accessMode === 'read_only'
+                        ? 'Read-Only Executive Oversight'
+                        : 'Read-Only + Policy Advisory'}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleMinisterAccessMode(cab.id)}
+                    className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                    title="Permanent Secretary tool: Toggle between Strict Read-Only Oversight and Policy Advisory mode"
+                  >
+                    PS Toggle Mode ↻
+                  </button>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
-                <code className="text-[10.5px] font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-[#161a22] px-2 py-0.5 rounded border border-[#e3e6ea] dark:border-[#262b36]">
-                  {cab.passcode}
-                </code>
+              <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-[10.5px] font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-[#161a22] px-2 py-0.5 rounded border border-[#e3e6ea] dark:border-[#262b36]">
+                    {cab.passcode}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(cab.passcode);
+                      toast(`Copied commissioning passcode ${cab.passcode}`, 'emerald');
+                    }}
+                    className="px-2 py-1 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy size={11} />
+                    <span>Copy Key</span>
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => {
-                    navigator.clipboard?.writeText(cab.passcode);
-                    toast(`Copied commissioning passcode ${cab.passcode}`, 'emerald');
-                  }}
-                  className="px-2 py-1 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1 cursor-pointer"
+                  onClick={() => handleExperienceAsMinister(cab)}
+                  className="w-full py-1.5 px-2.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:opacity-90 text-[10.5px] font-mono font-semibold flex items-center justify-center gap-1.5 transition-opacity cursor-pointer"
                 >
-                  <Copy size={11} />
-                  <span>Copy Key</span>
+                  <Lock size={12} />
+                  <span>Copy Warrant &amp; Sign In at Official Desk</span>
+                  <ArrowRight size={11} />
                 </button>
               </div>
             </div>

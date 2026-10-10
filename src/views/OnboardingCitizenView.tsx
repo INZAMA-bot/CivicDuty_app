@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode, Department, IdentityDocumentType } from '../types';
 import { COUNTRIES, allDepts } from '../data/countries';
@@ -133,13 +133,18 @@ export const OnboardingCitizenView: React.FC = () => {
     setProfiles,
     ensureCitizenSession,
     openLegalCenter,
+    showDemos,
+    selectedCountry,
+    setSelectedCountry,
   } = useApp();
 
   // Onboarding Mode: New Citizen Sign Up (3-Step) vs Returning Citizen Login (1-Step)
   const [citizenAuthMode, setCitizenAuthMode] = useState<'signup' | 'login'>('signup');
   const [acceptedCharter, setAcceptedCharter] = useState<boolean>(true);
   const [loginIdentifier, setLoginIdentifier] = useState<string>('');
-  const [loginCountry, setLoginCountry] = useState<CountryCode>(user?.country || 'UG');
+  const [loginCountry, setLoginCountry] = useState<CountryCode>(
+    ((selectedCountry || user?.country || 'UG') as CountryCode)
+  );
   const [loginCitizenshipMode, setLoginCitizenshipMode] = useState<'citizen' | 'foreign_resident'>('citizen');
   const [loginForeignDocType, setLoginForeignDocType] = useState<IdentityDocumentType>('work_permit');
   const [loginForeignPermitNo, setLoginForeignPermitNo] = useState<string>('');
@@ -149,7 +154,16 @@ export const OnboardingCitizenView: React.FC = () => {
   const [citizenshipStatus, setCitizenshipStatus] = useState<'citizen' | 'foreign_resident'>('citizen');
   const [idType, setIdType] = useState<IdentityDocumentType>('nid');
   const [idVal, setIdVal] = useState('');
-  const [country, setCountry] = useState<CountryCode | ''>(user?.country || 'UG');
+  const [country, setCountry] = useState<CountryCode | ''>(
+    ((selectedCountry || user?.country || 'UG') as CountryCode)
+  );
+
+  useEffect(() => {
+    if (selectedCountry && COUNTRIES[selectedCountry as CountryCode]) {
+      setCountry(selectedCountry as CountryCode);
+      setLoginCountry(selectedCountry as CountryCode);
+    }
+  }, [selectedCountry]);
   const [originCountry, setOriginCountry] = useState<CountryCode>('KE');
   const [permitNumber, setPermitNumber] = useState('');
   const [permitExpiry, setPermitExpiry] = useState('2027-12-31');
@@ -194,7 +208,7 @@ export const OnboardingCitizenView: React.FC = () => {
     setIdVal(val);
     setVerificationScanStatus('idle');
     const detected = detectCountry(val);
-    if (detected && citizenshipStatus === 'citizen') {
+    if (detected && citizenshipStatus === 'citizen' && !country) {
       setCountry(detected);
     }
   };
@@ -366,6 +380,7 @@ export const OnboardingCitizenView: React.FC = () => {
       followed: activeProfile.followed || defaultFollowed,
       name: activeProfile.display_name,
     });
+    setSelectedCountry(targetCountry);
 
     toast(
       isForeigner
@@ -377,14 +392,14 @@ export const OnboardingCitizenView: React.FC = () => {
   };
 
   const handleFinishOnboarding = () => {
+    const activeCountry = (country || selectedCountry || 'UG') as CountryCode;
+    const countryDefaultDepts = allDepts(activeCountry).slice(0, 4).map((d) => d.id);
     let deptsToFollow = [...followedDepts];
     if (deptsToFollow.length < 3) {
       toast('Minimum 3 walls required — auto-added top local authorities', 'amber');
-      deptsToFollow = Array.from(new Set([...deptsToFollow, 'ug-unra', 'ug-nwsc', 'ug-umeme']));
+      deptsToFollow = Array.from(new Set([...deptsToFollow, ...countryDefaultDepts]));
       setFollowedDepts(deptsToFollow);
     }
-
-    const activeCountry = (country || 'UG') as CountryCode;
     const cleanId = idVal.trim() || `${activeCountry}-9028491`;
     const uid = 'usr-' + cleanId.replace(/[^A-Z0-9]/gi, '').slice(-5) + '-' + activeCountry;
     const isForeigner = citizenshipStatus === 'foreign_resident';
@@ -430,6 +445,7 @@ export const OnboardingCitizenView: React.FC = () => {
       followed: deptsToFollow,
       name: newProfile.display_name,
     });
+    setSelectedCountry(activeCountry);
 
     toast(
       isForeigner
@@ -473,16 +489,20 @@ export const OnboardingCitizenView: React.FC = () => {
               <span>3 · Walls</span>
             </div>
 
-            <button
-              onClick={() => {
-                ensureCitizenSession();
-                go('feed');
-              }}
-              className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <span>Skip</span>
-              <ArrowRight size={11} strokeWidth={1.75} />
-            </button>
+            {showDemos ? (
+              <button
+                onClick={() => {
+                  ensureCitizenSession();
+                  go('feed');
+                }}
+                className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <span>Skip</span>
+                <ArrowRight size={11} strokeWidth={1.75} />
+              </button>
+            ) : (
+              <span className="text-[9.5px] font-mono text-slate-400">Strict ID Required</span>
+            )}
           </div>
 
           <div className="p-4 sm:p-5 space-y-4">
@@ -639,7 +659,11 @@ export const OnboardingCitizenView: React.FC = () => {
                       </label>
                       <select
                         value={loginCountry}
-                        onChange={(e) => setLoginCountry(e.target.value as CountryCode)}
+                        onChange={(e) => {
+                          const nextC = e.target.value as CountryCode;
+                          setLoginCountry(nextC);
+                          setSelectedCountry(nextC);
+                        }}
                         className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
                       >
                         {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
@@ -676,20 +700,22 @@ export const OnboardingCitizenView: React.FC = () => {
                         <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                           Foreigner Extension Document Required
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const doc =
-                              FOREIGN_DOCUMENT_OPTIONS.find((d) => d.id === loginForeignDocType) ||
-                              FOREIGN_DOCUMENT_OPTIONS[0];
-                            setLoginForeignPermitNo(`${doc.codePrefix}-${loginCountry}-2026-9042`);
-                            if (!loginIdentifier) setLoginIdentifier(`P-${loginOriginCountry}-774920`);
-                            toast(`Auto-filled verified ${doc.label} for ${COUNTRIES[loginCountry]?.name}`, 'emerald');
-                          }}
-                          className="text-[10px] font-mono font-semibold text-amber-700 dark:text-amber-300 underline cursor-pointer"
-                        >
-                          Fill Demo Permit
-                        </button>
+                        {showDemos && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const doc =
+                                FOREIGN_DOCUMENT_OPTIONS.find((d) => d.id === loginForeignDocType) ||
+                                FOREIGN_DOCUMENT_OPTIONS[0];
+                              setLoginForeignPermitNo(`${doc.codePrefix}-${loginCountry}-2026-9042`);
+                              if (!loginIdentifier) setLoginIdentifier(`P-${loginOriginCountry}-774920`);
+                              toast(`Auto-filled verified ${doc.label} for ${COUNTRIES[loginCountry]?.name}`, 'emerald');
+                            }}
+                            className="text-[10px] font-mono font-semibold text-amber-700 dark:text-amber-300 underline cursor-pointer"
+                          >
+                            Fill Demo Permit
+                          </button>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -848,20 +874,22 @@ export const OnboardingCitizenView: React.FC = () => {
                       <label className="text-[10px] font-mono text-amber-800 dark:text-amber-300 uppercase tracking-wider font-bold">
                         Select Foreigner Immigration Document
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const activeC = (country || 'UG') as CountryCode;
-                          const docMeta =
-                            FOREIGN_DOCUMENT_OPTIONS.find((d) => d.id === idType) || FOREIGN_DOCUMENT_OPTIONS[0];
-                          setPermitNumber(`${docMeta.codePrefix}-${activeC}-2026-8841`);
-                          setIdVal(`P-${originCountry}-904821`);
-                          handleRunVerificationScan();
-                        }}
-                        className="text-[10px] font-mono font-semibold text-amber-700 dark:text-amber-300 underline cursor-pointer"
-                      >
-                        Auto-Fill Demo Permit
-                      </button>
+                      {showDemos && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const activeC = (country || 'UG') as CountryCode;
+                            const docMeta =
+                              FOREIGN_DOCUMENT_OPTIONS.find((d) => d.id === idType) || FOREIGN_DOCUMENT_OPTIONS[0];
+                            setPermitNumber(`${docMeta.codePrefix}-${activeC}-2026-8841`);
+                            setIdVal(`P-${originCountry}-904821`);
+                            handleRunVerificationScan();
+                          }}
+                          className="text-[10px] font-mono font-semibold text-amber-700 dark:text-amber-300 underline cursor-pointer"
+                        >
+                          Auto-Fill Demo Permit
+                        </button>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -932,7 +960,9 @@ export const OnboardingCitizenView: React.FC = () => {
                     <select
                       value={country}
                       onChange={(e) => {
-                        setCountry(e.target.value as CountryCode);
+                        const nextC = e.target.value as CountryCode;
+                        setCountry(nextC);
+                        setSelectedCountry(nextC);
                         setVerificationScanStatus('idle');
                       }}
                       className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"

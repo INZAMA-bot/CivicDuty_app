@@ -12,6 +12,8 @@ import {
   Video,
   ArrowRight,
   Terminal,
+  Lock,
+  Eye,
 } from 'lucide-react';
 
 interface InteractiveRoleSandboxGridProps {
@@ -36,6 +38,7 @@ export const InteractiveRoleSandboxGrid: React.FC<InteractiveRoleSandboxGridProp
     setActiveDept,
     setActiveDeptCountry,
     setUser,
+    showDemos,
   } = useApp();
 
   const activeCountry = (countryCode || user?.country || selectedCountry || 'UG') as CountryCode;
@@ -49,6 +52,35 @@ export const InteractiveRoleSandboxGrid: React.FC<InteractiveRoleSandboxGridProp
   const finish = () => {
     if (onAfterSelect) onAfterSelect();
   };
+
+  if (!showDemos) {
+    return (
+      <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-1">
+          <div className="text-[10px] font-mono uppercase tracking-wider font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+            <Lock size={12} />
+            <span>PRODUCTION LIVE CUTOVER · SANDBOX DEMOS DISABLED</span>
+          </div>
+          <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+            1-Click Role Simulations Turned OFF via CD-Ops Master Switch
+          </h3>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            All 6 live role simulations and demo auto-fillers are currently hidden for production citizen operations. Re-enable anytime from the CD-Ops Studio header.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            finish();
+            go('company_management');
+          }}
+          className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 shrink-0 cursor-pointer"
+        >
+          Open CD-Ops Switch →
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
@@ -194,48 +226,85 @@ export const InteractiveRoleSandboxGrid: React.FC<InteractiveRoleSandboxGridProp
           </div>
         </button>
 
-        {/* Demo 4: Line Ministry Permanent Secretary (Strict Jurisdiction + Invite Minister) */}
-        <button
-          type="button"
-          onClick={() => {
-            setUser({
-              id: `ps-works-${activeCountry.toLowerCase()}`,
-              name: `Permanent Secretary — Works & Transport (${countryMeta.name})`,
-              country: activeCountry,
-              role: 'node_admin',
-              dept: 'unra',
-              dept_label: `${countryMeta.name} Ministry of Works & Transport`,
-              scope: activeCountry,
-              scope_label: `${countryMeta.name} Ministry of Works & Transport (MoWT)`,
-              title: `Permanent Secretary, Ministry of Works & Transport`,
-              hierarchy_level: 'tier5_perm_sec',
-              escalation_rank: 5,
-              is_admin: true,
-            });
-            finish();
-            go('gov_admin');
-            toast(
-              `Mounted Line Ministry PS (${countryMeta.name} Works & Transport) — strictly scoped Admin, Team & Apex!`,
-              'emerald'
-            );
-          }}
-          className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-indigo-500/60 flex flex-col justify-between gap-2 transition-colors cursor-pointer group text-left"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-              <Users size={13} /> Line Ministry PS &amp; Apex
-            </span>
-            <ArrowRight size={12} className="text-slate-400 group-hover:text-indigo-500" />
-          </div>
-          <div>
+        {/* Demo 4: Line Ministry Permanent Secretary & Cabinet Minister (Read-Only) */}
+        <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-indigo-500/60 flex flex-col justify-between gap-2 transition-colors text-left">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                <Users size={13} /> Line Ministry PS &amp; Minister
+              </span>
+              <span className="text-[9.5px] font-mono text-slate-400">PFMA Dual-Mode</span>
+            </div>
             <div className="text-xs font-bold text-slate-900 dark:text-white">
-              Ministry Admin, Team &amp; Invite Minister
+              PS Write Authority vs Minister Read-Only
             </div>
-            <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-              Strictly limited to your Ministry: invite your Cabinet Minister, State Ministers &amp; review Apex.
+            <div className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+              Experience Line PS operational control or Cabinet Minister Read-Only Executive Oversight.
             </div>
           </div>
-        </button>
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setUser({
+                  id: `ps-works-${activeCountry.toLowerCase()}`,
+                  name: `Permanent Secretary — Works & Transport (${countryMeta.name})`,
+                  country: activeCountry,
+                  role: 'node_admin',
+                  dept: 'unra',
+                  dept_label: `${countryMeta.name} Ministry of Works & Transport`,
+                  scope: activeCountry,
+                  scope_label: `${countryMeta.name} Ministry of Works & Transport (MoWT)`,
+                  title: `Permanent Secretary, Ministry of Works & Transport`,
+                  real_title_short: 'PS WORKS',
+                  hierarchy_level: 'tier5_perm_sec',
+                  escalation_rank: 5,
+                  is_admin: true,
+                });
+                finish();
+                go('gov_admin');
+                toast(
+                  `Mounted Line Ministry PS (${countryMeta.name} Works & Transport) — Full Operational Write & Commissioning!`,
+                  'emerald'
+                );
+              }}
+              className="px-2 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-mono font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>Line PS (Write)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUser({
+                  id: `minister-works-${activeCountry.toLowerCase()}`,
+                  name: `Cabinet Minister — Works & Transport (${countryMeta.name})`,
+                  country: activeCountry,
+                  role: 'read_only',
+                  role_label: 'Cabinet Minister (Read-Only Oversight)',
+                  dept: 'unra',
+                  dept_label: `${countryMeta.name} Ministry of Works & Transport`,
+                  scope: activeCountry,
+                  scope_label: `${countryMeta.name} Ministry of Works & Transport (MoWT)`,
+                  title: `Cabinet Minister — ${countryMeta.name} Ministry of Works & Transport (Read-Only Executive Oversight)`,
+                  real_title_short: 'MINISTER (RO)',
+                  hierarchy_level: 'tier5_perm_sec',
+                  escalation_rank: 5,
+                  is_admin: false,
+                });
+                finish();
+                go('ps_executive_desk');
+                toast(
+                  `Mounted Cabinet Minister (Read-Only Executive Oversight) for ${countryMeta.name} Works & Transport!`,
+                  'amber'
+                );
+              }}
+              className="px-2 py-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-[10px] font-mono font-semibold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+            >
+              <Eye size={11} />
+              <span>Minister (RO)</span>
+            </button>
+          </div>
+        </div>
 
         {/* Demo 5: National ID / Passport & Foreigner Permit Verification */}
         <button

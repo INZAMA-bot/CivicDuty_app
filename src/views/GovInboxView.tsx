@@ -47,6 +47,7 @@ export const GovInboxView: React.FC = () => {
     addGovFeedbackMessage,
     endorseModificationForCdOps,
     rejectModificationBySuperadmin,
+    showDemos,
   } = useApp();
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
   const [selectedDupToMerge, setSelectedDupToMerge] = useState<string>('');
@@ -89,13 +90,33 @@ export const GovInboxView: React.FC = () => {
   if (!user) return null;
 
   const d = getDept(user.country, user.dept || 'kcca');
-  const queue = posts.filter(
-    (p) =>
-      p.country === user.country &&
-      (p.dept === user.dept ||
-        (user.dept === 'mofped' && (p.category === 'finance' || p.dept === 'ura' || p.is_corruption)) ||
-        (user.scope && p.territory?.district === user.scope))
-  );
+  const isNationalScope =
+    !user.scope ||
+    user.scope.toUpperCase() === user.country.toUpperCase() ||
+    user.scope.toUpperCase() === 'NATIONAL' ||
+    user.scope.toUpperCase().startsWith('PS-') ||
+    user.role === 'platform_admin';
+
+  const queue = posts.filter((p) => {
+    if (p.country !== user.country) return false;
+    if (!showDemos && p.is_demo) return false;
+
+    if (!isNationalScope && user.scope) {
+      const sc = user.scope.toLowerCase();
+      const scLabelFirst = (user.scope_label || '').split(/[ ·,(]/)[0].trim().toLowerCase();
+      const matchesTerritory =
+        p.territory?.district?.toLowerCase() === sc ||
+        p.territory?.subcounty?.toLowerCase() === sc ||
+        p.territory?.parish?.toLowerCase() === sc ||
+        (scLabelFirst.length >= 3 && (p.location || '').toLowerCase().includes(scLabelFirst));
+      return matchesTerritory;
+    }
+
+    return (
+      p.dept === user.dept ||
+      (user.dept === 'mofped' && (p.category === 'finance' || p.dept === 'ura' || p.is_corruption))
+    );
+  });
 
   const isRO = user.role === 'read_only';
   const canInvite = ['node_admin', 'platform_admin'].includes(user.role) || user.is_admin;

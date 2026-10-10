@@ -56,6 +56,7 @@ export const CompanyManagementView: React.FC = () => {
     setShowDemos,
     posts,
     claimedEntities,
+    logAudit,
   } = useApp();
 
   const [internalUnlocked, setInternalUnlocked] = useState<boolean>(
@@ -271,8 +272,43 @@ export const CompanyManagementView: React.FC = () => {
           </h2>
         </div>
 
-        {/* Active Dispatching Operator & Lock */}
-        <div className="flex items-center gap-2">
+        {/* Master Demo Switch, Active Dispatching Operator & Lock */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              const nextState = !showDemos;
+              setShowDemos(nextState);
+              logAudit(
+                nextState ? 'CDOPS_MASTER_DEMOS_ENABLED' : 'CDOPS_MASTER_DEMOS_DISABLED',
+                nextState
+                  ? 'CD-Ops enabled Global Master Demo Switch (Feed Mannequins, 6 Role Simulations, Official Auto-Fill, Provider Presets & Permit Fillers ON).'
+                  : 'CD-Ops disabled Global Master Demo Switch — Production Live Cutover active across all portals.',
+                'CD-OPS',
+                'GLOBAL'
+              );
+              toast(
+                nextState
+                  ? 'Master Switch ON: All 5 Demo Subsystems & Role Simulations enabled across CivicDuty.'
+                  : 'Master Switch OFF: All Demos & Auto-Fillers disabled — Production Live Mode active!',
+                nextState ? 'amber' : 'emerald'
+              );
+            }}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+              showDemos
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
+                : 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
+            }`}
+            title="1-Click Master Switch to turn ON or OFF all demos, role simulations, and auto-fillers across the entire platform"
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                showDemos ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
+              }`}
+            />
+            <span>{showDemos ? 'ALL DEMOS: ON (SANDBOX)' : 'ALL DEMOS: OFF (LIVE ONLY)'}</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('staff')}
             className="flex items-center gap-2 py-1.5 px-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-left transition-colors cursor-pointer"
@@ -1073,45 +1109,124 @@ export const CompanyManagementView: React.FC = () => {
       {/* TAB 5: DATA COMPLIANCE & DEMO CUTOVER RULES */}
       {/* ============================================================ */}
       {activeTab === 'policy' && (
-        <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2.5">
-            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase font-mono">
-              Acceptable Data Policy &amp; Production Feed Cutover
-            </span>
-            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-              Strictly Enforced
+        <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4 animate-fade-in">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+            <div>
+              <span className="text-xs font-bold text-slate-900 dark:text-white uppercase font-mono block">
+                Global Master Demo Switch &amp; Production Cutover Console
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                1-Click master switch controlling all 5 demo &amp; sandbox subsystems across CivicDuty.site
+              </span>
+            </div>
+            <span
+              className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold border ${
+                showDemos
+                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                  : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+              }`}
+            >
+              {showDemos ? 'SANDBOX / PITCH DEMO MODE ACTIVE' : 'PRODUCTION LIVE CUTOVER ACTIVE'}
             </span>
           </div>
 
-          <div className="space-y-2.5 text-xs">
-            <div className="flex items-center justify-between gap-3 p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg">
-              <div>
-                <div className="font-bold text-slate-900 dark:text-white">
-                  Illustrative Demo Showcases (&ldquo;Boutique Mannequins&rdquo;) — {posts.filter((p) => p.is_demo).length} Multi-Country Demos
+          <div className="space-y-3 text-xs">
+            {/* Master Switch Card */}
+            <div className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Master Platform Demo Switch (All Demos At Once)</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">
+                    Toggle all demo feeds, 1-click role simulations, and passcode auto-fillers across the entire application simultaneously. State persists across reloads and honors <code className="font-mono font-bold">VITE_SANDBOX_MODE</code>.
+                  </div>
                 </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  Pre-filled country showcase tickets labeled <code className="font-mono font-bold">ILLUSTRATIVE DEMO</code>. Toggle OFF at launch cutover.
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextState = !showDemos;
+                    setShowDemos(nextState);
+                    logAudit(
+                      nextState ? 'CDOPS_MASTER_DEMOS_ENABLED' : 'CDOPS_MASTER_DEMOS_DISABLED',
+                      nextState
+                        ? 'CD-Ops enabled Global Master Demo Switch across all 5 subsystems.'
+                        : 'CD-Ops disabled Global Master Demo Switch — Production Live Mode enforced.',
+                      'CD-OPS',
+                      'GLOBAL'
+                    );
+                    toast(
+                      nextState
+                        ? 'All 5 Demo Subsystems turned ON (Sandbox / Pitch Mode).'
+                        : 'All 5 Demo Subsystems turned OFF — Strictly Live Production Mode active.',
+                      nextState ? 'amber' : 'emerald'
+                    );
+                  }}
+                  className={`px-4 py-2.5 rounded-lg font-mono font-bold text-xs shrink-0 cursor-pointer transition-colors flex items-center gap-2 ${
+                    showDemos
+                      ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  <span>
+                    {showDemos
+                      ? 'ALL DEMOS: ON — Click to Turn All OFF'
+                      : 'ALL DEMOS: OFF — Click to Turn All ON'}
+                  </span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDemos(!showDemos);
-                  toast(
-                    !showDemos
-                      ? 'Illustrative Demo Showcases enabled across public feeds.'
-                      : 'Illustrative Demo Showcases hidden — showing strictly live citizen dispatches.',
-                    'emerald'
-                  );
-                }}
-                className={`px-3 py-1.5 rounded-lg font-mono font-semibold text-xs shrink-0 cursor-pointer transition-colors ${
-                  showDemos
-                    ? 'bg-amber-500 text-slate-950'
-                    : 'bg-emerald-600 text-white'
-                }`}
-              >
-                {showDemos ? 'Demos: ON (Click to Hide)' : 'Demos: OFF (Live Only)'}
-              </button>
+
+              {/* 5 Subsystems Controlled Simultaneously */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
+                {[
+                  {
+                    title: '1. Public Feed Demos',
+                    detail: `${posts.filter((p) => p.is_demo).length} Multi-Country Showcase Tickets`,
+                    stateLabel: showDemos ? 'Visible in Feeds' : 'Hidden (Live Only)',
+                  },
+                  {
+                    title: '2. 6 Role Simulations',
+                    detail: 'Field Guide & System Docs Sandbox',
+                    stateLabel: showDemos ? '1-Click Launch ON' : 'Locked (Prod Ref)',
+                  },
+                  {
+                    title: '3. Official Desk Auto-Fill',
+                    detail: 'Gov Portal Passcode Injectors',
+                    stateLabel: showDemos ? 'Auto-Fill Active' : 'Manual Code Only',
+                  },
+                  {
+                    title: '4. Entity Demo Presets',
+                    detail: 'Provider Gateway Quick-Mounts',
+                    stateLabel: showDemos ? 'Presets Visible' : 'Direct Code Only',
+                  },
+                  {
+                    title: '5. Visa & ID Demo Fillers',
+                    detail: 'Onboarding Permit Auto-Fillers',
+                    stateLabel: showDemos ? 'Demo Fill ON' : 'Strict Entry Only',
+                  },
+                ].map((sub) => (
+                  <div
+                    key={sub.title}
+                    className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1"
+                  >
+                    <div className="text-[10.5px] font-bold text-slate-900 dark:text-white">
+                      {sub.title}
+                    </div>
+                    <div className="text-[9.5px] text-slate-500 dark:text-slate-400">
+                      {sub.detail}
+                    </div>
+                    <div
+                      className={`text-[9.5px] font-mono font-bold pt-0.5 ${
+                        showDemos
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      ● {sub.stateLabel}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg space-y-1.5">

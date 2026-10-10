@@ -1424,11 +1424,16 @@ export const GovTeamView: React.FC = () => {
                       </button>
 
                       <button
-                        onClick={() => directLoginWithGovCode(issuedCode)}
-                        title="Mount desk immediately"
+                        onClick={() => {
+                          if (issuedCode) {
+                            navigator.clipboard?.writeText(issuedCode);
+                            toast(`Copied Warrant Code ${issuedCode} · Recipient must authenticate at Official Desk Gate`, 'emerald');
+                          }
+                        }}
+                        title="Copy Warrant Access Code for recipient authentication"
                         className="py-2.5 px-3 bg-teal-100 dark:bg-teal-950/80 hover:bg-teal-200 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 text-xs font-bold rounded-xl transition-all border border-teal-300 dark:border-teal-700 flex items-center gap-1 shrink-0"
                       >
-                        Mount
+                        Copy Code
                       </button>
                     </div>
                   </div>

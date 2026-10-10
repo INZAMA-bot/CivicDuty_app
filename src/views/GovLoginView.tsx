@@ -31,12 +31,19 @@ export const GovLoginView: React.FC = () => {
     toast,
     logAudit,
     teamMembers,
+    invites,
     customGovCodes,
     setActiveDeptCountry,
     setSelectedMinistryId,
+    showDemos,
+    selectedCountry: ctxSelectedCountry,
+    setSelectedCountry: setCtxSelectedCountry,
   } = useApp();
 
-  const [selectedCountry, setSelectedCountry] = useState<string>(user?.country || 'UG');
+  const selectedCountry = ctxSelectedCountry || user?.country || 'UG';
+  const setSelectedCountry = (code: string) => {
+    setCtxSelectedCountry(code as any);
+  };
   const [countrySearch, setCountrySearch] = useState('');
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
@@ -77,18 +84,12 @@ export const GovLoginView: React.FC = () => {
     }
 
     if (expectedCodeForDesk && clean !== expectedCodeForDesk.toUpperCase()) {
-      // Also allow any other valid registered code if the officer typed a valid custom/national code
-      const isKnownCode =
-        Boolean(GOV_CODES[clean]) ||
-        Boolean(customGovCodes && customGovCodes[clean]) ||
-        Boolean(teamMembers?.some((m) => m.code?.toUpperCase() === clean));
-
-      if (!isKnownCode) {
-        setError(
-          `Invalid access code "${clean}" for ${deskTitle || 'selected desk'}. Tap "Auto-fill: ${expectedCodeForDesk}" to test this desk.`
-        );
-        return;
-      }
+      setError(
+        showDemos
+          ? `Strict Warrant Lock: Access code "${clean}" does not match ${deskTitle || 'selected desk'}. Each account requires its own specific access code (${expectedCodeForDesk}).`
+          : `Strict Warrant Lock: Invalid access code "${clean}" for ${deskTitle || 'selected desk'}. Enter the exact warrant key issued to this account.`
+      );
+      return;
     }
 
     // Ensure profile codes for selectedCountry are registered in GOV_CODES
@@ -98,6 +99,12 @@ export const GovLoginView: React.FC = () => {
     const dynamicMember = teamMembers?.find((m) => m.code?.toUpperCase() === clean);
     if (dynamicMember) {
       const mCountry = (dynamicMember as any).country || selectedCountry;
+      if (mCountry !== selectedCountry) {
+        setError(
+          `Strict Country Restriction: Warrant code "${clean}" is bound to ${COUNTRIES[mCountry as any]?.name || mCountry}. You cannot use another country's warrant in ${COUNTRIES[selectedCountry as any]?.name || selectedCountry}.`
+        );
+        return;
+      }
       const newUser: UserSession = {
         id: 'gov_' + Date.now(),
         name: dynamicMember.name,
@@ -114,6 +121,7 @@ export const GovLoginView: React.FC = () => {
       };
       setError('');
       setUser(newUser);
+      setCtxSelectedCountry(mCountry as any);
       setActiveDeptCountry(mCountry);
       logAudit('gov_login', dynamicMember.dept, `${dynamicMember.name} signed in via code ${clean}`);
       toast(`Authenticated: ${dynamicMember.name}`, 'emerald');
@@ -121,7 +129,7 @@ export const GovLoginView: React.FC = () => {
       return;
     }
 
-    // 2. Check GOV_CODES or customGovCodes (and if not found, scan all countries so any country code works)
+    // 2. Check GOV_CODES or customGovCodes
     let match: any = GOV_CODES[clean] || (customGovCodes ? customGovCodes[clean] : undefined);
     if (!match) {
       for (const c of countryList) {
@@ -135,6 +143,12 @@ export const GovLoginView: React.FC = () => {
 
     if (match) {
       const targetCountry = match.country || selectedCountry;
+      if (targetCountry !== selectedCountry) {
+        setError(
+          `Strict Country Restriction: Warrant code "${clean}" is bound to ${COUNTRIES[targetCountry as any]?.name || targetCountry}. Switch jurisdiction to ${COUNTRIES[targetCountry as any]?.name || targetCountry} or enter a valid ${COUNTRIES[selectedCountry as any]?.name || selectedCountry} warrant code.`
+        );
+        return;
+      }
       const labelStr = match.role_label || match.label || deskTitle || 'Government Desk';
       const shortStr = match.real_title_short || match.label || 'GOV';
       const newUser: UserSession = {
@@ -154,6 +168,7 @@ export const GovLoginView: React.FC = () => {
 
       setError('');
       setUser(newUser);
+      setCtxSelectedCountry(targetCountry as any);
       setActiveDeptCountry(targetCountry);
       logAudit('gov_login', newUser.dept || 'gov', `${labelStr} signed in via code ${clean}`);
       toast(`Authenticated: ${labelStr}`, 'emerald');
@@ -167,8 +182,13 @@ export const GovLoginView: React.FC = () => {
       const psCheck = getPsMinistryInfo(newUser);
       if (psCheck.isMoLG) {
         go('ps_molg_rollout');
-      } else if (psCheck.isPs && psCheck.ministryId) {
-        setSelectedMinistryId(psCheck.ministryId);
+      } else if (
+        (psCheck.isPs && psCheck.ministryId) ||
+        clean.startsWith('MIN-') ||
+        clean.startsWith('STM-') ||
+        labelStr.toUpperCase().includes('MINISTER')
+      ) {
+        setSelectedMinistryId(psCheck.ministryId || 'PS-MOWT');
         go('ps_executive_desk');
       } else {
         go('gov_inbox');
@@ -176,10 +196,92 @@ export const GovLoginView: React.FC = () => {
       return;
     }
 
+    // 2B. Check commissioned invites & Cabinet Minister / State Minister Warrant Codes (MIN-* / STM-*)
+    const matchedInvite = invites?.find((inv) => inv.code?.toUpperCase() === clean);
+    if (matchedInvite || clean.startsWith('MIN-') || clean.startsWith('STM-')) {
+      const codeParts = clean.split('-');
+      const codeCountry = codeParts[1] && COUNTRIES[codeParts[1] as any] ? codeParts[1] : undefined;
+      const targetCountry = (matchedInvite?.country || codeCountry || selectedCountry) as any;
+      if (targetCountry !== selectedCountry) {
+        setError(
+          `Strict Country Restriction: Ministerial Warrant "${clean}" is bound to ${COUNTRIES[targetCountry]?.name || targetCountry}. You cannot access ${COUNTRIES[selectedCountry as any]?.name || selectedCountry} with a foreign warrant.`
+        );
+        return;
+      }
+
+      const isStateMin = clean.startsWith('STM-') || matchedInvite?.title?.toUpperCase().includes('STATE');
+      const isMinister =
+        clean.startsWith('MIN-') ||
+        clean.startsWith('STM-') ||
+        matchedInvite?.title?.toUpperCase().includes('MINISTER') ||
+        matchedInvite?.role === 'read_only';
+
+      // Extract ministry code if present in MIN-UG-MOWT-2026 -> PS-MOWT
+      const minSegment = codeParts[2] && codeParts[2] !== '2026' ? `PS-${codeParts[2]}` : 'PS-MOWT';
+      const boundMinistryId = matchedInvite?.scope?.startsWith('PS-') ? matchedInvite.scope : minSegment;
+      const boundDept = matchedInvite?.dept || (codeParts[2] && codeParts[2] !== '2026' ? codeParts[2].toLowerCase() : 'mowt');
+
+      const roleTitle =
+        matchedInvite?.title ||
+        (isStateMin
+          ? `Minister of State — ${boundDept.toUpperCase()} (${COUNTRIES[targetCountry]?.name || targetCountry})`
+          : `Cabinet Minister — ${boundDept.toUpperCase()} (${COUNTRIES[targetCountry]?.name || targetCountry})`);
+      const officialName =
+        matchedInvite?.name ||
+        (isStateMin ? 'Hon. Minister of State' : 'Hon. Cabinet Minister');
+
+      const ministerSession: UserSession = {
+        id: 'gov_min_' + Date.now(),
+        name: `${officialName} (${roleTitle})`,
+        country: targetCountry,
+        role: isMinister ? 'read_only' : (matchedInvite?.role as any) || 'node_admin',
+        role_label: isMinister
+          ? `${roleTitle} · Read-Only Executive Oversight (PFMA)`
+          : roleTitle,
+        real_title_short: isMinister
+          ? isStateMin
+            ? 'STATE MINISTER (RO)'
+            : 'CABINET MINISTER (RO)'
+          : 'OFFICIAL',
+        dept: boundDept,
+        scope: boundMinistryId,
+        scope_label: `${matchedInvite?.duty_station || 'Ministry of Works & Transport'} (${
+          isMinister ? 'Read-Only Executive Warrant' : 'Active Warrant'
+        })`,
+        entity_type: 'government',
+        is_admin: !isMinister,
+      };
+
+      setError('');
+      setUser(ministerSession);
+      setCtxSelectedCountry(targetCountry);
+      setActiveDeptCountry(targetCountry);
+      setSelectedMinistryId(boundMinistryId);
+      logAudit(
+        'minister_ro_login',
+        ministerSession.dept || 'mowt',
+        `${officialName} signed in via warrant code ${clean} (${ministerSession.role === 'read_only' ? 'Read-Only Executive Oversight' : 'Active'})`
+      );
+      toast(
+        isMinister
+          ? `Authenticated: ${officialName} · Read-Only Executive Oversight (PFMA)`
+          : `Authenticated: ${officialName}`,
+        'emerald'
+      );
+      go(isMinister ? 'ps_executive_desk' : 'gov_inbox');
+      return;
+    }
+
     // 3. Support instant Read-Only External Auditor Passcode pattern (AUDIT-RO-<COUNTRY>-2026)
     if (clean.startsWith('AUDIT-RO-')) {
       const parts = clean.split('-');
       const tokenCountry = parts[2] && COUNTRIES[parts[2] as any] ? parts[2] : selectedCountry;
+      if (tokenCountry !== selectedCountry) {
+        setError(
+          `Strict Country Restriction: Auditor Token "${clean}" is bound to ${COUNTRIES[tokenCountry as any]?.name || tokenCountry}.`
+        );
+        return;
+      }
       const roUser: UserSession = {
         id: 'auditor_ro_' + Date.now(),
         name: `External Statutory Auditor (${tokenCountry} Read-Only Pass)`,
@@ -195,6 +297,7 @@ export const GovLoginView: React.FC = () => {
       };
       setError('');
       setUser(roUser);
+      setCtxSelectedCountry(tokenCountry as any);
       setActiveDeptCountry(tokenCountry as any);
       logAudit('external_auditor_ro_login', 'AUDIT-LEDGER', `Read-only external auditor authenticated via token ${clean}`);
       toast('Authenticated: Read-Only External Auditor Token · Opening 5-Page Audit Suite', 'emerald');
@@ -203,7 +306,7 @@ export const GovLoginView: React.FC = () => {
     }
 
     setError(
-      expectedCodeForDesk
+      expectedCodeForDesk && showDemos
         ? `Invalid access code "${clean}". Tap "Auto-fill: ${expectedCodeForDesk}" to test this desk.`
         : 'Invalid access code. Select your desk from the 5-Tier Escalation Hierarchy or check your issued code.'
     );
@@ -487,16 +590,18 @@ export const GovLoginView: React.FC = () => {
                               <KeyRound size={12} className="text-emerald-600 dark:text-emerald-400" />
                               <span>Enter {tier.badge} Access Code</span>
                             </label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDeskCodes((prev) => ({ ...prev, [itemKey]: tier.sampleCode }));
-                                setError('');
-                              }}
-                              className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 cursor-pointer"
-                            >
-                              Auto-fill: {tier.sampleCode}
-                            </button>
+                            {showDemos && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeskCodes((prev) => ({ ...prev, [itemKey]: tier.sampleCode }));
+                                  setError('');
+                                }}
+                                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 cursor-pointer"
+                              >
+                                Auto-fill: {tier.sampleCode}
+                              </button>
+                            )}
                           </div>
 
                           <div className="flex flex-col sm:flex-row gap-2">
@@ -510,13 +615,13 @@ export const GovLoginView: React.FC = () => {
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                   authenticateWithCode(
-                                    codeVal || tier.sampleCode,
+                                    codeVal || (showDemos ? tier.sampleCode : ''),
                                     tier.sampleCode,
                                     tier.title
                                   );
                                 }
                               }}
-                              placeholder={`e.g. ${tier.sampleCode}`}
+                              placeholder={showDemos ? `e.g. ${tier.sampleCode}` : 'Enter official desk access code...'}
                               className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                             />
                             <button
@@ -541,6 +646,105 @@ export const GovLoginView: React.FC = () => {
             {/* TAB 2: Specialized Ministry & Sector Accounting Desks for Selected Country */}
             {activeTab === 'ministries' && (
               <div className="space-y-2.5">
+                {/* Featured: Cabinet Minister & Minister of State (Read-Only Executive Oversight) */}
+                {(() => {
+                  const minSampleCode = `MIN-MOWT-${selectedCountry}-2026`;
+                  const minKey = `min-cabinet-${selectedCountry}`;
+                  const isMinExpanded = selectedDeskKey === minKey;
+                  const minCodeVal = deskCodes[minKey] ?? '';
+                  return (
+                    <div
+                      className={`rounded-xl border transition-all overflow-hidden ${
+                        isMinExpanded
+                          ? 'bg-white dark:bg-[#161a22] border-amber-500/60'
+                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36]'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeskKey(isMinExpanded ? '' : minKey);
+                          setError('');
+                        }}
+                        className="w-full p-3.5 text-left flex items-start justify-between gap-3 cursor-pointer"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                              Cabinet Minister &amp; State Ministers (Executive Policy Oversight)
+                            </span>
+                            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-semibold">
+                              READ-ONLY EXECUTIVE (PFMA)
+                            </span>
+                          </div>
+                          <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300 mt-0.5">
+                            Commissioned by Permanent Secretary · Inspects Apex Telemetry, League Tables &amp; Audit Ledgers in Read-Only Mode
+                          </div>
+                        </div>
+                        <ChevronRight
+                          size={15}
+                          className={`text-slate-400 shrink-0 mt-1 transition-transform ${
+                            isMinExpanded ? 'rotate-90 text-amber-500' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {isMinExpanded && (
+                        <div className="px-3.5 pb-3.5 pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 animate-fade-in">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono uppercase font-bold text-slate-600 dark:text-slate-300">
+                              Ministerial Warrant Code (Issued by Permanent Secretary)
+                            </span>
+                            {showDemos && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeskCodes((prev) => ({ ...prev, [minKey]: minSampleCode }));
+                                  setError('');
+                                }}
+                                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25 cursor-pointer"
+                              >
+                                Auto-fill: {minSampleCode}
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="text"
+                              value={minCodeVal}
+                              onChange={(e) => {
+                                setDeskCodes((prev) => ({ ...prev, [minKey]: e.target.value }));
+                                setError('');
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  authenticateWithCode(
+                                    minCodeVal || (showDemos ? minSampleCode : ''),
+                                    minSampleCode,
+                                    'Cabinet Minister Desk'
+                                  );
+                                }
+                              }}
+                              placeholder={showDemos ? `Enter ${minSampleCode}` : 'Enter PS-issued Minister Warrant Code...'}
+                              className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                authenticateWithCode(minCodeVal, minSampleCode, 'Cabinet Minister Desk')
+                              }
+                              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                              <span>Sign In as Minister (RO)</span>
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {profile.accountingDesks.map((desk: AccountingDeskPreset) => {
                   const deskKey = `min-${desk.code}`;
                   const isExpanded = selectedDeskKey === deskKey;
@@ -590,16 +794,18 @@ export const GovLoginView: React.FC = () => {
                             <span className="text-[10px] font-mono uppercase font-bold text-slate-600 dark:text-slate-300">
                               Desk Access Code ({desk.badge})
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDeskCodes((prev) => ({ ...prev, [deskKey]: desk.code }));
-                                setError('');
-                              }}
-                              className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 cursor-pointer"
-                            >
-                              Auto-fill: {desk.code}
-                            </button>
+                            {showDemos && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeskCodes((prev) => ({ ...prev, [deskKey]: desk.code }));
+                                  setError('');
+                                }}
+                                className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 cursor-pointer"
+                              >
+                                Auto-fill: {desk.code}
+                              </button>
+                            )}
                           </div>
                           <div className="flex flex-col sm:flex-row gap-2">
                             <input
@@ -611,10 +817,14 @@ export const GovLoginView: React.FC = () => {
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                  authenticateWithCode(codeVal || desk.code, desk.code, desk.title);
+                                  authenticateWithCode(
+                                    codeVal || (showDemos ? desk.code : ''),
+                                    desk.code,
+                                    desk.title
+                                  );
                                 }
                               }}
-                              placeholder={`Enter ${desk.code}`}
+                              placeholder={showDemos ? `Enter ${desk.code}` : 'Enter official desk access code...'}
                               className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                             />
                             <button

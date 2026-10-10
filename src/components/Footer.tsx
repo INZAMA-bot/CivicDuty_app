@@ -2,10 +2,6 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Lock,
-  Terminal,
-  FileCheck2,
-  BookOpen,
-  HelpCircle,
   ShieldCheck,
 } from 'lucide-react';
 
@@ -14,67 +10,29 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ isSplash = false }) => {
-  const { go, openLegalCenter, openGuide, t } = useApp();
+  const { go, openLegalCenter, t } = useApp();
 
   return (
     <footer
       className={`w-full border-t border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400 transition-colors ${
-        isSplash ? 'mt-6 py-5 px-3.5 sm:px-6' : 'mt-auto pt-5 pb-24 md:pb-6 px-3.5 sm:px-6'
+        isSplash ? 'mt-6 py-4 px-3.5 sm:px-6' : 'mt-auto pt-4 pb-24 md:pb-5 px-3.5 sm:px-6'
       }`}
     >
-      <div className="max-w-5xl mx-auto space-y-4">
-        {/* Top Row: Clean Text-Only Brand Identity (No Logo Icon) + Quick Consoles */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-          <div className="space-y-0.5 text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                CivicDuty
-              </span>
-              <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">·</span>
-              <span className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                Speak · Serve · Be Heard
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              {t('mottoSub') || 'Sovereign Public Service Accountability & Statutory SLA Platform'}
-            </p>
+      <div className="max-w-5xl mx-auto space-y-3">
+        {/* Top Row: Clean Text-Only Brand Identity */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-center sm:text-left">
+          <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+            <span className="text-xs font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              CivicDuty
+            </span>
+            <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">·</span>
+            <span className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+              Speak · Serve · Be Heard
+            </span>
           </div>
-
-          {/* Mobile-Friendly Quick Utility Links */}
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
-            <button
-              type="button"
-              onClick={() => go('ussd')}
-              className="min-h-[38px] px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600 text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 flex items-center justify-center sm:justify-start gap-1.5 transition-colors cursor-pointer"
-            >
-              <Terminal size={12} strokeWidth={1.75} className="text-amber-500 shrink-0" />
-              <span>*3030# USSD</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => go('verify')}
-              className="min-h-[38px] px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600 text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 flex items-center justify-center sm:justify-start gap-1.5 transition-colors cursor-pointer"
-            >
-              <FileCheck2 size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>Verify Seal</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => go('docs')}
-              className="min-h-[38px] px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600 text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 flex items-center justify-center sm:justify-start gap-1.5 transition-colors cursor-pointer"
-            >
-              <BookOpen size={12} strokeWidth={1.75} className="text-slate-500 shrink-0" />
-              <span>System Docs</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => openGuide('quickstart')}
-              className="min-h-[38px] px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600 text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 flex items-center justify-center sm:justify-start gap-1.5 transition-colors cursor-pointer"
-            >
-              <HelpCircle size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>Field Guide</span>
-            </button>
-          </div>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {t('mottoSub') || 'Sovereign Public Service Accountability & Statutory SLA Platform'}
+          </p>
         </div>
 
         {/* Bottom Row: Legal & Governance Links + CD-Ops */}
