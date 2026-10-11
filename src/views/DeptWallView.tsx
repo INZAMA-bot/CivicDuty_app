@@ -77,6 +77,9 @@ export const DeptWallView: React.FC = () => {
   });
   const [activeSubTab, setActiveSubTab] = useState<'all' | 'unresolved' | 'resolved' | 'overdue'>('all');
   const [showOfficerRoster, setShowOfficerRoster] = useState(false);
+  const [showNudgeModal, setShowNudgeModal] = useState(false);
+  const [nudgeXHandle, setNudgeXHandle] = useState('');
+  const [focusedWallPostId, setFocusedWallPostId] = useState<string | null>(null);
 
   const country = activeDeptCountry || user?.country || 'UG';
   const did = activeDept || 'kcca';
@@ -126,6 +129,23 @@ export const DeptWallView: React.FC = () => {
     setEditEmail(claimRecord?.officialEmail || accountingOfficer.email);
     setShowEditWallModal(true);
   };
+
+  const openNudgeXModal = () => {
+    const cleanId = did.replace(/^[a-z]{2}[-_]/i, '').replace(/[^a-zA-Z0-9_]/g, '');
+    const defaultHandle = `@${cleanId.charAt(0).toUpperCase() + cleanId.slice(1)}`;
+    setNudgeXHandle(defaultHandle);
+    setShowNudgeModal(true);
+  };
+
+  const formattedXHandle = nudgeXHandle.trim()
+    ? nudgeXHandle.trim().startsWith('@')
+      ? nudgeXHandle.trim()
+      : `@${nudgeXHandle.trim()}`
+    : `@${did.replace(/[^a-zA-Z0-9_]/g, '')}`;
+
+  const autoNudgeMessage = isConsumer
+    ? `Dear ${formattedXHandle} (${d.name}) leadership, citizens have filed ${deptPosts.length} public reports (${live} unresolved) on @CivicDuty. Claim your free 30-Day Founding Partner desk on https://civicduty.site to restore customer care SLA compliance.`
+    : `Public notice to ${formattedXHandle} (${d.name} — ${accountingOfficer.name}): ${deptPosts.length} citizen dispatches (${live} unresolved) are logged on @CivicDuty. We urge the Accounting Officer to activate the statutory desk on https://civicduty.site`;
 
   const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -404,7 +424,7 @@ export const DeptWallView: React.FC = () => {
                   <DeptIcon dept={d} size={24} />
                 </div>
               )}
-              {isClaimed && (
+              {isConsumer && isClaimed && (
                 <button
                   type="button"
                   onClick={openEditWallStudio}
@@ -456,7 +476,7 @@ export const DeptWallView: React.FC = () => {
             </div>
           </div>
 
-          {isClaimed && (
+          {isConsumer && isClaimed && (
             <button
               type="button"
               onClick={openEditWallStudio}
@@ -526,17 +546,12 @@ export const DeptWallView: React.FC = () => {
 
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
-                      onClick={() => {
-                        nudgeEntity(did);
-                        const tweetText = `Dear @${d.id} leadership, citizens have filed ${deptPosts.length} complaints on CivicDuty. Claim your free 30-Day Founding Partner desk to resume public customer care.`;
-                        navigator.clipboard?.writeText(tweetText);
-                        toast(`Leadership nudge logged & public notice copied to clipboard!`, 'emerald');
-                      }}
+                      onClick={openNudgeXModal}
                       className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center gap-1.5 transition-colors cursor-pointer"
-                      title="Nudge Brand Executives"
+                      title="Attach X (@handle) & Nudge Brand Leadership"
                     >
                       <Megaphone size={13} />
-                      <span>Nudge Leadership ({nudgeCounts[did] || 0})</span>
+                      <span>Nudge Leadership on X ({nudgeCounts[did] || 0})</span>
                     </button>
 
                     <button
@@ -573,14 +588,6 @@ export const DeptWallView: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={openEditWallStudio}
-                className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-white dark:bg-[#161a22] border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 flex items-center gap-1 cursor-pointer"
-              >
-                <Edit3 size={11} />
-                <span>Edit Wall Profile</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => go('ps_molg_rollout')}
                 className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-blue-700 hover:bg-blue-800 text-white flex items-center gap-1 transition-all cursor-pointer"
               >
@@ -612,17 +619,12 @@ export const DeptWallView: React.FC = () => {
 
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => {
-                    nudgeEntity(did);
-                    const tweetText = `Public notice: ${d.name} has ${deptPosts.length} unresolved citizen reports on CivicDuty. We urge the Accounting Officer to activate the statutory desk subscription.`;
-                    navigator.clipboard?.writeText(tweetText);
-                    toast(`Official nudge logged & public notice copied to clipboard!`, 'emerald');
-                  }}
+                  onClick={openNudgeXModal}
                   className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Nudge Mayor / Town Clerk"
+                  title="Attach X (@handle) & Nudge Mayor / Accounting Officer"
                 >
                   <Megaphone size={13} />
-                  <span>Nudge Official ({nudgeCounts[did] || 0})</span>
+                  <span>Nudge Official on X ({nudgeCounts[did] || 0})</span>
                 </button>
 
                 <button
@@ -814,34 +816,41 @@ export const DeptWallView: React.FC = () => {
           </div>
 
           {/* Posts Feed */}
-          <div className="divide-y divide-slate-300 dark:divide-slate-800">
+          <div className="p-3 sm:p-4 space-y-4 bg-slate-100/70 dark:bg-[#090b10]">
             {filteredPosts.length === 0 ? (
               <div className="text-center py-16 text-xs text-slate-500 mono font-bold space-y-1">
                 <p>No reports currently matching filter.</p>
                 <p className="text-[10px] text-slate-400">All submissions are monitored under statutory 48-hour SLA.</p>
               </div>
             ) : (
-              filteredPosts.map((p) => (
-                <div key={p.id} className="relative group bg-white dark:bg-slate-950">
-                  <PostCardComponent post={p} />
-                  <div className="px-4 pb-3 -mt-1 flex justify-end">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedCitizen({
-                          name: p.citizen_name || 'Verified Citizen',
-                          postId: p.id,
-                        });
-                        setRewardModalOpen(true);
-                      }}
-                      className="text-[9.5px] mono font-black bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-2.5 py-1 rounded-xl flex items-center gap-1 transition-all shadow-2xs active:scale-95"
-                    >
-                      <Gift size={11} className="text-amber-600 dark:text-amber-400" />
-                      <span>Reward Citizen</span>
-                    </button>
+              filteredPosts.map((p) => {
+                const activeWallId = focusedWallPostId || filteredPosts[0]?.id;
+                return (
+                  <div key={p.id} className="relative group space-y-1.5">
+                    <PostCardComponent
+                      post={p}
+                      isFocused={activeWallId === p.id}
+                      onActivateFocus={(id) => setFocusedWallPostId(id)}
+                    />
+                    <div className="px-2 flex justify-end">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCitizen({
+                            name: p.citizen_name || 'Verified Citizen',
+                            postId: p.id,
+                          });
+                          setRewardModalOpen(true);
+                        }}
+                        className="text-[9.5px] mono font-black bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-2.5 py-1 rounded-xl flex items-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                      >
+                        <Gift size={11} className="text-amber-600 dark:text-amber-400" />
+                        <span>Reward Citizen</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -1207,6 +1216,102 @@ export const DeptWallView: React.FC = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Nudge on X (@handle) CTA Modal — Attaches X Handle Automatically to Nudge Message */}
+      {showNudgeModal && (
+        <div
+          onClick={() => setShowNudgeModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl p-5 shadow-2xl space-y-4 text-slate-900 dark:text-slate-100"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                  <Megaphone size={17} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-amber-600 dark:text-amber-400 font-bold">
+                    Public Accountability Nudge CTA
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Attach X (Twitter) Handle to Nudge {d.name}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNudgeModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10.5px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+                  Enter Official or Brand X Handle (Automatically Attached):
+                </label>
+                <input
+                  type="text"
+                  value={nudgeXHandle}
+                  onChange={(e) => setNudgeXHandle(e.target.value)}
+                  placeholder="e.g. @KCCAUG or @UmemeLtd"
+                  className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                />
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                  Type the X handle above — it is automatically inserted into your public nudge dispatch below.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span>AUTO-GENERATED NUDGE MESSAGE</span>
+                  <span>Handle: {formattedXHandle}</span>
+                </div>
+                <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
+                  {autoNudgeMessage}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-2 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
+              <button
+                type="button"
+                onClick={() => {
+                  nudgeEntity(did);
+                  navigator.clipboard?.writeText(autoNudgeMessage);
+                  toast(`Nudge logged for ${formattedXHandle} & message copied to clipboard!`, 'emerald');
+                  setShowNudgeModal(false);
+                }}
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Copy size={13} />
+                <span>Log Nudge &amp; Copy Message</span>
+              </button>
+
+              <a
+                href={`https://x.com/intent/tweet?text=${encodeURIComponent(autoNudgeMessage)}`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => {
+                  nudgeEntity(did);
+                  navigator.clipboard?.writeText(autoNudgeMessage);
+                  toast(`Nudge logged & X post prepared for ${formattedXHandle}!`, 'emerald');
+                  setShowNudgeModal(false);
+                }}
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                <span>Post on X ({formattedXHandle})</span>
+              </a>
             </div>
           </div>
         </div>

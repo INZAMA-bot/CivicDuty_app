@@ -205,17 +205,83 @@ export const GovAuditView: React.FC = () => {
       endorse_modification_cd_ops: 'National Node Head Endorsed App Modification → CD-Ops',
       reject_modification_superadmin: 'National Node Head Rejected Modification Request',
       gov_login: 'Official Desk Authenticated',
+      monthly_vault_batch_dispatch: 'Monthly Top-3 Merit Vault Award Dispatched',
+      individual_vault_peer_reward: 'Individual Vault Peer Reward Dispatched',
+      provider_profile_updated: 'Service Provider Desk Profile & SLA Updated',
     };
     return map[a] || String(a).replace(/_/g, ' ');
   };
 
+  // Determine the nature of the logged-in desk for jurisdiction & desk-type scoping
+  const isSuperAdminOrNationalOversight =
+    user.role === 'platform_admin' ||
+    user.is_superadmin ||
+    user.is_oversight ||
+    user.scope === 'national' ||
+    user.dept === 'molg' ||
+    user.dept === 'igg';
+
+  const isServiceProviderDesk =
+    user.entity_type === 'non_government_entity' || Boolean(user.is_utility);
+
+  const [scopeMode, setScopeMode] = useState<'desk_scoped' | 'national_ledger'>(
+    isSuperAdminOrNationalOversight ? 'national_ledger' : 'desk_scoped'
+  );
+
+  const deskNatureTitle = isSuperAdminOrNationalOversight
+    ? `National Sovereign Audit Ledger (${countryObj.name})`
+    : isServiceProviderDesk
+    ? `Service Provider Desk Audit & SLA Ledger · ${user.organization_name || d.name}`
+    : `Jurisdictional Accounting Officer Audit Ledger · ${user.jurisdiction_label || user.organization_name || d.name}`;
+
+  const deskNatureBadge = isSuperAdminOrNationalOversight
+    ? 'SUPERADMIN & NATIONAL OVERSIGHT (ALL DESKS)'
+    : isServiceProviderDesk
+    ? 'SERVICE PROVIDER DESK SCOPE (CUSTOMER SLA & ESCROW)'
+    : `ACCOUNTING OFFICER JURISDICTION (${(user.scope || 'TERRITORIAL').toUpperCase()})`;
+
   const countryAudit = useMemo(() => {
-    return audit.filter((entry) => (entry.country || 'UG') === countryCode);
-  }, [audit, countryCode]);
+    const byCountry = audit.filter((entry) => (entry.country || 'UG') === countryCode);
+    if (scopeMode === 'national_ledger' && isSuperAdminOrNationalOversight) {
+      return byCountry;
+    }
+    const orgKey = (user.organization_name || d.name || '').toLowerCase();
+    const deptKey = (user.dept || '').toLowerCase();
+    const jurKey = (user.jurisdiction_label || user.parish || user.subcounty || user.district || '').toLowerCase();
+    const officerKey = (user.officer_name || user.name || '').toLowerCase();
+
+    const scoped = byCountry.filter((entry) => {
+      const hay = `${entry.actor_name || ''} ${entry.actor_role || ''} ${entry.detail || ''} ${entry.ticket_id || ''}`.toLowerCase();
+      if (deptKey && hay.includes(deptKey)) return true;
+      if (orgKey && hay.includes(orgKey)) return true;
+      if (jurKey && jurKey.length > 2 && hay.includes(jurKey)) return true;
+      if (officerKey && officerKey.length > 2 && hay.includes(officerKey)) return true;
+      if (isServiceProviderDesk && (entry.action === 'record_payment' || entry.action.includes('vault') || entry.action === 'reply' || entry.action === 'resolve')) {
+        return true;
+      }
+      return false;
+    });
+    return scoped.length > 0 ? scoped : byCountry.slice(0, 8);
+  }, [audit, countryCode, scopeMode, isSuperAdminOrNationalOversight, user, d.name, isServiceProviderDesk]);
 
   const countryQueries = useMemo(() => {
-    return officialQueries.filter((q) => (q.country || 'UG') === countryCode);
-  }, [officialQueries, countryCode]);
+    const byCountry = officialQueries.filter((q) => (q.country || 'UG') === countryCode);
+    if (scopeMode === 'national_ledger' && isSuperAdminOrNationalOversight) {
+      return byCountry;
+    }
+    const deptKey = (user.dept || '').toLowerCase();
+    const orgKey = (user.organization_name || d.name || '').toLowerCase();
+    const jurKey = (user.jurisdiction_label || user.parish || user.subcounty || user.district || '').toLowerCase();
+    const scoped = byCountry.filter((q) => {
+      const hay = `${q.target_dept || ''} ${q.target_officer_title || ''} ${q.target_officer_name || ''} ${q.issuer_title || ''} ${q.subject || ''}`.toLowerCase();
+      return (
+        (deptKey && hay.includes(deptKey)) ||
+        (orgKey && hay.includes(orgKey)) ||
+        (jurKey && jurKey.length > 2 && hay.includes(jurKey))
+      );
+    });
+    return scoped.length > 0 ? scoped : byCountry;
+  }, [officialQueries, countryCode, scopeMode, isSuperAdminOrNationalOversight, user, d.name]);
 
   const filteredAudit = useMemo(() => {
     return countryAudit.filter((entry) => {
@@ -376,9 +442,9 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
               <Lock size={20} strokeWidth={1.75} />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-500 dark:text-slate-400 flex-wrap">
                 <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                  SHA-256 NON-REPUDIATION LEDGER
+                  {deskNatureBadge}
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>
@@ -386,13 +452,24 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                 </span>
               </div>
               <h1 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
-                National Governance &amp; Forensic Audit Suite
+                {deskNatureTitle}
               </h1>
             </div>
           </div>
 
           {/* Header Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {isSuperAdminOrNationalOversight && (
+              <button
+                type="button"
+                onClick={() => setScopeMode((prev) => (prev === 'national_ledger' ? 'desk_scoped' : 'national_ledger'))}
+                className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-semibold rounded-lg border border-emerald-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Toggle between full National Sovereign Audit Ledger and your specific desk actions"
+              >
+                <Eye size={13} />
+                <span>{scopeMode === 'national_ledger' ? 'Scope: All National Desks' : 'Scope: My Desk Only'}</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={handleGenerateAuditorToken}

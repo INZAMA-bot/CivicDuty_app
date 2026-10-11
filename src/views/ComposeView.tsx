@@ -21,7 +21,9 @@ import {
   BarChart3,
   Send,
   FileText,
+  SlidersHorizontal,
 } from 'lucide-react';
+import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 
 export const ComposeView: React.FC = () => {
   const {
@@ -76,6 +78,14 @@ export const ComposeView: React.FC = () => {
   const [pollOpt1, setPollOpt1] = useState('Urgent Repair Within 24h');
   const [pollOpt2, setPollOpt2] = useState('Include in Q3 Parish Budget');
   const [pollOpt3, setPollOpt3] = useState('Dispatch Inspector General Audit');
+
+  // Optional Citizen Before & After Transformation Proof Builder
+  const [includeBeforeAfter, setIncludeBeforeAfter] = useState(false);
+  const [beforePhotoUrl, setBeforePhotoUrl] = useState('');
+  const [afterPhotoUrl, setAfterPhotoUrl] = useState('');
+  const [beforePhotoLabel, setBeforePhotoLabel] = useState('Reported Site Condition');
+  const [afterPhotoLabel, setAfterPhotoLabel] = useState('Completed Repair / Transformation');
+  const [turnaroundInput, setTurnaroundInput] = useState('3h 30m');
 
   const subcounties = district ? territory.find((d) => d.id === district)?.children || [] : [];
   const parishes = subcounty ? subcounties.find((s) => s.id === subcounty)?.children || [] : [];
@@ -267,9 +277,9 @@ export const ComposeView: React.FC = () => {
     const isCorrupt = category === 'corruption';
 
     const finalMedia: MediaItem[] = stagedMedia.map((m) => {
-      if (m.type === 'image') return { type: 'image', url: m.url, caption: '' };
-      if (m.type === 'video') return { type: 'video', url: m.url, thumb: m.url, duration: '0:30' };
-      return { type: 'doc', name: m.name, size: m.size };
+      if (m.type === 'image') return { type: 'image', url: m.url, caption: m.name || '' };
+      if (m.type === 'video') return { type: 'video', url: m.url, duration: '0:30', caption: m.name || 'Field Video Evidence' };
+      return { type: 'doc', url: m.url, name: m.name, size: m.size };
     });
 
     if (voiceSaved) {
@@ -333,8 +343,20 @@ export const ComposeView: React.FC = () => {
               })),
             }
           : undefined,
+      before_after:
+        includeBeforeAfter && beforePhotoUrl && afterPhotoUrl
+          ? {
+              before_url: beforePhotoUrl,
+              after_url: afterPhotoUrl,
+              before_label: beforePhotoLabel.trim() || 'Reported Site Condition',
+              after_label: afterPhotoLabel.trim() || 'Completed Repair',
+              turnaround_hrs: turnaroundInput.trim() || '3h 30m',
+              gps_verified: Boolean(gps),
+              verified_by: anonymous ? 'Verified Citizen Scout' : user?.name || 'Citizen Field Scout',
+            }
+          : undefined,
       author_profession: profession,
-      citizen_satisfied: null,
+      citizen_satisfied: category === 'praise' ? true : null,
       escalated: false,
     };
 
@@ -938,6 +960,117 @@ export const ComposeView: React.FC = () => {
                       className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs"
                     />
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Citizen Direct Before & After Transformation Proof Builder */}
+            <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <SlidersHorizontal size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Attach Before &amp; After Transformation Proof</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIncludeBeforeAfter(!includeBeforeAfter)}
+                  className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                >
+                  {includeBeforeAfter ? 'Remove Before/After' : '+ Add Before & After'}
+                </button>
+              </div>
+
+              {includeBeforeAfter && (
+                <div className="space-y-2.5 pt-2.5 animate-fade-in">
+                  <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Upload &ldquo;Before&rdquo; and &ldquo;After&rdquo; photos to publish an interactive swipe-comparison card (ideal for Praise &amp; Commendations or verified community repairs).
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase">
+                          1. Before Photo
+                        </span>
+                        <label className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[9.5px] font-mono font-semibold cursor-pointer">
+                          <span>{beforePhotoUrl ? 'Change Photo' : 'Upload Before'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) setBeforePhotoUrl(URL.createObjectURL(f));
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <input
+                        type="text"
+                        value={beforePhotoLabel}
+                        onChange={(e) => setBeforePhotoLabel(e.target.value)}
+                        placeholder="Before label (e.g. Broken Culvert)"
+                        className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2 py-1 text-[11px]"
+                      />
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                          2. After Photo
+                        </span>
+                        <label className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-mono font-semibold cursor-pointer">
+                          <span>{afterPhotoUrl ? 'Change Photo' : 'Upload After'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) setAfterPhotoUrl(URL.createObjectURL(f));
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <input
+                        type="text"
+                        value={afterPhotoLabel}
+                        onChange={(e) => setAfterPhotoLabel(e.target.value)}
+                        placeholder="After label (e.g. Rebuilt by District Works)"
+                        className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2 py-1 text-[11px]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-[10px] font-mono text-slate-500 uppercase font-semibold">
+                      Observed Turnaround Time:
+                    </label>
+                    <input
+                      type="text"
+                      value={turnaroundInput}
+                      onChange={(e) => setTurnaroundInput(e.target.value)}
+                      placeholder="e.g. 3h 30m or 2 Days"
+                      className="w-36 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2.5 py-1 text-[11px] font-mono"
+                    />
+                  </div>
+
+                  {beforePhotoUrl && afterPhotoUrl && (
+                    <BeforeAfterSlider
+                      beforeUrl={beforePhotoUrl}
+                      afterUrl={afterPhotoUrl}
+                      beforeLabel={beforePhotoLabel || 'Before'}
+                      afterLabel={afterPhotoLabel || 'After'}
+                      turnaroundTime={turnaroundInput || '3h 30m'}
+                      gpsCoords={gps}
+                      gpsVerified={Boolean(gps)}
+                      verifiedBy={anonymous ? 'Verified Citizen Scout' : user?.name || 'Citizen Field Scout'}
+                      compact={true}
+                      defaultMode="slider"
+                    />
+                  )}
                 </div>
               )}
             </div>

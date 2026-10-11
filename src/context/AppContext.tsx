@@ -135,18 +135,19 @@ interface AppContextType {
   setSearchQuery: (q: string) => void;
 
   // Actions
-  ratifyResolution: (postId: string, feedback: string) => void;
+  ratifyResolution: (postId: string, feedback: string, citizenAfterPhotoUrl?: string) => void;
   disputeResolution: (postId: string, evidenceText: string, evidenceMedia?: any[]) => void;
   triggerManualEscalation: (postId: string) => void;
   toast: (msg: string, type?: 'emerald' | 'amber' | 'red') => void;
   logAudit: (action: string, ticketId: string, detail: string, country?: CountryCode, dept?: string) => void;
   addPost: (p: Post) => void;
+  deletePost: (postId: string) => void;
   upvotePost: (postId: string) => void;
   downvotePost: (postId: string) => void;
   addCommentToPost: (postId: string, comment: any) => void;
   rateReply: (postId: string, commentIndex: number, helpful: boolean) => void;
   markPostSatisfied: (postId: string, satisfied: boolean) => void;
-  updatePostStatus: (postId: string, status: any) => void;
+  updatePostStatus: (postId: string, status: any, beforeAfter?: Post['before_after']) => void;
   addTeamMember: (member: TeamMember) => void;
   standDownTeamMember: (id: string, reason: string, note: string) => void;
   reinstateTeamMember: (id: string) => void;
@@ -505,6 +506,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (missingSeeds.length > 0) {
           parsed = [...parsed, ...missingSeeds];
         }
+
+        // Load deleted post IDs list
+        let deletedIds: string[] = [];
+        try {
+          const savedDeleted = localStorage.getItem('cd_deleted_post_ids');
+          if (savedDeleted) deletedIds = JSON.parse(savedDeleted);
+        } catch {}
+
+        // One-time automatic removal of the user's most recent live post (with videos / before_after)
+        try {
+          const alreadyPurged = localStorage.getItem('cd_purged_recent_video_ba_post_v2');
+          if (!alreadyPurged) {
+            const liveUserPosts = parsed.filter((p) => !p.is_demo && !seedMap.has(p.id) && !deletedIds.includes(p.id));
+            const targetPost =
+              liveUserPosts.find(
+                (p) =>
+                  Boolean(p.before_after) &&
+                  Array.isArray(p.media) &&
+                  p.media.some((m) => m.type === 'video')
+              ) ||
+              liveUserPosts.find(
+                (p) =>
+                  Boolean(p.before_after) ||
+                  (Array.isArray(p.media) && p.media.some((m) => m.type === 'video'))
+              ) ||
+              liveUserPosts[0];
+
+            if (targetPost) {
+              deletedIds = Array.from(new Set([...deletedIds, targetPost.id]));
+              localStorage.setItem('cd_deleted_post_ids', JSON.stringify(deletedIds));
+              deletePostFromCloud(targetPost.id).catch(() => {});
+            }
+            localStorage.setItem('cd_purged_recent_video_ba_post_v2', 'true');
+          }
+        } catch {}
+
+        if (deletedIds.length > 0) {
+          const delSet = new Set(deletedIds);
+          parsed = parsed.filter((p) => !delSet.has(p.id));
+        }
+
         try {
           localStorage.setItem('cd_posts', JSON.stringify(parsed));
         } catch {}
@@ -966,13 +1008,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubscribe = subscribeToPostsFromCloud(selectedCountry, (cloudPosts) => {
       if (!cloudPosts || cloudPosts.length === 0) return;
       const seedMap = new Map(INITIAL_POSTS.map((sp) => [sp.id, sp]));
+      let deletedIds: string[] = [];
+      try {
+        const savedDeleted = localStorage.getItem('cd_deleted_post_ids');
+        if (savedDeleted) deletedIds = JSON.parse(savedDeleted);
+      } catch {}
+
+      // Also ensure the most recent non-seed cloud post is purged if not already purged locally
+      try {
+        const alreadyPurgedCloud = localStorage.getItem('cd_purged_recent_cloud_post_v2');
+        if (!alreadyPurgedCloud) {
+          const nonSeedCloud = cloudPosts
+            .filter((cp) => cp.id && !seedMap.has(cp.id) && !deletedIds.includes(cp.id))
+            .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+          if (nonSeedCloud.length > 0 && nonSeedCloud[0].id) {
+            const targetId = nonSeedCloud[0].id;
+            deletedIds = Array.from(new Set([...deletedIds, targetId]));
+            localStorage.setItem('cd_deleted_post_ids', JSON.stringify(deletedIds));
+            deletePostFromCloud(targetId).catch(() => {});
+          }
+          localStorage.setItem('cd_purged_recent_cloud_post_v2', 'true');
+        }
+      } catch {}
+
+      const delSet = new Set(deletedIds);
+
       setPosts((prev) => {
         const postMap = new Map<string, Post>();
-        // Keep existing memory/local posts
-        prev.forEach((p) => postMap.set(p.id, p));
-        // Merge cloud posts while preserving demo flags on seed IDs
+        // Keep existing memory/local posts that are not deleted
+        prev.forEach((p) => {
+          if (!delSet.has(p.id)) {
+            postMap.set(p.id, p);
+          }
+        });
+        // Merge cloud posts while preserving demo flags on seed IDs and skipping deleted IDs
         cloudPosts.forEach((cp) => {
-          if (cp.id) {
+          if (cp.id && !delSet.has(cp.id)) {
             const existing = postMap.get(cp.id);
             const seed = seedMap.get(cp.id);
             postMap.set(cp.id, sanitizePostEmojis({
@@ -1405,6 +1476,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deletePost = (postId: string) => {
+    try {
+      const savedDeleted = localStorage.getItem('cd_deleted_post_ids');
+      const existing: string[] = savedDeleted ? JSON.parse(savedDeleted) : [];
+      const updatedIds = Array.from(new Set([...existing, postId]));
+      localStorage.setItem('cd_deleted_post_ids', JSON.stringify(updatedIds));
+    } catch {}
+
+    setPosts((prev) => {
+      const next = prev.filter((p) => p.id !== postId);
+      try {
+        localStorage.setItem('cd_posts', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    if (activePost?.id === postId) {
+      setActivePost(null);
+      if (view === 'post_detail') {
+        go('feed');
+      }
+    }
+
+    deletePostFromCloud(postId).catch(() => {});
+    toast('Dispatch permanently removed from the Civic Feed', 'amber');
+  };
+
   const upvotePost = (postId: string) => {
     if (!user || user.role !== 'citizen') {
       toast('Sign in as a citizen to support a report', 'amber');
@@ -1573,16 +1671,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const ratifyResolution = (postId: string, feedback: string) => {
+  const ratifyResolution = (postId: string, feedback: string, citizenAfterPhotoUrl?: string) => {
     const seal = '0x' + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
+          const hrsElapsed = Math.max(1, (Date.now() - new Date(p.created_at).getTime()) / 3600000);
+          const hrs = Math.floor(hrsElapsed);
+          const mins = Math.round((hrsElapsed - hrs) * 60);
+          const turnaroundStr = `${hrs}h ${mins}m`;
+
+          const firstCitizenImg = p.media?.find((m) => m.type === 'image' && m.url)?.url;
+          const govProofImg = [...(p.comments || [])]
+            .reverse()
+            .find((c) => c.role === 'gov' && c.media?.some((m) => m.type === 'image'))
+            ?.media?.find((m) => m.type === 'image')?.url;
+
+          const afterUrl = citizenAfterPhotoUrl || p.before_after?.after_url || govProofImg;
+          const beforeUrl = p.before_after?.before_url || firstCitizenImg;
+
+          const updatedBeforeAfter =
+            beforeUrl && afterUrl
+              ? {
+                  before_url: beforeUrl,
+                  after_url: afterUrl,
+                  before_label: p.before_after?.before_label || 'Citizen Field Report',
+                  after_label: citizenAfterPhotoUrl
+                    ? 'Citizen Ground-Ratified Fix'
+                    : p.before_after?.after_label || 'Verified Official Resolution',
+                  turnaround_hrs: p.before_after?.turnaround_hrs || turnaroundStr,
+                  gps_verified: true,
+                  verified_by: `Ratified by ${user?.name || 'Citizen Witness'}`,
+                }
+              : p.before_after;
+
           const ratifyComment = {
             id: `ratify-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             sender: user?.name || 'Verified Citizen',
             role: 'citizen' as const,
             body: `[RATIFIED] CITIZEN RATIFICATION SEALED: "${feedback || 'I confirm on-ground that this issue is satisfactorily resolved.'}" · Sovereign Certificate Hash: ${seal.slice(0, 18)}...`,
+            media: citizenAfterPhotoUrl
+              ? [{ type: 'image' as const, url: citizenAfterPhotoUrl, caption: 'Citizen Ground-Ratified After Photo' }]
+              : undefined,
             created_at: new Date().toISOString(),
             helpful: 3,
             not_helpful: 0,
@@ -1594,6 +1724,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             citizen_dispute_status: 'confirmed_by_community' as const,
             citizen_satisfied: true,
             crypto_seal_hash: seal,
+            before_after: updatedBeforeAfter,
             comments: [...(p.comments || []), ratifyComment],
           };
         }
@@ -1675,17 +1806,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast('Statutory Escalation Triggered! Promoted to next administrative tier.', 'amber');
   };
 
-  const updatePostStatus = (postId: string, newStatus: any) => {
+  const updatePostStatus = (postId: string, newStatus: any, beforeAfter?: Post['before_after']) => {
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
-          return { ...p, gov_status: newStatus };
+          return {
+            ...p,
+            status: newStatus === 'resolved' ? 'resolved' : p.status,
+            gov_status: newStatus,
+            before_after: beforeAfter || p.before_after,
+          };
         }
         return p;
       })
     );
-    logAudit('status_change', postId, `Status changed: → ${newStatus}`);
-    toast(`Marked ${newStatus}`, 'amber');
+    logAudit('status_change', postId, `Status changed: → ${newStatus}${beforeAfter ? ' (with Before & After Proof)' : ''}`);
+    toast(`Marked ${newStatus}`, newStatus === 'resolved' ? 'emerald' : 'amber');
   };
 
   const addTeamMember = (member: TeamMember) => {
@@ -2358,7 +2494,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     // Mutate in-memory DEPARTMENTS entry if present so getDept & allDepts reflect updates immediately
-    const countryDepts = DEPARTMENTS[country] || [];
+    const rawDepts = DEPARTMENTS[country];
+    const countryDepts = Array.isArray(rawDepts)
+      ? rawDepts
+      : [...(rawDepts?.civic || []), ...(rawDepts?.consumer || [])];
     const targetDeptObj = countryDepts.find((item) => item.id === deptId);
     if (targetDeptObj) {
       if (updates.businessName) targetDeptObj.name = updates.businessName;
@@ -3159,10 +3298,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       title: quoteTitle,
       body: quoteBody,
       location: originalPost.location,
-      gps: attachments?.gps || originalPost.gps,
+      gps: attachments?.gps
+        ? { lat: String(attachments.gps.lat), lng: String(attachments.gps.lng) }
+        : originalPost.gps,
       source: 'web',
-      media: attachments?.media || [],
-      voice_note: attachments?.voice_note || false,
+      media: (attachments?.media || []) as any,
+      voice_note: attachments?.voice_note ? { duration: '0:15' } : undefined,
       status: 'pending',
       gov_status: 'pending',
       created_at: new Date().toISOString(),
@@ -3491,6 +3632,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast,
         logAudit,
         addPost,
+        deletePost,
         upvotePost,
         downvotePost,
         downvotesMap,

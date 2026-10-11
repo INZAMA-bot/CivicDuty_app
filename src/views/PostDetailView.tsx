@@ -57,6 +57,7 @@ import { RewardModal } from '../components/RewardModal';
 import { TicketAuditTimeline } from '../components/TicketAuditTimeline';
 import { generateCryptoSealSync } from '../utils/cryptoSeal';
 import { QrCodeModal } from '../components/QrCodeModal';
+import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 
 export const PostDetailView: React.FC = () => {
   const {
@@ -111,6 +112,7 @@ export const PostDetailView: React.FC = () => {
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
   const [ratifyNotes, setRatifyNotes] = useState('');
+  const [ratifyPhotoUrl, setRatifyPhotoUrl] = useState('');
   const [showRatifyModal, setShowRatifyModal] = useState(false);
   const [showPraiseExplainer, setShowPraiseExplainer] = useState(true);
 
@@ -675,6 +677,46 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
             </p>
           </div>
         )}
+
+        {/* Interactive Before & After Visual Proof Comparison Studio */}
+        {(() => {
+          const citizenImg = p.media?.find((m) => m.type === 'image' && m.url)?.url;
+          const govImg = [...(p.comments || [])]
+            .reverse()
+            .find((c) => c.role === 'gov' && c.media?.some((m) => m.type === 'image'))
+            ?.media?.find((m) => m.type === 'image')?.url;
+
+          const ba =
+            p.before_after ||
+            (citizenImg && govImg
+              ? {
+                  before_url: citizenImg,
+                  after_url: govImg,
+                  before_label: 'Citizen Field Report',
+                  after_label: 'Official Resolution Proof',
+                  turnaround_hrs: `${Math.max(1, Math.round(hrsElapsed))}h`,
+                  gps_verified: Boolean(p.gps),
+                  verified_by: d.name,
+                }
+              : null);
+
+          if (!ba) return null;
+          return (
+            <BeforeAfterSlider
+              beforeUrl={ba.before_url}
+              afterUrl={ba.after_url}
+              beforeLabel={ba.before_label || 'Citizen Field Report'}
+              afterLabel={ba.after_label || 'Verified Fix'}
+              turnaroundTime={ba.turnaround_hrs || `${Math.max(1, Math.round(hrsElapsed))}h`}
+              gpsCoords={p.gps}
+              gpsVerified={ba.gps_verified ?? true}
+              verifiedBy={ba.verified_by || d.name}
+              cryptoSeal={cryptoSeal}
+              compact={false}
+              defaultMode="slider"
+            />
+          );
+        })()}
 
         {/* Media Player Grid / Video / Audio / Docs */}
         <MediaCard media={p.media} postId={p.id} onToast={(msg) => toast(msg)} />
@@ -1485,34 +1527,81 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
               {showRatifyModal && (
                 <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-950 border border-emerald-300 dark:border-emerald-800 space-y-3 a-fade">
                   <h5 className="text-xs font-black text-emerald-950 dark:text-emerald-200">
-                    Community Ratification & Sovereign Seal
+                    Community Ratification &amp; On-Ground &ldquo;After&rdquo; Photo Seal
                   </h5>
                   <p className="text-[10px] text-slate-700 dark:text-slate-300 font-medium">
-                    I attest as an on-ground citizen that the reported infrastructure problem has been satisfactorily fixed.
+                    I attest as an on-ground citizen that the reported infrastructure problem has been satisfactorily fixed. Attach an optional on-ground &ldquo;After&rdquo; photo to upgrade this ticket into a Before &amp; After showcase.
                   </p>
                   <input
                     type="text"
                     value={ratifyNotes}
                     onChange={(e) => setRatifyNotes(e.target.value)}
-                    placeholder="Optional verification note (e.g. 'Water flowing properly from borehole now')..."
+                    placeholder="Verification note (e.g. 'Water flowing properly from borehole now')..."
                     className="w-full p-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-950 dark:text-white font-medium focus:outline-none focus:border-emerald-500"
                   />
+
+                  {/* Citizen On-Ground After Photo Upload */}
+                  <div className="p-2.5 rounded-xl bg-emerald-50/50 dark:bg-slate-900 border border-emerald-200 dark:border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-[10px] font-mono font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                        <ImageIcon size={12} />
+                        <span>Attach Ground-Ratified &ldquo;After&rdquo; Photo (Optional)</span>
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <label className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer">
+                          <Upload size={11} />
+                          <span>Upload Photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
+                                setRatifyPhotoUrl(URL.createObjectURL(f));
+                              }
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                        {ratifyPhotoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setRatifyPhotoUrl('')}
+                            className="px-2 py-1 rounded-lg bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-[10px] font-mono font-bold cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {ratifyPhotoUrl && (
+                      <div className="relative h-28 rounded-lg overflow-hidden border border-emerald-400">
+                        <img src={ratifyPhotoUrl} alt="Citizen After Proof" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-emerald-900/90 text-white text-[9px] font-mono font-bold">
+                          AFTER · Citizen Ground-Ratified Fix
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setShowRatifyModal(false)}
-                      className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold"
+                      className="px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => {
-                        ratifyResolution(p.id, ratifyNotes);
+                        ratifyResolution(p.id, ratifyNotes, ratifyPhotoUrl || undefined);
+                        setRatifyPhotoUrl('');
                         setShowRatifyModal(false);
                       }}
-                      className="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-black flex items-center gap-1.5 shadow-xs"
+                      className="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <CheckCheck size={13} />
-                      <span>Seal Ratification</span>
+                      <span>Seal Ratification{ratifyPhotoUrl ? ' + After Photo' : ''}</span>
                     </button>
                   </div>
                 </div>

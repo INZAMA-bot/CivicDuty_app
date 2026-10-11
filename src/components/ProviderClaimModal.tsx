@@ -226,7 +226,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
       features: [
         `Everything in Community Desk`,
         `Multi-neighborhood complaint triage & routing`,
-        `5 Staff responder & supervisor seats`,
+        `Unlimited Staff responder & supervisor seats`,
         `Weekly Customer Satisfaction (CSAT) analytics`,
         `Mobile Money (MTN / Airtel / M-Pesa) billing`,
       ],
@@ -245,7 +245,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
         `Fast-Track 12h / 24h Resolution SLA Guarantee badge`,
         `Embeddable "CivicDuty Verified Trust Index" Website Badge`,
         `Official Resolution Certificate & Evidence Vault uploads`,
-        `15 Staff responder seats with departmental routing`,
+        `Unlimited Staff responder seats with departmental routing`,
       ],
     },
     national: {

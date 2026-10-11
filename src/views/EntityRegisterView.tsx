@@ -137,60 +137,43 @@ export function getEntityTiersForCountry(country: CountryCode): EntityTierDef[] 
   const primary = primaryUnit(country).toLowerCase();
   const tiers = tiersFor(country);
   const l1Unit = tiers[1]?.unit || 'District';
+  const l2Unit = tiers[2]?.unit || 'Sub-County';
 
   return [
     {
-      id: 'free',
-      name: `Single-Unit (${primary})`,
+      id: 'parish_free',
+      name: `Parish Coverage (Single-Unit)`,
       price: 'Free',
-      sub: `1 ${primary} desk · Multi-Seat Admin`,
-      note: 'Free forever for single-branch shops, clinics & schools.',
+      sub: `1 ${primary} desk · Up to 2 Staff Seats`,
+      note: 'Free forever ($0/mo) for single-branch neighborhood shops, clinics, and local kiosks.',
       min: 1,
       max: 1,
     },
     {
-      id: 'community',
-      name: `Multi-${primary} Cluster`,
-      price: '$100',
-      sub: `per ${primary} / yr (2 to 50 ${primary}s)`,
-      note: 'Self-serve. Mobile Money (MTN / Airtel / M-Pesa) & Cards.',
+      id: 'subcounty',
+      name: `${l2Unit} Coverage`,
+      price: '$5/mo',
+      sub: `2 to 15 ${primary}s ($5/mo) · Unlimited Seats`,
+      note: `Full ${l2Unit} multi-branch routing, Unlimited Staff Seats, SLA response desk & Perk Vault.`,
       min: 2,
-      max: 50,
-    },
-    {
-      id: 'branch',
-      name: `Branch Network`,
-      price: '$7,200',
-      sub: `51 to 150 ${primary}s`,
-      note: 'Multi-branch SLA routing & regional supervisor desk.',
-      min: 51,
-      max: 150,
+      max: 15,
     },
     {
       id: 'district',
       name: `${l1Unit} Coverage`,
-      price: '$18,000',
-      sub: `151 to 500 ${primary}s`,
-      note: `Full ${l1Unit} executive dashboard & priority SLA.`,
-      min: 151,
-      max: 500,
-    },
-    {
-      id: 'regional',
-      name: `Regional (${countryName})`,
-      price: '$34,000',
-      sub: `501 to 2,000 ${primary}s`,
-      note: `Multi-node central oversight & analytics ledger.`,
-      min: 501,
-      max: 2000,
+      price: '$10/mo',
+      sub: `16 to 150 ${primary}s ($10/mo) · Unlimited Seats`,
+      note: `Full ${l1Unit} executive dashboard, Unlimited Staff Seats & regional supervisor routing.`,
+      min: 16,
+      max: 150,
     },
     {
       id: 'national',
-      name: `National (${countryName})`,
-      price: '$58,000',
-      sub: `2,001+ ${primary}s`,
-      note: `Full countrywide enterprise integration & API.`,
-      min: 2001,
+      name: `National Coverage (${countryName})`,
+      price: '$20/mo',
+      sub: `151+ ${primary}s ($20/mo) · Unlimited Seats`,
+      note: `Complete ${countryName} national coverage, Unlimited Staff Seats, unlimited branches & API.`,
+      min: 151,
       max: null,
     },
   ];
@@ -201,27 +184,20 @@ function tierForParishes(n: number, country: CountryCode) {
   return tiers.find((t) => n >= t.min && (t.max === null || n <= t.max)) || tiers[0];
 }
 
-const CONSUMER_BANDS: Record<number, number> = { 51: 10800, 151: 26000, 501: 46000, 2001: 74000, 6001: 98000 };
-const MONTHLY_UPLIFT = 1.12;
-
-function annualUsd(n: number, kind: string, country: CountryCode): number {
-  if (n <= 1) return 0;
-  if (n <= 50) return n * 100;
-  if (kind === 'consumer') {
-    const k =
-      Object.keys(CONSUMER_BANDS)
-        .map(Number)
-        .filter((x) => n >= x)
-        .pop() || 51;
-    return CONSUMER_BANDS[k];
-  }
-  const tier = tierForParishes(n, country);
-  return parseInt(tier.price.replace(/[^0-9]/g, ''), 10);
+function monthlyUsd(n: number): number {
+  if (n <= 1) return 0; // Parish: Free ($0/mo)
+  if (n <= 15) return 5; // Sub-County: $5/mo
+  if (n <= 150) return 10; // District: $10/mo
+  return 20; // National: $20/mo
 }
 
-function intervalUsd(n: number, kind: string, iv: 'annual' | 'monthly', country: CountryCode): number {
-  const a = annualUsd(n, kind, country);
-  return iv === 'monthly' ? Math.round((a * MONTHLY_UPLIFT) / 12) : a;
+function annualUsd(n: number, _kind: string, _country: CountryCode): number {
+  return monthlyUsd(n) * 12;
+}
+
+function intervalUsd(n: number, _kind: string, iv: 'annual' | 'monthly', _country: CountryCode): number {
+  const m = monthlyUsd(n);
+  return iv === 'monthly' ? m : m * 12;
 }
 
 function fmtUsd(v: number): string {
@@ -229,48 +205,57 @@ function fmtUsd(v: number): string {
 }
 
 function entityPrice(n: number, kind: string, iv: 'annual' | 'monthly', country: CountryCode): string {
-  const v = intervalUsd(n, kind || 'utility', iv || 'annual', country);
-  if (v === 0) return 'Free Forever';
-  return fmtUsd(v) + ((iv || 'annual') === 'annual' ? '/yr' : '/mo');
+  const v = intervalUsd(n, kind || 'utility', iv || 'monthly', country);
+  if (v === 0) return 'Free Forever ($0)';
+  return fmtUsd(v) + ((iv || 'monthly') === 'annual' ? '/yr' : '/mo');
 }
 
 export const EntityRegisterView: React.FC = () => {
-  const { go, registerNewEntity, toast, selectedCountry } = useApp();
+  const { go, registerNewEntity, toast, selectedCountry, user, updateCurrentUser, logAudit } = useApp();
 
-  const [country, setCountry] = useState<CountryCode>((selectedCountry || 'UG') as CountryCode);
+  const isExistingProvider = Boolean(
+    user && (user.entity_type === 'non_government_entity' || user.is_utility)
+  );
+
+  const [country, setCountry] = useState<CountryCode>((user?.country || selectedCountry || 'UG') as CountryCode);
 
   React.useEffect(() => {
-    if (selectedCountry && selectedCountry !== country) {
+    if (selectedCountry && selectedCountry !== country && !isExistingProvider) {
       setCountry(selectedCountry as CountryCode);
       setDistrict('');
       setSubcounty('');
       setParish('');
     }
-  }, [selectedCountry]);
+  }, [selectedCountry, isExistingProvider]);
 
-  const [name, setName] = useState('');
-  const [reg, setReg] = useState('');
-  const [kind, setKind] = useState<'utility' | 'consumer'>('consumer');
+  const [name, setName] = useState(isExistingProvider ? user?.organization_name || '' : '');
+  const [reg, setReg] = useState(isExistingProvider ? `TIN-${(user?.dept || 'ENT').toUpperCase()}-2026` : '');
+  const [kind, setKind] = useState<'utility' | 'consumer'>(user?.is_utility ? 'utility' : 'consumer');
 
   // Categorization & Professional Identity States
-  const [selectedSector, setSelectedSector] = useState<string>('retail_shops');
+  const [selectedSector, setSelectedSector] = useState<string>(
+    isExistingProvider && user?.entity_category ? user.entity_category : 'retail_shops'
+  );
   const [customSectorSpecify, setCustomSectorSpecify] = useState<string>('');
 
   const [selectedTypology, setSelectedTypology] = useState<string>('Corner Grocery & Convenience Store');
   const [customTypologySpecify, setCustomTypologySpecify] = useState<string>('');
 
-  const [officerName, setOfficerName] = useState<string>('');
-  const [selectedTitle, setSelectedTitle] = useState<string>('Proprietor & General Merchant');
+  const [officerName, setOfficerName] = useState<string>(isExistingProvider ? user?.officer_name || user?.name || '' : '');
+  const [selectedTitle, setSelectedTitle] = useState<string>(
+    isExistingProvider && user?.role_label ? user.role_label : 'Proprietor & General Merchant'
+  );
   const [customTitleSpecify, setCustomTitleSpecify] = useState<string>('');
 
-  const [staffSeats, setStaffSeats] = useState<number>(5);
+  const [staffSeats, setStaffSeats] = useState<number>(isExistingProvider ? user?.staff_seats || 5 : 5);
+  const [slaTargetHours, setSlaTargetHours] = useState<number>(24);
 
-  const [district, setDistrict] = useState('');
-  const [subcounty, setSubcounty] = useState('');
-  const [parish, setParish] = useState('');
+  const [district, setDistrict] = useState(isExistingProvider ? user?.district || '' : '');
+  const [subcounty, setSubcounty] = useState(isExistingProvider ? user?.subcounty || '' : '');
+  const [parish, setParish] = useState(isExistingProvider ? user?.parish || '' : '');
   const [manualUnitsOverride, setManualUnitsOverride] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [interval, setInterval] = useState<'annual' | 'monthly'>('annual');
+  const [interval, setInterval] = useState<'annual' | 'monthly'>('monthly');
 
   // Local payment flow state
   const [step, setStep] = useState<'details' | 'payment'>('details');
@@ -363,6 +348,38 @@ export const EntityRegisterView: React.FC = () => {
       return false;
     }
     return true;
+  };
+
+  const handleSaveExistingProviderProfile = () => {
+    if (!validateForm()) return;
+    const activeName = name.trim() || user?.organization_name || 'Verified Service Provider';
+    const activeOfficer = officerName.trim() || user?.officer_name || user?.name || effectiveProfessionalTitle;
+    const activeScope = parish || subcounty || district || user?.scope || 'd-kla';
+
+    updateCurrentUser({
+      organization_name: activeName,
+      officer_name: activeOfficer,
+      name: activeOfficer,
+      role_label: effectiveProfessionalTitle,
+      professional_identity: effectiveProfessionalTitle,
+      entity_category: selectedSector as any,
+      business_typology: effectiveTypologyName,
+      staff_seats: staffSeats,
+      district: district || user?.district,
+      subcounty: subcounty || user?.subcounty,
+      parish: parish || user?.parish,
+      scope: activeScope,
+      jurisdiction_label: `${activeName} (${tier.name} · ${slaTargetHours}h SLA)`,
+    });
+
+    logAudit(
+      'provider_profile_updated',
+      user?.dept || activeName,
+      `Updated Service Provider Desk Profile for ${activeName}: ${effectiveProfessionalTitle}, ${effectiveSectorName}, ${tier.name} (${slaTargetHours}h SLA, ${staffSeats} seats)`
+    );
+
+    toast(`Service Provider Desk Profile updated for ${activeName}!`, 'emerald');
+    go('gov_inbox');
   };
 
   const handleStartTrialSubmit = () => {
@@ -468,38 +485,81 @@ export const EntityRegisterView: React.FC = () => {
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 flex-wrap">
                 <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                  Entity &amp; Business Desk Onboarding
+                  {isExistingProvider ? 'Service Provider Profile & Desk Configuration' : 'Entity & Business Desk Onboarding'}
                 </span>
                 <span aria-hidden="true">·</span>
-                <span>1st {primaryUnitName} Free Forever</span>
-                <span aria-hidden="true">·</span>
-                <span>30-Day Founding Trial</span>
+                <span>Parish Free · Sub-County $5 · District $10 · National $20/mo</span>
               </div>
               <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {step === 'payment' ? 'Complete Subscription Payment' : 'Register your business or entity'}
+                {step === 'payment'
+                  ? 'Complete Subscription Payment'
+                  : isExistingProvider
+                  ? `Edit Provider Desk Profile (${user?.organization_name || 'Active Desk'})`
+                  : 'Register your business or entity'}
               </h1>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
                 {step === 'payment'
                   ? `Secure B2B checkout powered by Mobile Money (${localCurrencyCode}), Visa/Mastercard & RTGS Wire for ${countryName}.`
-                  : `Mount a verified public accountability & customer care wall for any enterprise — from single-branch shops, clinics, and schools to national utilities and banks.`}
+                  : isExistingProvider
+                  ? `Update your organization name, industry classification, executive title, SLA target, staff seats, or territorial coverage tier (${countryName}).`
+                  : `Mount a verified public accountability & customer care wall for any enterprise — Parish Free ($0), Sub-County ($5/mo), District ($10/mo), or National ($20/mo).`}
               </p>
             </div>
 
             {step === 'details' && (
-              <button
-                type="button"
-                onClick={() => go('entity_gateway')}
-                className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
-              >
-                <Building2 size={13} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Have a Code? Sign In →</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {isExistingProvider && (
+                  <button
+                    type="button"
+                    onClick={handleSaveExistingProviderProfile}
+                    className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 size={13} />
+                    <span>Save Profile Changes</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => go(isExistingProvider ? 'gov_inbox' : 'entity_gateway')}
+                  className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                >
+                  <Building2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>{isExistingProvider ? 'Return to Desk Inbox →' : 'Have a Code? Sign In →'}</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
 
         {step === 'details' && (
           <>
+            {isExistingProvider && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                    <SlidersHorizontal size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Active Service Provider Profile Editor · {user?.organization_name}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                    Make edits to your business name, sector, professional title, SLA hours, or coverage tier below and click <strong>Save Provider Profile</strong>, or commission a new branch desk.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="text-[10px] font-mono font-bold uppercase text-slate-600 dark:text-slate-300">
+                    Published SLA:
+                  </label>
+                  <select
+                    value={slaTargetHours}
+                    onChange={(e) => setSlaTargetHours(Number(e.target.value))}
+                    className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
+                  >
+                    <option value={12}>12h Rapid SLA</option>
+                    <option value={24}>24h Standard SLA</option>
+                    <option value={48}>48h Extended SLA</option>
+                  </select>
+                </div>
+              </div>
+            )}
             {/* Section 1: Business Category & Sector */}
             <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
@@ -719,48 +779,64 @@ export const EntityRegisterView: React.FC = () => {
               </div>
             </div>
 
-            {/* Section 4: Entity Administration & Multi-Seat Team Setup */}
+            {/* Section 4: Entity Administration & Unlimited Paid Desk Seat Policy */}
             <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-3">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                   <Users size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>04. Entity Admin &amp; Team Seat Allocation</span>
+                  <span>04. Entity Admin &amp; Unlimited Paid Desk Seat Policy</span>
                 </span>
                 <span className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                  Multi-Seat Admin Console Included
+                  {priceVal > 0 ? 'Unlimited Staff Seats Unlocked (Paid Desk)' : 'Free Tier: 2 Starter Seats (Upgrade for Unlimited)'}
                 </span>
               </div>
 
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                As <strong className="text-slate-900 dark:text-white">{effectiveProfessionalTitle}</strong>, you hold primary administrative permissions to invite duty managers, customer care leads, and field technicians to your entity desk.
+                Private providers pay for their <strong>territorial desk coverage</strong>, never per individual staff member. Every paid desk subscription (<strong className="text-slate-900 dark:text-white">$5/mo Sub-County, $10/mo District, or $20/mo National</strong>) unlocks <strong className="text-emerald-600 dark:text-emerald-400">Unlimited Staff &amp; Responder Seats</strong> so you can onboard your entire customer care, branch, and field technician roster without per-seat penalties.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {[
-                  { count: 3, label: '3 Staff Seats', note: 'Single shop, pharmacy or café' },
-                  { count: 5, label: '5 Staff Seats (Standard)', note: 'Clinic, school or medium enterprise' },
-                  { count: 12, label: '12 Staff Seats', note: 'Multi-branch network & utility care' },
-                ].map((seatOpt) => {
-                  const isActive = staffSeats === seatOpt.count;
-                  return (
-                    <button
-                      key={seatOpt.count}
-                      type="button"
-                      onClick={() => setStaffSeats(seatOpt.count)}
-                      className={`p-3 rounded-lg text-left border transition-colors cursor-pointer ${
-                        isActive
-                          ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
-                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono font-semibold">{seatOpt.label}</span>
-                        {isActive && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />}
-                      </div>
-                      <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block mt-0.5">{seatOpt.note}</span>
-                    </button>
-                  );
-                })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStaffSeats(2);
+                    setManualUnitsOverride(1);
+                  }}
+                  className={`p-3 rounded-lg text-left border transition-colors cursor-pointer ${
+                    priceVal === 0
+                      ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-semibold">Free Single-Parish Desk · 2 Staff Seats</span>
+                    {priceVal === 0 && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />}
+                  </div>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                    Ideal for a solo neighborhood shop, kiosk, or local clinic ($0/mo)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStaffSeats(999);
+                    if (covered <= 1) setManualUnitsOverride(2);
+                  }}
+                  className={`p-3 rounded-lg text-left border transition-colors cursor-pointer ${
+                    priceVal > 0
+                      ? 'border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-semibold">Paid Desk Subscription · Unlimited Staff Seats (∞)</span>
+                    {priceVal > 0 && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />}
+                  </div>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                    Included on Sub-County ($5/mo), District ($10/mo) &amp; National ($20/mo) desks
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -953,8 +1029,8 @@ export const EntityRegisterView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Interactive 6-Tier Pricing Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {/* Interactive 4-Tier Accessible Pricing Cards Grid (Parish Free, Sub-County $5, District $10, National $20/mo) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {currentTiers.map((tItem) => {
                   const isCurrentTier = tier.id === tItem.id;
                   const sampleUnits = tItem.min;
@@ -983,9 +1059,7 @@ export const EntityRegisterView: React.FC = () => {
                           )}
                         </div>
                         <div className="text-base font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
-                          {tItem.id === 'community'
-                            ? `${fmtUsd(intervalUsd(1, kind, interval, country) || (interval === 'annual' ? 100 : 9))} / ${primaryUnitName}`
-                            : computedTierPrice}
+                          {computedTierPrice}
                         </div>
                         {computedUsdNum > 0 && (
                           <div className="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400">
@@ -1063,6 +1137,17 @@ export const EntityRegisterView: React.FC = () => {
                 </div>
 
                 <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {isExistingProvider && (
+                    <button
+                      type="button"
+                      onClick={handleSaveExistingProviderProfile}
+                      className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-mono font-bold rounded-lg py-3 px-4 text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>Save &amp; Update Active Provider Desk Profile</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     disabled={isProcessing}
@@ -1073,7 +1158,7 @@ export const EntityRegisterView: React.FC = () => {
                       {isProcessing
                         ? 'Commissioning Entity Desk...'
                         : priceVal === 0
-                        ? 'Activate Free Community Entity Desk ($0 Forever)'
+                        ? 'Activate Free Parish Entity Desk ($0 Forever)'
                         : 'Activate 30-Day Founding Partner Trial ($0 Due Today)'}
                     </span>
                     <ArrowRight size={14} />

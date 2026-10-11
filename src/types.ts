@@ -353,6 +353,9 @@ export interface Post {
     after_url: string;
     before_label?: string;
     after_label?: string;
+    turnaround_hrs?: string;
+    gps_verified?: boolean;
+    verified_by?: string;
   };
   voice_note?: {
     duration: string;
@@ -877,16 +880,32 @@ export type ViewType =
   | 'livery'
   | 'gov_partnership'
   | 'perk_vault'
+  | 'gov_login'
+  | 'entity_register'
+  | 'entity_gateway'
+  | 'entity_team'
   | 'cd_ops';
+
+export type IdentityDocumentType =
+  | 'national_id'
+  | 'passport'
+  | 'voter_card'
+  | 'driving_permit'
+  | 'refugee_id'
+  | 'student_id'
+  | 'phone_otp'
+  | string;
 
 export interface CdOpsPromotionalAd {
   id: string;
   title: string;
-  category: 'bodaboda' | 'bus' | 'train' | 'terminal' | 'radio' | 'noticeboard' | 'ussd';
+  category: 'bodaboda' | 'bus' | 'train' | 'market' | 'terminal' | 'radio' | 'noticeboard' | 'ussd';
   categoryLabel: string;
   tagline: string;
   summary: string;
   imageSrc: string;
+  realLifePosterSrc?: string;
+  adFormatType?: 'fleet_livery_proposal' | 'grassroots_billboard';
   callToAction: string;
   ctaType: 'ussd' | 'specs' | 'report' | 'perks' | 'custom';
   ctaValue?: string;

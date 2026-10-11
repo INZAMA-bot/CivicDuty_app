@@ -341,42 +341,43 @@ export const EntityGatewayView: React.FC = () => {
           <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4 animate-fade-in">
             <div className="space-y-1">
               <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
-                Founding Partner Program · $0 Due Today
+                Accessible Tiered Pricing · Parish Free · Sub-County $5 · District $10 · National $20/mo
               </div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Claim &amp; Register Your Provider Wall
+                Claim, Register &amp; Edit Your Service Provider Desk Profile
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Every verified school, healthcare center, restaurant, bank branch, transit cooperative, or utility receives a dedicated public wall to resolve citizen inquiries and maintain verified SLA compliance.
+                Every verified school, healthcare center, shop, restaurant, bank branch, transit cooperative, or utility receives a dedicated public wall, customizable SLA profile, multi-seat team console, and Private Provider Perk Vault.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Prevent Churn</span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  82% of customers who experience unresolved service delays switch to higher-rated alternatives.
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/30 space-y-1">
+                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">Free ($0)</div>
+                <div className="font-semibold text-slate-900 dark:text-white text-[11px]">Parish Coverage</div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                  Free forever for single-branch shops, clinics &amp; schools (1 Parish).
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>1st Unit Free Forever</span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Single-branch community clinics, primary schools, and neighborhood enterprises pay nothing.
+                <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">$5 / mo</div>
+                <div className="font-semibold text-slate-900 dark:text-white text-[11px]">Sub-County Tier</div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                  2–15 Parishes ($60/yr). Multi-branch SLA desk &amp; Shop Perk Vault.
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
-                  <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Verified Trust Score</span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Build public brand credibility through transparent response times and verified proof uploads.
+                <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">$10 / mo</div>
+                <div className="font-semibold text-slate-900 dark:text-white text-[11px]">District Coverage</div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                  16–150 Parishes ($120/yr). Full district executive SLA &amp; team seats.
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <div className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">$20 / mo</div>
+                <div className="font-semibold text-slate-900 dark:text-white text-[11px]">National Coverage</div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                  Countrywide 151+ Parishes ($240/yr). Unlimited branches &amp; API.
                 </p>
               </div>
             </div>
@@ -386,7 +387,7 @@ export const EntityGatewayView: React.FC = () => {
               onClick={() => go('entity_register')}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-2.5 px-4 text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
-              <span>Proceed to Provider Registration</span>
+              <span>Proceed to Provider Registration &amp; Profile Editor</span>
               <ArrowRight size={14} />
             </button>
           </div>

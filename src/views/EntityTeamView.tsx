@@ -150,12 +150,13 @@ export const EntityTeamView: React.FC = () => {
   const orgName = user.organization_name || user.dept_label || 'Service Provider Desk';
   const profTitle = user.custom_title_specify || user.professional_identity || user.real_title_short || 'Entity Admin';
   const mySub = subscriptions.find((s) => s.dept === user.dept);
-  const seatLimit = user.seat_limit || (mySub?.units ? Math.max(5, mySub.units * 3) : 5);
+  const isPaidTier = user.scope !== 'parish' || Boolean(mySub && mySub.units > 1);
+  const seatLimit = isPaidTier ? 9999 : 2;
 
   const myTeam = teamMembers.filter((m) => m.dept === user.dept);
   const myInvites = invites.filter((i) => !i.used && i.dept === user.dept);
   const totalOccupiedSeats = myTeam.length + myInvites.length;
-  const availableSeats = Math.max(0, seatLimit - totalOccupiedSeats);
+  const availableSeats = isPaidTier ? 9999 : Math.max(0, seatLimit - totalOccupiedSeats);
 
   const SectorIcon = SECTOR_ICONS[user.entity_category || 'other'] || Building2;
 
@@ -348,61 +349,85 @@ export const EntityTeamView: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 space-y-6 pt-6 animate-fade-in text-slate-800 dark:text-slate-100 max-w-6xl mx-auto pb-24">
       {/* 1. Header & Entity Master Desk Overview */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className="text-[10px] font-black uppercase mono px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/70 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800/60 flex items-center gap-1.5">
-              <SectorIcon size={12} />
-              {user.entity_category ? user.entity_category.replace(/_/g, ' ') : 'Commercial Entity'}
-            </span>
-            <span className="text-[10px] font-black uppercase mono px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60 flex items-center gap-1">
-              <ShieldCheck size={12} /> Master Entity Desk
-            </span>
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-              ID: {user.dept}
-            </span>
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 flex items-center gap-1.5">
+                <SectorIcon size={12} />
+                {user.entity_category ? user.entity_category.replace(/_/g, ' ') : 'Service Provider Desk'}
+              </span>
+              <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1">
+                <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" /> Master Entity Desk
+              </span>
+              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                ID: {user.dept} · Tier: {user.scope === 'national' ? 'National ($20/mo)' : user.scope === 'subcounty' ? 'Sub-County ($5/mo)' : user.scope === 'parish' ? 'Parish (Free)' : 'District ($10/mo)'}
+              </span>
+            </div>
+
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              {orgName} · Team &amp; Staff Roster
+            </h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              Registered Administrator: <strong>{profTitle}</strong> ({user.name || user.real_title_short || 'Primary Owner'}). Define custom roles, configure permission limits, invite duty staff, and manage Monthly Top-3 Perk Vault dispatches.
+            </p>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            {orgName} · Team & Staff Roster
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Registered Administrator: <strong>{profTitle}</strong> ({user.name || user.real_title_short || 'Primary Owner'}). Define custom roles, configure permission limits, and invite duty staff.
-          </p>
+          {/* Seat Usage Widget */}
+          <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] min-w-[250px]">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Users size={14} className="text-emerald-600 dark:text-emerald-400" />
+                Staff Seat Allocation
+              </span>
+              <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                {isPaidTier ? `${totalOccupiedSeats} Active · Unlimited (∞)` : `${totalOccupiedSeats} / ${seatLimit} Seats`}
+              </span>
+            </div>
+
+            <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  !isPaidTier && totalOccupiedSeats >= seatLimit
+                    ? 'bg-rose-500'
+                    : 'bg-emerald-500'
+                }`}
+                style={{ width: isPaidTier ? '100%' : `${Math.min(100, (totalOccupiedSeats / seatLimit) * 100)}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
+              <span>{isPaidTier ? 'Unlimited seats on paid desk' : `${availableSeats} free seats remaining`}</span>
+              <button
+                type="button"
+                onClick={() => go('entity_register')}
+                className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+              >
+                Edit Profile &amp; Tier →
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Seat Usage Widget */}
-        <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm min-w-[240px]">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Users size={14} className="text-purple-600 dark:text-purple-400" />
-              Staff Seat Allocation
-            </span>
-            <span className="mono font-black text-slate-900 dark:text-white">
-              {totalOccupiedSeats} / {seatLimit} Seats
-            </span>
-          </div>
-
-          <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
-            <div
-              className={`h-full rounded-full transition-all ${
-                totalOccupiedSeats >= seatLimit
-                  ? 'bg-rose-500'
-                  : totalOccupiedSeats > seatLimit * 0.7
-                  ? 'bg-amber-500'
-                  : 'bg-emerald-500'
-              }`}
-              style={{ width: `${Math.min(100, (totalOccupiedSeats / seatLimit) * 100)}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-[10px] mono text-slate-500 dark:text-slate-400">
-            <span>{availableSeats} seats remaining</span>
+        {/* Quick Desk Navigation Bar */}
+        <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+            Pricing Tiers: Parish Free ($0) · Sub-County $5/mo · District $10/mo · National $20/mo
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => go('gov_billing')}
-              className="text-purple-600 dark:text-purple-400 hover:underline font-bold"
+              type="button"
+              onClick={() => go('entity_register')}
+              className="px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 cursor-pointer"
             >
-              Manage Quota →
+              Edit Provider Desk Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => go('perk_vault')}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer"
+            >
+              Open 5-Vault Monthly Perks →
             </button>
           </div>
         </div>

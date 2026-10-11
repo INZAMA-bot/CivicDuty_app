@@ -32,17 +32,27 @@ import {
   Eye,
   UserCheck,
   Gift,
+  Trash2,
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 import { RewardModal } from './RewardModal';
+import { BeforeAfterSlider } from './BeforeAfterSlider';
 
 interface PostCardComponentProps {
   post?: Post;
   p?: Post;
   rankIndex?: number | null;
+  isFocused?: boolean;
+  onActivateFocus?: (postId: string) => void;
 }
 
-export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: propPost, p: fallbackPost, rankIndex }) => {
+export const PostCardComponent: React.FC<PostCardComponentProps> = ({
+  post: propPost,
+  p: fallbackPost,
+  rankIndex,
+  isFocused = true,
+  onActivateFocus,
+}) => {
   const post = propPost || fallbackPost;
   const {
     setActivePost,
@@ -50,6 +60,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
     toast,
     upvotePost,
     downvotePost,
+    deletePost,
     user,
     supportsMap,
     downvotesMap,
@@ -63,7 +74,6 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
   } = useApp();
   const [showQr, setShowQr] = useState<boolean>(false);
   const [rewardOpen, setRewardOpen] = useState<boolean>(false);
-  const [playingVoice, setPlayingVoice] = useState<boolean>(false);
 
   if (!post) return null;
 
@@ -87,6 +97,10 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
   const isRed = isCorrupt || post.status === 'pending' || post.status === 'overdue' || post.escalated;
   const isGreen = post.status === 'resolved' || post.citizen_satisfied === true || isPraise;
   const isAmber = !isRed && !isGreen;
+
+  const focusSpotlightClasses = isFocused
+    ? 'opacity-100 scale-100 bg-white dark:bg-[#12161f] border border-slate-300 dark:border-[#2c3344] shadow-[0_10px_28px_-6px_rgba(15,23,42,0.12)] dark:shadow-[0_12px_32px_-6px_rgba(0,0,0,0.65)] ring-1 ring-slate-900/5 dark:ring-white/10 z-1'
+    : 'opacity-35 saturate-50 scale-[0.988] bg-white/80 dark:bg-[#0e1116]/80 border border-[#e3e6ea]/70 dark:border-[#262b36]/70 hover:opacity-75';
 
   const statusChip = (s: string) => {
     const m: Record<string, string> = {
@@ -133,13 +147,16 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
 
   return (
     <article
+      data-post-card-id={post.id}
+      onMouseEnter={() => onActivateFocus?.(post.id)}
+      onTouchStart={() => onActivateFocus?.(post.id)}
+      onFocus={() => onActivateFocus?.(post.id)}
       onClick={() => {
+        onActivateFocus?.(post.id);
         setActivePost(post);
         go('post_detail');
       }}
-      className={`post-row px-4 py-4 cursor-pointer bg-white dark:bg-[#0e1116] hover:bg-[#f3f4f6] dark:hover:bg-[#161a22] transition-colors border-b border-[#e3e6ea] dark:border-[#262b36] relative group ${
-        isPraise ? 'border-l-4 border-l-emerald-500' : ''
-      }`}
+      className={`post-row px-4 py-4 sm:px-5 sm:py-5 rounded-2xl cursor-pointer transition-all duration-300 ease-out relative group ${focusSpotlightClasses}`}
     >
       {rankIndex !== null && rankIndex !== undefined && rankIndex < 3 && (
         <div className="float-right w-5 h-5 rounded-md bg-emerald-50 dark:bg-slate-900 border border-emerald-500/40 flex items-center justify-center -mt-1">
@@ -155,9 +172,23 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
               <Eye size={11} strokeWidth={1.75} className="text-slate-500 dark:text-slate-400 shrink-0" />
               <span>ILLUSTRATIVE DEMO · CIVICDUTY IMPACT SHOWCASE</span>
             </span>
-            <span className="text-[8px] font-mono font-medium text-slate-500 dark:text-slate-400">
-              System Demonstration Ticket
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[8px] font-mono font-medium text-slate-500 dark:text-slate-400">
+                System Demonstration Ticket
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deletePost(post.id);
+                }}
+                className="px-1.5 py-0.5 rounded bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white text-[8.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                title="Remove this post from your feed"
+              >
+                <Trash2 size={9} />
+                <span>Delete</span>
+              </button>
+            </div>
           </div>
           {post.demo_highlight && (
             <div className="text-[10px] font-semibold text-slate-800 dark:text-slate-200 leading-snug pt-1 border-t border-[#e3e6ea] dark:border-[#262b36]">
@@ -166,14 +197,28 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
           )}
         </div>
       ) : (
-        <div className="mb-2 flex items-center justify-between gap-2 px-2.5 py-1 rounded-md bg-[#f8f9fa] dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
-          <span className="text-[8.5px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+        <div className="mb-2.5 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-50/70 dark:bg-[#161a22] border border-emerald-300/70 dark:border-[#262b36]">
+          <span className="text-[8.5px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
             <span>LIVE CITIZEN DISPATCH · VERIFIED REAL TICKET</span>
           </span>
-          <span className="text-[8px] font-mono font-medium text-slate-500 dark:text-slate-400">
-            Active Public Ledger
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] font-mono font-medium text-slate-500 dark:text-slate-400">
+              Active Public Ledger
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                deletePost(post.id);
+              }}
+              className="px-1.5 py-0.5 rounded bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white text-[8.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+              title="Delete this post from the Civic Feed"
+            >
+              <Trash2 size={9} />
+              <span>Delete Post</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -202,7 +247,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
       </div>
 
       {/* Dispatch Dateline */}
-      <div className="text-[7.5px] font-mono text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5 flex-wrap">
+      <div className="text-[8px] font-mono text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5 flex-wrap">
         <span className="text-emerald-700 dark:text-emerald-400">DISPATCH #{post.id.slice(-6).toUpperCase()}</span>
         <span>·</span>
         <span>{srcLabel(post.source)}</span>
@@ -220,7 +265,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
 
       {/* Master Dossier Multi-Witness Compilation Strip */}
       {isMasterDossier && (
-        <div className="mb-2 p-2 rounded-lg bg-slate-50 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
+        <div className="mb-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-6 h-6 rounded-md bg-indigo-600 text-white flex items-center justify-center shrink-0 font-mono text-[10px] font-black">
               {compiledCount}x
@@ -253,7 +298,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
         </div>
       )}
 
-      {/* Broadsheet Headline & Body */}
+      {/* Broadsheet Headline & Full-Fidelity Body */}
       {post.author_profession && (
         <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
           <span
@@ -291,12 +336,12 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
         </div>
       )}
 
-      <h4 className={`text-[14.5px] sm:text-[15.5px] font-semibold tracking-tight ${
+      <h4 className={`text-[15px] sm:text-[16px] font-bold tracking-tight ${
         isPraise ? 'text-emerald-950 dark:text-emerald-100' : isCorrupt ? 'text-rose-700 dark:text-rose-200' : 'text-slate-950 dark:text-slate-100'
       } leading-snug mb-1.5 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors`}>
         {stripDecorativeEmojis(post.title)}
       </h4>
-      <p className="text-[12.5px] text-slate-700 dark:text-slate-300 clamp2 leading-relaxed font-normal mb-2.5">
+      <p className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed font-normal mb-3 whitespace-pre-line">
         <RichCivicText
           text={stripDecorativeEmojis(post.body)}
           onHashtagClick={(tag) => {
@@ -320,73 +365,41 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({ post: prop
             e.stopPropagation();
             toast(`Quoted Dispatch #${post.quote_of?.id.slice(-6).toUpperCase()}`, 'emerald');
           }}
-          className="mb-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/90 border-l-4 border-l-emerald-500 border border-slate-200 dark:border-slate-800 space-y-1"
+          className="mb-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/90 border-l-4 border-l-emerald-500 border border-slate-200 dark:border-slate-800 space-y-1"
         >
           <div className="flex items-center gap-1.5 text-[9px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
             <Repeat2 size={11} />
             <span>QUOTED DISPATCH · {post.quote_of.dept_name} · {post.quote_of.citizen_name}</span>
           </div>
           <div className="text-xs font-black text-slate-900 dark:text-white">{post.quote_of.title}</div>
-          <p className="text-[10.5px] text-slate-600 dark:text-slate-400 line-clamp-2">{post.quote_of.snippet}</p>
-        </div>
-      )}
-
-      {/* Vernacular Field Voice Note & Transcript Card */}
-      {post.voice_note && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="mb-2.5 p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/70 space-y-1.5"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setPlayingVoice(!playingVoice);
-                if (!playingVoice) {
-                  toast('Playing citizen field voice note with civic transcript...', 'emerald');
-                }
-              }}
-              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-mono font-bold flex items-center gap-1.5 cursor-pointer"
-            >
-              {playingVoice ? <Pause size={11} /> : <Play size={11} />}
-              <span>{playingVoice ? 'Playing Audio...' : `Play Voice (${post.voice_note.duration})`}</span>
-            </button>
-            <span className="text-[9px] font-mono font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-1">
-              <Volume2 size={11} />
-              <span>{post.voice_note.language || 'Vernacular Field Audio'}</span>
-            </span>
-          </div>
-          {post.voice_note.transcript && (
-            <p className="text-[10.5px] italic text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-900/80 p-2 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
-              {post.voice_note.transcript}
-            </p>
-          )}
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">{post.quote_of.snippet}</p>
         </div>
       )}
 
       {/* Before & After Interactive Photo Proof Preview */}
       {post.before_after && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="mb-2.5 grid grid-cols-2 gap-1.5 p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/25 border border-emerald-300/70 dark:border-emerald-800/60"
-        >
-          <div className="relative rounded-lg overflow-hidden h-24 border border-rose-300 dark:border-rose-800">
-            <img src={post.before_after.before_url} alt="Before" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-rose-600/90 text-white text-[8px] font-mono font-bold">
-              BEFORE: {post.before_after.before_label || 'Reported'}
-            </span>
-          </div>
-          <div className="relative rounded-lg overflow-hidden h-24 border border-emerald-400 dark:border-emerald-700">
-            <img src={post.before_after.after_url} alt="After" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-emerald-600/90 text-white text-[8px] font-mono font-bold">
-              AFTER: {post.before_after.after_label || 'Resolved'}
-            </span>
-          </div>
-        </div>
+        <BeforeAfterSlider
+          beforeUrl={post.before_after.before_url}
+          afterUrl={post.before_after.after_url}
+          beforeLabel={post.before_after.before_label || 'Reported'}
+          afterLabel={post.before_after.after_label || 'Resolved'}
+          turnaroundTime={post.before_after.turnaround_hrs || '3h 40m'}
+          gpsCoords={post.gps}
+          gpsVerified={post.before_after.gps_verified ?? true}
+          verifiedBy={post.before_after.verified_by || d.name}
+          cryptoSeal={post.crypto_seal_hash}
+          compact={true}
+          defaultMode="slider"
+        />
       )}
 
-      {/* Media Attachment */}
-      <MediaCard media={post.media} postId={post.id} onToast={(msg) => toast(msg)} />
+      {/* Unified Full-Fidelity Media Attachment Viewer (Images, Cinema Videos, Interactive Audio Waveform & Document Reader) */}
+      <MediaCard
+        media={post.media}
+        postId={post.id}
+        voiceNote={post.voice_note}
+        onToast={(msg) => toast(msg)}
+      />
 
       {/* Interactive Civic Poll (Twitter/X Poll equivalent for local referendums) */}
       {post.poll && (

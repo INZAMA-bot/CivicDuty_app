@@ -183,9 +183,15 @@ export const GovBillingView: React.FC = () => {
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Plan Status</p>
                 <h3 className="text-base font-black text-slate-900 dark:text-white mt-1">
-                  Government Sovereign Regional Authority Tier
+                  {user.scope === 'national'
+                    ? 'National Coverage Tier ($20 / month)'
+                    : user.scope === 'subcounty'
+                    ? 'Sub-County Coverage Tier ($5 / month)'
+                    : user.scope === 'parish'
+                    ? 'Parish Coverage Tier (Free Forever · $0)'
+                    : 'District Coverage Tier ($10 / month)'}
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">Assigned Mandate: {d.name}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Assigned Mandate: {user.organization_name || d.name}</p>
               </div>
               <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
                 Active Tier
@@ -194,20 +200,20 @@ export const GovBillingView: React.FC = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Annual License</span>
-                <span className="text-slate-900 dark:text-white font-black">$18,000 / year</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Parish Coverage</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-black">Free ($0 / mo)</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Renewal Date</span>
-                <span className="text-slate-900 dark:text-white font-black">15 Dec 2026</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Sub-County Tier</span>
+                <span className="text-slate-900 dark:text-white font-black">$5 / mo ($60/yr)</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Desks</span>
-                <span className="text-emerald-600 font-black">135+ Supervised Desks</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">District Tier</span>
+                <span className="text-slate-900 dark:text-white font-black">$10 / mo ($120/yr)</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Settlement Channel</span>
-                <span className="text-amber-600 font-black">Treasury MoMo / Card</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">National Tier</span>
+                <span className="text-amber-600 dark:text-amber-400 font-black">$20 / mo ($240/yr)</span>
               </div>
             </div>
           </div>

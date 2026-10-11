@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Search, 
@@ -66,6 +66,7 @@ export const FeedView: React.FC = () => {
   const [gisViewMode, setGisViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [selectedCategory, setSelectedCategory] = useState<TicketCategory | 'all'>('all');
   const [showBookmarksOnly, setShowBookmarksOnly] = useState<boolean>(false);
+  const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
 
   const activePromotionalAds = (promotionalAds || []).filter((a) => a.published);
 
@@ -157,6 +158,49 @@ export const FeedView: React.FC = () => {
   const corruptCt = allC.filter((p) => p.category === 'corruption').length;
   const praiseCt = allC.filter((p) => p.category === 'praise').length;
   const topPraise = allC.find((p) => p.category === 'praise');
+
+  // Ensure initial reading focus is on the top visible post card
+  useEffect(() => {
+    if (display.length > 0 && (!focusedCardId || !display.some((p) => p.id === focusedCardId))) {
+      setFocusedCardId(display[0].id);
+    }
+  }, [display.length, feedTab, selectedCategory]);
+
+  // Viewport reading spotlight: as the user scrolls/swaps to the next post card,
+  // what they were reading dims away while the next post turns on visually clear.
+  const updateReadingSpotlightOnScroll = useCallback(() => {
+    const container = document.getElementById('feed-list');
+    if (!container) return;
+    const cards = container.querySelectorAll<HTMLElement>('[data-post-card-id]');
+    if (!cards.length) return;
+
+    const viewportCenterY = window.innerHeight * 0.45;
+    let closestId: string | null = null;
+    let minDistance = Infinity;
+
+    cards.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      // Ignore cards completely off-screen
+      if (rect.bottom < 60 || rect.top > window.innerHeight - 40) return;
+      const cardCenterY = rect.top + rect.height / 2;
+      const dist = Math.abs(cardCenterY - viewportCenterY);
+      if (dist < minDistance) {
+        minDistance = dist;
+        closestId = el.getAttribute('data-post-card-id');
+      }
+    });
+
+    if (closestId) {
+      setFocusedCardId((prev) => (prev === closestId ? prev : closestId));
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('scroll', updateReadingSpotlightOnScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', updateReadingSpotlightOnScroll);
+    };
+  }, [updateReadingSpotlightOnScroll]);
 
   return (
     <div className="animate-fade-in pb-16 text-slate-950 dark:text-white">
@@ -476,12 +520,16 @@ export const FeedView: React.FC = () => {
 
       {/* Feed List Items */}
       {gisViewMode === 'LIST' && (
-        <div id="feed-list" className="divide-y divide-slate-200 dark:divide-slate-800/80">
+        <div id="feed-list" className="p-3 sm:p-4 space-y-4 bg-slate-100/70 dark:bg-[#090b10]">
           {display.length === 0 ? (
             <div className="space-y-4">
               {activePromotionalAds.length > 0 && (
-                <div className="p-3">
-                  <PromotionalAdFeedCard ad={activePromotionalAds[0]} />
+                <div data-post-card-id="ad-transit-painting">
+                  <PromotionalAdFeedCard
+                    ad={activePromotionalAds[0]}
+                    campaignMode="transit_painting"
+                    isFocused={true}
+                  />
                 </div>
               )}
               <div className="text-center py-16 space-y-3 px-4">
@@ -498,26 +546,43 @@ export const FeedView: React.FC = () => {
               </div>
             </div>
           ) : (
-            display.map((p, i) => (
-              <React.Fragment key={p.id}>
-                <PostCardComponent post={p} rankIndex={feedTab === 'trending' ? i : null} />
-                {i === 1 && activePromotionalAds[0] && (
-                  <div className="my-2 px-0 sm:px-3">
-                    <PromotionalAdFeedCard ad={activePromotionalAds[0]} defaultIndex={0} />
-                  </div>
-                )}
-                {i === 4 && activePromotionalAds[1] && (
-                  <div className="my-2 px-0 sm:px-3">
-                    <PromotionalAdFeedCard ad={activePromotionalAds[1]} defaultIndex={1} />
-                  </div>
-                )}
-                {i === 7 && activePromotionalAds[2] && (
-                  <div className="my-2 px-0 sm:px-3">
-                    <PromotionalAdFeedCard ad={activePromotionalAds[2]} defaultIndex={2} />
-                  </div>
-                )}
-              </React.Fragment>
-            ))
+            display.map((p, i) => {
+              const activeId = focusedCardId || display[0]?.id;
+              return (
+                <React.Fragment key={p.id}>
+                  <PostCardComponent
+                    post={p}
+                    rankIndex={feedTab === 'trending' ? i : null}
+                    isFocused={activeId === p.id}
+                    onActivateFocus={(id) => setFocusedCardId(id)}
+                  />
+                  {/* Card 1: Minimal Transit Painting Proposal (Kayoola Bus & Train Only) */}
+                  {i === 1 && activePromotionalAds[0] && (
+                    <div data-post-card-id="ad-transit-painting">
+                      <PromotionalAdFeedCard
+                        ad={activePromotionalAds[0]}
+                        defaultIndex={0}
+                        campaignMode="transit_painting"
+                        isFocused={activeId === 'ad-transit-painting'}
+                        onActivateFocus={() => setFocusedCardId('ad-transit-painting')}
+                      />
+                    </div>
+                  )}
+                  {/* Card 2: Separate Minimal Frontline Scouts Campaign (Bodaboda Stages & Market Vendors) */}
+                  {i === 4 && (activePromotionalAds[2] || activePromotionalAds[0]) && (
+                    <div data-post-card-id="ad-frontline-scouts">
+                      <PromotionalAdFeedCard
+                        ad={activePromotionalAds[2] || activePromotionalAds[0]}
+                        defaultIndex={2}
+                        campaignMode="frontline_scouts"
+                        isFocused={activeId === 'ad-frontline-scouts'}
+                        onActivateFocus={() => setFocusedCardId('ad-frontline-scouts')}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })
           )}
         </div>
       )}

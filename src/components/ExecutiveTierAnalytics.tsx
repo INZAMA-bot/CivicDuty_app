@@ -323,7 +323,7 @@ Civic Duty Sovereign Digital Infrastructure`;
                 </select>
               ) : (
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs">
-                  {activeDistrict?.name || user?.scope_label || user?.scope} · Locked
+                  {currentDistrictObj?.name || user?.scope_label || user?.scope} · Locked
                 </span>
               )}
             </div>

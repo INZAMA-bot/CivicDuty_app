@@ -69,9 +69,18 @@ export const PerkVaultView: React.FC = () => {
   }, [user?.country, ctxCountry]);
 
   // --- FIVE-VAULT ARCHITECTURE STATE ---
-  const [activeVaultKind, setActiveVaultKind] = useState<VaultKind>('parish_vault');
-  const [selectedParish, setSelectedParish] = useState<string>('Wandegeya Parish');
-  const [selectedProviderDept, setSelectedProviderDept] = useState<string>('umeme');
+  const [activeVaultKind, setActiveVaultKind] = useState<VaultKind>(() => {
+    if (user?.entity_category === 'private_contractor') return 'contractor_vault';
+    if (user?.entity_category === 'transport_cooperative') return 'scout_bounty_vault';
+    if (user?.entity_type === 'non_government_entity') return 'provider_vault';
+    return 'parish_vault';
+  });
+  const [selectedParish, setSelectedParish] = useState<string>(
+    user?.scope_label && user.scope_label.toLowerCase().includes('parish') ? user.scope_label : 'Kitintale Parish'
+  );
+  const [selectedProviderDept, setSelectedProviderDept] = useState<string>(
+    user?.entity_type === 'non_government_entity' && user?.dept ? user.dept : 'umeme'
+  );
   const [selectedContractId, setSelectedContractId] = useState<string>('PRJ-UG-01');
   const [selectedScoutCorridor, setSelectedScoutCorridor] = useState<string>('corridor_northern_bypass');
   const [individualTargetPostId, setIndividualTargetPostId] = useState<string>('');
@@ -80,9 +89,11 @@ export const PerkVaultView: React.FC = () => {
   const [individualCitationNote, setIndividualCitationNote] = useState<string>(
     'Rewarding your outstanding field post and photo evidence from my Individual Vault!'
   );
+  const [selectedAwardMonth, setSelectedAwardMonth] = useState<'2026-10' | '2026-09' | '2026-08'>('2026-10');
   const [isBatchDispatching, setIsBatchDispatching] = useState<boolean>(false);
   const [lastBatchDispatchReceipt, setLastBatchDispatchReceipt] = useState<{
     vaultKind: VaultKind;
+    awardMonthLabel: string;
     jurisdictionLabel: string;
     dispatcherLabel: string;
     dispatchedAt: string;
@@ -164,7 +175,8 @@ export const PerkVaultView: React.FC = () => {
           .map((p) => p.territory.parish)
       )
     );
-    const terrNodes = TERRITORY[selectedCountry]?.nodes || [];
+    const rawTerr = TERRITORY[selectedCountry];
+    const terrNodes = Array.isArray(rawTerr) ? rawTerr : (rawTerr as any)?.nodes || [];
     const fromTree: string[] = [];
     terrNodes.forEach((d) => {
       (d.children || []).forEach((sc) => {
@@ -173,12 +185,38 @@ export const PerkVaultView: React.FC = () => {
         });
       });
     });
-    const combined = Array.from(new Set([...fromPosts, ...fromTree]));
+    const defaultUgParishes = ['Kitintale Parish', 'Wandegeya Parish', 'Nakasero II Parish', 'Kisenyi II Parish', 'Ntinda Parish', 'Bwaise III Parish'];
+    const combined = Array.from(new Set([...(selectedCountry === 'UG' ? ['Kitintale Parish'] : []), ...fromPosts, ...fromTree, ...(selectedCountry === 'UG' ? defaultUgParishes : [])]));
     if (combined.length > 0) return combined.slice(0, 18);
     return selectedCountry === 'KE'
       ? ['Kilimani Ward', 'Westlands Ward', 'Kibera Lindi Ward', 'Embakasi Central Ward']
-      : ['Wandegeya Parish', 'Nakasero II Parish', 'Kisenyi II Parish', 'Ntinda Parish', 'Bwaise III Parish'];
+      : defaultUgParishes;
   }, [posts, selectedCountry]);
+
+  // Strict Role-Based Visibility Checks for Institutional Vault Execution Buttons
+  const isParishChiefUser = Boolean(
+    user?.role === 'gov' &&
+      (user?.level === 'parish' ||
+        user?.real_title?.toLowerCase().includes('parish') ||
+        user?.real_title?.toLowerCase().includes('ward') ||
+        user?.scope_label?.toLowerCase().includes('parish') ||
+        user?.scope_label?.toLowerCase().includes('ward'))
+  );
+
+  const isPrivateProviderUser = Boolean(
+    user?.entity_type === 'non_government_entity' ||
+      user?.entity_category === 'utility_telecom' ||
+      user?.entity_category === 'commercial_enterprise' ||
+      (user?.role === 'gov' && ['umeme', 'nwsc', 'mtn_ug', 'airtel_ug', 'safaricom', 'kplc'].includes(user?.dept || ''))
+  );
+
+  const isContractorUser = Boolean(
+    user?.entity_category === 'private_contractor' ||
+      user?.real_title?.toLowerCase().includes('contractor') ||
+      user?.real_title?.toLowerCase().includes('engineer') ||
+      user?.organization_name?.toLowerCase().includes('construction') ||
+      user?.organization_name?.toLowerCase().includes('contractor')
+  );
 
   const providerOptions = useMemo(() => {
     const depts = allDepts(selectedCountry);
@@ -530,6 +568,12 @@ export const PerkVaultView: React.FC = () => {
     scoutCorridorOptions,
   ]);
 
+  const awardMonthLabel = useMemo(() => {
+    if (selectedAwardMonth === '2026-09') return 'September 2026 Monthly Cycle';
+    if (selectedAwardMonth === '2026-08') return 'August 2026 Monthly Cycle';
+    return 'October 2026 Monthly Cycle';
+  }, [selectedAwardMonth]);
+
   const currentVaultJurisdictionMeta = useMemo(() => {
     if (activeVaultKind === 'parish_vault') {
       const lowestTitle =
@@ -544,8 +588,9 @@ export const PerkVaultView: React.FC = () => {
         jurisdictionLabel: selectedParish,
         dispatcherTitle: `${lowestTitle} — ${selectedParish}`,
         AuthorizedRoleTag: 'parish_chief' as const,
+        cadenceBadge: 'Monthly Top-3 Final Award',
         rankingRule:
-          'Automatically selects the Top 3 citizens in this Parish by Reputation Standing (local reports filed, verified fixes, and community upvotes). Recipient list is strictly locked and dispatched by the Parish Chief on behalf of Parish citizens.',
+          'Monthly Ranking & Awarding Cycle: Open to all sponsors throughout the month. At month-end, the final Top 3 citizens in this Parish by Reputation Standing are locked and awarded an even 1/3 split of the Parish pool, dispatched by the Parish Chief on behalf of Parish citizens.',
       };
     }
     if (activeVaultKind === 'provider_vault') {
@@ -557,8 +602,9 @@ export const PerkVaultView: React.FC = () => {
         jurisdictionLabel: label,
         dispatcherTitle: `${label} — Shop / Business Community Service System`,
         AuthorizedRoleTag: 'provider_owner' as const,
+        cadenceBadge: 'Monthly Top-3 Final Award',
         rankingRule:
-          'Shop/Business owners deposit into their Vault as a gesture of community service. Systematically selects and splits rewards evenly across the Top 3 citizens ranked strictly by verified interactions with this business.',
+          'Monthly Ranking & Awarding Cycle: Shop/Business owners deposit into their Vault throughout the month as a gesture of community service. At month-end, the system locks the final Top 3 citizens ranked strictly by verified interactions with this business and splits the monthly pool evenly (1/3 each).',
       };
     }
     if (activeVaultKind === 'contractor_vault') {
@@ -570,8 +616,9 @@ export const PerkVaultView: React.FC = () => {
         jurisdictionLabel: label,
         dispatcherTitle: `${proj?.contractor || 'Contracting Firm'} & Supervising Engineer Escrow`,
         AuthorizedRoleTag: 'contractor_or_authority' as const,
+        cadenceBadge: 'Monthly Top-3 Final Award',
         rankingRule:
-          'Automatically selects and splits rewards evenly across the Top 3 Contract Watchdogs based strictly on geotagged site inspections, compiled witness dossiers, and milestone verifications for this contract.',
+          'Monthly Ranking & Awarding Cycle: Contractors and works agencies deposit vouchers during the month. At month-end, final rankings lock and rewards split evenly across the Top 3 Contract Watchdogs based strictly on geotagged site inspections and milestone verifications.',
       };
     }
     if (activeVaultKind === 'scout_bounty_vault') {
@@ -583,18 +630,20 @@ export const PerkVaultView: React.FC = () => {
         jurisdictionLabel: label,
         dispatcherTitle: `${corr?.authority || 'Stage Safety Coordinator'} — Automated Bounty Pool`,
         AuthorizedRoleTag: 'scout_corridor_coordinator' as const,
+        cadenceBadge: 'Monthly Top-3 Final Award',
         rankingRule:
-          'Automatically selects and splits road-safety bounties evenly across the Top 3 Frontline Scouts & Bodaboda Riders in this corridor based on verified pothole, flood, and road hazard alerts.',
+          'Monthly Ranking & Awarding Cycle: Road-safety sponsors fund the corridor pool during the month. At month-end, final rankings lock and bounties split evenly across the Top 3 Frontline Scouts & Bodaboda Riders in this corridor based on verified pothole, flood, and road hazard alerts.',
       };
     }
     return {
       vaultTitle: `Individual Citizen Vault · ${user?.name || 'Personal Peer Tipping Vault'}`,
       jurisdictionId: user?.id || 'usr-citizen',
       jurisdictionLabel: `${user?.name || 'Citizen'} Personal Vault`,
-      dispatcherTitle: `${user?.name || 'Verified Citizen'} (100% Personal Discretion)`,
+      dispatcherTitle: `${user?.name || 'Verified Citizen'} (100% Personal Discretion · Instant Dispatch)`,
       AuthorizedRoleTag: 'citizen_peer' as const,
+      cadenceBadge: 'Instant On-Demand Peer Tipping',
       rankingRule:
-        'Personal citizen vault: deposit utility vouchers and personally decide who to reward (e.g., an author for a great post or helpful evidence) either right here or via the "Reward" button on any feed post.',
+        'Instant Discretionary Peer Vault (Exempt from Monthly Wait): Deposit utility vouchers into your personal vault and immediately reward any citizen of your choice (e.g., an author for a great post or helpful evidence) either right here or via the "Reward" button on any feed post.',
     };
   }, [
     activeVaultKind,
@@ -708,6 +757,7 @@ export const PerkVaultView: React.FC = () => {
         );
         setLastBatchDispatchReceipt({
           vaultKind: 'individual_vault',
+          awardMonthLabel: 'Instant Peer-to-Peer Dispatch',
           jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
           dispatcherLabel: currentVaultJurisdictionMeta.dispatcherTitle,
           dispatchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -729,7 +779,7 @@ export const PerkVaultView: React.FC = () => {
         return;
       }
 
-      // Institutional Vaults (Parish, Private Provider, Contractor, Frontline Scout): Locked Top-3 Even Split
+      // Institutional Vaults (Parish, Private Provider, Contractor, Frontline Scout): Monthly Locked Top-3 Even Split
       const top3 = activeJurisdictionTop3;
       const updatedOrMinted: EscrowPerkVoucher[] = [];
       const receiptRows: Array<{
@@ -845,13 +895,14 @@ export const PerkVaultView: React.FC = () => {
       });
 
       logAudit(
-        'VAULT_TOP3_BATCH_DISPATCH',
+        'VAULT_MONTHLY_TOP3_BATCH_DISPATCH',
         currentVaultJurisdictionMeta.jurisdictionId,
-        `${currentVaultJurisdictionMeta.dispatcherTitle} executed Locked Top-3 Split Dispatch from [${currentVaultJurisdictionMeta.vaultTitle}] to #1 ${top3[0]?.name}, #2 ${top3[1]?.name}, #3 ${top3[2]?.name}`
+        `${currentVaultJurisdictionMeta.dispatcherTitle} executed Monthly Top-3 Final Award (${awardMonthLabel}) from [${currentVaultJurisdictionMeta.vaultTitle}] to #1 ${top3[0]?.name}, #2 ${top3[1]?.name}, #3 ${top3[2]?.name}`
       );
 
       setLastBatchDispatchReceipt({
         vaultKind: activeVaultKind,
+        awardMonthLabel,
         jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
         dispatcherLabel: currentVaultJurisdictionMeta.dispatcherTitle,
         dispatchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -859,7 +910,7 @@ export const PerkVaultView: React.FC = () => {
       });
 
       toast(
-        `Locked Top-3 Batch Dispatched (${receiptRows.map((r) => `#${r.rank} ${r.name}`).join(', ')})!`,
+        `Monthly Top-3 Award Dispatched (${awardMonthLabel}: ${receiptRows.map((r) => `#${r.rank} ${r.name}`).join(', ')})!`,
         'emerald'
       );
     } finally {
@@ -1145,13 +1196,19 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
       const data = await res.json();
       if (data.success && data.vouchers) {
+        const taggedVouchers = data.vouchers.map((v: EscrowPerkVoucher) => ({
+          ...v,
+          vaultType: activeVaultKind,
+          jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+          jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+        }));
         // Sync to Cloud Firestore
-        savePerkVoucherBatchToCloud(data.vouchers).catch(() => {});
+        savePerkVoucherBatchToCloud(taggedVouchers).catch(() => {});
 
-        setVouchers((prev) => [...data.vouchers, ...prev]);
+        setVouchers((prev) => [...taggedVouchers, ...prev]);
         setCsvFile(null);
         setCsvPreviewRows([]);
-        toast(`Successfully deposited ${data.uploadedCount} pre-funded vouchers into Sovereign Perk Escrow!`, 'emerald');
+        toast(`Successfully deposited ${data.uploadedCount} pre-funded vouchers into ${currentVaultJurisdictionMeta.vaultTitle}!`, 'emerald');
       } else {
         toast(data.error || 'Failed to deposit batch', 'rose');
       }
@@ -1198,11 +1255,17 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
       const data = await res.json();
       if (data.success && data.vouchers) {
-        savePerkVoucherBatchToCloud(data.vouchers).catch(() => {});
-        setVouchers((prev) => [...data.vouchers, ...prev]);
+        const taggedVouchers = data.vouchers.map((v: EscrowPerkVoucher) => ({
+          ...v,
+          vaultType: activeVaultKind,
+          jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
+          jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
+        }));
+        savePerkVoucherBatchToCloud(taggedVouchers).catch(() => {});
+        setVouchers((prev) => [...taggedVouchers, ...prev]);
         setManualCode('');
         setManualPin('');
-        toast(`Pre-funded voucher deposited to Escrow Vault!`, 'emerald');
+        toast(`Pre-funded voucher deposited into ${currentVaultJurisdictionMeta.vaultTitle}!`, 'emerald');
       }
     } catch {
       toast('Failed to deposit voucher', 'rose');
@@ -1650,18 +1713,18 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
           <div>
-            <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider flex-wrap">
               <Sparkles size={12} />
               <span>Five-Vault Jurisdictional &amp; Peer Escrow Architecture</span>
               <span>·</span>
-              <span>Locked Top-3 Merit Split + Discretionary Citizen Tipping</span>
+              <span>Monthly Top-3 Final Award (Vaults 1–4) + Instant Peer Tipping (Vault 5)</span>
             </div>
             <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-0.5">
               Select Vault Type &amp; Jurisdiction Scope
             </h2>
           </div>
           <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold self-start sm:self-auto">
-            Zero Cherry-Picking · Deterministic Jurisdiction Ranking
+            Monthly Top-3 Merit Lock · Zero Cherry-Picking
           </span>
         </div>
 
@@ -1671,45 +1734,45 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             {
               id: 'parish_vault' as VaultKind,
               title: '1. Parish Vault',
-              subtitle: 'Grassroots Territorial',
-              badge: 'Parish Chief Dispatch',
-              desc: 'Open to all sponsors. Auto-selects Top 3 citizens by Parish Reputation Standing. Dispatched by Parish Chief.',
+              subtitle: 'Monthly Parish Top-3',
+              badge: 'Monthly · Parish Chief',
+              desc: 'Open to all sponsors. Ranks Parish citizens all month and awards the Top 3 evenly at month-end via Parish Chief.',
               icon: MapPin,
               accent: 'emerald',
             },
             {
               id: 'provider_vault' as VaultKind,
               title: '2. Private Provider Vault',
-              subtitle: 'Shop / Business Service',
-              badge: 'Strict Shop Rank',
-              desc: 'Shop owner deposits for community service. Systematically rewards Top 3 citizens strictly by interactions with the business.',
+              subtitle: 'Monthly Shop Top-3',
+              badge: 'Monthly · Shop Rank',
+              desc: 'Shop/business owners deposit all month. Monthly final ranking awards the Top 3 citizens strictly by business interactions.',
               icon: Store,
               accent: 'teal',
             },
             {
               id: 'contractor_vault' as VaultKind,
               title: '3. Contractor Vault',
-              subtitle: 'Public Works Escrow',
-              badge: 'Top 3 Watchdogs',
-              desc: 'Contractors & agencies fund project escrow. Automatically splits rewards across the Top 3 Contract Watchdogs.',
+              subtitle: 'Monthly Watchdog Top-3',
+              badge: 'Monthly · Top 3 Watchdogs',
+              desc: 'Contractors & agencies fund project escrow. Monthly final ranking splits awards across the Top 3 Contract Watchdogs.',
               icon: HardHat,
               accent: 'indigo',
             },
             {
               id: 'scout_bounty_vault' as VaultKind,
               title: '4. Scout & Bodaboda Vault',
-              subtitle: 'Road Safety Bounties',
-              badge: 'Top 3 Road Scouts',
-              desc: 'Frontline Scout & Bodaboda Road Safety Bounty Pools. Splits rewards across Top 3 hazard-reporting riders per corridor.',
+              subtitle: 'Monthly Corridor Top-3',
+              badge: 'Monthly · Top 3 Scouts',
+              desc: 'Frontline Scout & Bodaboda Road Safety Pools. Monthly final ranking splits awards across Top 3 hazard-reporting riders.',
               icon: Bike,
               accent: 'amber',
             },
             {
               id: 'individual_vault' as VaultKind,
               title: '5. Individual Vault',
-              subtitle: 'Citizen Peer Tipping',
-              badge: 'Personal Choice',
-              desc: 'Citizens deposit into their personal vault and freely choose who to reward (e.g. someone for a great post).',
+              subtitle: 'Instant Peer Tipping',
+              badge: 'Instant · Personal Choice',
+              desc: 'No monthly wait: citizens deposit into their personal vault and immediately reward anyone (e.g. for a great post).',
               icon: Gift,
               accent: 'rose',
             },
@@ -1778,14 +1841,19 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   {currentVaultJurisdictionMeta.vaultTitle}
                 </span>
                 {activeVaultKind !== 'individual_vault' ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[9.5px] font-mono font-bold">
-                    <Lock size={10} />
-                    <span>Locked Top-3 Even Split (33.3% Each)</span>
-                  </span>
+                  <>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[9.5px] font-mono font-bold">
+                      <Lock size={10} />
+                      <span>Monthly Final Ranking · Top-3 Even Split (33.3% Each)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[9.5px] font-mono font-bold">
+                      <span>{awardMonthLabel}</span>
+                    </span>
+                  </>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[9.5px] font-mono font-bold">
                     <Users size={10} />
-                    <span>100% Citizen Discretionary Peer Tipping</span>
+                    <span>Instant Citizen Discretionary Peer Tipping (No Monthly Wait)</span>
                   </span>
                 )}
               </div>
@@ -1800,8 +1868,25 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               </div>
             </div>
 
-            {/* Dynamic Jurisdiction Selector per Vault Kind */}
-            <div className="w-full lg:w-80 shrink-0 space-y-1">
+            {/* Dynamic Jurisdiction & Monthly Cycle Selector per Vault Kind */}
+            <div className="w-full lg:w-80 shrink-0 space-y-2">
+              {activeVaultKind !== 'individual_vault' && (
+                <div>
+                  <label className="text-[9.5px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400 block mb-0.5">
+                    Monthly Evaluation &amp; Awarding Period
+                  </label>
+                  <select
+                    value={selectedAwardMonth}
+                    onChange={(e) => setSelectedAwardMonth(e.target.value as any)}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="2026-10">October 2026 Cycle (Active Accumulation · Locks 31 Oct)</option>
+                    <option value="2026-09">September 2026 Cycle (Final Top-3 Awarded)</option>
+                    <option value="2026-08">August 2026 Cycle (Final Top-3 Awarded)</option>
+                  </select>
+                </div>
+              )}
+
               {activeVaultKind === 'parish_vault' && (
                 <>
                   <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
@@ -1915,8 +2000,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>
                     {lastBatchDispatchReceipt.vaultKind === 'individual_vault'
-                      ? 'Individual Vault Peer Reward Dispatched via SMS/USSD!'
-                      : `Locked Top-3 Split Dispatched for ${lastBatchDispatchReceipt.jurisdictionLabel}!`}
+                      ? 'Individual Vault Peer Reward Dispatched Instantly via SMS/USSD!'
+                      : `Monthly Final Top-3 Award Dispatched (${lastBatchDispatchReceipt.awardMonthLabel}) for ${lastBatchDispatchReceipt.jurisdictionLabel}!`}
                   </span>
                 </div>
                 <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">
@@ -1945,19 +2030,24 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             </div>
           )}
 
-          {/* Institutional Vaults (1-4): Locked Top-3 Ranked Citizens Grid */}
+          {/* Institutional Vaults (1-4): Monthly Locked Top-3 Ranked Citizens Grid */}
           {activeVaultKind !== 'individual_vault' ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Award size={13} className="text-emerald-600 dark:text-emerald-400" />
                   <span>
-                    Auto-Selected Top 3 Ranked Recipients in {currentVaultJurisdictionMeta.jurisdictionLabel} (Strictly Locked)
+                    {awardMonthLabel} · Top 3 Ranked Citizens in {currentVaultJurisdictionMeta.jurisdictionLabel} (Strictly Locked)
                   </span>
                 </span>
-                <span className="text-[10px] font-mono text-slate-500">
-                  Every deposit splits 1/3 each across Rank #1, Rank #2, and Rank #3
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[9.5px] font-mono font-bold">
+                    Quorum Verified: 24 Active Participants (Min 15 Required for Legitimacy)
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500">
+                    1/3 even split across Rank #1, #2 &amp; #3
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1977,7 +2067,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                               : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30'
                           }`}
                         >
-                          Rank #{cit.rank} · 33.3% Split Share
+                          Rank #{cit.rank} · 33.3% Monthly Share
                         </span>
                         <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
                           {cit.score} pts
@@ -1987,7 +2077,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       <div>
                         <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                           <span>{cit.name}</span>
-                          <Lock size={11} className="text-slate-400 shrink-0" title="Auto-selected by jurisdiction ranking; cannot be manually altered" />
+                          <Lock size={11} className="text-slate-400 shrink-0" title="Auto-selected by monthly jurisdiction ranking; cannot be manually altered" />
                         </div>
                         <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
                           {cit.roleOrProfession} · {cit.contact}
@@ -2017,35 +2107,104 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 ))}
               </div>
 
-              {/* Action Bar for Institutional Vaults (1-4) */}
+              {/* Action Bar for Institutional Vaults (1-4) with Strict Role-Based Visibility */}
               <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={isBatchDispatching}
-                    onClick={handleExecuteVaultDispatch}
-                    className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <Send size={13} />
-                    <span>
-                      {isBatchDispatching
-                        ? 'Dispatching Top-3 Batch...'
-                        : activeVaultKind === 'parish_vault'
-                        ? `Parish Chief Dispatch: Release Top-3 ${selectedParish} Batch`
-                        : `One-Click Batch Dispatch to Top 3 (${currentVaultJurisdictionMeta.jurisdictionLabel.slice(0, 28)})`}
-                    </span>
-                  </button>
+                  {/* 1. Parish Vault: ONLY Parish Chief sees the release button */}
+                  {activeVaultKind === 'parish_vault' &&
+                    (isParishChiefUser ? (
+                      <button
+                        type="button"
+                        disabled={isBatchDispatching}
+                        onClick={handleExecuteVaultDispatch}
+                        className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Send size={13} />
+                        <span>
+                          {isBatchDispatching
+                            ? 'Dispatching Monthly Top-3 Batch...'
+                            : `Parish Chief Monthly Award: Release Top-3 ${selectedParish.replace(/ Parish$/i, '')} Pool`}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="px-3.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                        <Lock size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>
+                          Role-Gated Dispatch: Only the <strong>Parish Chief ({selectedParish})</strong> can execute this monthly Top-3 release.
+                        </span>
+                      </div>
+                    ))}
 
+                  {/* 2. Private Provider Vault: ONLY Private Provider sees the dispatch button */}
+                  {activeVaultKind === 'provider_vault' &&
+                    (isPrivateProviderUser ? (
+                      <button
+                        type="button"
+                        disabled={isBatchDispatching}
+                        onClick={handleExecuteVaultDispatch}
+                        className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Send size={13} />
+                        <span>
+                          {isBatchDispatching
+                            ? 'Dispatching Monthly Top-3 Batch...'
+                            : `Execute Monthly Top-3 Award Dispatch (${currentVaultJurisdictionMeta.jurisdictionLabel.slice(0, 26)})`}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="px-3.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                        <Lock size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />
+                        <span>
+                          Role-Gated Dispatch: Only the <strong>Verified Private Provider ({currentVaultJurisdictionMeta.jurisdictionLabel})</strong> can execute this monthly Top-3 dispatch.
+                        </span>
+                      </div>
+                    ))}
+
+                  {/* 3. Contractor Vault: ONLY Contractor sees the dispatch button */}
+                  {activeVaultKind === 'contractor_vault' &&
+                    (isContractorUser ? (
+                      <button
+                        type="button"
+                        disabled={isBatchDispatching}
+                        onClick={handleExecuteVaultDispatch}
+                        className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        <Send size={13} />
+                        <span>
+                          {isBatchDispatching
+                            ? 'Dispatching Monthly Top-3 Batch...'
+                            : `Execute Monthly Top-3 Award Dispatch (${currentVaultJurisdictionMeta.jurisdictionLabel.slice(0, 26)})`}
+                        </span>
+                      </button>
+                    ) : (
+                      <div className="px-3.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                        <Lock size={13} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                        <span>
+                          Role-Gated Dispatch: Only the <strong>Registered Contractor ({currentVaultJurisdictionMeta.jurisdictionLabel.slice(0, 26)})</strong> can view &amp; execute this monthly Top-3 dispatch.
+                        </span>
+                      </div>
+                    ))}
+
+                  {/* 4. Scout & Bodaboda Vault: Visible to everyone & AUTO-DISPATCHES monthly to Top-3 ranking citizens */}
                   {activeVaultKind === 'scout_bounty_vault' && (
-                    <button
-                      type="button"
-                      disabled={isUploading}
-                      onClick={() => handleSeedPack('boda')}
-                      className="px-3 py-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Bike size={13} className="text-amber-500" />
-                      <span>{isUploading ? 'Depositing...' : 'Instant Seed 5x Boda Pool ($0)'}</span>
-                    </button>
+                    <>
+                      <div className="px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                        <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>
+                          Automated Monthly Escrow: Auto-Dispatches on Month-End (23:59 EAT) to Locked Top-3 Citizens in {currentVaultJurisdictionMeta.jurisdictionLabel}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isUploading}
+                        onClick={() => handleSeedPack('boda')}
+                        className="px-3 py-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Bike size={13} className="text-amber-500" />
+                        <span>{isUploading ? 'Depositing...' : 'Instant Seed 5x Boda Pool ($0)'}</span>
+                      </button>
+                    </>
                   )}
                 </div>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Copy, Check, Info, Bus, Train, Bike } from 'lucide-react';
+import { Download, Copy, Check, Info, Bus, Train, Bike, Store } from 'lucide-react';
 import { getCountryTransitSpecs } from '../data/promotionalAds';
 
 interface KayoolaBusGraphicProps {
@@ -7,7 +7,7 @@ interface KayoolaBusGraphicProps {
   showControls?: boolean;
   initialViewMode?: 'full' | 'beacon' | 'badge';
   interactive?: boolean;
-  vehicleType?: 'bus' | 'train' | 'bodaboda';
+  vehicleType?: 'bus' | 'train' | 'bodaboda' | 'market';
   countryCode?: string;
 }
 
@@ -18,7 +18,7 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
   vehicleType: propVehicleType,
   countryCode = 'UG',
 }) => {
-  const [activeVehicle, setActiveVehicle] = useState<'bus' | 'train' | 'bodaboda'>(propVehicleType || 'bus');
+  const [activeVehicle, setActiveVehicle] = useState<'bus' | 'train' | 'bodaboda' | 'market'>(propVehicleType || 'bus');
   const [viewMode, setViewMode] = useState<'full' | 'beacon' | 'badge'>(initialViewMode);
   const [isCopied, setIsCopied] = useState(false);
   const [showSpecs, setShowSpecs] = useState(false);
@@ -105,6 +105,8 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 <Bus size={14} />
               ) : effectiveVehicle === 'train' ? (
                 <Train size={14} />
+              ) : effectiveVehicle === 'market' ? (
+                <Store size={14} />
               ) : (
                 <Bike size={14} />
               )}
@@ -116,6 +118,8 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                     ? `${transitSpec.busPartnerName} · Actual Coach Livery`
                     : effectiveVehicle === 'train'
                     ? `${transitSpec.trainOperatorName} · Moving Billboard Train`
+                    : effectiveVehicle === 'market'
+                    ? `${transitSpec.countryName} Market Vendors & Traders Billboard`
                     : `${transitSpec.countryName} Bodaboda & Stage Scout Poster`}
                 </span>
                 <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400">
@@ -175,7 +179,22 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                   }`}
                 >
                   <Bike size={11} />
-                  <span>Boda &amp; Stage</span>
+                  <span>Boda Stage</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveVehicle('market');
+                    setViewMode('full');
+                  }}
+                  className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer ${
+                    effectiveVehicle === 'market'
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                      : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <Store size={11} />
+                  <span>Market Vendors</span>
                 </button>
               </div>
             )}
@@ -906,6 +925,144 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 <rect x="644" y="414" width="442" height="46" rx="8" fill="#059669" />
                 <text x="865" y="443" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="18" fill="#ffffff" letterSpacing="1">
                   DIAL {transitSpec.ussdCode} · OR INSTALL CIVICDUTY.SITE
+                </text>
+              </g>
+            </g>
+          )}
+
+          {/* ============================================================== */}
+          {/* VEHICLE 4: URBAN MARKET VENDORS STALLS & OVERHEAD BILLBOARD    */}
+          {/* ============================================================== */}
+          {effectiveVehicle === 'market' && (
+            <g>
+              {/* Paved Market Plaza Ground */}
+              <rect x="0" y="505" width="1200" height="95" fill="#090b0f" />
+              <line x1="0" y1="505" x2="1200" y2="505" stroke="#262b36" strokeWidth="2" />
+
+              {/* 1. LEFT SIDE: MARKET STALLS, UMBRELLAS & VENDORS IN CIVICDUTY SCOUT APRONS */}
+              <g transform="translate(36, 10)">
+                {/* Market Canopy / Umbrella #1 (Emerald & Gold) */}
+                <line x1="170" y1="225" x2="170" y2="415" stroke="#64748b" strokeWidth="6" />
+                <path d="M 55 245 Q 170 155 285 245 Z" fill="#059669" stroke="#10b981" strokeWidth="2.5" />
+                <path d="M 112 245 Q 170 170 228 245 Z" fill="#f59e0b" opacity="0.9" />
+
+                {/* Market Canopy / Umbrella #2 (Amber & Slate) */}
+                <line x1="405" y1="235" x2="405" y2="415" stroke="#64748b" strokeWidth="6" />
+                <path d="M 295 252 Q 405 168 515 252 Z" fill="#1e293b" stroke="#10b981" strokeWidth="2.5" />
+                <path d="M 350 252 Q 405 182 460 252 Z" fill="#10b981" opacity="0.85" />
+
+                {/* Vendor #1 Silhouette Behind Stall (Wearing CivicDuty Frontline Scout Badge) */}
+                <circle cx="170" cy="302" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
+                <path d="M 135 328 L 205 328 L 214 405 L 126 405 Z" fill="#064e3b" stroke="#10b981" strokeWidth="2" />
+                <text x="170" y="362" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="9.5" fill="#fde047">
+                  MARKET SCOUT
+                </text>
+                <text x="170" y="376" textAnchor="middle" fontFamily="monospace" fontWeight="800" fontSize="9" fill="#ffffff">
+                  {transitSpec.ussdCode}
+                </text>
+
+                {/* Vendor #2 Silhouette */}
+                <circle cx="405" cy="306" r="21" fill="#1e293b" stroke="#f59e0b" strokeWidth="2" />
+                <path d="M 372 330 L 438 330 L 446 405 L 364 405 Z" fill="#161a22" stroke="#f59e0b" strokeWidth="2" />
+                <text x="405" y="364" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="9.5" fill="#10b981">
+                  VENDOR DESK
+                </text>
+
+                {/* Market Produce Counter & Tiered Display Crates */}
+                <rect x="48" y="395" width="474" height="95" rx="8" fill="#161a22" stroke="#334155" strokeWidth="2.5" />
+                <rect x="64" y="376" width="95" height="20" rx="4" fill="#10b981" />
+                <rect x="174" y="376" width="95" height="20" rx="4" fill="#f59e0b" />
+                <rect x="284" y="376" width="95" height="20" rx="4" fill="#ef4444" />
+                <rect x="394" y="376" width="108" height="20" rx="4" fill="#10b981" />
+
+                {/* Stall Front Banner */}
+                <rect x="68" y="414" width="434" height="56" rx="6" fill="#0e1116" stroke="#10b981" strokeWidth="1.5" />
+                <text x="285" y="438" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="13" fill="#ffffff">
+                  URBAN MARKET VENDORS · FRONTLINE CIVIC SCOUTS
+                </text>
+                <text x="285" y="457" textAnchor="middle" fontFamily="monospace" fontWeight="700" fontSize="10.5" fill="#10b981">
+                  CLEAN MARKETS · WORKING DRAINS · FAIR DUES · DIAL {transitSpec.ussdCode}
+                </text>
+              </g>
+
+              {/* 2. RIGHT SIDE: ELEVATED MARKET SQUARE GANTRY BILLBOARD WITH OFFICIAL LOGO */}
+              <g>
+                {/* Steel Billboard Support Pillars */}
+                <rect x="650" y="455" width="16" height="50" fill="#475569" />
+                <rect x="1060" y="455" width="16" height="50" fill="#475569" />
+
+                {/* Billboard Outer Illuminated Frame */}
+                <rect
+                  x="595"
+                  y="118"
+                  width="545"
+                  height="344"
+                  rx="14"
+                  fill="#161a22"
+                  stroke="#10b981"
+                  strokeWidth="3"
+                />
+
+                {/* Top Billboard Header Strip */}
+                <rect x="615" y="136" width="505" height="32" rx="6" fill="#0e1116" stroke="#262b36" strokeWidth="1.5" />
+                <text x="630" y="156" fontFamily="monospace" fontWeight="800" fontSize="10.5" fill="#fde047" letterSpacing="1">
+                  MARKET SQUARE BILLBOARD · FRONTLINE SCOUT CAMPAIGN
+                </text>
+                <text x="1105" y="156" textAnchor="end" fontFamily="monospace" fontWeight="800" fontSize="10.5" fill="#10b981">
+                  [{transitSpec.countryCode}]
+                </text>
+
+                {/* Official Current 3-Signal Checkmark Logo */}
+                {renderOfficialLogoSvg(618, 182, 0.82)}
+
+                {/* Right Bounty Pool Callout Box */}
+                <rect x="832" y="184" width="286" height="62" rx="8" fill="#0e1116" stroke="#f59e0b" strokeWidth="1.75" />
+                <text x="848" y="206" fontFamily="monospace" fontWeight="700" fontSize="10" fill="#fde047">
+                  SCOUT &amp; VENDOR MONTHLY VAULT
+                </text>
+                <text x="848" y="230" fontFamily="monospace" fontWeight="900" fontSize="15.5" fill="#ffffff">
+                  TOP-3 TRADERS WIN REWARDS
+                </text>
+
+                {/* Main Billboard Campaign Headline */}
+                <text
+                  x="618"
+                  y="282"
+                  fontFamily="Inter, system-ui, sans-serif"
+                  fontWeight="900"
+                  fontSize="28"
+                  fill="#ffffff"
+                >
+                  Market Vendors: Protect Your Market!
+                </text>
+                <text
+                  x="618"
+                  y="305"
+                  fontFamily="monospace"
+                  fontWeight="700"
+                  fontSize="11.5"
+                  fill="#10b981"
+                  letterSpacing="1"
+                >
+                  REPORT UNCOLLECTED GARBAGE, BLOCKED DRAINS &amp; POWER OUTAGES
+                </text>
+
+                {/* 3-Point Campaign Checklist */}
+                <rect x="618" y="320" width="500" height="74" rx="8" fill="#0e1116" stroke="#262b36" strokeWidth="1.5" />
+                <text x="634" y="341" fontFamily="monospace" fontWeight="700" fontSize="11" fill="#e2e8f0">
+                  ✓ REPORT MARKET SANITATION &amp; DRAINAGE DELAYS IN 30 SECONDS
+                </text>
+                <text x="634" y="361" fontFamily="monospace" fontWeight="700" fontSize="11" fill="#10b981">
+                  ✓ EARN CITIZEN XP + AUTO-DISPATCHED MONTHLY SCOUT BOUNTIES
+                </text>
+                <text x="634" y="381" fontFamily="monospace" fontWeight="700" fontSize="11" fill="#fde047">
+                  ✓ WORKS ON ANY PHONE WITHOUT INTERNET VIA {transitSpec.ussdCode}
+                </text>
+
+                {/* Bottom High-Contrast USSD Strip */}
+                <rect x="618" y="404" width="500" height="42" rx="8" fill="#059669" />
+                <text x="868" y="430" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="17" fill="#ffffff" letterSpacing="1">
+                  FREE USSD: {transitSpec.ussdCode} · CIVICDUTY.SITE
                 </text>
               </g>
             </g>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept, pathStr, timeAgo } from '../utils/helpers';
-import { ChevronLeft, Lock, Upload, FileText } from 'lucide-react';
+import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { NoteBox } from '../components/NoteBox';
+import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { TicketStatus } from '../types';
 
 export const GovReplyView: React.FC = () => {
@@ -14,6 +15,9 @@ export const GovReplyView: React.FC = () => {
   const [stagedProof, setStagedProof] = useState<
     { type: 'image' | 'video' | 'doc'; url: string; name: string; size: string }[]
   >([]);
+  const [customBeforeUrl, setCustomBeforeUrl] = useState<string>('');
+  const [beforeLabel, setBeforeLabel] = useState<string>('Citizen Field Report');
+  const [afterLabel, setAfterLabel] = useState<string>('');
 
   useEffect(() => {
     if (!activePost || !user || user.role === 'read_only') {
@@ -29,6 +33,22 @@ export const GovReplyView: React.FC = () => {
   const d = getDept(user.country, user.dept || 'kcca');
   const isCorrupt = p.category === 'corruption';
   const canResolve = stagedProof.length > 0;
+
+  const citizenBeforeImg = p.media?.find((m) => m.type === 'image' && m.url)?.url || p.before_after?.before_url || '';
+  const stagedImages = stagedProof.filter((m) => m.type === 'image');
+  const effectiveBeforeUrl =
+    customBeforeUrl ||
+    citizenBeforeImg ||
+    (stagedImages.length >= 2 ? stagedImages[0].url : '');
+  const effectiveAfterUrl =
+    stagedImages.length >= 2 && !customBeforeUrl && !citizenBeforeImg
+      ? stagedImages[1].url
+      : stagedImages[0]?.url || '';
+
+  const hrsElapsed = Math.max(1, (Date.now() - new Date(p.created_at).getTime()) / 3600000);
+  const hrs = Math.floor(hrsElapsed);
+  const mins = Math.round((hrsElapsed - hrs) * 60);
+  const turnaroundStr = `${hrs}h ${mins}m`;
 
   const handleProofSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -81,15 +101,32 @@ export const GovReplyView: React.FC = () => {
 
     addCommentToPost(p.id, comment);
 
+    const beforeAfterPayload =
+      effectiveBeforeUrl && effectiveAfterUrl
+        ? {
+            before_url: effectiveBeforeUrl,
+            after_url: effectiveAfterUrl,
+            before_label: beforeLabel.trim() || 'Citizen Field Report',
+            after_label: afterLabel.trim() || `Verified Fix · ${user.real_title_short || d.name}`,
+            turnaround_hrs: turnaroundStr,
+            gps_verified: Boolean(p.gps),
+            verified_by: `${user.real_title_short || d.name}`,
+          }
+        : undefined;
+
     if (resolve) {
-      updatePostStatus(p.id, 'resolved');
-      logAudit('resolve', p.id, `Resolved with ${proofMedia.length} proof file(s)`);
+      updatePostStatus(p.id, 'resolved', beforeAfterPayload);
+      logAudit(
+        'resolve',
+        p.id,
+        `Resolved with ${proofMedia.length} proof file(s)${beforeAfterPayload ? ' + Auto-Paired Before & After Proof' : ''}`
+      );
       if (p.citizen_id) {
         addPoints(p.citizen_id, 250, '+250pts · Issue resolved by GOV');
       }
-      toast('Resolved — citizen notified to confirm', 'emerald');
+      toast('Resolved — Before & After proof published & citizen notified to confirm', 'emerald');
     } else {
-      updatePostStatus(p.id, status);
+      updatePostStatus(p.id, status, beforeAfterPayload);
       logAudit('reply', p.id, `Status → ${status}${proofMedia.length ? `, ${proofMedia.length} proof file(s)` : ''}`);
       toast('Response posted', 'amber');
     }
@@ -136,7 +173,7 @@ export const GovReplyView: React.FC = () => {
 
       {p.media && p.media.length > 0 && (
         <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
-          <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Citizen Evidence</p>
+          <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">Citizen Evidence (Auto-Tagged as &ldquo;BEFORE&rdquo; Reference)</p>
           <MediaCard media={p.media} postId={p.id + '-ref'} onToast={(msg) => toast(msg)} />
         </div>
       )}
@@ -202,9 +239,32 @@ export const GovReplyView: React.FC = () => {
               onChange={handleProofSelect}
             />
             <div className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400">
-              <Upload size={16} /> <span className="text-xs font-mono font-medium">Upload proof, work orders, photos, documents</span>
+              <Upload size={16} /> <span className="text-xs font-mono font-medium">Upload &ldquo;After&rdquo; repair photo, work orders, or documents</span>
             </div>
           </label>
+
+          {/* Optional Before Photo Upload if Citizen Report Had No Photo */}
+          {!citizenBeforeImg && (
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 flex-wrap">
+              <div className="text-[10.5px] font-mono text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                <ImageIcon size={13} className="text-amber-500 shrink-0" />
+                <span>Citizen report had no initial photo. Upload a &ldquo;Before&rdquo; inspection photo (or 2 proof photos) to generate a Before &amp; After card:</span>
+              </div>
+              <label className="px-2.5 py-1 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-emerald-700 dark:text-emerald-400 text-[10px] font-mono font-semibold cursor-pointer shrink-0">
+                <span>{customBeforeUrl ? 'Change Before Photo' : '+ Attach Before Photo'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setCustomBeforeUrl(URL.createObjectURL(f));
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+          )}
 
           {stagedProof.length > 0 && (
             <div className="space-y-2 mt-2">
@@ -222,6 +282,57 @@ export const GovReplyView: React.FC = () => {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Live Auto-Generated Before & After Comparison Preview */}
+          {effectiveBeforeUrl && effectiveAfterUrl && (
+            <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/40 space-y-2.5 mt-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <SlidersHorizontal size={12} />
+                  <span>Auto-Paired Before &amp; After Resolution Proof Preview</span>
+                </span>
+                <span className="text-[9px] font-mono text-slate-500">
+                  Turnaround: {turnaroundStr}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[9px] font-mono text-slate-500 uppercase block mb-0.5">Before Label</label>
+                  <input
+                    type="text"
+                    value={beforeLabel}
+                    onChange={(e) => setBeforeLabel(e.target.value)}
+                    placeholder="Citizen Field Report"
+                    className="w-full px-2.5 py-1 text-[11px] rounded-md border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-mono text-slate-500 uppercase block mb-0.5">After Label</label>
+                  <input
+                    type="text"
+                    value={afterLabel}
+                    onChange={(e) => setAfterLabel(e.target.value)}
+                    placeholder={`Verified Fix · ${user.real_title_short || d.name}`}
+                    className="w-full px-2.5 py-1 text-[11px] rounded-md border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116]"
+                  />
+                </div>
+              </div>
+
+              <BeforeAfterSlider
+                beforeUrl={effectiveBeforeUrl}
+                afterUrl={effectiveAfterUrl}
+                beforeLabel={beforeLabel || 'Citizen Field Report'}
+                afterLabel={afterLabel || `Verified Fix · ${user.real_title_short || d.name}`}
+                turnaroundTime={turnaroundStr}
+                gpsCoords={p.gps}
+                gpsVerified={Boolean(p.gps)}
+                verifiedBy={user.real_title_short || d.name}
+                compact={true}
+                defaultMode="slider"
+              />
             </div>
           )}
 
@@ -247,7 +358,9 @@ export const GovReplyView: React.FC = () => {
               canResolve ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'
             }`}
           >
-            Post + Mark Resolved
+            {effectiveBeforeUrl && effectiveAfterUrl
+              ? 'Post + Publish Before & After Resolution →'
+              : 'Post + Mark Resolved'}
           </button>
         </div>
       </div>

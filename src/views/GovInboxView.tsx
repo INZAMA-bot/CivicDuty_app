@@ -186,41 +186,147 @@ export const GovInboxView: React.FC = () => {
           high={resPct >= 70}
         />
 
-        {/* Entity Civic Perks & Rewards Dispatch Console (Always visible to all Entity Desk users) */}
+        {/* Desk Profile, Team Roster & 5-Vault Perks Quick Strip */}
+        {(() => {
+          const isPrivateProvider = Boolean(
+            user.entity_type === 'non_government_entity' ||
+              user.dept?.startsWith('ent-') ||
+              d.lane === 'consumer' ||
+              (d.category &&
+                [
+                  'private_utility',
+                  'telecom',
+                  'banking',
+                  'transport',
+                  'hospitality',
+                  'education_private',
+                  'health_private',
+                  'private_contractor',
+                  'ngo',
+                ].includes(d.category))
+          );
+
+          return (
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-[#161a22] px-3.5 py-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-600 dark:text-slate-300 flex-wrap">
+                <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                  {user.organization_name || d.name}
+                </span>
+                <span>·</span>
+                <span>{user.role_label || user.real_title_short || 'Executive Desk'}</span>
+                <span>·</span>
+                {isPrivateProvider ? (
+                  <span className="text-slate-500">
+                    Tier:{' '}
+                    {user.scope === 'national'
+                      ? 'National ($20/mo · Unlimited Seats)'
+                      : user.scope === 'subcounty'
+                      ? 'Sub-County ($5/mo · Unlimited Seats)'
+                      : user.scope === 'parish'
+                      ? 'Parish (Free · 2 Seats)'
+                      : 'District ($10/mo · Unlimited Seats)'}
+                  </span>
+                ) : (
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                    Sovereign Government Desk · State-Funded Allocation
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {isPrivateProvider && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => go('entity_register')}
+                      className="px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Layers size={11} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>Edit Desk Profile &amp; Tier</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => go('entity_team')}
+                      className="px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Users size={11} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>Team &amp; Staff Roster (Unlimited)</span>
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => go('perk_vault')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Award size={11} />
+                  <span>5-Vault Monthly Perks →</span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Entity Civic Perks & Rewards Dispatch Console (Updated with 5-Vault Monthly Top-3 Merit Architecture) */}
         <div className="mt-3 bg-white dark:bg-[#161a22] p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
-          <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+          <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2 flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <Gift size={14} strokeWidth={1.75} />
               </div>
               <div>
-                <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono uppercase tracking-wide flex items-center gap-1.5">
-                  <span>Entity Civic Perks &amp; Rewards Dispatch Console</span>
+                <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono uppercase tracking-wide flex items-center gap-1.5 flex-wrap">
+                  <span>Entity Civic Perks &amp; Monthly Top-3 Merit Vault Console</span>
                   <span className="text-[8.5px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold uppercase">
-                    Active Desk
+                    Monthly Top-3 Split (33.3% Each)
                   </span>
                 </h5>
                 <p className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
-                  Dispatch digital items or issue allocated Headquarter physical prize collection passes
+                  Parish, Private Provider, Contractor &amp; Scout Vaults rank citizens monthly and award the Top 3 evenly; Individual Vault tips peers instantly
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
-            {/* Digital Item Dispatch */}
-            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
-              <div className="flex items-center justify-between">
-                <strong className="text-amber-700 dark:text-amber-400 flex items-center gap-1">
-                  <Zap size={11} strokeWidth={1.75} />
-                  <span>Digital Item Dispatch</span>
-                  <span className="text-[9px] text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] px-1.5 py-0.2 rounded font-bold">[{countryPerks.countryCode}]</span>
-                </strong>
-                <span className="text-[8.5px] bg-amber-500/10 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-semibold">Instant PWA / SMS</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] font-mono">
+            {/* 1. Monthly Top-3 Jurisdiction Vault Dispatch */}
+            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-lg border border-emerald-500/30 space-y-1.5 flex flex-col justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <strong className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                    <Award size={11} strokeWidth={1.75} />
+                    <span>5-Vault Monthly Top-3</span>
+                  </strong>
+                  <span className="text-[8.5px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded font-semibold">Locked Merit</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
+                  Award the monthly Top 3 ranked citizens in your Parish, Shop, Contract, or Boda Stage (strictly locked against cherry-picking).
+                </p>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
-                Send {countryPerks.digitalPerks[0]?.name || 'Data Bundles'}, airtime credit, or utility discount vouchers to verified {countryPerks.countryName} citizen phone numbers.
-              </p>
+              <button
+                type="button"
+                onClick={() => go('perk_vault')}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Award size={12} />
+                <span>Open Monthly Top-3 Vaults</span>
+              </button>
+            </div>
+
+            {/* 2. Digital Item Dispatch */}
+            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5 flex flex-col justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <strong className="text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                    <Zap size={11} strokeWidth={1.75} />
+                    <span>Digital Item Dispatch</span>
+                    <span className="text-[9px] text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] px-1.5 py-0.2 rounded font-bold">[{countryPerks.countryCode}]</span>
+                  </strong>
+                  <span className="text-[8.5px] bg-amber-500/10 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-semibold">Instant SMS</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
+                  Send {countryPerks.digitalPerks[0]?.name || 'Data Bundles'}, airtime credit, or utility discount vouchers to verified {countryPerks.countryName} citizen phone numbers.
+                </p>
+              </div>
               <button
                 onClick={() => {
                   setDispatchSuccess(null);
@@ -229,31 +335,33 @@ export const GovInboxView: React.FC = () => {
                 className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Zap size={12} />
-                <span>1-Click Dispatch Digital Perks ({countryPerks.countryCode})</span>
+                <span>1-Click Dispatch Digital Perks</span>
               </button>
             </div>
 
-            {/* Physical Prize HQ Collection Pass */}
-            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
-              <div className="flex items-center justify-between">
-                <strong className="text-emerald-700 dark:text-emerald-400 font-mono flex items-center gap-1">
-                  <MapPin size={11} strokeWidth={1.75} />
-                  <span>Allocated HQ Pickup Pass</span>
-                </strong>
-                <span className="text-[8.5px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded font-semibold">HQ Desk Pass</span>
+            {/* 3. Physical Prize HQ Collection Pass */}
+            <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5 flex flex-col justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <strong className="text-emerald-700 dark:text-emerald-400 font-mono flex items-center gap-1">
+                    <MapPin size={11} strokeWidth={1.75} />
+                    <span>Allocated HQ Pickup Pass</span>
+                  </strong>
+                  <span className="text-[8.5px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded font-semibold">HQ Desk Pass</span>
+                </div>
+                <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
+                  Assign physical prize (Plaque / Solar Lantern) at <strong className="text-slate-800 dark:text-slate-200">{countryPerks.hqRoom}</strong>.
+                </p>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
-                Assign physical prize (Plaque / Solar Lantern) at <strong className="text-slate-800 dark:text-slate-200">{countryPerks.hqRoom}</strong>.
-              </p>
               <button
                 onClick={() => {
                   setDispatchSuccess(null);
                   setDispatchModal('physical');
                 }}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <MapPin size={12} />
-                <span>Issue Allocated HQ Pickup Pass</span>
+                <span>Issue HQ Pickup Pass</span>
               </button>
             </div>
           </div>
