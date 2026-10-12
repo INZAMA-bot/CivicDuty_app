@@ -575,6 +575,117 @@ CIVICDUTY RESOLUTION:
 • PAYE & Employment: Creation of high-value software engineering, cybersecurity, and data analysis jobs for Ugandan youth.
 • Public Expenditure Savings: Eliminates an estimated 15–22% in ghost contractor works and procurement inflation across local governments.`,
       },
+      {
+        id: 'em-laas-commission',
+        num: '04',
+        title: 'Loyalty-as-a-Service (LaaS) 2% Capped Fee Covenant',
+        content: `CivicDuty operates an ethical, pro-merchant financial protocol for all local MSMEs and private service providers:
+• 2% Maximum Platform Fee: CivicDuty takes an absolute maximum commission of 2% per voucher transaction to cover SMS dispatch, QR cryptographic generation, and server maintenance.
+• 98% Merchant Escrow Guarantee: 98% of the gross voucher amount is reserved in blind cryptographic escrow and settled directly to the service provider's registered Mobile Money or bank account upon point-of-sale customer redemption.
+• Zero Hidden Upfront Listing Fees: Subscribed service providers incur no barrier to entry for listing product/service vouchers into community and CSR vaults.`,
+      },
+    ],
+  },
+  {
+    id: 'merchant-loyalty-marketplace',
+    title: 'Merchant Loyalty & Voucher Marketplace Architecture',
+    subtitle: 'Loyalty-as-a-Service (LaaS), Hyperlocal Parish Proximity, Capped 2% Escrow & Private Provider Top-3 Perks',
+    category: 'ECONOMIC MODEL',
+    version: 'v1.0 Sovereign Marketplace Blueprint',
+    date: 'October 2026',
+    author: 'Inzama Robin',
+    authorTitle: 'System Architect & Founder, CivicDuty',
+    authorContact: '0778277900 / 0748338796 • inzamarobin279@gmail.com',
+    readTime: '7 min read',
+    color: {
+      bg: 'bg-emerald-500/10',
+      text: 'text-emerald-900 dark:text-emerald-200',
+      border: 'border-emerald-300 dark:border-emerald-800',
+      badgeBg: 'bg-emerald-100 dark:bg-emerald-950/80',
+      badgeText: 'text-emerald-800 dark:text-emerald-300',
+      accent: 'emerald',
+    },
+    summary: 'The operational, cryptographic, and economic blueprint for CivicDuty\'s Merchant Loyalty & Voucher Marketplace. Transforms local African shopkeepers, salons, clinics, and eateries into high-retention businesses through Loyalty-as-a-Service (LaaS), 2% capped commissions, parish proximity matching, and automated private vault rewards.',
+    sections: [
+      {
+        id: 'laas-overview',
+        num: '01',
+        title: 'The Concept: "Shopify for Vouchers" (Loyalty-as-a-Service)',
+        content: `Across African urban centers (Kireka, Kitintale, Kilimani, Westlands, Ikeja), small and medium-sized service providers (salons, barber shops, pharmacies, eateries, mechanics) lack the expensive proprietary software used by supermarket chains like Shoprite or Carrefour to reward loyal customers.
+
+CivicDuty acts as the single unified platform powering Loyalty-as-a-Service (LaaS):
+1. Side A (Service Providers & Shopkeepers): Sign up, list services/products, and generate customized cryptographic perk vouchers.
+2. Side B (Citizens & Patrons): Receive vouchers via SMS/app and present QR/barcodes for physical in-store redemption.
+3. CivicDuty Platform: Handles the voucher generation, USSD/SMS gateway, point-of-sale scanner, and cryptographic escrow settlement.`,
+        highlights: [
+          'Turnkey loyalty infrastructure for local African shops without expensive POS terminals',
+          'Vouchers integrate directly into the 5 Civic Vaults as real-money purchase targets',
+          'Instant SMS delivery with one-click offline USSD redemption codes (*303#)',
+        ],
+      },
+      {
+        id: 'laas-reward-structures',
+        num: '02',
+        title: '5 Customized Reward Structures for Every Business Line',
+        content: `Subscribed service providers can configure distinct reward formulations tailored to their specific margins and inventory:`,
+        table: {
+          headers: ['Reward Structure', 'Mechanic & Formula', 'Real-World Example (Kampala/Nairobi)'],
+          rows: [
+            ['🏷️ Discount Voucher', 'Percentage or fixed value off standard service price', '20% Off Braiding & Styling (Kireka Beauty Salon)'],
+            ['🎁 Freebie Voucher', 'Complementary add-on service when purchasing core product', 'Buy Haircut, Get Free Herbal Wash & Scalp Massage'],
+            ['🔄 BOGO (Buy 1 Get 1)', 'Equal-value or half-value item free on dual purchase', 'Buy 1 Fresh Fruit Smoothie, Get 1 Free'],
+            ['🛍️ Gift Voucher', 'Free ancillary retail item upon purchasing product X', 'Buy Running Shoes, Get 2 Pairs of Cotton Socks Free'],
+            ['💰 Cashback Voucher', 'Store credit voucher generated upon reaching spend threshold', 'Spend UGX 50,000, Receive UGX 5,000 Store Credit'],
+          ],
+        },
+      },
+      {
+        id: 'laas-commission-escrow',
+        num: '03',
+        title: 'Strict 2% Capped Platform Commission & Escrow Payout Protocol',
+        content: `Fair pricing is central to the CivicDuty ecosystem:
+• Maximum 2% Commission Cap: CivicDuty's platform fee will never exceed 2.0% of the voucher face value. For example, on a UGX 50,000 voucher, CivicDuty receives at most UGX 1,000.
+• 98% Merchant Escrow Settlement: The remaining 98% (e.g. UGX 49,000) is held in an automated cryptographic escrow vault.
+• Payout Timing: The merchant's 98% is settled directly to their registered Mobile Money (MTN MoMo / Airtel Money / M-PESA) or bank account immediately upon verified point-of-sale redemption.
+• Anti-Double-Spend Guarantee: Once scanned and marked REDEEMED, the voucher is cryptographically invalidated on the server and blockchain ledger.`,
+        callout: {
+          type: 'emerald',
+          title: 'Guaranteed 2% Fee Ceiling',
+          text: 'Unlike aggregators that charge 15-30% merchant markups, CivicDuty permanently caps platform commission at 2% to protect local African MSME profit margins.',
+        },
+      },
+      {
+        id: 'laas-parish-proximity',
+        num: '04',
+        title: 'Hyperlocal Parish Proximity Filtering & Location Architecture',
+        content: `Location is crucial for voucher relevance. In a city like Kampala or Nairobi, a citizen residing in Kitintale or Kireka will rarely travel across town to redeem a salon or car wash perk in Nateete or Rongai.
+
+• Onboarding Parish Anchor: Every citizen\'s account is anchored to their administrative Parish/Ward upon onboarding.
+• Merchant Location Binding: Merchants specify their exact Parish, Sub-County/Constituency, District/County, and physical street address.
+• Proximity Matching Engine: When sponsors, corporate CSR patrons, or individual peers deposit into a vault to reward a great poster, the system defaults to recommending merchant vouchers located within the author\'s immediate Parish or neighboring zone.`,
+        highlights: [
+          'Automatic distance sorting based on onboarded Parish metadata',
+          'Eliminates unredeemed voucher waste by prioritizing local neighborhood businesses',
+          'Boosts neighborhood economic circulation by keeping capital inside the Parish',
+        ],
+      },
+      {
+        id: 'laas-top3-private-dispatch',
+        num: '05',
+        title: 'Top-3 Ranking Auto-Dispatch Protocol for Private Provider Vaults',
+        content: `When managing a Private Service Provider Vault (Provider Vault Kind):
+• Exclusive Catalog Limitation: Automatic monthly dispatches to the top 3 ranking customers/posters are strictly limited to products or services from that respective private service provider.
+• Fair Monthly Share: The top 3 ranked citizens receive equal 1/3 splits or customized tier allocations (e.g. Rank #1 gets core service + freebie, Rank #2 gets 20% discount, Rank #3 gets gift package).
+• Community Accountability: Top-3 rankings are computed transparently based on verified constructive reviews, incident reports, and confirmed resolutions without algorithmic manipulation.`,
+      },
+      {
+        id: 'laas-pos-redemption',
+        num: '06',
+        title: 'Counter Point-of-Sale (POS) Scanner & USSD Redemptions',
+        content: `Merchant staff at checkout counter can validate vouchers through two zero-friction paths:
+1. Smartphone App / Camera Scanner: Staff opens the Merchant Loyalty Studio tab, scans the customer\'s QR code or enters the 8-character serial code, confirms the item, and taps "Validate & Release Escrow".
+2. Offline USSD Protocol: In low-connectivity environments, the shopkeeper dials *303*CODE# to instantly confirm validity and initiate Mobile Money payout.`,
+      },
     ],
   },
 ];

@@ -35,6 +35,7 @@ import {
   Edit3,
   Camera,
   Upload,
+  Store,
 } from 'lucide-react';
 import { DeptIcon } from '../components/DeptIcon';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
@@ -43,6 +44,7 @@ import { RewardModal } from '../components/RewardModal';
 import { ProviderClaimModal } from '../components/ProviderClaimModal';
 import { CustomerDefectionNotice } from '../components/CustomerDefectionNotice';
 import { QrCodeModal } from '../components/QrCodeModal';
+import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
 
 export const DeptWallView: React.FC = () => {
   const {
@@ -105,6 +107,33 @@ export const DeptWallView: React.FC = () => {
   const displayWallLocation = claimRecord?.customLocation || d.location || `${COUNTRIES[country]?.name || 'National'} Service Network`;
   const displayWallAvatar = claimRecord?.customAvatarUrl || '';
   const displayWallWebsite = claimRecord?.customWebsite || '';
+
+  const isEducation = d.category === 'education';
+  const isHealth = d.category === 'health';
+  const isHospitality = d.category === 'hospitality';
+  const isFinance = d.category === 'finance';
+  const isTransport = d.category === 'transport';
+  const isHousing = d.category === 'housing';
+
+  const accountingOfficer = isEducation
+    ? { name: 'Dr. Jane Nabukenya', role: 'Head of Academic Standards & Parent Liaison', phone: '+256 414 123 456', email: 'academics@institution.ac.ug' }
+    : isHealth
+    ? { name: 'Dr. Robert Asaba', role: 'Clinical Director & Patient Quality Ombudsman', phone: '+256 414 789 012', email: 'quality@healthcenter.ug' }
+    : isHospitality
+    ? { name: 'Chef Patrick Mukasa', role: 'Executive Operations & Food Hygiene Director', phone: '+256 700 334 455', email: 'hygiene@dininggroup.com' }
+    : isFinance
+    ? { name: 'Florence Nambatya', role: 'Head of Consumer Protection & Credit Compliance', phone: '+256 312 998 877', email: 'ombudsman@bank.co.ug' }
+    : isTransport
+    ? { name: 'Hajj Sulaiman Ssebaggala', role: 'Fleet Safety Director & Stage Ombudsman', phone: '+256 772 556 677', email: 'safety@transitunion.ug' }
+    : did.includes('kcca') 
+    ? { name: 'Eng. David Luyimbazi', role: 'Accounting Officer & Director Engineering', phone: '+256 414 901 000', email: 'engineering@kcca.go.ug' }
+    : did.includes('nwsc')
+    ? { name: 'Dr. Eng. Silver Mugisha', role: 'Managing Director & Accounting Officer', phone: '+256 313 315 100', email: 'md@nwsc.co.ug' }
+    : did.includes('unra')
+    ? { name: 'Eng. Samuel Muhoozi', role: 'Director Roads & Bridges Maintenance', phone: '+256 312 249 000', email: 'roadmaintenance@unra.go.ug' }
+    : did.includes('umeme')
+    ? { name: 'Selestino Babungi', role: 'Managing Director & Lead Spokesperson', phone: '+256 312 360 000', email: 'customercare@umeme.co.ug' }
+    : { name: 'Chief Administrative Officer (CAO)', role: 'Statutory Accounting Officer', phone: '+256 414 000 111', email: 'cao@district.go.ug' };
 
   // Edit Wall Modal Form State
   const [editBusinessName, setEditBusinessName] = useState('');
@@ -186,33 +215,6 @@ export const DeptWallView: React.FC = () => {
   const ussdCode = `*3030*${(did.charCodeAt(0) % 50) + 10}#`;
   const tollFree = claimRecord?.customHotline || (isConsumer ? '0800 200 900' : '0800 100 066');
   const whatsappDesk = isConsumer ? '+256 701 889 000' : '+256 772 100 044';
-
-  const isEducation = d.category === 'education';
-  const isHealth = d.category === 'health';
-  const isHospitality = d.category === 'hospitality';
-  const isFinance = d.category === 'finance';
-  const isTransport = d.category === 'transport';
-  const isHousing = d.category === 'housing';
-
-  const accountingOfficer = isEducation
-    ? { name: 'Dr. Jane Nabukenya', role: 'Head of Academic Standards & Parent Liaison', phone: '+256 414 123 456', email: 'academics@institution.ac.ug' }
-    : isHealth
-    ? { name: 'Dr. Robert Asaba', role: 'Clinical Director & Patient Quality Ombudsman', phone: '+256 414 789 012', email: 'quality@healthcenter.ug' }
-    : isHospitality
-    ? { name: 'Chef Patrick Mukasa', role: 'Executive Operations & Food Hygiene Director', phone: '+256 700 334 455', email: 'hygiene@dininggroup.com' }
-    : isFinance
-    ? { name: 'Florence Nambatya', role: 'Head of Consumer Protection & Credit Compliance', phone: '+256 312 998 877', email: 'ombudsman@bank.co.ug' }
-    : isTransport
-    ? { name: 'Hajj Sulaiman Ssebaggala', role: 'Fleet Safety Director & Stage Ombudsman', phone: '+256 772 556 677', email: 'safety@transitunion.ug' }
-    : did.includes('kcca') 
-    ? { name: 'Eng. David Luyimbazi', role: 'Accounting Officer & Director Engineering', phone: '+256 414 901 000', email: 'engineering@kcca.go.ug' }
-    : did.includes('nwsc')
-    ? { name: 'Dr. Eng. Silver Mugisha', role: 'Managing Director & Accounting Officer', phone: '+256 313 315 100', email: 'md@nwsc.co.ug' }
-    : did.includes('unra')
-    ? { name: 'Eng. Samuel Muhoozi', role: 'Director Roads & Bridges Maintenance', phone: '+256 312 249 000', email: 'roadmaintenance@unra.go.ug' }
-    : did.includes('umeme')
-    ? { name: 'Selestino Babungi', role: 'Managing Director & Lead Spokesperson', phone: '+256 312 360 000', email: 'customercare@umeme.co.ug' }
-    : { name: 'Chief Administrative Officer (CAO)', role: 'Statutory Accounting Officer', phone: '+256 414 000 111', email: 'cao@district.go.ug' };
 
   const fieldRoster = isEducation
     ? [
@@ -751,12 +753,13 @@ export const DeptWallView: React.FC = () => {
         />
       </div>
 
-      {/* Main Tabs: Posts, Announcements, Public Projects & Tenders */}
-      <div className="border-t border-b border-slate-300 dark:border-slate-800 flex mt-3 bg-white dark:bg-slate-950">
+      {/* Main Tabs: Posts, Announcements, Public Projects & Tenders, Loyalty Vouchers */}
+      <div className="border-t border-b border-slate-300 dark:border-slate-800 flex mt-3 bg-white dark:bg-slate-950 overflow-x-auto">
         {[
           { id: 'posts', label: `Public Reports (${deptPosts.length})` },
           { id: 'projects', label: `Capital Projects & Tenders (${deptProjects.length})` },
           { id: 'announcements', label: 'Gazette & Bulletins' },
+          { id: 'vouchers', label: isConsumer ? 'Loyalty Vouchers & Perks' : 'Perk Vouchers & Rewards' },
         ].map((t) => (
           <button
             key={t.id}
@@ -902,7 +905,7 @@ export const DeptWallView: React.FC = () => {
             ))
           )}
         </div>
-      ) : (
+      ) : wallTab === 'announcements' ? (
         /* Official Bulletins Tab */
         <div className="p-4 space-y-3">
           <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 space-y-2.5 shadow-2xs">
@@ -921,6 +924,42 @@ export const DeptWallView: React.FC = () => {
               <span className="chip ch-gov text-[8px]">Sovereign Signed</span>
             </div>
           </div>
+        </div>
+      ) : (
+        /* Loyalty Vouchers & Perks Tab (Loyalty-as-a-Service Studio) */
+        <div className="p-4 space-y-4">
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Store size={18} className="text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-sm font-black text-slate-950 dark:text-white">
+                  {d.name} · Merchant Loyalty &amp; Voucher Marketplace
+                </h3>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Generate custom discount, freebie, BOGO, gift &amp; cashback vouchers for your products &amp; services.
+                CivicDuty permanent 2% capped commission with 98% direct escrow release at checkout counter.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => go('vaults')}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Gift size={13} />
+              <span>Browse All Vaults &rarr;</span>
+            </button>
+          </div>
+
+          <MerchantLoyaltyStudio
+            selectedCountry={country as any}
+            activeMerchantDept={did}
+            currentVouchers={[]}
+            onSelectForVaultDeposit={(product) => {
+              go('vaults');
+              toast(`Redirecting to Sovereign Vault to fund ${product.merchantName} voucher!`, 'emerald');
+            }}
+          />
         </div>
       )}
 

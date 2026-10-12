@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { EscrowPerkVoucher, CountryCode, VaultKind } from '../types';
+import { EscrowPerkVoucher, CountryCode, VaultKind, MerchantProductService, MerchantVoucherRewardType } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { allDepts } from '../utils/helpers';
 import { savePerkVoucherBatchToCloud, savePerkVoucherToCloud, saveGatewayTransactionToCloud } from '../services/firestoreSync';
+import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
+import { getStoredMerchantProducts, filterMerchantProductsByLocation, calculateVoucherEconomics } from '../data/merchantLoyaltyData';
 import {
   ArrowLeft,
   Upload,
@@ -38,9 +40,15 @@ import {
   SlidersHorizontal,
   MapPin,
   Store,
+  ShoppingBag,
+  Package,
+  X,
   Users,
   Send,
-  Sparkles
+  Sparkles,
+  Tag,
+  Percent,
+  ScanLine,
 } from 'lucide-react';
 
 export interface RankedJurisdictionCitizen {
@@ -102,7 +110,14 @@ export const PerkVaultView: React.FC = () => {
 
   const [vouchers, setVouchers] = useState<EscrowPerkVoucher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard'>('packs');
+  const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard' | 'merchant_studio'>('packs');
+  const [merchantProducts, setMerchantProducts] = useState<MerchantProductService[]>(() => getStoredMerchantProducts());
+  const [allocationSource, setAllocationSource] = useState<'utilities_supermarket' | 'merchant_loyalty'>('utilities_supermarket');
+  const [merchantLocationFilterParish, setMerchantLocationFilterParish] = useState<string>(() => {
+    return user?.scope_label && user.scope_label.toLowerCase().includes('parish') ? user.scope_label : 'Kitintale Parish';
+  });
+  const [merchantRewardTypeFilter, setMerchantRewardTypeFilter] = useState<'all' | MerchantVoucherRewardType>('all');
+  const [selectedMerchantProduct, setSelectedMerchantProduct] = useState<MerchantProductService | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterDemoMode, setFilterDemoMode] = useState<'all' | 'live' | 'demo'>('all');
   const [filterVaultKind, setFilterVaultKind] = useState<'all' | VaultKind>('all');
@@ -129,7 +144,28 @@ export const PerkVaultView: React.FC = () => {
   });
 
   // Direct Payment & Instant Escrow Buy State
-  const [payPackage, setPayPackage] = useState<'mtn_5' | 'mtn_10' | 'nwsc_5' | 'yaka_5' | 'safeboda_10' | 'custom'>('mtn_5');
+  const [payPackage, setPayPackage] = useState<
+    | 'supermarket_1000ksh_single'
+    | 'supermarket_1000ksh_5'
+    | 'supermarket_mega_hamper_3'
+    | 'mtn_5'
+    | 'mtn_10'
+    | 'nwsc_5'
+    | 'yaka_5'
+    | 'safeboda_10'
+    | 'fuel_shell_5'
+    | 'pharmacy_wellness_5'
+    | 'school_stationery_5'
+    | 'agri_market_5'
+    | 'custom'
+  >('supermarket_1000ksh_5');
+  const [allocationSearchQuery, setAllocationSearchQuery] = useState<string>('');
+  const [allocationCategoryFilter, setAllocationCategoryFilter] = useState<
+    'all' | 'supermarket' | 'telco_data' | 'water_electricity' | 'transit_fuel'
+  >('all');
+  const [customPackagedItemsInput, setCustomPackagedItemsInput] = useState<string>(
+    '2kg Maize Flour (Unga), 1L Cooking Oil, 1kg Sugar, 2kg Rice, Bar of Soap & Milk'
+  );
   const [paySponsorName, setPaySponsorName] = useState(user?.name ? `${user.name} (Civic Patron)` : 'Seyani Brothers Construction Ltd');
   const [paySponsorType, setPaySponsorType] = useState<'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron'>('citizen_patron');
   const [payProjectName, setPayProjectName] = useState('Community Civic Watchdog Incentive Fund');
@@ -141,9 +177,9 @@ export const PerkVaultView: React.FC = () => {
   const [payCardExpiry, setPayCardExpiry] = useState('12/28');
   const [payCardCvc, setPayCardCvc] = useState('892');
   const [customQuantity, setCustomQuantity] = useState(3);
-  const [customFaceValue, setCustomFaceValue] = useState(10000);
-  const [customBrand, setCustomBrand] = useState('MTN Uganda');
-  const [customCategory, setCustomCategory] = useState<'telco_data' | 'water_utility' | 'electricity' | 'transit_credit'>('telco_data');
+  const [customFaceValue, setCustomFaceValue] = useState(1000);
+  const [customBrand, setCustomBrand] = useState('Naivas / Quality Supermarket');
+  const [customCategory, setCustomCategory] = useState<'telco_data' | 'water_utility' | 'electricity' | 'transit_credit' | 'supermarket'>('supermarket');
   const [isPaying, setIsPaying] = useState(false);
   const [paymentReceipt, setPaymentReceipt] = useState<any>(null);
 
@@ -157,7 +193,7 @@ export const PerkVaultView: React.FC = () => {
 
   // Manual Deposit Form State
   const [manualBrand, setManualBrand] = useState('MTN Uganda');
-  const [manualCategory, setManualCategory] = useState<'telco_data' | 'water_utility' | 'electricity' | 'transit_credit'>('telco_data');
+  const [manualCategory, setManualCategory] = useState<'telco_data' | 'water_utility' | 'electricity' | 'transit_credit' | 'supermarket'>('telco_data');
   const [manualCode, setManualCode] = useState('');
   const [manualPin, setManualPin] = useState('');
   const [manualFaceValue, setManualFaceValue] = useState('10000');
@@ -797,6 +833,40 @@ export const PerkVaultView: React.FC = () => {
         const existingVoucher = poolToUse[idx];
         const slot = (idx + 1) as 1 | 2 | 3;
         const fallbackCode = `TOP${slot}-${Math.floor(1000 + Math.random() * 9000)}-${selectedCountry}`;
+
+        // When Provider Vault is active: perks are strictly limited to products/services from this respective private provider!
+        let provProduct: any = null;
+        if (activeVaultKind === 'provider_vault') {
+          const matchingProds = merchantProducts.filter(
+            (p) =>
+              p.country.toUpperCase() === selectedCountry.toUpperCase() &&
+              (p.merchantId === selectedProviderDept ||
+                selectedProviderDept.includes(p.merchantId) ||
+                p.merchantName.toLowerCase().includes(selectedProviderDept.toLowerCase().replace(/shop_|dept_/g, '')))
+          );
+          const fallbackProds = merchantProducts.filter((p) => p.country.toUpperCase() === selectedCountry.toUpperCase());
+          const candidateList = matchingProds.length > 0 ? matchingProds : fallbackProds;
+          if (candidateList.length > 0) {
+            provProduct = candidateList[idx % candidateList.length];
+          }
+        }
+
+        const effectiveBrand = provProduct
+          ? provProduct.merchantName
+          : activeVaultKind === 'scout_bounty_vault'
+          ? 'SafeBoda'
+          : defaultBrand;
+
+        const effectiveTitle = provProduct
+          ? `${provProduct.merchantName} - ${provProduct.rewardHeadline} (Rank #${slot} Perk)`
+          : activeVaultKind === 'scout_bounty_vault'
+          ? `SafeBoda Road Safety Bounty (Rank #${slot})`
+          : `${defaultBrand} Top-3 Jurisdiction Split (Rank #${slot})`;
+
+        const effectiveFaceValue = provProduct ? provProduct.voucherCost : defaultFaceValue;
+        const provFee = provProduct ? Math.round(effectiveFaceValue * 0.02) : undefined;
+        const provPayout = provProduct ? effectiveFaceValue - (provFee || 0) : undefined;
+
         const vObj: EscrowPerkVoucher = existingVoucher
           ? {
               ...existingVoucher,
@@ -807,12 +877,24 @@ export const PerkVaultView: React.FC = () => {
               rankingScoreAtDispatch: citizen.score,
               authorizedDispatcherRole: currentVaultJurisdictionMeta.AuthorizedRoleTag,
               status: 'dispatched',
+              ...(provProduct && {
+                rewardType: provProduct.rewardType,
+                rewardHeadline: provProduct.rewardHeadline,
+                rewardDescription: provProduct.rewardDescription,
+                merchantId: provProduct.merchantId,
+                merchantName: provProduct.merchantName,
+                merchantLocation: { parish: provProduct.parish, district: provProduct.district, address: provProduct.address },
+                platformCommissionPercent: 2,
+                commissionAmount: provFee,
+                merchantPayoutAmount: provPayout,
+                packagedItems: provProduct.packagedItems,
+              }),
               dispatchedTo: {
                 recipientName: citizen.name,
                 recipientContact: citizen.contact,
                 dispatchedAt: nowIso,
                 dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
-                citationNote: `[Locked Rank #${slot} · ${citizen.score} pts] ${citizen.citationReason}`,
+                citationNote: `[Locked Rank #${slot} · ${citizen.score} pts] ${citizen.citationReason}${provProduct ? ` · Perk: ${provProduct.rewardHeadline}` : ''}`,
                 postOrProjectId: citizen.samplePostId || currentVaultJurisdictionMeta.jurisdictionId,
                 smsDeliveryStatus: 'delivered',
                 ethicalNonInterferenceAck: true,
@@ -826,13 +908,10 @@ export const PerkVaultView: React.FC = () => {
               id: `vch-${activeVaultKind}-${Date.now()}-${slot}`,
               voucherCode: fallbackCode,
               pin: `${Math.floor(100000 + Math.random() * 900000)}`,
-              category: activeVaultKind === 'scout_bounty_vault' ? 'transit_credit' : 'telco_data',
-              brand: activeVaultKind === 'scout_bounty_vault' ? 'SafeBoda' : defaultBrand,
-              title:
-                activeVaultKind === 'scout_bounty_vault'
-                  ? `SafeBoda Road Safety Bounty (Rank #${slot})`
-                  : `${defaultBrand} Top-3 Jurisdiction Split (Rank #${slot})`,
-              faceValue: defaultFaceValue,
+              category: provProduct ? (provProduct.category as any) : activeVaultKind === 'scout_bounty_vault' ? 'transit_credit' : 'telco_data',
+              brand: effectiveBrand,
+              title: effectiveTitle,
+              faceValue: effectiveFaceValue,
               currency: defaultCurrency,
               country: selectedCountry,
               sponsoredBy: currentVaultJurisdictionMeta.jurisdictionLabel,
@@ -853,12 +932,24 @@ export const PerkVaultView: React.FC = () => {
               createdAt: nowIso,
               expiryDate: '2026-12-31',
               redemptionUssdString: `*303*${fallbackCode}#`,
+              ...(provProduct && {
+                rewardType: provProduct.rewardType,
+                rewardHeadline: provProduct.rewardHeadline,
+                rewardDescription: provProduct.rewardDescription,
+                merchantId: provProduct.merchantId,
+                merchantName: provProduct.merchantName,
+                merchantLocation: { parish: provProduct.parish, district: provProduct.district, address: provProduct.address },
+                platformCommissionPercent: 2,
+                commissionAmount: provFee,
+                merchantPayoutAmount: provPayout,
+                packagedItems: provProduct.packagedItems,
+              }),
               dispatchedTo: {
                 recipientName: citizen.name,
                 recipientContact: citizen.contact,
                 dispatchedAt: nowIso,
                 dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
-                citationNote: `[Locked Rank #${slot} · ${citizen.score} pts] ${citizen.citationReason}`,
+                citationNote: `[Locked Rank #${slot} · ${citizen.score} pts] ${citizen.citationReason}${provProduct ? ` · Perk: ${provProduct.rewardHeadline}` : ''}`,
                 postOrProjectId: citizen.samplePostId || currentVaultJurisdictionMeta.jurisdictionId,
                 smsDeliveryStatus: 'delivered',
                 ethicalNonInterferenceAck: true,
@@ -967,11 +1058,12 @@ export const PerkVaultView: React.FC = () => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesCode = v.voucherCode.toLowerCase().includes(q);
-        const matchesBrand = v.brand.toLowerCase().includes(q);
+        const matchesBrand = v.brand.toLowerCase().includes(q) || (v.title || '').toLowerCase().includes(q);
         const matchesSponsor = v.sponsoredBy.toLowerCase().includes(q);
         const matchesJurisdiction = (v.jurisdictionLabel || '').toLowerCase().includes(q);
+        const matchesItems = (v.packagedItems || []).some((pi) => pi.toLowerCase().includes(q));
         const matchesRecipient = v.dispatchedTo?.recipientName.toLowerCase().includes(q) || v.dispatchedTo?.recipientContact.includes(q);
-        if (!matchesCode && !matchesBrand && !matchesSponsor && !matchesJurisdiction && !matchesRecipient) return false;
+        if (!matchesCode && !matchesBrand && !matchesSponsor && !matchesJurisdiction && !matchesItems && !matchesRecipient) return false;
       }
       return true;
     });
@@ -1038,6 +1130,7 @@ export const PerkVaultView: React.FC = () => {
   const getXpCostForCategory = (cat: string) => {
     if (cat === 'transit_credit') return 100;
     if (cat === 'telco_data') return 150;
+    if (cat === 'supermarket') return 175;
     return 200; // electricity / water_utility
   };
 
@@ -1274,8 +1367,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
     }
   };
 
-  // Quick Seed Pack (Country-Adaptive + Includes Boda Bounty Pool)
-  const handleSeedPack = async (packType: 'mtn' | 'nwsc' | 'yaka' | 'boda') => {
+  // Quick Seed Pack (Country-Adaptive + Includes Boda Bounty Pool & 1,000 KSh Supermarket Basket)
+  const handleSeedPack = async (packType: 'mtn' | 'nwsc' | 'yaka' | 'boda' | 'supermarket') => {
     const isKe = selectedCountry === 'KE';
     const isNg = selectedCountry === 'NG';
     const currency = isKe ? 'KES' : isNg ? 'NGN' : 'UGX';
@@ -1284,7 +1377,32 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
     let sponsorName = 'Seyani Brothers Construction Ltd (CSR Allocation)';
     let batchTitle = 'Corporate CSR Allocation';
 
-    if (packType === 'mtn') {
+    if (packType === 'supermarket') {
+      sponsorName = isKe ? 'Naivas & Carrefour Supermarket Community Desk' : 'Quality Supermarket & Carrefour Patron Pool';
+      batchTitle = 'Supermarket 1,000 KSh (30,000 UGX) Packaged Household Shopping Vouchers';
+      for (let i = 1; i <= 5; i++) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        seedRows.push({
+          voucherCode: `SHOP-1000KSH-${rand}-${selectedCountry}`,
+          pin: `${rand}`,
+          brand: isKe ? 'Naivas / Carrefour Supermarket' : 'Quality Supermarket / Carrefour',
+          category: 'supermarket',
+          title: isKe
+            ? '1,000 KSh Supermarket Shopping Basket Voucher'
+            : '1,000 KSh Equiv. (30,000 UGX) Supermarket Shopping Voucher',
+          faceValue: isKe ? 1000 : isNg ? 12000 : 30000,
+          currency,
+          packagedItems: [
+            '2kg Maize Flour (Unga / Posho)',
+            '1L Fresh Cooking Oil',
+            '1kg Sugar & Tea Leaves',
+            '2kg Rice & Bar of Laundry Soap',
+            'Milk, Bread & Supermarket Items up to 1,000 KSh',
+          ],
+          expiryDate: '2026-12-31',
+        });
+      }
+    } else if (packType === 'mtn') {
       sponsorName = 'Seyani Brothers Construction Ltd (CSR Allocation)';
       batchTitle = `Seyani Bros CSR - ${isKe ? 'Safaricom' : 'MTN'} 2GB Data Seed`;
       for (let i = 1; i <= 5; i++) {
@@ -1296,6 +1414,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           category: 'telco_data',
           faceValue: isKe ? 360 : isNg ? 3500 : 10000,
           currency,
+          packagedItems: ['2GB 4G/5G Data Bundle', '30 On-Net Voice Mins', 'Zero-Rated Evidence Upload'],
           expiryDate: '2026-12-31',
         });
       }
@@ -1311,6 +1430,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           category: 'water_utility',
           faceValue: isKe ? 300 : isNg ? 3000 : 10000,
           currency,
+          packagedItems: ['6,500 Litres Prepaid Domestic Water', 'Public Standpipe / Smart Meter Token'],
           expiryDate: '2026-12-31',
         });
       }
@@ -1326,6 +1446,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           category: 'electricity',
           faceValue: isKe ? 500 : isNg ? 5000 : 15000,
           currency,
+          packagedItems: ['45 kWh Domestic Power Units', '20-Digit STS Meter Token'],
           expiryDate: '2026-12-31',
         });
       }
@@ -1341,6 +1462,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           category: 'transit_credit',
           faceValue: isKe ? 250 : isNg ? 2500 : 5000,
           currency,
+          packagedItems: ['Cashless SafeBoda Commuter Pass', '2L Stage Petrol Equivalent'],
           expiryDate: '2026-12-31',
         });
       }
@@ -1354,10 +1476,12 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         body: JSON.stringify({
           batchName: batchTitle,
           sponsorName,
-          sponsorType: packType === 'boda' ? 'corporate_csr' : 'contractor',
+          sponsorType: packType === 'boda' || packType === 'supermarket' ? 'corporate_csr' : 'contractor',
           projectName:
             packType === 'boda'
               ? 'Frontline Scout & Bodaboda Road Safety Bounty Pool'
+              : packType === 'supermarket'
+              ? 'Supermarket 1,000 KSh Community Shopping Basket Pool'
               : 'Municipal Infrastructure Watchdog Pool',
           country: selectedCountry,
           vouchers: seedRows,
@@ -1368,7 +1492,12 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
       const data = await res.json();
       if (data.success && data.vouchers) {
-        const targetVault: VaultKind = packType === 'boda' ? 'scout_bounty_vault' : activeVaultKind;
+        const targetVault: VaultKind =
+          packType === 'boda'
+            ? 'scout_bounty_vault'
+            : packType === 'supermarket'
+            ? 'provider_vault'
+            : activeVaultKind;
         const taggedVouchers = data.vouchers.map((v: EscrowPerkVoucher) => ({
           ...v,
           vaultType: targetVault,
@@ -1379,7 +1508,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         setVouchers((prev) => [...taggedVouchers, ...prev]);
         logAudit(
           'BODA_BOUNTY_ESCROW_SEEDED',
-          data.batchId || 'BATCH-BODA',
+          data.batchId || 'BATCH-SEED',
           `Deposited ${data.uploadedCount}x ${batchTitle} vouchers into [${selectedCountry}] ${currentVaultJurisdictionMeta.vaultTitle}.`
         );
         toast(`Deposited ${data.uploadedCount} pre-funded vouchers into ${currentVaultJurisdictionMeta.vaultTitle}!`, 'emerald');
@@ -1391,80 +1520,402 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
     }
   };
 
-  // Details of the selected digital utility package
+  // Structured Catalog of Packaged Voucher Allocations (Searchable & Filterable)
+  const allocationCatalog = useMemo(() => {
+    const isKe = selectedCountry === 'KE';
+    const currency = isKe ? 'KES' : 'UGX';
+
+    return [
+      {
+        id: 'supermarket_1000ksh_single' as const,
+        shortTitle: isKe ? '1,000 KSh Supermarket Voucher (1x)' : '1,000 KSh / 30K UGX Supermarket (1x)',
+        title: isKe
+          ? '1x Naivas / Carrefour 1,000 KSh Shopping Basket Voucher'
+          : '1x Quality / Carrefour 30,000 UGX (1,000 KSh) Shopping Voucher',
+        brand: isKe ? 'Naivas / Carrefour Supermarket' : 'Quality Supermarket / Carrefour',
+        category: 'supermarket' as const,
+        filterGroup: 'supermarket' as const,
+        unitFaceValue: isKe ? 1000 : 30000,
+        quantity: 1,
+        totalCost: isKe ? 1000 : 30000,
+        currency,
+        badge: '1,000 KSh Basket',
+        accent: 'rose',
+        description:
+          'Single 1,000 KSh (UGX 30,000) supermarket shopping voucher—redeemable at the till for a variety of packaged household groceries.',
+        packagedItems: [
+          '2kg Maize Flour (Unga / Posho)',
+          '1L Fresh Cooking Oil',
+          '1kg Sugar & Tea Leaves',
+          '2kg Rice & Bar of Laundry Soap',
+          'Milk, Bread & Till Choice up to 1,000 KSh',
+        ],
+      },
+      {
+        id: 'supermarket_1000ksh_5' as const,
+        shortTitle: isKe ? '1,000 KSh Supermarket Basket (5x)' : '1,000 KSh / 30K UGX Supermarket (5x)',
+        title: isKe
+          ? '5x Naivas / Carrefour 1,000 KSh Supermarket Shopping Vouchers'
+          : '5x Quality / Carrefour 30,000 UGX (1,000 KSh) Supermarket Vouchers',
+        brand: isKe ? 'Naivas / Carrefour Supermarket' : 'Quality Supermarket / Carrefour',
+        category: 'supermarket' as const,
+        filterGroup: 'supermarket' as const,
+        unitFaceValue: isKe ? 1000 : 30000,
+        quantity: 5,
+        totalCost: isKe ? 5000 : 150000,
+        currency,
+        badge: '5x 1,000 KSh Pack',
+        accent: 'rose',
+        description:
+          '5 supermarket shopping vouchers (each worth 1,000 KSh / UGX 30,000) packaged with essential household groceries for community winners.',
+        packagedItems: [
+          '2kg Maize Flour (Unga / Posho)',
+          '1L Fresh Cooking Oil',
+          '1kg Sugar & Tea Leaves',
+          '2kg Rice & Bar of Laundry Soap',
+          'Milk, Bread & Household Essentials',
+        ],
+      },
+      {
+        id: 'supermarket_mega_hamper_3' as const,
+        shortTitle: isKe ? 'Supermarket Family Hamper (3x)' : 'Supermarket Family Hamper (3x)',
+        title: isKe
+          ? '3x Carrefour / Quickmart 2,500 KSh Family Grocery Hampers'
+          : '3x Capital Shoppers / Carrefour 75,000 UGX Family Hampers',
+        brand: isKe ? 'Carrefour / Quickmart Kenya' : 'Capital Shoppers / Carrefour',
+        category: 'supermarket' as const,
+        filterGroup: 'supermarket' as const,
+        unitFaceValue: isKe ? 2500 : 75000,
+        quantity: 3,
+        totalCost: isKe ? 7500 : 225000,
+        currency,
+        badge: 'Top-3 Monthly Split',
+        accent: 'rose',
+        description:
+          '3 full-month family supermarket hampers designed for exact 1/3 Top-3 Monthly Jurisdiction Awarding.',
+        packagedItems: [
+          '5kg Basmati / Super Rice',
+          '3L Vegetable Cooking Oil',
+          '2kg Sugar & 4kg Maize Flour',
+          'Bathing & Multi-Purpose Soap Pack',
+          'Long-Life Milk Carton & Breakfast Oats',
+        ],
+      },
+      {
+        id: 'mtn_5' as const,
+        shortTitle: isKe ? 'Safaricom 2GB Data (5x)' : 'MTN 2GB Data & Voice (5x)',
+        title: isKe ? '5x Safaricom 2GB Data Packs' : '5x MTN 2GB Freedom Data Packs',
+        brand: isKe ? 'Safaricom' : 'MTN Uganda',
+        category: 'telco_data' as const,
+        filterGroup: 'telco_data' as const,
+        unitFaceValue: isKe ? 360 : 10000,
+        quantity: 5,
+        totalCost: isKe ? 1800 : 50000,
+        currency,
+        badge: 'Field Data + Voice',
+        accent: 'amber',
+        description:
+          '5 high-speed telecom vouchers packaged with data, voice minutes, and SMS for field evidence uploads.',
+        packagedItems: [
+          '2GB 4G/5G High-Speed Data',
+          '30 On-Net Voice Minutes',
+          '100 SMS for *284*33# USSD',
+          'Zero-Rated Evidence Upload',
+        ],
+      },
+      {
+        id: 'mtn_10' as const,
+        shortTitle: isKe ? 'Safaricom 2GB Mega (10x)' : 'MTN 2GB Mega (10x)',
+        title: isKe ? '10x Safaricom 2GB Data Packs' : '10x MTN 2GB Data Mega Batch',
+        brand: isKe ? 'Safaricom' : 'MTN Uganda',
+        category: 'telco_data' as const,
+        filterGroup: 'telco_data' as const,
+        unitFaceValue: isKe ? 360 : 10000,
+        quantity: 10,
+        totalCost: isKe ? 3600 : 100000,
+        currency,
+        badge: '10x Parish Pool',
+        accent: 'amber',
+        description:
+          '10 data vouchers for sustained community watchdog reporting and video inspection uploads.',
+        packagedItems: [
+          '10x 2GB 4G/5G Data Bundles',
+          'HD Video & Geotagged Photo Quota',
+          '30-Day Rollover Validity',
+        ],
+      },
+      {
+        id: 'nwsc_5' as const,
+        shortTitle: isKe ? 'Nairobi Water (5x)' : 'NWSC Clean Water (5x)',
+        title: isKe ? '5x Nairobi Water Clean Water Credits' : '5x NWSC 10,000 UGX Water Tokens',
+        brand: isKe ? 'Nairobi Water (NCWSC)' : 'NWSC Uganda',
+        category: 'water_utility' as const,
+        filterGroup: 'water_electricity' as const,
+        unitFaceValue: isKe ? 300 : 10000,
+        quantity: 5,
+        totalCost: isKe ? 1500 : 50000,
+        currency,
+        badge: '6,500L Water',
+        accent: 'cyan',
+        description:
+          '5 pre-paid water utility tokens rewarding citizens who report pipe bursts and sanitation hazards.',
+        packagedItems: [
+          '6,500 Litres Prepaid Domestic Water',
+          'Public Standpipe / Smart Meter Token',
+          'Sanitation Levy Credit',
+        ],
+      },
+      {
+        id: 'yaka_5' as const,
+        shortTitle: isKe ? 'KPLC Stima Power (5x)' : 'Umeme Yaka Power (5x)',
+        title: isKe ? '5x Kenya Power KPLC Prepaid Tokens' : '5x Umeme Yaka 15,000 UGX Power Tokens',
+        brand: isKe ? 'Kenya Power (KPLC)' : 'Umeme Power',
+        category: 'electricity' as const,
+        filterGroup: 'water_electricity' as const,
+        unitFaceValue: isKe ? 500 : 15000,
+        quantity: 5,
+        totalCost: isKe ? 2500 : 75000,
+        currency,
+        badge: '45 kWh Stima/Yaka',
+        accent: 'yellow',
+        description:
+          '5 pre-paid electricity tokens packaged with domestic kWh units for streetlight & grid audits.',
+        packagedItems: [
+          '45 kWh Domestic Electricity Units',
+          'Instant 20-Digit STS Meter Token',
+          'Zero Standing Charge Deduction',
+        ],
+      },
+      {
+        id: 'safeboda_10' as const,
+        shortTitle: 'SafeBoda Transit (10x)',
+        title: '10x SafeBoda Rapid Field Ride Credits',
+        brand: 'SafeBoda',
+        category: 'transit_credit' as const,
+        filterGroup: 'transit_fuel' as const,
+        unitFaceValue: isKe ? 150 : 5000,
+        quantity: 10,
+        totalCost: isKe ? 1500 : 50000,
+        currency,
+        badge: '10x Stage Mobility',
+        accent: 'emerald',
+        description:
+          '10 transit credits for citizen inspectors & Frontline Scouts visiting public works sites.',
+        packagedItems: [
+          'Cashless SafeBoda Commuter Credit',
+          '2L Stage Petrol Equivalent',
+          'Reflector & Helmet Safety Care',
+        ],
+      },
+      {
+        id: 'fuel_shell_5' as const,
+        shortTitle: 'Total / Shell Fuel & Lube (5x)',
+        title: isKe
+          ? '5x TotalEnergies / Shell 1,000 KSh Rider Fuel & Lube Vouchers'
+          : '5x TotalEnergies / Shell 30,000 UGX (1,000 KSh) Fuel Vouchers',
+        brand: 'TotalEnergies / Shell Service Station',
+        category: 'transit_credit' as const,
+        filterGroup: 'transit_fuel' as const,
+        unitFaceValue: isKe ? 1000 : 30000,
+        quantity: 5,
+        totalCost: isKe ? 5000 : 150000,
+        currency,
+        badge: '1,000 KSh Fuel + Oil',
+        accent: 'emerald',
+        description:
+          '5 service-station fuel & lubricant vouchers (1,000 KSh / UGX 30,000 each) for Bodaboda & Taxi Scouts.',
+        packagedItems: [
+          '5.5 Litres Unleaded Petrol / Diesel',
+          '4T Bodaboda Engine Oil Top-Up',
+          'Free Tire Pressure & Safety Inspection',
+        ],
+      },
+      {
+        id: 'pharmacy_wellness_5' as const,
+        shortTitle: 'Pharmacy & First-Aid Kit (5x)',
+        title: isKe
+          ? '5x Goodlife Pharmacy 1,000 KSh Family First-Aid & Wellness Vouchers'
+          : '5x Vine / Ecopharm 30,000 UGX (1,000 KSh) Pharmacy Vouchers',
+        brand: isKe ? 'Goodlife Pharmacy Kenya' : 'Vine Pharmacy / Ecopharm Uganda',
+        category: 'supermarket' as const,
+        filterGroup: 'supermarket' as const,
+        unitFaceValue: isKe ? 1000 : 30000,
+        quantity: 5,
+        totalCost: isKe ? 5000 : 150000,
+        currency,
+        badge: '1,000 KSh Health Kit',
+        accent: 'rose',
+        description:
+          '5 pharmacy vouchers packaged with essential family first-aid, ORS, and wellness items for VHTs & citizens.',
+        packagedItems: [
+          'First-Aid Bandages, Gauze & Antiseptic',
+          'Anti-Malarial & Pain Relief Essentials',
+          'ORS, Zinc & Family Hygiene Soap Pack',
+        ],
+      },
+      {
+        id: 'school_stationery_5' as const,
+        shortTitle: 'Back-to-School Scholastic (5x)',
+        title: isKe
+          ? '5x Text Book Centre / Naivas 1,000 KSh Scholastic Vouchers'
+          : '5x Aristoc / Supermarket 30,000 UGX (1,000 KSh) School Vouchers',
+        brand: isKe ? 'Text Book Centre / Naivas School' : 'Aristoc / Quality School Desk',
+        category: 'supermarket' as const,
+        filterGroup: 'supermarket' as const,
+        unitFaceValue: isKe ? 1000 : 30000,
+        quantity: 5,
+        totalCost: isKe ? 5000 : 150000,
+        currency,
+        badge: '1,000 KSh School Pack',
+        accent: 'rose',
+        description:
+          '5 packaged scholastic supply vouchers redeemable at supermarkets and bookshops for exercise books & solar lamps.',
+        packagedItems: [
+          '12x A4 Counter & Exercise Books',
+          'Mathematical Geometry Set, Pens & Pencils',
+          'Rechargeable Solar Reading Lamp Credit',
+        ],
+      },
+      {
+        id: 'agri_market_5' as const,
+        shortTitle: 'Agro-Seed & Market Stall (5x)',
+        title: isKe
+          ? '5x Agro-Vet & Market Vendor 1,000 KSh Input Vouchers'
+          : '5x Container Village / Agro-Input 30,000 UGX (1,000 KSh) Vouchers',
+        brand: isKe ? 'Kenya Seed & Market Coop' : 'Bukoola / Market Vendor Input Desk',
+        category: 'supermarket' as const,
+        filterGroup: 'supermarket' as const,
+        unitFaceValue: isKe ? 1000 : 30000,
+        quantity: 5,
+        totalCost: isKe ? 5000 : 150000,
+        currency,
+        badge: '1,000 KSh Agro/Market',
+        accent: 'emerald',
+        description:
+          '5 packaged agricultural seed & market vendor stall vouchers for rural parish farmers and market scouts.',
+        packagedItems: [
+          '2kg Certified Maize & Bean Seeds',
+          'Organic Foliar Fertilizer Pack',
+          'Solar Market Stall Bulb & Eco Bags',
+        ],
+      },
+    ];
+  }, [selectedCountry]);
+
+  const filteredAllocationCatalog = useMemo(() => {
+    return allocationCatalog.filter((item) => {
+      if (allocationCategoryFilter !== 'all' && item.filterGroup !== allocationCategoryFilter) {
+        return false;
+      }
+      if (allocationSearchQuery.trim()) {
+        const q = allocationSearchQuery.toLowerCase();
+        const inTitle = item.title.toLowerCase().includes(q) || item.shortTitle.toLowerCase().includes(q);
+        const inBrand = item.brand.toLowerCase().includes(q);
+        const inDesc = item.description.toLowerCase().includes(q);
+        const inBadge = item.badge.toLowerCase().includes(q);
+        const inPrice =
+          String(item.unitFaceValue).includes(q) ||
+          String(item.totalCost).includes(q) ||
+          (q.includes('1000') && (item.unitFaceValue === 1000 || item.unitFaceValue === 30000)) ||
+          (q.includes('ksh') && (item.unitFaceValue === 1000 || item.unitFaceValue === 2500 || item.unitFaceValue === 30000));
+        const inItems = item.packagedItems.some((pi) => pi.toLowerCase().includes(q));
+        if (!inTitle && !inBrand && !inDesc && !inBadge && !inPrice && !inItems) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [allocationCatalog, allocationCategoryFilter, allocationSearchQuery]);
+
+  const filteredMerchantCatalog = useMemo(() => {
+    let list = merchantProducts.filter(
+      (p) => p.country.toUpperCase() === selectedCountry.toUpperCase() && p.active
+    );
+    if (merchantRewardTypeFilter !== 'all') {
+      list = list.filter((p) => p.rewardType === merchantRewardTypeFilter);
+    }
+    if (merchantLocationFilterParish && !merchantLocationFilterParish.toLowerCase().includes('all')) {
+      const q = merchantLocationFilterParish.toLowerCase().replace(/parish|ward/g, '').trim();
+      if (q) {
+        list = list.filter((p) =>
+          (p.parish || '').toLowerCase().includes(q) ||
+          (p.district || '').toLowerCase().includes(q) ||
+          (p.subCounty || '').toLowerCase().includes(q)
+        );
+      }
+    }
+    if (allocationSearchQuery.trim()) {
+      const q = allocationSearchQuery.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.merchantName.toLowerCase().includes(q) ||
+          p.title.toLowerCase().includes(q) ||
+          p.rewardHeadline.toLowerCase().includes(q) ||
+          p.rewardDescription.toLowerCase().includes(q) ||
+          (p.parish || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [merchantProducts, selectedCountry, merchantRewardTypeFilter, merchantLocationFilterParish, allocationSearchQuery]);
+
+  // Details of the selected digital utility, supermarket, or local merchant package
   const getPackageDetails = () => {
     const isKe = selectedCountry === 'KE';
     const currency = isKe ? 'KES' : 'UGX';
 
-    switch (payPackage) {
-      case 'mtn_5':
-        return {
-          title: isKe ? '5x Safaricom 2GB Data Packs' : '5x MTN 2GB Freedom Data Packs',
-          brand: isKe ? 'Safaricom' : 'MTN Uganda',
-          category: 'telco_data' as const,
-          unitFaceValue: isKe ? 360 : 10000,
-          quantity: 5,
-          totalCost: isKe ? 1800 : 50000,
-          currency,
-          description: isKe ? '5 Safaricom high-speed 2GB data vouchers for watchdog upload' : '5 MTN Uganda 2GB vouchers pre-funded for citizen project watchdogs',
-        };
-      case 'mtn_10':
-        return {
-          title: isKe ? '10x Safaricom 2GB Data Packs' : '10x MTN 2GB Data Mega Batch',
-          brand: isKe ? 'Safaricom' : 'MTN Uganda',
-          category: 'telco_data' as const,
-          unitFaceValue: isKe ? 360 : 10000,
-          quantity: 10,
-          totalCost: isKe ? 3600 : 100000,
-          currency,
-          description: isKe ? '10 Safaricom data vouchers for wide community reporting' : '10 MTN data vouchers for continuous field inspection & photo evidence',
-        };
-      case 'nwsc_5':
-        return {
-          title: isKe ? '5x Nairobi Water Clean Water Credits' : '5x NWSC 10,000 UGX Water Tokens',
-          brand: isKe ? 'Nairobi Water (NCWSC)' : 'NWSC Uganda',
-          category: 'water_utility' as const,
-          unitFaceValue: isKe ? 300 : 10000,
-          quantity: 5,
-          totalCost: isKe ? 1500 : 50000,
-          currency,
-          description: isKe ? '5 water utility vouchers for public sanitation whistleblowers' : '5 NWSC water tokens rewarding citizens reporting leaks & bursts',
-        };
-      case 'yaka_5':
-        return {
-          title: isKe ? '5x Kenya Power KPLC Prepaid Tokens' : '5x Umeme Yaka 15,000 UGX Power Tokens',
-          brand: isKe ? 'Kenya Power (KPLC)' : 'Umeme Power',
-          category: 'electricity' as const,
-          unitFaceValue: isKe ? 500 : 15000,
-          quantity: 5,
-          totalCost: isKe ? 2500 : 75000,
-          currency,
-          description: isKe ? '5 prepaid electricity units for public streetlighting audits' : '5 Yaka units sponsored under public infrastructure energy CSR',
-        };
-      case 'safeboda_10':
-        return {
-          title: '10x SafeBoda Rapid Field Ride Credits',
-          brand: 'SafeBoda',
-          category: 'transit_credit' as const,
-          unitFaceValue: isKe ? 150 : 5000,
-          quantity: 10,
-          totalCost: isKe ? 1500 : 50000,
-          currency,
-          description: '10 transit credits for citizen inspectors visiting project sites',
-        };
-      case 'custom':
-      default:
-        return {
-          title: `${customQuantity}x ${customBrand} Custom CSR Allocation`,
-          brand: customBrand,
-          category: customCategory,
-          unitFaceValue: customFaceValue,
-          quantity: customQuantity,
-          totalCost: customQuantity * customFaceValue,
-          currency,
-          description: `Custom package of ${customQuantity} pre-funded ${customBrand} vouchers`,
-        };
+    // When Local Merchant & Provider Voucher is selected
+    if (allocationSource === 'merchant_loyalty' && selectedMerchantProduct) {
+      const prod = selectedMerchantProduct;
+      return {
+        id: prod.id,
+        shortTitle: prod.rewardHeadline,
+        title: `1x ${prod.merchantName} - ${prod.rewardHeadline}`,
+        brand: prod.merchantName,
+        category: prod.category as any,
+        unitFaceValue: prod.voucherCost,
+        quantity: 1,
+        totalCost: prod.voucherCost,
+        currency: prod.currency,
+        badge: prod.rewardType.toUpperCase(),
+        accent: 'amber' as const,
+        description: prod.rewardDescription,
+        packagedItems: [
+          prod.rewardHeadline,
+          prod.title,
+          `Redeemable at: ${prod.merchantName} (${prod.parish}, ${prod.district || ''})`,
+          `CivicDuty 2% Fee: ${prod.currency} ${prod.commissionAmount} | 98% Merchant Escrow Payout: ${prod.currency} ${prod.merchantPayoutAmount.toLocaleString()}`,
+        ],
+        merchantProduct: prod,
+      };
     }
+
+    if (payPackage !== 'custom') {
+      const found = allocationCatalog.find((item) => item.id === payPackage);
+      if (found) {
+        return found;
+      }
+    }
+
+    const parsedCustomItems = customPackagedItemsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    return {
+      title: `${customQuantity}x ${customBrand} Custom CSR Allocation`,
+      brand: customBrand,
+      category: customCategory,
+      unitFaceValue: customFaceValue,
+      quantity: customQuantity,
+      totalCost: customQuantity * customFaceValue,
+      currency,
+      description: `Custom package of ${customQuantity} pre-funded ${customBrand} vouchers`,
+      packagedItems:
+        parsedCustomItems.length > 0
+          ? parsedCustomItems
+          : [`Redeemable for ${customBrand} packaged items up to ${currency} ${customFaceValue.toLocaleString()}`],
+      merchantProduct: undefined as MerchantProductService | undefined,
+    };
   };
 
   const handleExecuteDirectPayment = async (e?: React.FormEvent) => {
@@ -1512,23 +1963,63 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         throw new Error('Payment gateway verification failed');
       }
 
-      // 3. Mint Verified Digital Utility Vouchers
+      // 3. Mint Verified Digital Utility & Merchant Loyalty Vouchers
       const mintedVouchers: any[] = [];
-      const prefix = pkg.brand.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-      for (let i = 1; i <= pkg.quantity; i++) {
+      const prefix = pkg.brand.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'VCH';
+
+      if (pkg.merchantProduct) {
+        const prod = pkg.merchantProduct;
         const rand = Math.floor(1000 + Math.random() * 9000);
         const pin = Math.floor(100000 + Math.random() * 900000).toString();
-        const code = `${prefix}-${pkg.unitFaceValue >= 1000 ? `${Math.round(pkg.unitFaceValue / 1000)}K` : pkg.unitFaceValue}-${rand}-${selectedCountry}`;
+        const code = `VCH-${prefix}-${rand}-${selectedCountry}`;
         mintedVouchers.push({
           voucherCode: code,
           pin,
-          brand: pkg.brand,
-          category: pkg.category,
-          faceValue: pkg.unitFaceValue,
-          currency: pkg.currency,
+          brand: prod.merchantName,
+          title: prod.rewardHeadline,
+          category: prod.category,
+          faceValue: prod.voucherCost,
+          currency: prod.currency,
+          packagedItems: pkg.packagedItems,
           expiryDate: '2026-12-31',
-          redemptionUssdString: (selectedCountry === 'KE' ? '*141*CODE#' : '*303*CODE#').replace('CODE', code),
+          merchantId: prod.merchantId,
+          merchantName: prod.merchantName,
+          merchantLocation: {
+            parish: prod.parish,
+            subCounty: prod.subCounty,
+            district: prod.district,
+            address: prod.address,
+          },
+          rewardType: prod.rewardType,
+          rewardHeadline: prod.rewardHeadline,
+          merchantPayout: {
+            payoutAmount: prod.merchantPayoutAmount,
+            commissionAmount: prod.commissionAmount,
+            commissionRate: 0.02,
+            payoutStatus: 'escrowed' as const,
+          },
+          qrCodeData: prod.qrCodePayload || code,
+          barcode: prod.barcode || `${selectedCountry === 'KE' ? '710' : '890'}${Math.floor(100000000 + Math.random() * 900000000)}`,
+          redemptionUssdString: prod.ussdCode || (selectedCountry === 'KE' ? `*141*${rand}#` : `*303*${rand}#`),
         });
+      } else {
+        for (let i = 1; i <= pkg.quantity; i++) {
+          const rand = Math.floor(1000 + Math.random() * 9000);
+          const pin = Math.floor(100000 + Math.random() * 900000).toString();
+          const code = `${prefix}-${pkg.unitFaceValue >= 1000 ? `${Math.round(pkg.unitFaceValue / 1000)}K` : pkg.unitFaceValue}-${rand}-${selectedCountry}`;
+          mintedVouchers.push({
+            voucherCode: code,
+            pin,
+            brand: pkg.brand,
+            title: pkg.title.replace(/^\d+x\s+/i, ''),
+            category: pkg.category,
+            faceValue: pkg.unitFaceValue,
+            currency: pkg.currency,
+            packagedItems: pkg.packagedItems,
+            expiryDate: '2026-12-31',
+            redemptionUssdString: (selectedCountry === 'KE' ? '*141*CODE#' : '*303*CODE#').replace('CODE', code),
+          });
+        }
       }
 
       // 4. Batch Deposit into Sovereign Escrow Vault
@@ -1551,6 +2042,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       if (batchData.success && batchData.vouchers) {
         const taggedBatch = batchData.vouchers.map((v: EscrowPerkVoucher) => ({
           ...v,
+          packagedItems: v.packagedItems || pkg.packagedItems,
           vaultType: activeVaultKind,
           jurisdictionId: currentVaultJurisdictionMeta.jurisdictionId,
           jurisdictionLabel: currentVaultJurisdictionMeta.jurisdictionLabel,
@@ -1578,12 +2070,13 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           method: payMethod,
           vouchersCount: pkg.quantity,
           pkgTitle: pkg.title,
+          packagedItems: pkg.packagedItems,
           sponsor: paySponsorName,
           project: payProjectName,
           timestamp: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         });
 
-        toast(`Payment confirmed! ${pkg.quantity} vouchers deposited and locked in Escrow!`, 'emerald');
+        toast(`Payment confirmed! ${pkg.quantity} packaged vouchers deposited and locked in Escrow!`, 'emerald');
       }
     } catch {
       toast('Payment gateway processing error', 'rose');
@@ -1594,6 +2087,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
+      case 'supermarket':
+        return <ShoppingBag size={15} className="text-rose-500" />;
       case 'telco_data':
         return <Smartphone size={15} className="text-amber-500" />;
       case 'water_utility':
@@ -2087,6 +2582,27 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       <p className="text-[10.5px] text-slate-600 dark:text-slate-300 leading-snug bg-[#f8f9fa] dark:bg-[#0e1116] p-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
                         {cit.citationReason}
                       </p>
+
+                      {/* For Private Provider Vaults: Show specific provider perk form */}
+                      {activeVaultKind === 'provider_vault' && (
+                        <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono space-y-1">
+                          <div className="flex items-center justify-between font-bold text-emerald-800 dark:text-emerald-300">
+                            <span className="uppercase text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 font-black">
+                              {cit.rank === 1 ? '🎁 Freebie Perk' : cit.rank === 2 ? '🏷️ 20% Discount' : '🔄 BOGO / Gift Perk'}
+                            </span>
+                            <span className="text-[9px] text-slate-500 truncate max-w-[130px]">
+                              {currentVaultJurisdictionMeta.jurisdictionLabel}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-700 dark:text-slate-300 font-semibold">
+                            {cit.rank === 1
+                              ? 'Buy Haircut/Service → Free Wash & Care ($0)'
+                              : cit.rank === 2
+                              ? '20% OFF Braiding, Styling or Consultation'
+                              : 'BOGO (Buy 1 Get 1) or UGX 5,000 Loyalty Cashback'}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] grid grid-cols-3 gap-1 text-center text-[9.5px] font-mono">
@@ -2453,6 +2969,17 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               <Award size={12} />
               <span>CSR Leaderboard</span>
             </button>
+            <button
+              onClick={() => setActiveTab('merchant_studio')}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                activeTab === 'merchant_studio'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
+              }`}
+            >
+              <Store size={12} />
+              <span>Merchant Studio &amp; POS</span>
+            </button>
           </div>
         </div>
 
@@ -2501,188 +3028,254 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               </div>
             )}
 
-            {/* STEP 1: SELECT UTILITY PACK */}
-            <div>
-              <label className="text-xs font-bold text-slate-900 dark:text-slate-100 block mb-2">
-                1. Select Digital Utility Voucher Allocation to Buy & Escrow
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* Option 1: MTN/Safaricom Data 5x */}
-                <button
-                  type="button"
-                  onClick={() => setPayPackage('mtn_5')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    payPackage === 'mtn_5'
-                      ? 'border-amber-500 bg-amber-500/10 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-                        <Smartphone size={14} />
-                        <span>{selectedCountry === 'KE' ? 'Safaricom 2GB (5x)' : 'MTN 2GB Data (5x)'}</span>
-                      </div>
-                      {payPackage === 'mtn_5' && <Check size={14} className="text-amber-600 dark:text-amber-400" />}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      5 Watchdog data vouchers pre-funded for field photo uploads.
-                    </p>
+            {/* STEP 1: SELECT VOUCHER ALLOCATION TO BUY & ESCROW (DUAL MODE: PRE-PACKAGED VS LOCAL MERCHANT LAAS) */}
+            <div className="space-y-3">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                <div>
+                  <label className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 block">
+                    1. Select Voucher Allocation to Buy &amp; Escrow into Vault
+                  </label>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Buy into any Vault: CivicDuty receives a <strong>2% capped commission</strong> while <strong>98%</strong> is safely held in escrow for local merchants and utility providers until customer redemption.
+                  </p>
+                </div>
+
+                {/* Source Mode Toggle: Standard Packs vs Local Merchant Loyalty Vouchers */}
+                <div className="flex items-center gap-1 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setAllocationSource('utilities_supermarket')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      allocationSource === 'utilities_supermarket'
+                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Package size={13} />
+                    <span>Utilities &amp; Supermarkets</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAllocationSource('merchant_loyalty');
+                      if (!selectedMerchantProduct && filteredMerchantCatalog.length > 0) {
+                        setSelectedMerchantProduct(filteredMerchantCatalog[0]);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      allocationSource === 'merchant_loyalty'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
+                    }`}
+                  >
+                    <Store size={13} />
+                    <span>Local Merchant Vouchers (2% Fee)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* SEARCH BAR & PARISH LOCATION MATCHER */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={allocationSearchQuery}
+                    onChange={(e) => setAllocationSearchQuery(e.target.value)}
+                    placeholder={
+                      allocationSource === 'merchant_loyalty'
+                        ? 'Search local salon, haircut, bread, garage, grocer, Kireka, Kitintale...'
+                        : 'Search 1000 KSh, supermarket, sugar, oil, fuel, data, water...'
+                    }
+                    className="w-full pl-8 pr-8 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  />
+                  {allocationSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setAllocationSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Parish Location Filter (Essential for rewarding posters closer to home) */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300">
+                    <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Parish:</span>
                   </div>
-                  <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-400">Total Price</span>
-                    <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
-                      {selectedCountry === 'KE' ? 'KES 1,800' : 'UGX 50,000'}
+                  <select
+                    value={merchantLocationFilterParish}
+                    onChange={(e) => setMerchantLocationFilterParish(e.target.value)}
+                    className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="all">All Parishes in {selectedCountry}</option>
+                    {parishOptions.map((par) => (
+                      <option key={par} value={par}>
+                        {par}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* MODE A: PRE-PACKAGED DIGITAL UTILITY & SUPERMARKET VOUCHERS */}
+              {allocationSource === 'utilities_supermarket' && (
+                <div className="space-y-3">
+                  {/* Category Filter Bar for Packaged Vouchers */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                      {[
+                        { id: 'all' as const, label: `All Packages (${allocationCatalog.length})` },
+                        { id: 'supermarket' as const, label: 'Supermarket & 1,000 KSh Baskets (6)' },
+                        { id: 'telco_data' as const, label: 'Telco Data & Voice (2)' },
+                        { id: 'water_electricity' as const, label: 'Water & Power (2)' },
+                        { id: 'transit_fuel' as const, label: 'Scout Fuel & Transit (2)' },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setAllocationCategoryFilter(tab.id)}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                            allocationCategoryFilter === tab.id
+                              ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <span className="text-[10.5px] font-mono text-slate-500">
+                      Showing {filteredAllocationCatalog.length} utility packages + Custom Builder
                     </span>
                   </div>
-                </button>
 
-                {/* Option 2: MTN/Safaricom Data 10x */}
-                <button
-                  type="button"
-                  onClick={() => setPayPackage('mtn_10')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    payPackage === 'mtn_10'
-                      ? 'border-amber-500 bg-amber-500/10 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-                        <Smartphone size={14} />
-                        <span>{selectedCountry === 'KE' ? 'Safaricom 2GB (10x)' : 'MTN 2GB Mega (10x)'}</span>
+                  {/* Packaged Voucher Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {filteredAllocationCatalog.map((item) => {
+                  const isSelected = payPackage === item.id;
+                  const accentBorder =
+                    item.accent === 'rose'
+                      ? isSelected
+                        ? 'border-rose-500 bg-rose-500/10 ring-1 ring-rose-500/30'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-rose-400/60'
+                      : item.accent === 'amber'
+                      ? isSelected
+                        ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-400/60'
+                      : item.accent === 'cyan'
+                      ? isSelected
+                        ? 'border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500/30'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-cyan-400/60'
+                      : item.accent === 'yellow'
+                      ? isSelected
+                        ? 'border-yellow-500 bg-yellow-500/10 ring-1 ring-yellow-500/30'
+                        : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-yellow-400/60'
+                      : isSelected
+                      ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-400/60';
+
+                  const accentText =
+                    item.accent === 'rose'
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : item.accent === 'amber'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : item.accent === 'cyan'
+                      ? 'text-cyan-600 dark:text-cyan-400'
+                      : item.accent === 'yellow'
+                      ? 'text-yellow-600 dark:text-yellow-400'
+                      : 'text-emerald-600 dark:text-emerald-400';
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setPayPackage(item.id)}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${accentBorder}`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-start justify-between gap-1.5">
+                          <div className={`flex items-center gap-1.5 text-xs font-bold ${accentText}`}>
+                            {getCategoryIcon(item.category)}
+                            <span className="leading-snug">{item.shortTitle}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[9px] font-mono font-semibold text-slate-500 dark:text-slate-400">
+                              {item.badge}
+                            </span>
+                            {isSelected && <Check size={14} className={accentText} />}
+                          </div>
+                        </div>
+
+                        <div className="text-[10.5px] font-mono text-slate-600 dark:text-slate-300 font-semibold">
+                          {item.brand} · {item.quantity}x @ {item.currency} {item.unitFaceValue.toLocaleString()}
+                        </div>
+
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                          {item.description}
+                        </p>
+
+                        {/* Packaged Items Box */}
+                        <div className="p-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                          <div className="flex items-center gap-1 text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400">
+                            <Package size={11} className={accentText} />
+                            <span>Items Packaged in Voucher:</span>
+                          </div>
+                          <div className="text-[10px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                            {item.packagedItems.join(' · ')}
+                          </div>
+                        </div>
                       </div>
-                      {payPackage === 'mtn_10' && <Check size={14} className="text-amber-600 dark:text-amber-400" />}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      10 Data vouchers for sustained community watchdog tracking.
-                    </p>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-400">Total Price</span>
-                    <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
-                      {selectedCountry === 'KE' ? 'KES 3,600' : 'UGX 100,000'}
-                    </span>
-                  </div>
-                </button>
 
-                {/* Option 3: Clean Water Pool */}
-                <button
-                  type="button"
-                  onClick={() => setPayPackage('nwsc_5')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    payPackage === 'nwsc_5'
-                      ? 'border-cyan-500 bg-cyan-500/10 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-cyan-600 dark:text-cyan-400">
-                        <Droplet size={14} />
-                        <span>{selectedCountry === 'KE' ? 'Nairobi Water (5x)' : 'NWSC Water (5x)'}</span>
+                      <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-xs">
+                        <span className="text-[10px] font-mono text-slate-400">
+                          Total ({item.quantity} {item.quantity === 1 ? 'Voucher' : 'Vouchers'})
+                        </span>
+                        <span className={`font-bold font-mono ${accentText}`}>
+                          {item.currency} {item.totalCost.toLocaleString()}
+                        </span>
                       </div>
-                      {payPackage === 'nwsc_5' && <Check size={14} className="text-cyan-600 dark:text-cyan-400" />}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      5 Pre-paid water tokens for leak & water burst whistleblowers.
-                    </p>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-400">Total Price</span>
-                    <span className="font-bold font-mono text-cyan-600 dark:text-cyan-400">
-                      {selectedCountry === 'KE' ? 'KES 1,500' : 'UGX 50,000'}
-                    </span>
-                  </div>
-                </button>
+                    </button>
+                  );
+                })}
 
-                {/* Option 4: Electricity / Yaka */}
-                <button
-                  type="button"
-                  onClick={() => setPayPackage('yaka_5')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    payPackage === 'yaka_5'
-                      ? 'border-yellow-500 bg-yellow-500/10 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-yellow-600 dark:text-yellow-400">
-                        <Zap size={14} />
-                        <span>{selectedCountry === 'KE' ? 'KPLC Stima (5x)' : 'Umeme Yaka (5x)'}</span>
-                      </div>
-                      {payPackage === 'yaka_5' && <Check size={14} className="text-yellow-600 dark:text-yellow-400" />}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      5 Pre-paid electricity tokens for infrastructure audits.
-                    </p>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-400">Total Price</span>
-                    <span className="font-bold font-mono text-yellow-600 dark:text-yellow-400">
-                      {selectedCountry === 'KE' ? 'KES 2,500' : 'UGX 75,000'}
-                    </span>
-                  </div>
-                </button>
-
-                {/* Option 5: SafeBoda Rapid Field Ride */}
-                <button
-                  type="button"
-                  onClick={() => setPayPackage('safeboda_10')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    payPackage === 'safeboda_10'
-                      ? 'border-emerald-500 bg-emerald-500/10 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        <Bike size={14} />
-                        <span>SafeBoda Transit (10x)</span>
-                      </div>
-                      {payPackage === 'safeboda_10' && <Check size={14} className="text-emerald-600 dark:text-emerald-400" />}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      10 Transit credits for rapid site verification visits.
-                    </p>
-                  </div>
-                  <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-400">Total Price</span>
-                    <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                      {selectedCountry === 'KE' ? 'KES 1,500' : 'UGX 50,000'}
-                    </span>
-                  </div>
-                </button>
-
-                {/* Option 6: Custom Allocation */}
+                {/* Custom Allocation Builder Card */}
                 <button
                   type="button"
                   onClick={() => setPayPackage('custom')}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 ${
                     payPackage === 'custom'
-                      ? 'border-indigo-500 bg-indigo-500/10 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 hover:border-slate-300'
+                      ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/30'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-indigo-400/60'
                   }`}
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400">
                         <SlidersHorizontal size={14} strokeWidth={1.75} />
-                        <span>Custom CSR Allocation</span>
+                        <span>Custom Packaged Voucher</span>
                       </div>
                       {payPackage === 'custom' && <Check size={14} className="text-indigo-600 dark:text-indigo-400" />}
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Custom voucher count and value tailored to your project budget.
+                      Build your own supermarket, utility, or retail shopping voucher with custom face value (e.g. 1,000 KSh) and itemized basket list.
                     </p>
+                    <div className="p-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[10px] text-slate-600 dark:text-slate-300">
+                      <span className="font-mono font-bold text-[9.5px] uppercase text-indigo-600 dark:text-indigo-400 block mb-0.5">
+                        Custom Basket Preview:
+                      </span>
+                      {customPackagedItemsInput}
+                    </div>
                   </div>
-                  <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-400">Custom Pool</span>
+                  <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-xs">
+                    <span className="text-[10px] font-mono text-slate-400">Custom Pool</span>
                     <span className="font-bold font-mono text-indigo-600 dark:text-indigo-400">
-                      {getPackageDetails().currency} {getPackageDetails().totalCost.toLocaleString()}
+                      {getPackageDetails().currency} {(customQuantity * customFaceValue).toLocaleString()}
                     </span>
                   </div>
                 </button>
@@ -2690,55 +3283,210 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
               {/* Custom Package Form (If selected) */}
               {payPackage === 'custom' && (
-                <div className="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-indigo-500/30 grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="text-[10px] mono uppercase font-bold text-slate-500 block mb-1">Brand</label>
-                    <select
-                      value={customBrand}
-                      onChange={(e) => setCustomBrand(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5 text-xs font-medium"
-                    >
-                      <option value="MTN Uganda">MTN Uganda</option>
-                      <option value="Airtel Uganda">Airtel Uganda</option>
-                      <option value="NWSC Uganda">NWSC Uganda</option>
-                      <option value="Umeme Power">Umeme Power</option>
-                      <option value="SafeBoda">SafeBoda</option>
-                      <option value="Safaricom">Safaricom</option>
-                      <option value="Kenya Power (KPLC)">Kenya Power (KPLC)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] mono uppercase font-bold text-slate-500 block mb-1">Voucher Quantity</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={customQuantity}
-                      onChange={(e) => setCustomQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold text-center"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] mono uppercase font-bold text-slate-500 block mb-1">Unit Face Value</label>
-                    <input
-                      type="number"
-                      step={1000}
-                      value={customFaceValue}
-                      onChange={(e) => setCustomFaceValue(Math.max(100, parseInt(e.target.value) || 1000))}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5 text-xs font-bold text-center"
-                    />
-                  </div>
-                  <div className="flex flex-col justify-end">
-                    <div className="text-[10px] text-slate-400 mb-0.5">Total Settlement</div>
-                    <div className="font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">
-                      {getPackageDetails().currency} {(customQuantity * customFaceValue).toLocaleString()}
+                <div className="mt-3 p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-indigo-500/30 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block mb-1">Supermarket / Utility Brand</label>
+                      <select
+                        value={customBrand}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomBrand(val);
+                          if (val.toLowerCase().includes('supermarket') || val.toLowerCase().includes('naivas') || val.toLowerCase().includes('carrefour') || val.toLowerCase().includes('pharmacy')) {
+                            setCustomCategory('supermarket');
+                          } else if (val.toLowerCase().includes('mtn') || val.toLowerCase().includes('airtel') || val.toLowerCase().includes('safaricom')) {
+                            setCustomCategory('telco_data');
+                          } else if (val.toLowerCase().includes('water') || val.toLowerCase().includes('nwsc')) {
+                            setCustomCategory('water_utility');
+                          } else if (val.toLowerCase().includes('power') || val.toLowerCase().includes('umeme')) {
+                            setCustomCategory('electricity');
+                          } else {
+                            setCustomCategory('transit_credit');
+                          }
+                        }}
+                        className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg p-1.5 text-xs font-medium"
+                      >
+                        <option value="Naivas / Quality Supermarket">Naivas / Quality Supermarket</option>
+                        <option value="Carrefour East Africa">Carrefour East Africa</option>
+                        <option value="Capital Shoppers / Quickmart">Capital Shoppers / Quickmart</option>
+                        <option value="Goodlife / Vine Pharmacy">Goodlife / Vine Pharmacy</option>
+                        <option value="TotalEnergies / Shell Fuel">TotalEnergies / Shell Fuel</option>
+                        <option value="MTN Uganda">MTN Uganda</option>
+                        <option value="Airtel Uganda">Airtel Uganda</option>
+                        <option value="NWSC Uganda">NWSC Uganda</option>
+                        <option value="Umeme Power">Umeme Power</option>
+                        <option value="SafeBoda">SafeBoda</option>
+                        <option value="Safaricom">Safaricom</option>
+                        <option value="Kenya Power (KPLC)">Kenya Power (KPLC)</option>
+                      </select>
                     </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block mb-1">Voucher Quantity</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={customQuantity}
+                        onChange={(e) => setCustomQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg p-1.5 text-xs font-bold text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block mb-1">Unit Face Value ({getPackageDetails().currency})</label>
+                      <input
+                        type="number"
+                        step={500}
+                        value={customFaceValue}
+                        onChange={(e) => setCustomFaceValue(Math.max(100, parseInt(e.target.value) || 1000))}
+                        className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg p-1.5 text-xs font-bold text-center"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-end">
+                      <div className="text-[10px] text-slate-400 mb-0.5">Total Settlement</div>
+                      <div className="font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">
+                        {getPackageDetails().currency} {(customQuantity * customFaceValue).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block mb-1">
+                      Items Packaged in Voucher (Comma-Separated Shopping Basket)
+                    </label>
+                    <input
+                      type="text"
+                      value={customPackagedItemsInput}
+                      onChange={(e) => setCustomPackagedItemsInput(e.target.value)}
+                      placeholder="e.g. 2kg Maize Flour (Unga), 1L Cooking Oil, 1kg Sugar, 2kg Rice, Bar of Soap & Milk"
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                    />
                   </div>
                 </div>
               )}
             </div>
+          )}
 
-            {/* STEP 2: SPONSOR & PROJECT DETAILS */}
+          {/* MODE B: LOCAL MERCHANT & SERVICE PROVIDER VOUCHERS (LAAS · 2% FEE · PARISH PROXIMITY) */}
+            {allocationSource === 'merchant_loyalty' && (
+              <div className="space-y-3">
+                {/* Reward Type Filter Pills */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                    {[
+                      { id: 'all' as const, label: `All Offers (${filteredMerchantCatalog.length})` },
+                      { id: 'discount' as const, label: '🏷️ Discounts (e.g. 20% off)' },
+                      { id: 'freebie' as const, label: '🎁 Freebies (e.g. haircut + wash)' },
+                      { id: 'bogo' as const, label: '🔄 BOGO (Buy 1 get 1)' },
+                      { id: 'gift' as const, label: '🛍️ Gifts (Buy X win Y)' },
+                      { id: 'cashback' as const, label: '💰 Cashback (Spend 50k get 5k)' },
+                    ].map((chip) => (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        onClick={() => setMerchantRewardTypeFilter(chip.id)}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                          merchantRewardTypeFilter === chip.id
+                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <ShieldCheck size={13} />
+                    <span>CivicDuty 2% Capped Fee · 98% Merchant Escrow Settlement</span>
+                  </div>
+                </div>
+
+                {/* Grid of Merchant Vouchers */}
+                {filteredMerchantCatalog.length === 0 ? (
+                  <div className="p-8 text-center text-xs font-mono text-slate-500 rounded-xl border border-dashed border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                    <Store size={32} className="mx-auto text-slate-400" />
+                    <div>No merchant vouchers matching this filter in {merchantLocationFilterParish}.</div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMerchantLocationFilterParish('all');
+                        setMerchantRewardTypeFilter('all');
+                      }}
+                      className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-semibold text-xs cursor-pointer"
+                    >
+                      Reset Parish &amp; Offer Filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {filteredMerchantCatalog.map((prod) => {
+                      const isSelected = selectedMerchantProduct?.id === prod.id;
+                      return (
+                        <button
+                          key={prod.id}
+                          type="button"
+                          onClick={() => setSelectedMerchantProduct(prod)}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/30'
+                              : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-400/60'
+                          }`}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                {prod.rewardType.toUpperCase()}
+                              </span>
+                              {isSelected && <Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 font-bold" />}
+                            </div>
+
+                            <div>
+                              <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <Store size={11} />
+                                <span className="truncate">{prod.merchantName}</span>
+                              </div>
+                              <h4 className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1">
+                                {prod.rewardHeadline}
+                              </h4>
+                            </div>
+
+                            <p className="text-[10.5px] text-slate-600 dark:text-slate-300 line-clamp-2 leading-snug">
+                              {prod.rewardDescription}
+                            </p>
+
+                            <div className="text-[10px] font-mono text-slate-500 flex items-center gap-1 pt-0.5">
+                              <MapPin size={11} className="text-emerald-600 shrink-0" />
+                              <span className="truncate font-semibold">{prod.parish} · {prod.district || prod.subCounty}</span>
+                            </div>
+
+                            {/* 2% Commission vs 98% Merchant Escrow Breakdown */}
+                            <div className="p-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[9.5px] font-mono space-y-0.5">
+                              <div className="flex items-center justify-between text-slate-500">
+                                <span>Platform Fee (2%):</span>
+                                <span className="text-amber-600 font-semibold">{prod.currency} {prod.commissionAmount.toLocaleString()}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-bold">
+                                <span>Merchant Payout (98%):</span>
+                                <span>{prod.currency} {prod.merchantPayoutAmount.toLocaleString()} (In Escrow)</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-xs">
+                            <span className="text-[10px] font-mono text-slate-400">Voucher Cost</span>
+                            <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400 text-sm">
+                              {prod.currency} {prod.voucherCost.toLocaleString()}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* STEP 2: SPONSOR & PROJECT DETAILS */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-900 dark:text-slate-100 block">
                 2. Sponsoring Entity & Target Project Allocation
@@ -3254,6 +4002,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   onChange={(e) => setManualBrand(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
+                  <option value="Quality Supermarket / Carrefour">Quality / Carrefour Supermarket (1,000 KSh / 30K UGX Basket)</option>
+                  <option value="Naivas / Carrefour Supermarket">Naivas / Carrefour Supermarket (1,000 KSh Basket)</option>
                   <option value="MTN Uganda">MTN Uganda (Telco)</option>
                   <option value="Airtel Uganda">Airtel Uganda (Telco)</option>
                   <option value="NWSC Uganda">NWSC Uganda (Water)</option>
@@ -3274,6 +4024,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   onChange={(e) => setManualCategory(e.target.value as any)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
+                  <option value="supermarket">Supermarket Shopping Basket (1,000 KSh / 30K UGX)</option>
                   <option value="telco_data">Mobile Telco Data</option>
                   <option value="water_utility">Clean Water Bill Waiver</option>
                   <option value="electricity">Prepaid Electricity Token</option>
@@ -3403,6 +4154,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400 mono">
                   <span>• Transit Pass: <strong>100 XP</strong></span>
                   <span>• Mobile Data Pack: <strong>150 XP</strong></span>
+                  <span>• Supermarket 1,000 KSh Basket: <strong>175 XP</strong></span>
                   <span>• Water / Power Token: <strong>200 XP</strong></span>
                   <span>• Cooldown Limit: <strong>Max 1 Claim / 7 Days</strong></span>
                 </div>
@@ -3523,6 +4275,12 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                           </span>
                         </div>
                         <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{v.title}</div>
+                        {v.packagedItems && v.packagedItems.length > 0 && (
+                          <div className="text-[10px] text-slate-600 dark:text-slate-300 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2 py-1 leading-snug">
+                            <span className="font-mono font-bold text-[9px] uppercase text-rose-600 dark:text-rose-400">Packaged Items: </span>
+                            {v.packagedItems.join(' · ')}
+                          </div>
+                        )}
                         <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">
                           {v.reimbursementFraming || 'Field Evidence Cost Reimbursement'}
                         </div>
@@ -3650,7 +4408,27 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
               One-click pre-load certified batches for sandbox demonstration and live field tests in [{selectedCountry}]:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="p-3.5 rounded-xl border border-rose-500/40 bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-xs">
+                    <ShoppingBag size={15} />
+                    <span>5x 1,000 KSh Supermarket</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    {selectedCountry === 'KE' ? 'Naivas / Carrefour 1,000 KSh' : 'Quality / Carrefour 30K UGX (1,000 KSh)'} basket: Unga, Oil, Sugar, Rice, Soap &amp; Milk.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSeedPack('supermarket')}
+                  disabled={isUploading}
+                  className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Deposit 5x 1,000 KSh Basket
+                </button>
+              </div>
+
               <div className="p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
@@ -3731,6 +4509,31 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB 6: MERCHANT LOYALTY STUDIO & POS COUNTER REDEEM (LAAS) */}
+        {activeTab === 'merchant_studio' && (
+          <div className="space-y-4 animate-fade-in">
+            <MerchantLoyaltyStudio
+              selectedCountry={selectedCountry}
+              activeMerchantDept={selectedProviderDept}
+              currentVouchers={vouchers}
+              onVoucherCreated={(product) => {
+                setMerchantProducts(getStoredMerchantProducts());
+                toast(`Created ${product.rewardHeadline} for ${product.merchantName}! Published to Marketplace.`, 'emerald');
+              }}
+              onVoucherRedeemed={(voucher) => {
+                setVouchers((prev) => prev.map((v) => (v.id === voucher.id ? voucher : v)));
+              }}
+              onSelectForVaultDeposit={(product) => {
+                setSelectedMerchantProduct(product);
+                setAllocationSource('merchant_loyalty');
+                setActiveTab('pay');
+                toast(`Selected ${product.merchantName} voucher for Vault Deposit!`, 'emerald');
+                studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            />
           </div>
         )}
       </div>
@@ -3845,6 +4648,12 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       <td className="py-3 px-3">
                         <div className="font-bold text-slate-900 dark:text-slate-100">{v.brand}</div>
                         <div className="text-[10px] text-slate-500 dark:text-slate-400">{v.title}</div>
+                        {v.packagedItems && v.packagedItems.length > 0 && (
+                          <div className="text-[9.5px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                            <span className="font-mono font-bold text-rose-600 dark:text-rose-400">Packaged: </span>
+                            {v.packagedItems.join(' · ')}
+                          </div>
+                        )}
                         <div className="text-[9px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
                           {v.reimbursementFraming || 'Field Evidence Cost Reimbursement'}
                         </div>

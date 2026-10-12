@@ -787,16 +787,50 @@ export type VaultKind =
   | 'scout_bounty_vault'
   | 'individual_vault';
 
+// --- PHASE 7: MERCHANT LOYALTY & VOUCHER MARKETPLACE (LOYALTY-AS-A-SERVICE) ---
+export type MerchantVoucherRewardType = 'discount' | 'freebie' | 'bogo' | 'gift' | 'cashback';
+
+export interface MerchantProductService {
+  id: string;
+  merchantId: string;
+  merchantName: string;
+  category: string;
+  parish: string;
+  subCounty?: string;
+  district?: string;
+  address?: string;
+  country: CountryCode;
+  title: string;
+  basePrice: number;
+  currency: string;
+  rewardType: MerchantVoucherRewardType;
+  rewardHeadline: string; // e.g. "20% OFF Braiding", "Buy Haircut Get Free Wash", "Buy 1 Get 1 Free"
+  rewardDescription: string;
+  discountPercent?: number; // e.g. 20
+  voucherCost: number; // Face value paid to buy into vault
+  commissionPct: number; // Max 2% (0.02)
+  commissionAmount: number; // 2% platform fee
+  merchantPayoutAmount: number; // 98% held in escrow
+  payoutStatus?: 'escrowed' | 'released' | 'refunded';
+  qrCodePayload?: string;
+  barcode?: string;
+  ussdCode?: string;
+  smsCode?: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export interface EscrowPerkVoucher {
   id: string;
   voucherCode: string;
   pin?: string;
-  category: 'telco_data' | 'water_utility' | 'electricity' | 'transit_credit' | 'supermarket' | 'other';
+  category: 'telco_data' | 'water_utility' | 'electricity' | 'transit_credit' | 'supermarket' | 'other' | string;
   brand: string;
   title: string;
   faceValue: number;
   currency: string;
   country: string;
+  packagedItems?: string[];
   sponsoredBy: string;
   sponsorType: 'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron';
   vaultType?: VaultKind;
@@ -820,6 +854,28 @@ export interface EscrowPerkVoucher {
   ethicalPledgeSealed?: boolean;
   selfRedeemedByCitizen?: boolean;
   xpSpent?: number;
+  // Merchant Loyalty & Provider Metadata
+  merchantId?: string;
+  merchantName?: string;
+  merchantLocation?: {
+    parish: string;
+    subCounty?: string;
+    district?: string;
+    address?: string;
+  };
+  rewardType?: MerchantVoucherRewardType;
+  rewardHeadline?: string;
+  merchantPayout?: {
+    payoutAmount: number; // 98% of face value
+    commissionAmount: number; // 2% capped CivicDuty platform fee
+    commissionRate: number; // e.g. 0.02
+    payoutStatus: 'escrowed' | 'released' | 'refunded';
+    releasedAt?: string;
+    payoutReference?: string;
+    payoutMethod?: string;
+  };
+  qrCodeData?: string;
+  barcode?: string;
   commissionBreakdown?: {
     faceValueTotal: number;
     wholesaleDiscountPct: number;
@@ -899,13 +955,24 @@ export type IdentityDocumentType =
 export interface CdOpsPromotionalAd {
   id: string;
   title: string;
-  category: 'bodaboda' | 'bus' | 'train' | 'market' | 'terminal' | 'radio' | 'noticeboard' | 'ussd';
+  category:
+    | 'bodaboda'
+    | 'bus'
+    | 'train'
+    | 'market'
+    | 'taxi'
+    | 'vht'
+    | 'kit'
+    | 'terminal'
+    | 'radio'
+    | 'noticeboard'
+    | 'ussd';
   categoryLabel: string;
   tagline: string;
   summary: string;
   imageSrc: string;
   realLifePosterSrc?: string;
-  adFormatType?: 'fleet_livery_proposal' | 'grassroots_billboard';
+  adFormatType?: 'fleet_livery_proposal' | 'grassroots_billboard' | 'real_life_street_poster';
   callToAction: string;
   ctaType: 'ussd' | 'specs' | 'report' | 'perks' | 'custom';
   ctaValue?: string;

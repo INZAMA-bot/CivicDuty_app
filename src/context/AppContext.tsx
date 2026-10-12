@@ -127,8 +127,8 @@ interface AppContextType {
   setTrafficSignalFilter: (sig: 'all' | 'red' | 'amber' | 'green') => void;
   feedTab: 'following' | 'trending' | 'near_me';
   setFeedTab: (t: 'following' | 'trending' | 'near_me') => void;
-  wallTab: 'posts' | 'announcements' | 'projects';
-  setWallTab: (t: 'posts' | 'announcements' | 'projects') => void;
+  wallTab: 'posts' | 'announcements' | 'projects' | 'vouchers';
+  setWallTab: (t: 'posts' | 'announcements' | 'projects' | 'vouchers') => void;
   govTab: 'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved';
   setGovTab: (t: 'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved') => void;
   searchQuery: string;
@@ -973,7 +973,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [trafficSignalFilter, setTrafficSignalFilter] = useState<'all' | 'red' | 'amber' | 'green'>('all');
   const [feedTab, setFeedTab] = useState<'following' | 'trending' | 'near_me'>('following');
-  const [wallTab, setWallTab] = useState<'posts' | 'announcements' | 'projects'>('posts');
+  const [wallTab, setWallTab] = useState<'posts' | 'announcements' | 'projects' | 'vouchers'>('posts');
   const [govTab, setGovTab] = useState<'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 

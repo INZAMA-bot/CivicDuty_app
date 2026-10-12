@@ -518,6 +518,8 @@ Session ended.`;
         return '💧 Water Utility Credit (Leak & Sanitation Whistleblower Recognition)';
       case 'electricity':
         return '⚡ Power Grid Credit (Transformer & Line Safety Audit Recognition)';
+      case 'supermarket':
+        return '🛒 Supermarket Shopping Voucher (1,000 KSh / 30,000 UGX Packaged Household Goods)';
       default:
         return '🎁 Community Service Field Cost Reimbursement';
     }
@@ -541,6 +543,37 @@ Session ended.`;
 
   const inMemoryPerkVouchers: any[] = [
     {
+      id: 'PV-UG-000',
+      voucherCode: 'SHOP-1000KSH-30K-UG',
+      pin: '7410',
+      category: 'supermarket',
+      brand: 'Quality Supermarket / Carrefour',
+      title: '1,000 KSh Equiv. (30,000 UGX) Supermarket Shopping Basket Voucher',
+      faceValue: 30000,
+      currency: 'UGX',
+      country: 'UG',
+      packagedItems: [
+        '2kg Maize Flour (Posho / Unga)',
+        '1L Fresh Cooking Oil',
+        '1kg Sugar & Tea Leaves',
+        '2kg Rice & Bar of Laundry Soap',
+        'Milk, Bread & Till Essentials (Worth 1,000 KSh / 30,000 UGX)',
+      ],
+      sponsoredBy: 'Quality Supermarket & Community Patron Pool',
+      sponsorType: 'corporate_csr',
+      vaultType: 'provider_vault',
+      jurisdictionLabel: 'Quality Supermarket Community Desk',
+      batchId: 'BATCH-SUPERMARKET-UG-01',
+      status: 'escrow_unassigned',
+      createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
+      redemptionUssdString: '*284*33*7410#',
+      expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('supermarket'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(30000, false),
+    },
+    {
       id: 'PV-UG-001',
       voucherCode: 'MTN-2GB-8841-CIVIC',
       pin: '8841',
@@ -550,6 +583,7 @@ Session ended.`;
       faceValue: 10000,
       currency: 'UGX',
       country: 'UG',
+      packagedItems: ['2GB 4G/5G Data Bundle', '30 On-Net Voice Mins', 'Zero-Rated Civic Evidence Upload'],
       sponsoredBy: 'Seyani Brothers Construction Ltd (CSR Allocation)',
       sponsorType: 'contractor',
       projectId: 'PRJ-KLA-001',
@@ -574,6 +608,7 @@ Session ended.`;
       faceValue: 10000,
       currency: 'UGX',
       country: 'UG',
+      packagedItems: ['2GB 4G/5G Data Bundle', '30 On-Net Voice Mins', 'Zero-Rated Civic Evidence Upload'],
       sponsoredBy: 'Seyani Brothers Construction Ltd (CSR Allocation)',
       sponsorType: 'contractor',
       projectId: 'PRJ-KLA-001',
@@ -598,6 +633,7 @@ Session ended.`;
       faceValue: 8000,
       currency: 'UGX',
       country: 'UG',
+      packagedItems: ['1.5GB 4G Data Bundle', '25 Voice Minutes', '100 SMS Pack'],
       sponsoredBy: 'KCCA Urban Infrastructure Division',
       sponsorType: 'authority',
       batchId: 'BATCH-KCCA-GOV-02',
@@ -620,6 +656,7 @@ Session ended.`;
       faceValue: 10000,
       currency: 'UGX',
       country: 'UG',
+      packagedItems: ['6,500 Litres Prepaid Domestic Water', 'Public Standpipe / Smart Meter Token'],
       sponsoredBy: 'National Water & Sewerage Corp (Leakage Reporting Program)',
       sponsorType: 'authority',
       batchId: 'BATCH-NWSC-CSR-01',
@@ -642,6 +679,7 @@ Session ended.`;
       faceValue: 15000,
       currency: 'UGX',
       country: 'UG',
+      packagedItems: ['45 kWh Domestic Power Units', 'Instant 20-Digit STS Meter Token'],
       sponsoredBy: 'Ministry of Energy & Mineral Development',
       sponsorType: 'authority',
       batchId: 'BATCH-MEMD-01',
@@ -664,6 +702,7 @@ Session ended.`;
       faceValue: 5000,
       currency: 'UGX',
       country: 'UG',
+      packagedItems: ['Cashless SafeBoda Ride Credit', '2L Stage Fuel Voucher Equivalent'],
       sponsoredBy: 'Seyani Brothers Construction Ltd (CSR Allocation)',
       sponsorType: 'contractor',
       projectId: 'PRJ-KLA-001',
@@ -679,6 +718,37 @@ Session ended.`;
       commissionBreakdown: buildCommissionBreakdown(5000, false),
     },
     {
+      id: 'PV-KE-000',
+      voucherCode: 'NAIVAS-1000KSH-8820-KE',
+      pin: '8820',
+      category: 'supermarket',
+      brand: 'Naivas / Carrefour Supermarket',
+      title: '1,000 KSh Supermarket Shopping Basket Voucher',
+      faceValue: 1000,
+      currency: 'KES',
+      country: 'KE',
+      packagedItems: [
+        '2kg Maize Flour (Unga)',
+        '1L Fresh Cooking Oil',
+        '1kg Sugar & Tea Leaves',
+        '2kg Rice & Bar of Laundry Soap',
+        'Milk, Bread & Supermarket Essentials (Worth 1,000 KSh)',
+      ],
+      sponsoredBy: 'Naivas Supermarket Community Desk',
+      sponsorType: 'corporate_csr',
+      vaultType: 'provider_vault',
+      jurisdictionLabel: 'Naivas Supermarket Community Desk',
+      batchId: 'BATCH-NAIVAS-KE-01',
+      status: 'escrow_unassigned',
+      createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
+      redemptionUssdString: '*284*33*8820#',
+      expiryDate: '2026-12-31',
+      isDemo: true,
+      reimbursementFraming: getReimbursementLabel('supermarket'),
+      ethicalPledgeSealed: true,
+      commissionBreakdown: buildCommissionBreakdown(1000, false),
+    },
+    {
       id: 'PV-KE-001',
       voucherCode: 'SAF-5GB-7712-KE',
       pin: '7712',
@@ -688,6 +758,7 @@ Session ended.`;
       faceValue: 500,
       currency: 'KES',
       country: 'KE',
+      packagedItems: ['5GB Safaricom 4G/5G Data', 'Zero-Rated Evidence Upload'],
       sponsoredBy: 'Nairobi City County Public Works',
       sponsorType: 'authority',
       batchId: 'BATCH-NCC-01',
@@ -710,6 +781,7 @@ Session ended.`;
       faceValue: 1000,
       currency: 'KES',
       country: 'KE',
+      packagedItems: ['42 kWh KPLC Prepaid Stima Units', '20-Digit STS Meter Token'],
       sponsoredBy: 'H-Young Engineering Contractors',
       sponsorType: 'contractor',
       batchId: 'BATCH-HYOUNG-CSR-01',
@@ -732,6 +804,7 @@ Session ended.`;
       faceValue: 2500,
       currency: 'NGN',
       country: 'NG',
+      packagedItems: ['3GB MTN 4G/5G Data', '50 Voice Minutes'],
       sponsoredBy: 'Julius Berger Nigeria PLC (CSR Watchdog Pool)',
       sponsorType: 'contractor',
       batchId: 'BATCH-JBN-NG-01',
@@ -868,7 +941,17 @@ Session ended.`;
       const v = vouchers[i];
       const code = v.voucherCode || v.code || `VOUCH-${Math.floor(100000 + Math.random() * 900000)}`;
       const brand = v.brand || 'Utility Partner';
-      const category = v.category || (brand.toLowerCase().includes('data') || brand.toLowerCase().includes('mtn') || brand.toLowerCase().includes('airtel') ? 'telco_data' : 'water_utility');
+      const category =
+        v.category ||
+        (brand.toLowerCase().includes('supermarket') ||
+        brand.toLowerCase().includes('naivas') ||
+        brand.toLowerCase().includes('carrefour') ||
+        brand.toLowerCase().includes('quality') ||
+        brand.toLowerCase().includes('shoppers')
+          ? 'supermarket'
+          : brand.toLowerCase().includes('data') || brand.toLowerCase().includes('mtn') || brand.toLowerCase().includes('airtel')
+          ? 'telco_data'
+          : 'water_utility');
       const fv = Number(v.faceValue) || 10000;
 
       const record = {
@@ -877,10 +960,11 @@ Session ended.`;
         pin: v.pin || code.split('-').pop() || '',
         category,
         brand,
-        title: v.title || `${fv} ${v.currency || 'UGX'} ${brand} Voucher`,
+        title: v.title || `${fv.toLocaleString()} ${v.currency || 'UGX'} ${brand} Voucher`,
         faceValue: fv,
         currency: v.currency || (targetCountry === 'KE' ? 'KES' : 'UGX'),
         country: targetCountry,
+        packagedItems: Array.isArray(v.packagedItems) ? v.packagedItems : undefined,
         sponsoredBy: targetSponsor,
         sponsorType: targetSponsorType,
         projectId: projectId || undefined,
@@ -891,6 +975,20 @@ Session ended.`;
         isDemo: Boolean(isDemo),
         reimbursementFraming: getReimbursementLabel(category),
         ethicalPledgeSealed: true,
+        // Merchant Loyalty & Provider Metadata
+        merchantId: v.merchantId || undefined,
+        merchantName: v.merchantName || undefined,
+        merchantLocation: v.merchantLocation || undefined,
+        rewardType: v.rewardType || undefined,
+        rewardHeadline: v.rewardHeadline || undefined,
+        merchantPayout: v.merchantPayout || (v.merchantId ? {
+          payoutAmount: Math.round(fv * 0.98),
+          commissionAmount: Math.round(fv * 0.02),
+          commissionRate: 0.02,
+          payoutStatus: 'escrowed',
+        } : undefined),
+        qrCodeData: v.qrCodePayload || v.qrCodeData || code,
+        barcode: v.barcode || (code.replace(/[^0-9]/g, '').padEnd(12, '0').slice(0, 12)),
         commissionBreakdown: buildCommissionBreakdown(fv, isByov),
         redemptionUssdString: v.redemptionUssdString || (targetCountry === 'KE' ? '*141*CODE#' : '*303*CODE#').replace('CODE', code),
         expiryDate: v.expiryDate || '2026-12-31',
@@ -975,6 +1073,173 @@ Session ended.`;
       success: true,
       voucher: targetVoucher,
       message: `Voucher ${targetVoucher.voucherCode} dispatched to ${recipientName} (${recipientContact}). SMS push sent.`,
+    });
+  });
+
+  // =========================================================================
+  // ITEM 6: MERCHANT LOYALTY-AS-A-SERVICE & POS VOUCHER REDEMPTION
+  // =========================================================================
+  // In-memory merchant products store
+  const inMemoryMerchantProducts: any[] = [];
+
+  // GET /api/merchant-loyalty/products - List products created by service providers
+  app.get('/api/merchant-loyalty/products', (req, res) => {
+    const { country = 'UG', parish, merchantId, rewardType } = req.query as Record<string, string>;
+    let list = [...inMemoryMerchantProducts];
+    if (country) {
+      list = list.filter((p) => p.country?.toUpperCase() === country.toUpperCase());
+    }
+    if (merchantId) {
+      list = list.filter((p) => p.merchantId === merchantId);
+    }
+    if (rewardType) {
+      list = list.filter((p) => p.rewardType === rewardType);
+    }
+    if (parish && !parish.toLowerCase().includes('all')) {
+      const q = parish.toLowerCase().replace(/parish|ward/g, '').trim();
+      list = list.filter((p) => (p.parish || '').toLowerCase().includes(q));
+    }
+    res.json({
+      success: true,
+      total: list.length,
+      products: list,
+    });
+  });
+
+  // POST /api/merchant-loyalty/create-product-voucher - Merchant mints customized voucher
+  app.post('/api/merchant-loyalty/create-product-voucher', (req, res) => {
+    const {
+      merchantId,
+      merchantName,
+      category = 'hospitality',
+      parish,
+      subCounty,
+      district,
+      address,
+      country = 'UG',
+      title,
+      basePrice,
+      currency,
+      rewardType = 'discount',
+      rewardHeadline,
+      rewardDescription,
+      discountPercent,
+      voucherCost,
+    } = req.body || {};
+
+    if (!merchantName || !title || !voucherCost) {
+      return res.status(400).json({ error: 'merchantName, title, and voucherCost are required' });
+    }
+
+    const cost = Number(voucherCost) || 10000;
+    // Strictly cap commission at 2%
+    const commissionPct = 0.02;
+    const commissionAmount = Math.round(cost * commissionPct);
+    const merchantPayoutAmount = cost - commissionAmount;
+
+    const id = 'merch-' + Math.random().toString(36).substring(2, 9);
+    const codeSuffix = Math.floor(1000 + Math.random() * 9000);
+    const barcode = `${country === 'KE' ? '710' : '890'}${Math.floor(100000000 + Math.random() * 900000000)}`;
+
+    const newProduct = {
+      id,
+      merchantId: merchantId || `merch_${Date.now()}`,
+      merchantName,
+      category,
+      parish: parish || 'Kitintale Parish',
+      subCounty: subCounty || 'Nakawa Division',
+      district: district || 'Kampala',
+      address: address || 'Main Commercial Street',
+      country,
+      title,
+      basePrice: Number(basePrice) || cost,
+      currency: currency || (country === 'KE' ? 'KES' : 'UGX'),
+      rewardType,
+      rewardHeadline: rewardHeadline || `${title} Special Offer`,
+      rewardDescription: rewardDescription || 'Redeemable at service provider location.',
+      discountPercent: discountPercent ? Number(discountPercent) : undefined,
+      voucherCost: cost,
+      commissionPct,
+      commissionAmount,
+      merchantPayoutAmount,
+      payoutStatus: 'escrowed',
+      qrCodePayload: `CIVIC-${(merchantName || 'MERCH').slice(0, 5).toUpperCase()}-${codeSuffix}`,
+      barcode,
+      ussdCode: country === 'KE' ? `*141*${codeSuffix}#` : `*303*${codeSuffix}#`,
+      smsCode: `${(merchantName || 'VOUCH').slice(0, 4).toUpperCase()}${codeSuffix}`,
+      active: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    inMemoryMerchantProducts.unshift(newProduct);
+
+    res.json({
+      success: true,
+      message: `Loyalty voucher "${newProduct.rewardHeadline}" created! Displayed in Vault Deposit selector with 2% commission & 98% escrow payout guarantee.`,
+      product: newProduct,
+    });
+  });
+
+  // POST /api/merchant-loyalty/pos-redeem - Merchant Point-of-Sale scans/redeems voucher & triggers 98% escrow payout release
+  app.post('/api/merchant-loyalty/pos-redeem', (req, res) => {
+    const { voucherCode, merchantId, merchantName, verifiedByStaff } = req.body || {};
+
+    if (!voucherCode) {
+      return res.status(400).json({ error: 'voucherCode is required' });
+    }
+
+    const cleanCode = voucherCode.trim().toUpperCase();
+    const target = inMemoryPerkVouchers.find(
+      (v) => (v.voucherCode && v.voucherCode.toUpperCase() === cleanCode) ||
+             (v.qrCodeData && v.qrCodeData.toUpperCase() === cleanCode) ||
+             (v.barcode && v.barcode === cleanCode) ||
+             (v.pin && v.pin === cleanCode)
+    );
+
+    if (!target) {
+      return res.status(404).json({
+        error: 'VOUCHER_NOT_FOUND',
+        message: `Voucher code "${voucherCode}" was not found in the Sovereign Escrow Ledger.`,
+      });
+    }
+
+    if (target.status === 'redeemed') {
+      return res.status(400).json({
+        error: 'ALREADY_REDEEMED',
+        message: `Voucher #${target.voucherCode} was already redeemed on ${target.merchantPayout?.releasedAt || target.updatedAt || 'a previous date'}.`,
+        voucher: target,
+      });
+    }
+
+    // Mark as redeemed
+    target.status = 'redeemed';
+    const nowIso = new Date().toISOString();
+    const fv = Number(target.faceValue) || 10000;
+    const commission = Math.round(fv * 0.02);
+    const payout = fv - commission;
+    const payoutRef = `PAYOUT-MOMO-98PCT-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+    target.merchantPayout = {
+      payoutAmount: payout,
+      commissionAmount: commission,
+      commissionRate: 0.02,
+      payoutStatus: 'released',
+      releasedAt: nowIso,
+      payoutReference: payoutRef,
+      payoutMethod: 'Instant Mobile Money Escrow Settlement (98%)',
+    };
+
+    target.pointOfSaleVerification = {
+      redeemedAt: nowIso,
+      verifiedBy: verifiedByStaff || merchantName || 'Store Manager',
+      location: target.merchantLocation?.parish || target.jurisdictionLabel || 'Merchant Store',
+    };
+
+    res.json({
+      success: true,
+      message: `Voucher validated! 98% payout (${target.currency} ${payout.toLocaleString()}) instantly released from Escrow to ${merchantName || target.brand}.`,
+      payoutReference: payoutRef,
+      voucher: target,
     });
   });
 
