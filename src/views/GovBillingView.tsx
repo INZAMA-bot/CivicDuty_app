@@ -202,18 +202,22 @@ export const GovBillingView: React.FC = () => {
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Parish Coverage</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-black">Free ($0 / mo)</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Up to 2 Staff Seats</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Sub-County Tier</span>
-                <span className="text-slate-900 dark:text-white font-black">$5 / mo ($60/yr)</span>
+                <span className="text-slate-900 dark:text-white font-black">$5 / mo ($50/yr)</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">Unlimited Staff Seats</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">District Tier</span>
-                <span className="text-slate-900 dark:text-white font-black">$10 / mo ($120/yr)</span>
+                <span className="text-slate-900 dark:text-white font-black">$10 / mo ($100/yr)</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">Unlimited Staff Seats</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">National Tier</span>
-                <span className="text-amber-600 dark:text-amber-400 font-black">$20 / mo ($240/yr)</span>
+                <span className="text-amber-600 dark:text-amber-400 font-black">$20 / mo ($200/yr)</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">Unlimited Staff Seats</span>
               </div>
             </div>
           </div>

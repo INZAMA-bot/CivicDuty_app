@@ -200,8 +200,8 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
   const territoryPlans: Record<TerritoryPlanKey, TerritoryPlanConfig> = {
     community_single: {
       id: 'community_single',
-      name: 'Community Desk',
-      scopeLabel: `1 ${primary} (Single Neighborhood)`,
+      name: `${primary} Coverage`,
+      scopeLabel: `1 ${primary} (Single Branch / Neighborhood)`,
       unitRange: `1 local ${primary} footprint`,
       units: 1,
       monthlyUsd: 0,
@@ -212,54 +212,54 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
         `Direct Citizen Complaint SMS / Email Dispatch`,
         `Official Signed Public Response capability`,
         `Standard 48h Public SLA tracking`,
-        `2 Staff responder seats (Self-Serve)`,
+        `Up to 2 Staff responder seats (Self-Serve)`,
       ],
     },
     cluster: {
       id: 'cluster',
-      name: 'Sub-County Cluster',
-      scopeLabel: `2 – 50 ${primaryPlural} (Multi-Neighborhood)`,
+      name: 'Sub-County Coverage',
+      scopeLabel: `Sub-County / Division Multi-${primary} Desk`,
       unitRange: `Up to 50 ${primaryPlural}`,
       units: 25,
-      monthlyUsd: 19,
-      annualUsd: 190, // Saves $38 (2 months free)
+      monthlyUsd: 5,
+      annualUsd: 50, // Saves $10 (2 months free)
       features: [
-        `Everything in Community Desk`,
+        `Everything in ${primary} Free Tier`,
         `Multi-neighborhood complaint triage & routing`,
-        `Unlimited Staff responder & supervisor seats`,
+        `UNLIMITED Staff responder & supervisor seats ($0 per seat)`,
         `Weekly Customer Satisfaction (CSAT) analytics`,
         `Mobile Money (MTN / Airtel / M-Pesa) billing`,
       ],
     },
     district: {
       id: 'district',
-      name: `${l1Unit} Jurisdiction`,
-      scopeLabel: `51 – 500 ${primaryPlural} (${l1Unit}-Wide)`,
+      name: `${l1Unit} Coverage`,
+      scopeLabel: `Full ${l1Unit} / City-Wide Network`,
       unitRange: `${l1Unit}-wide operating network`,
       units: 150,
-      monthlyUsd: 89,
-      annualUsd: 890, // Saves $178 (2 months free)
+      monthlyUsd: 10,
+      annualUsd: 100, // Saves $20 (2 months free)
       popular: true,
       features: [
-        `Everything in Cluster Tier`,
+        `Everything in Sub-County ($5/mo) Tier`,
+        `UNLIMITED Staff responder, branch manager & engineer seats`,
         `Fast-Track 12h / 24h Resolution SLA Guarantee badge`,
         `Embeddable "CivicDuty Verified Trust Index" Website Badge`,
-        `Official Resolution Certificate & Evidence Vault uploads`,
-        `Unlimited Staff responder seats with departmental routing`,
+        `Official Resolution Certificate & Sponsor Perk Vaults`,
       ],
     },
     national: {
       id: 'national',
-      name: 'National Enterprise',
-      scopeLabel: `501+ ${primaryPlural} (Whole-of-Country)`,
+      name: 'National Coverage',
+      scopeLabel: `All ${primaryPlural} (Whole-of-Country)`,
       unitRange: `Nationwide branch network`,
       units: 501,
-      monthlyUsd: 299,
-      annualUsd: 2990, // Saves $598 (2 months free)
+      monthlyUsd: 20,
+      annualUsd: 200, // Saves $40 (2 months free)
       features: [
-        `Everything in ${l1Unit} Tier`,
-        `Unlimited branches & nationwide consumer coverage`,
-        `Unlimited responder & executive auditor seats`,
+        `Everything in ${l1Unit} ($10/mo) Tier`,
+        `Unrestricted nationwide consumer & branch coverage`,
+        `UNLIMITED Staff responder & executive auditor seats`,
         `CRM Webhook & API integration (Zendesk / Salesforce / ERP)`,
         `Dedicated CivicDuty Dispute Resolution Arbiter`,
       ],
@@ -897,25 +897,28 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                             <div className="mt-2.5">
                               {tData.free ? (
                                 <>
-                                  <div className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                                    Free Forever
+                                  <div className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                                    Free Forever ($0)
                                   </div>
                                   <div className="text-[9.5px] text-slate-500 font-semibold">
-                                    Self-serve community desk
+                                    Up to 2 staff seats · Self-serve desk
                                   </div>
                                 </>
                               ) : (
                                 <>
                                   <div className="flex items-baseline gap-1.5 flex-wrap">
-                                    <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                                      $0 Today
+                                    <span className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                                      ${interval === 'annual' ? tData.annualUsd : tData.monthlyUsd}
+                                      <span className="text-[10.5px] font-semibold">
+                                        /{interval === 'annual' ? 'yr' : 'mo'}
+                                      </span>
                                     </span>
-                                    <span className="text-[10.5px] line-through text-slate-400 font-mono">
-                                      {displayPrice}
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                                      ({displayPrice})
                                     </span>
                                   </div>
                                   <div className="text-[9.5px] text-emerald-700 dark:text-emerald-400 font-bold">
-                                    30-Day Founding Partner Trial
+                                    Unlimited Staff Seats · $0 Today (30-Day Trial)
                                   </div>
                                 </>
                               )}
@@ -1032,7 +1035,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  During CivicDuty&apos;s public launch phase, all private service providers are onboarded onto our <strong>30-Day Founding Partner Trial</strong> with zero upfront payment. You get immediate access to official SLA responses, staff responder seats, Counter QR Placards, and your Embeddable Trust Badge. Standard territory billing ({formatPrice(activeFeeUsd, interval === 'annual')}) only begins if you choose to renew after your 30-day trial.
+                  During CivicDuty&apos;s public launch phase, all private service providers are onboarded onto our <strong>30-Day Founding Partner Trial</strong> with zero upfront payment. You get immediate access to official SLA responses, <strong>Unlimited Staff Seats on all paid tiers</strong>, Counter QR Placards, and your Embeddable Trust Badge. Standard territory billing (<strong>${activeFeeUsd}/{interval === 'annual' ? 'yr' : 'mo'}</strong> · {formatPrice(activeFeeUsd, interval === 'annual')}) only begins if you choose to renew after your 30-day trial.
                 </p>
               </div>
 

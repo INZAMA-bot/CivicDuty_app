@@ -361,11 +361,11 @@ export const INITIAL_CLAIMED_ENTITIES: Record<string, ClaimedEntityRecord> = {
     officialEmail: 'director@nakaserohospital.com',
     phone: '+256 312 531 400',
     role: 'Medical Director',
-    plan: 'pro',
+    plan: 'district',
     claimedAt: '2026-08-10',
     verified: true,
     tinOrReg: 'TIN-8920192',
-    monthlyFee: 149,
+    monthlyFee: 10,
   },
   cafe_javas: {
     deptId: 'cafe_javas',
@@ -375,11 +375,11 @@ export const INITIAL_CLAIMED_ENTITIES: Record<string, ClaimedEntityRecord> = {
     officialEmail: 'care@cafejavas.co.ug',
     phone: '+256 312 244 444',
     role: 'Customer Experience Lead',
-    plan: 'pro',
+    plan: 'district',
     claimedAt: '2026-08-18',
     verified: true,
     tinOrReg: 'TIN-4019283',
-    monthlyFee: 149,
+    monthlyFee: 10,
   },
   mak_univ: {
     deptId: 'mak_univ',
@@ -389,11 +389,11 @@ export const INITIAL_CLAIMED_ENTITIES: Record<string, ClaimedEntityRecord> = {
     officialEmail: 'vc@mak.ac.ug',
     phone: '+256 414 542 803',
     role: 'Vice Chancellor / Registrar',
-    plan: 'enterprise',
+    plan: 'national',
     claimedAt: '2026-07-25',
     verified: true,
     tinOrReg: 'TIN-1002938',
-    monthlyFee: 499,
+    monthlyFee: 20,
   },
 };
 
@@ -2264,12 +2264,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
 
     const subId = 'sub-' + Date.now();
-    const subPrice = data.coveredUnits <= 1 ? 0 : data.coveredUnits * 100;
+    const monthlyTierUsd =
+      data.coveredUnits <= 1
+        ? 0
+        : data.coveredUnits <= 50
+        ? 5
+        : data.coveredUnits <= 500
+        ? 10
+        : 20;
+    const subPrice = data.interval === 'annual' ? monthlyTierUsd * 10 : monthlyTierUsd;
+    const bandLabel =
+      monthlyTierUsd === 0
+        ? 'Parish Coverage · Free (Up to 2 Seats)'
+        : monthlyTierUsd === 5
+        ? 'Sub-County Coverage · $5/mo (Unlimited Seats)'
+        : monthlyTierUsd === 10
+        ? 'District Coverage · $10/mo (Unlimited Seats)'
+        : 'National Coverage · $20/mo (Unlimited Seats)';
+
     const subscription: Subscription = {
       id: subId,
       dept: id,
       units: data.coveredUnits,
-      band: data.coveredUnits <= 1 ? 'Community · free' : 'Multi-parish',
+      band: bandLabel,
       interval: data.interval,
       amount: subPrice,
       status: subPrice === 0 ? 'active' : 'trial',
