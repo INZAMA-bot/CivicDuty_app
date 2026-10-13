@@ -34,7 +34,7 @@ interface MediaCardProps {
 export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: postVoiceNote, onToast }) => {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [imageFit, setImageFit] = useState<'contain' | 'cover'>('contain');
+  const [imageFit, setImageFit] = useState<'contain' | 'cover'>('cover');
   const [multiImageMode, setMultiImageMode] = useState<'stage' | 'grid'>('stage');
   const [activeStageImgIdx, setActiveStageImgIdx] = useState<number>(0);
 
@@ -49,6 +49,66 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
     progress: 0,
     speed: 1,
   });
+
+  const [failedMediaUrls, setFailedMediaUrls] = useState<Record<string, string>>({});
+
+  const getSafeFallbackUrl = (idx: number = 0, caption: string = '') => {
+    const c = (caption || '').toLowerCase();
+    if (c.includes('hospital') || c.includes('doctor') || c.includes('health') || c.includes('pediatric') || c.includes('triage') || c.includes('clinic')) {
+      return '/evidence/hospital_emergency_mulago.jpg';
+    }
+    if (c.includes('transformer') || c.includes('power') || c.includes('kplc') || c.includes('umeme') || c.includes('electric') || c.includes('cable') || c.includes('feeder') || c.includes('storm')) {
+      return '/evidence/power_transformer_repair.jpg';
+    }
+    if (c.includes('kigali') || c.includes('rwanda') || c.includes('clean') || c.includes('corridor') || c.includes('walkway') || c.includes('pedestrian')) {
+      return '/evidence/kigali_clean_corridor.jpg';
+    }
+    if (c.includes('tyre') || c.includes('tire') || c.includes('wheel') || c.includes('rim')) {
+      return '/evidence/damaged_tyre_pothole.jpg';
+    }
+    if (c.includes('unbuilt') || c.includes('ghost') || c.includes('contract') || c.includes('empty site') || c.includes('not built') || c.includes('culvert') || c.includes('bridge') || c.includes('collapse')) {
+      return '/evidence/unbuilt_road_site.jpg';
+    }
+    if (c.includes('pothole') || c.includes('matatu') || c.includes('road') || c.includes('vehicle')) {
+      return '/evidence/matatu_swerving_pothole.jpg';
+    }
+    if (c.includes('repair') || c.includes('reinstatement') || c.includes('restored') || c.includes('sealed') || c.includes('nwsc') || c.includes('fixed') || c.includes('squad')) {
+      return '/evidence/pipe_repaired_nwsc.jpg';
+    }
+    if (c.includes('sidewalk') || c.includes('curb') || c.includes('drain') || c.includes('gutter') || c.includes('damage') || c.includes('canal')) {
+      return '/evidence/sidewalk_damage.jpg';
+    }
+    if (c.includes('water') || c.includes('pipe') || c.includes('flood') || c.includes('burst') || c.includes('sewer') || c.includes('junction')) {
+      return '/evidence/water_main_burst.jpg';
+    }
+    const FALLBACKS = [
+      '/evidence/matatu_swerving_pothole.jpg',
+      '/evidence/hospital_emergency_mulago.jpg',
+      '/evidence/power_transformer_repair.jpg',
+      '/evidence/pipe_repaired_nwsc.jpg',
+      '/evidence/damaged_tyre_pothole.jpg',
+      '/evidence/kigali_clean_corridor.jpg',
+      '/evidence/unbuilt_road_site.jpg',
+      '/evidence/water_main_burst.jpg',
+      '/evidence/sidewalk_damage.jpg',
+    ];
+    return FALLBACKS[idx % FALLBACKS.length];
+  };
+
+  const resolveImageUrl = (rawUrl: string, idx: number, caption: string = '') => {
+    if (!rawUrl || rawUrl.includes('unsplash.com') || failedMediaUrls[rawUrl]) {
+      return failedMediaUrls[rawUrl] || getSafeFallbackUrl(idx, caption);
+    }
+    return rawUrl;
+  };
+
+  const handleImageError = (rawUrl: string, idx: number, caption: string, target: HTMLImageElement) => {
+    const fallback = getSafeFallbackUrl(idx, caption);
+    if (!target.src.endsWith(fallback)) {
+      target.src = fallback;
+      setFailedMediaUrls((prev) => ({ ...prev, [rawUrl]: fallback }));
+    }
+  };
 
   const safeMedia = media || [];
   const images = safeMedia.filter((m) => m.type === 'image' && m.url);
@@ -107,10 +167,10 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
     <div className="space-y-3 mt-3" onClick={(e) => e.stopPropagation()}>
       {/* 1. FULL-FIDELITY IMAGE GALLERY & VIEWER */}
       {images.length > 0 && (
-        <div className="rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 bg-slate-950 shadow-sm">
+        <div className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#12161f] shadow-xs">
           {/* Image Viewer Header Bar */}
-          <div className="px-3 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2 flex-wrap text-[10px] font-mono">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+          <div className="px-3 py-2 bg-[#f8f9fa] dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 flex-wrap text-[10px] font-mono text-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
               <ImageIcon size={12} />
               <span>
                 {images.length === 1
@@ -121,12 +181,14 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
             <div className="flex items-center gap-1.5">
               {images.length > 1 && (
-                <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+                <div className="flex items-center bg-slate-100 dark:bg-[#0e1116] p-0.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
                   <button
                     type="button"
                     onClick={() => setMultiImageMode('stage')}
                     className={`px-2 py-0.5 rounded text-[9.5px] font-semibold cursor-pointer ${
-                      multiImageMode === 'stage' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                      multiImageMode === 'stage'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     Full Stage
@@ -135,7 +197,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     type="button"
                     onClick={() => setMultiImageMode('grid')}
                     className={`px-2 py-0.5 rounded text-[9.5px] font-semibold flex items-center gap-1 cursor-pointer ${
-                      multiImageMode === 'grid' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                      multiImageMode === 'grid'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <LayoutGrid size={10} />
@@ -147,8 +211,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
               <button
                 type="button"
                 onClick={() => setImageFit(imageFit === 'contain' ? 'cover' : 'contain')}
-                className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-white text-[9.5px] font-semibold cursor-pointer"
-                title="Switch between Full Uncropped View and Cinema Fill"
+                className="px-2 py-0.5 rounded-md bg-white dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-[9.5px] font-semibold cursor-pointer"
+                title="Switch between Full Fill and Uncropped View"
               >
                 {imageFit === 'contain' ? 'Full Uncropped' : 'Cinema Fill'}
               </button>
@@ -159,7 +223,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                   setZoomLevel(1);
                   setLightboxIdx(activeStageImgIdx);
                 }}
-                className="px-2 py-0.5 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600 hover:text-white text-[9.5px] font-semibold flex items-center gap-1 cursor-pointer"
+                className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white text-[9.5px] font-semibold flex items-center gap-1 cursor-pointer"
               >
                 <Maximize2 size={10} />
                 <span>Fullscreen</span>
@@ -175,14 +239,31 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                   setZoomLevel(1);
                   setLightboxIdx(activeStageImgIdx);
                 }}
-                className="w-full min-h-[240px] max-h-[480px] bg-slate-950 flex items-center justify-center overflow-hidden cursor-zoom-in relative"
+                className="w-full min-h-[220px] max-h-[460px] bg-slate-100 dark:bg-[#0e1116] flex items-center justify-center overflow-hidden cursor-zoom-in relative"
               >
+                {/* Background Placeholder Watermark in case of slow network */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 pointer-events-none p-4 text-center">
+                  <ImageIcon size={32} className="opacity-40 mb-1" />
+                  <span className="text-[10px] font-mono font-medium text-slate-500">Citizen Evidence Photograph</span>
+                  <span className="text-[9px] font-mono text-slate-400 truncate max-w-xs">{currentStageImage.caption}</span>
+                </div>
+
                 <img
-                  src={currentStageImage.url}
+                  src={resolveImageUrl(currentStageImage.url, activeStageImgIdx, currentStageImage.caption)}
                   alt={currentStageImage.caption || 'Field evidence photo'}
                   referrerPolicy="no-referrer"
-                  className={`w-full max-h-[480px] transition-all duration-300 ${
-                    imageFit === 'contain' ? 'object-contain' : 'object-cover h-[340px] sm:h-[420px]'
+                  onError={(e) =>
+                    handleImageError(
+                      currentStageImage.url,
+                      activeStageImgIdx,
+                      currentStageImage.caption || '',
+                      e.currentTarget as HTMLImageElement
+                    )
+                  }
+                  className={`w-full transition-all duration-300 relative z-1 select-none ${
+                    imageFit === 'contain'
+                      ? 'max-h-[460px] object-contain'
+                      : 'h-[300px] sm:h-[380px] object-cover'
                   }`}
                 />
 
@@ -194,7 +275,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         e.stopPropagation();
                         setActiveStageImgIdx((prev) => (prev - 1 + images.length) % images.length);
                       }}
-                      className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/75 hover:bg-emerald-600 text-white border border-white/20 transition-colors cursor-pointer"
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/70 hover:bg-emerald-600 text-white border border-white/20 transition-colors cursor-pointer z-10"
                     >
                       <ChevronLeft size={16} />
                     </button>
@@ -204,7 +285,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         e.stopPropagation();
                         setActiveStageImgIdx((prev) => (prev + 1) % images.length);
                       }}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/75 hover:bg-emerald-600 text-white border border-white/20 transition-colors cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/70 hover:bg-emerald-600 text-white border border-white/20 transition-colors cursor-pointer z-10"
                     >
                       <ChevronRight size={16} />
                     </button>
@@ -214,12 +295,12 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
               {/* Caption & Counter Bar */}
               {(currentStageImage.caption || images.length > 1) && (
-                <div className="px-3.5 py-2 bg-slate-900/95 border-t border-slate-800 flex items-center justify-between gap-2 text-[11px] text-slate-200">
+                <div className="px-3.5 py-2 bg-[#f8f9fa] dark:bg-[#161a22] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-[11px] text-slate-700 dark:text-slate-200">
                   <span className="truncate font-medium">
                     {currentStageImage.caption || `Evidence Photograph #${activeStageImgIdx + 1}`}
                   </span>
                   {images.length > 1 && (
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold shrink-0">
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
                       {activeStageImgIdx + 1} / {images.length}
                     </span>
                   )}
@@ -228,23 +309,29 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
               {/* Interactive Filmstrip for Multi-Image Posts */}
               {images.length > 1 && (
-                <div className="p-2 bg-slate-950 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto">
+                <div className="p-2 bg-slate-50 dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-2 overflow-x-auto">
                   {images.map((img, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => setActiveStageImgIdx(idx)}
-                      className={`relative w-16 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
+                      className={`relative w-16 h-12 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer bg-slate-200 dark:bg-slate-900 ${
                         idx === activeStageImgIdx
                           ? 'border-emerald-500 ring-2 ring-emerald-500/30 opacity-100'
-                          : 'border-slate-800 opacity-60 hover:opacity-100'
+                          : 'border-[#e3e6ea] dark:border-slate-800 opacity-70 hover:opacity-100'
                       }`}
                     >
+                      <div className="absolute inset-0 flex items-center justify-center text-slate-400 dark:text-slate-600 pointer-events-none">
+                        <ImageIcon size={14} className="opacity-40" />
+                      </div>
                       <img
-                        src={img.url}
+                        src={resolveImageUrl(img.url, idx, img.caption)}
                         alt=""
                         referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
+                        onError={(e) =>
+                          handleImageError(img.url, idx, img.caption || '', e.currentTarget as HTMLImageElement)
+                        }
+                        className="w-full h-full object-cover relative z-1"
                       />
                     </button>
                   ))}
@@ -255,7 +342,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
           {/* Multi-Image Responsive Grid Mode */}
           {images.length > 1 && multiImageMode === 'grid' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-950">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-50 dark:bg-[#0e1116]">
               {images.map((m, i) => (
                 <div
                   key={i}
@@ -263,16 +350,19 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     setZoomLevel(1);
                     setLightboxIdx(i);
                   }}
-                  className="relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 cursor-zoom-in group"
+                  className="relative rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-slate-800 bg-white dark:bg-slate-900 cursor-zoom-in group"
                 >
                   <img
-                    src={m.url}
+                    src={resolveImageUrl(m.url, i, m.caption)}
                     alt={m.caption || `Photo ${i + 1}`}
                     referrerPolicy="no-referrer"
-                    className={`w-full h-56 sm:h-64 ${imageFit === 'contain' ? 'object-contain bg-slate-950' : 'object-cover'}`}
+                    onError={(e) =>
+                      handleImageError(m.url, i, m.caption || '', e.currentTarget as HTMLImageElement)
+                    }
+                    className={`w-full h-56 sm:h-64 ${imageFit === 'contain' ? 'object-contain bg-slate-100 dark:bg-slate-950' : 'object-cover'}`}
                   />
                   {m.caption && (
-                    <div className="px-2.5 py-1.5 bg-slate-900/95 border-t border-slate-800 text-[10.5px] text-slate-200 truncate">
+                    <div className="px-2.5 py-1.5 bg-[#f8f9fa] dark:bg-slate-900/95 border-t border-[#e3e6ea] dark:border-slate-800 text-[10.5px] text-slate-700 dark:text-slate-200 truncate">
                       {m.caption}
                     </div>
                   )}
@@ -593,9 +683,17 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
             )}
 
             <img
-              src={images[lightboxIdx].url}
+              src={resolveImageUrl(images[lightboxIdx].url, lightboxIdx, images[lightboxIdx].caption)}
               alt={images[lightboxIdx].caption || 'Evidence image'}
               referrerPolicy="no-referrer"
+              onError={(e) =>
+                handleImageError(
+                  images[lightboxIdx].url,
+                  lightboxIdx,
+                  images[lightboxIdx].caption || '',
+                  e.currentTarget as HTMLImageElement
+                )
+              }
               style={{ transform: `scale(${zoomLevel})` }}
               className="max-w-full max-h-[75vh] rounded-xl object-contain shadow-2xl transition-transform duration-200"
             />

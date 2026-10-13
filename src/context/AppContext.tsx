@@ -487,14 +487,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 merged_from_ids: seed.merged_from_ids ?? p.merged_from_ids,
               }
             : p;
+          const cleanCachedMedia = (rawMedia: any[], seedMedia?: any[]): any[] => {
+            if (seedMedia && seedMedia.length > 0) return seedMedia;
+            if (!Array.isArray(rawMedia)) return [];
+            return rawMedia.map((m) => {
+              if (m?.url && (typeof m.url !== 'string' || m.url.includes('unsplash.com') || !m.url.trim())) {
+                const c = (m.caption || '').toLowerCase();
+                let safe = '/evidence/matatu_swerving_pothole.jpg';
+                if (c.includes('hospital') || c.includes('doctor') || c.includes('health') || c.includes('pediatric')) safe = '/evidence/hospital_emergency_mulago.jpg';
+                else if (c.includes('transformer') || c.includes('power') || c.includes('kplc') || c.includes('electric')) safe = '/evidence/power_transformer_repair.jpg';
+                else if (c.includes('kigali') || c.includes('clean') || c.includes('corridor')) safe = '/evidence/kigali_clean_corridor.jpg';
+                else if (c.includes('tyre') || c.includes('tire') || c.includes('wheel')) safe = '/evidence/damaged_tyre_pothole.jpg';
+                else if (c.includes('unbuilt') || c.includes('site') || c.includes('contract') || c.includes('culvert')) safe = '/evidence/unbuilt_road_site.jpg';
+                return { ...m, url: safe };
+              }
+              return m;
+            });
+          };
+
           return sanitizePostEmojis({
             ...base,
             comments: Array.isArray(base.comments) ? base.comments : seed?.comments || [],
-            media: Array.isArray(base.media) ? base.media : seed?.media || [],
+            media: cleanCachedMedia(base.media, seed?.media),
             territory: base.territory || seed?.territory || { district: '', subcounty: '', parish: '' },
             poll: base.poll || seed?.poll,
             community_notes: base.community_notes || seed?.community_notes,
-            before_after: base.before_after || seed?.before_after,
+            before_after: seed?.before_after || base.before_after,
             voice_note: base.voice_note || seed?.voice_note,
             hashtags: base.hashtags || seed?.hashtags,
             reposts: base.reposts ?? seed?.reposts ?? 0,

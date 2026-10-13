@@ -24,6 +24,9 @@ import {
   Droplet,
   Smartphone,
   Bike,
+  Car,
+  Stethoscope,
+  GraduationCap,
   Copy,
   ExternalLink,
   RefreshCw,
@@ -64,6 +67,109 @@ export interface RankedJurisdictionCitizen {
   samplePostId?: string;
 }
 
+export interface ReporterProfessionCategoryConfig {
+  id: string;
+  name: string;
+  shortTitle: string;
+  fieldScoutTag: string;
+  bountyType: string;
+  defaultBrand: string;
+  icon: any;
+  badgeClass: string;
+  professionFilter: string[];
+}
+
+export const REPORTER_PROFESSION_CATEGORIES: ReporterProfessionCategoryConfig[] = [
+  {
+    id: 'boda',
+    name: 'Bodaboda Rider / Cyclist',
+    shortTitle: 'Bodaboda Road Scouts',
+    fieldScoutTag: 'Frontline Road Scout · Fuel & Airtime Eligible',
+    bountyType: 'Fuel & Airtime Bounty',
+    defaultBrand: 'SafeBoda / TotalEnergies Fuel',
+    icon: Bike,
+    badgeClass: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
+    professionFilter: ['boda', 'cyclist', 'rider', 'motorcycle', 'okada'],
+  },
+  {
+    id: 'taxi',
+    name: 'Taxi / Matatu / Commercial Driver',
+    shortTitle: 'Transit & Highway Drivers',
+    fieldScoutTag: 'Public Transit & Highway Scout · Fuel & Data Eligible',
+    bountyType: 'Highway Transit Fuel Voucher',
+    defaultBrand: 'Shell / Rubis Transit Fuel',
+    icon: Car,
+    badgeClass: 'text-orange-700 dark:text-orange-300 bg-orange-500/15 border-orange-500/30',
+    professionFilter: ['taxi', 'matatu', 'driver', 'commercial', 'danfo', 'trotro'],
+  },
+  {
+    id: 'market',
+    name: 'Market Vendor / Local Trader',
+    shortTitle: 'Market Vendors & Traders',
+    fieldScoutTag: 'Public Space & Sanitation Scout · Grocery & Power Eligible',
+    bountyType: 'Market Fresh Produce & Utility Pack',
+    defaultBrand: 'Fresh Produce & Umeme Utility Pack',
+    icon: Store,
+    badgeClass: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+    professionFilter: ['market', 'vendor', 'trader', 'shopkeeper', 'stall'],
+  },
+  {
+    id: 'health',
+    name: 'Healthcare Worker / Nurse / Clinical Staff',
+    shortTitle: 'Healthcare Monitors',
+    fieldScoutTag: 'Health Service Monitor · Clinical Wellness & Data Eligible',
+    bountyType: 'Clinical Connectivity & Wellness Voucher',
+    defaultBrand: 'Pharmacy Wellness & Clinical Data',
+    icon: Stethoscope,
+    badgeClass: 'text-sky-700 dark:text-sky-300 bg-sky-500/15 border-sky-500/30',
+    professionFilter: ['nurse', 'clinical', 'doctor', 'health', 'hospital', 'medical'],
+  },
+  {
+    id: 'teacher',
+    name: 'Teacher / Student / Youth Leader',
+    shortTitle: 'Teachers & Youth Leaders',
+    fieldScoutTag: 'Education & Community Watch · Educational Data & Book Eligible',
+    bountyType: 'Educational Data Bundle & Stationery Voucher',
+    defaultBrand: 'MTN / Airtel Education Data & Books',
+    icon: GraduationCap,
+    badgeClass: 'text-indigo-700 dark:text-indigo-300 bg-indigo-500/15 border-indigo-500/30',
+    professionFilter: ['teacher', 'student', 'youth', 'headmaster', 'school', 'guild'],
+  },
+  {
+    id: 'artisan',
+    name: 'Artisan / Builder / Field Technician',
+    shortTitle: 'Artisans & Builders',
+    fieldScoutTag: 'Infrastructure Quality Inspector · Tools & Hardware Eligible',
+    bountyType: 'Contractor CSR Hardware & Tool Voucher',
+    defaultBrand: 'Contractor CSR Hardware & Tools',
+    icon: HardHat,
+    badgeClass: 'text-yellow-700 dark:text-yellow-300 bg-yellow-500/15 border-yellow-500/30',
+    professionFilter: ['artisan', 'builder', 'technician', 'mason', 'plumber', 'electrician'],
+  },
+  {
+    id: 'civil',
+    name: 'Civil Servant / Public Officer',
+    shortTitle: 'Civil Servants & Public Officers',
+    fieldScoutTag: 'Internal Oversight & Whistleblower · Airtime & Integrity Pack',
+    bountyType: 'Public Integrity & Communication Voucher',
+    defaultBrand: 'Government Communications & Data Pack',
+    icon: ShieldCheck,
+    badgeClass: 'text-purple-700 dark:text-purple-300 bg-purple-500/15 border-purple-500/30',
+    professionFilter: ['civil servant', 'officer', 'public officer', 'oversight', 'whistleblower'],
+  },
+  {
+    id: 'citizen',
+    name: 'General Resident / Commuter',
+    shortTitle: 'Community Citizens',
+    fieldScoutTag: 'Community Citizen Watch · Utility & Food Pack Eligible',
+    bountyType: 'Utility Power & Supermarket Shopping Pack',
+    defaultBrand: 'NWSC Water & Supermarket Shopping',
+    icon: Users,
+    badgeClass: 'text-teal-700 dark:text-teal-300 bg-teal-500/15 border-teal-500/30',
+    professionFilter: ['resident', 'commuter', 'citizen', 'neighbourhood'],
+  },
+];
+
 export const PerkVaultView: React.FC = () => {
   const { user, posts, projects, profiles, addPoints, go, toast, logAudit, selectedCountry: ctxCountry } = useApp();
   const studioSectionRef = React.useRef<HTMLDivElement | null>(null);
@@ -91,6 +197,7 @@ export const PerkVaultView: React.FC = () => {
   );
   const [selectedContractId, setSelectedContractId] = useState<string>('PRJ-UG-01');
   const [selectedScoutCorridor, setSelectedScoutCorridor] = useState<string>('corridor_northern_bypass');
+  const [selectedScoutProfession, setSelectedScoutProfession] = useState<string>('boda');
   const [individualTargetPostId, setIndividualTargetPostId] = useState<string>('');
   const [individualRecipientName, setIndividualRecipientName] = useState<string>('Amina Nabatanzi');
   const [individualRecipientPhone, setIndividualRecipientPhone] = useState<string>('+256 774 819 203');
@@ -552,42 +659,277 @@ export const PerkVaultView: React.FC = () => {
     if (activeVaultKind === 'scout_bounty_vault') {
       const corridorObj = scoutCorridorOptions.find((c) => c.id === selectedScoutCorridor);
       const cLabel = corridorObj?.label || 'Transit Road Safety Corridor';
-      const scoutPosts = countryFeedPosts.filter(
-        (p) =>
-          p.author_profession?.toLowerCase().includes('boda') ||
-          p.author_profession?.toLowerCase().includes('driver') ||
-          p.category === 'pothole' ||
-          p.category === 'transport'
-      );
-      return buildTop3FromPosts(scoutPosts, [
-        {
-          name: selectedCountry === 'KE' ? 'John Macharia (Stage Captain)' : 'Suleiman Wasswa (Bodaboda Scout)',
-          role: `Bodaboda Frontline Road Scout · ${cLabel}`,
-          baseScore: 415,
-          reports: 9,
-          resolved: 6,
-          upvotes: 78,
-          reason: `#1 Frontline Road Safety Scout on ${cLabel} (9 geotagged pothole, open manhole & flood hazard alerts)`,
-        },
-        {
-          name: selectedCountry === 'KE' ? 'hassan Ali (Matatu Scout)' : 'Robert Ssempijja (Stage Chairman)',
-          role: `Bodaboda Stage Safety Lead · ${cLabel}`,
-          baseScore: 350,
-          reports: 7,
-          resolved: 5,
-          upvotes: 55,
-          reason: `#2 Frontline Road Safety Scout on ${cLabel} (broken traffic signal & washed-out culvert warnings)`,
-        },
-        {
-          name: selectedCountry === 'KE' ? 'vincent Kiprop (Rider Watch)' : 'Emmanuel Okello (Highway Rider)',
-          role: `Transit Corridor Hazard Reporter · ${cLabel}`,
-          baseScore: 295,
-          reports: 5,
-          resolved: 4,
-          upvotes: 41,
-          reason: `#3 Frontline Road Safety Scout on ${cLabel} (nighttime road obstruction & emergency ambulance clearance)`,
-        },
-      ]);
+      const profConfig =
+        REPORTER_PROFESSION_CATEGORIES.find((p) => p.id === selectedScoutProfession) ||
+        REPORTER_PROFESSION_CATEGORIES[0];
+
+      const matchingCategoryPosts = countryFeedPosts.filter((p) => {
+        const profession = (p.author_profession || '').toLowerCase();
+        const tagMatch = profConfig.professionFilter.some((filterKey) => profession.includes(filterKey));
+        if (tagMatch) return true;
+        if (profConfig.id === 'boda') return p.category === 'pothole' || p.category === 'transport';
+        if (profConfig.id === 'taxi') return p.category === 'transport' || p.category === 'safety';
+        if (profConfig.id === 'market') return p.category === 'sanitation' || p.category === 'water' || p.category === 'power';
+        if (profConfig.id === 'health') return p.category === 'health' || p.title.toLowerCase().includes('clinic') || p.title.toLowerCase().includes('drug');
+        if (profConfig.id === 'teacher') return p.category === 'education' || p.title.toLowerCase().includes('school');
+        if (profConfig.id === 'artisan') return p.category === 'infrastructure' || p.category === 'pothole' || Boolean(p.project);
+        if (profConfig.id === 'civil') return p.category === 'corruption' || p.category === 'budget';
+        return true;
+      });
+
+      let categorySeeds: Array<{
+        name: string;
+        role: string;
+        baseScore: number;
+        reports: number;
+        resolved: number;
+        upvotes: number;
+        reason: string;
+      }> = [];
+
+      if (profConfig.id === 'boda') {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'John Macharia (Stage Captain)' : 'Suleiman Wasswa (Bodaboda Scout)',
+            role: `Bodaboda Frontline Road Scout · ${cLabel}`,
+            baseScore: 415,
+            reports: 9,
+            resolved: 6,
+            upvotes: 78,
+            reason: `#1 Frontline Road Scout on ${cLabel} (9 geotagged pothole, open manhole & flood hazard alerts)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Hassan Ali (Matatu Scout)' : 'Robert Ssempijja (Stage Chairman)',
+            role: `Bodaboda Stage Safety Lead · ${cLabel}`,
+            baseScore: 350,
+            reports: 7,
+            resolved: 5,
+            upvotes: 55,
+            reason: `#2 Frontline Road Scout on ${cLabel} (broken traffic signal & washed-out culvert warnings)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Vincent Kiprop (Rider Watch)' : 'Emmanuel Okello (Highway Rider)',
+            role: `Transit Corridor Hazard Reporter · ${cLabel}`,
+            baseScore: 295,
+            reports: 5,
+            resolved: 4,
+            upvotes: 41,
+            reason: `#3 Frontline Road Scout on ${cLabel} (nighttime road obstruction & emergency ambulance clearance)`,
+          },
+        ];
+      } else if (profConfig.id === 'taxi') {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'Peter Mwangi (Matatu Sacco Rep)' : 'Patrick Kigozi (Taxi Park Lead)',
+            role: `Transit & Highway Scout · ${cLabel}`,
+            baseScore: 405,
+            reports: 8,
+            resolved: 6,
+            upvotes: 72,
+            reason: `#1 Highway Scout (reported dangerous highway shoulder washout & unregulated heavy truck parking)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'David Kamau (Route 44 Rep)' : 'Musa Mukasa (Kamunye Driver)',
+            role: `Commercial Corridor Watchdog · ${cLabel}`,
+            baseScore: 340,
+            reports: 6,
+            resolved: 5,
+            upvotes: 51,
+            reason: `#2 Highway Scout (logged illegal extortion toll checkpoint & missing highway cat-eyes)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'James Otieno (Express Driver)' : 'Charles Ochieng (Highway Transporter)',
+            role: `Inter-State Route Scout · ${cLabel}`,
+            baseScore: 290,
+            reports: 5,
+            resolved: 3,
+            upvotes: 39,
+            reason: `#3 Highway Scout (documented slippery oil spill & sharp curve visibility hazards)`,
+          },
+        ];
+      } else if (profConfig.id === 'market') {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'Mary Wanjiku (Market Rep)' : 'Mama Kevin Nalubega (Market Chair)',
+            role: `Market Vendor & Sanitation Scout · ${cLabel}`,
+            baseScore: 420,
+            reports: 10,
+            resolved: 7,
+            upvotes: 84,
+            reason: `#1 Market Scout (reported 48-hour uncollected garbage heap & overflowing drainage canal)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Amina Hassan (Produce Trader)' : 'Sarah Babirye (Produce Stall #14)',
+            role: `Market Sanitation & Utility Auditor · ${cLabel}`,
+            baseScore: 360,
+            reports: 8,
+            resolved: 5,
+            upvotes: 59,
+            reason: `#2 Market Scout (logged broken public water standpipe & illegal market entry dues extortion)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Beatrice Muthoni (Dry Goods Rep)' : 'Grace Akello (Stallholder Watch)',
+            role: `Public Trading Space Watchdog · ${cLabel}`,
+            baseScore: 305,
+            reports: 6,
+            resolved: 4,
+            upvotes: 43,
+            reason: `#3 Market Scout (alerted municipal health desk to broken abattoir cold storage & meat inspection delays)`,
+          },
+        ];
+      } else if (profConfig.id === 'health') {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'Nurse Faith Chebet (Health Centre IV)' : 'Harriet Namukasa (Senior Nursing Officer)',
+            role: `Health Service Monitor · ${cLabel}`,
+            baseScore: 435,
+            reports: 9,
+            resolved: 7,
+            upvotes: 89,
+            reason: `#1 Health Monitor (tracked essential antimalarial drug stockout & oxygen cylinder delivery delay)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Dr. Evans Ombati (Clinical Officer)' : 'Dr. Brian Ochieng (Clinical Officer)',
+            role: `Primary Care Facility Auditor · ${cLabel}`,
+            baseScore: 375,
+            reports: 7,
+            resolved: 6,
+            upvotes: 63,
+            reason: `#2 Health Monitor (documented outpatient triage power outage & broken autoclave sterilizer)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Sister Lucy Nduta (Maternity Lead)' : 'Sister Rose Nakato (Maternity Ward Quality Rep)',
+            role: `Maternal Health Safety Scout · ${cLabel}`,
+            baseScore: 315,
+            reports: 5,
+            resolved: 4,
+            upvotes: 47,
+            reason: `#3 Health Monitor (verified newborn incubator backup generator fuel supply & ambulance readiness)`,
+          },
+        ];
+      } else if (profConfig.id === 'teacher') {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'Master Joseph Mwangi (Head Teacher)' : 'Master Dennis Ssekandi (Primary School Lead)',
+            role: `Education & Safe School Scout · ${cLabel}`,
+            baseScore: 410,
+            reports: 8,
+            resolved: 6,
+            upvotes: 76,
+            reason: `#1 Education Scout (reported cracked classroom roof collapse hazard & non-functional school sanitation)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Brian Kiprono (Youth Guild Rep)' : 'Brian Mugisha (University Youth Guild Leader)',
+            role: `Youth Community Watchdog · ${cLabel}`,
+            baseScore: 345,
+            reports: 7,
+            resolved: 5,
+            upvotes: 54,
+            reason: `#2 Education Scout (mobilized student safety patrol for missing zebra crossing paint & speeding minibuses)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Grace Achieng (PTA Secretary)' : 'Patricia Nansubuga (PTA Infrastructure Watch)',
+            role: `School Environment Auditor · ${cLabel}`,
+            baseScore: 295,
+            reports: 5,
+            resolved: 4,
+            upvotes: 40,
+            reason: `#3 Education Scout (logged delayed capitation textbook delivery & flooded school perimeter fence)`,
+          },
+        ];
+      } else if (profConfig.id === 'artisan') {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'Mason Daniel Kinyua (Civil Artisan)' : 'Patrick Ouma (Lead Mason & Inspector)',
+            role: `Infrastructure Quality Inspector · ${cLabel}`,
+            baseScore: 425,
+            reports: 9,
+            resolved: 6,
+            upvotes: 81,
+            reason: `#1 Artisan Inspector (audited substandard unvibrated concrete on municipal bridge wing wall)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Eng. Stephen Ouma (Road Technician)' : 'Eng. Joseph Byamukama (Civil Technician)',
+            role: `Materials & Workmanship Auditor · ${cLabel}`,
+            baseScore: 365,
+            reports: 7,
+            resolved: 5,
+            upvotes: 58,
+            reason: `#2 Artisan Inspector (measured shallow 30mm asphalt layer against 50mm specification on road contract)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'John Wambua (Site Plumber)' : 'Charles Lwanga (Site Plumber & Tech)',
+            role: `Drainage & Civil Works Watch · ${cLabel}`,
+            baseScore: 300,
+            reports: 5,
+            resolved: 4,
+            upvotes: 42,
+            reason: `#3 Artisan Inspector (documented unreinforced precast drainage culverts installed without gravel bedding)`,
+          },
+        ];
+      } else if (profConfig.id === 'civil') {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'Arthur Maina (Administrative Officer)' : 'Arthur Tumwine (Public Admin Officer)',
+            role: `Internal Oversight & Whistleblower · ${cLabel}`,
+            baseScore: 430,
+            reports: 8,
+            resolved: 7,
+            upvotes: 85,
+            reason: `#1 Oversight Officer (flagged delayed procurement sign-off & unserviced municipal garbage fleet)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'David Kipkemboi (Internal Auditor)' : 'David Kigozi (Internal Municipal Auditor)',
+            role: `Public Integrity Auditor · ${cLabel}`,
+            baseScore: 370,
+            reports: 6,
+            resolved: 5,
+            upvotes: 60,
+            reason: `#2 Oversight Officer (verified biometric clock-in uptime & public asset maintenance registers)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Florence Njeri (Records Supervisor)' : 'Florence Namubiru (Public Records Oversight)',
+            role: `Civil Service Compliance Scout · ${cLabel}`,
+            baseScore: 310,
+            reports: 5,
+            resolved: 4,
+            upvotes: 44,
+            reason: `#3 Oversight Officer (logged public noticeboard tender publication delays and citizen charter compliance)`,
+          },
+        ];
+      } else {
+        categorySeeds = [
+          {
+            name: selectedCountry === 'KE' ? 'Joshua Mutiso (Resident Watch)' : 'Joshua Sserwadda (Parish Watchdog)',
+            role: `Community Citizen Watch · ${cLabel}`,
+            baseScore: 400,
+            reports: 8,
+            resolved: 6,
+            upvotes: 70,
+            reason: `#1 Community Citizen (logged dark streetlights on commuter footpaths and missing manhole covers)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Aida Waweru (Commuter Rep)' : 'Aida Nakazibwe (Public Transit Commuter)',
+            role: `Neighbourhood Safety Auditor · ${cLabel}`,
+            baseScore: 335,
+            reports: 6,
+            resolved: 5,
+            upvotes: 50,
+            reason: `#2 Community Citizen (reported burst water main flooding community access lane)`,
+          },
+          {
+            name: selectedCountry === 'KE' ? 'Peter Ochieng (Community Resident)' : 'Peter Wandera (Resident Safety Advocate)',
+            role: `Civic Resident Scout · ${cLabel}`,
+            baseScore: 285,
+            reports: 4,
+            resolved: 3,
+            upvotes: 36,
+            reason: `#3 Community Citizen (alerted community policing desk to illegal waste dumping in public park)`,
+          },
+        ];
+      }
+
+      return buildTop3FromPosts(matchingCategoryPosts, categorySeeds);
     }
 
     return [];
@@ -598,6 +940,7 @@ export const PerkVaultView: React.FC = () => {
     selectedProviderDept,
     selectedContractId,
     selectedScoutCorridor,
+    selectedScoutProfession,
     countryFeedPosts,
     providerOptions,
     contractOptions,
@@ -658,17 +1001,20 @@ export const PerkVaultView: React.FC = () => {
       };
     }
     if (activeVaultKind === 'scout_bounty_vault') {
+      const profConfig =
+        REPORTER_PROFESSION_CATEGORIES.find((p) => p.id === selectedScoutProfession) ||
+        REPORTER_PROFESSION_CATEGORIES[0];
       const corr = scoutCorridorOptions.find((c) => c.id === selectedScoutCorridor);
       const label = corr?.label || selectedScoutCorridor;
       return {
-        vaultTitle: `Frontline Scout & Bodaboda Vault · ${label}`,
-        jurisdictionId: selectedScoutCorridor,
-        jurisdictionLabel: label,
-        dispatcherTitle: `${corr?.authority || 'Stage Safety Coordinator'} — Automated Bounty Pool`,
+        vaultTitle: `Frontline Scout & ${profConfig.shortTitle} Vault · ${label}`,
+        jurisdictionId: `${selectedScoutCorridor}_${profConfig.id}`,
+        jurisdictionLabel: `${profConfig.shortTitle} (${profConfig.fieldScoutTag.split('·')[0].trim()}) · ${label}`,
+        dispatcherTitle: `${profConfig.shortTitle} Association & ${corr?.authority || 'Corridor Safety Escrow'}`,
         AuthorizedRoleTag: 'scout_corridor_coordinator' as const,
         cadenceBadge: 'Monthly Top-3 Final Award',
         rankingRule:
-          'Monthly Ranking & Awarding Cycle: Road-safety sponsors fund the corridor pool during the month. At month-end, final rankings lock and bounties split evenly across the Top 3 Frontline Scouts & Bodaboda Riders in this corridor based on verified pothole, flood, and road hazard alerts.',
+          `Monthly Ranking & Awarding Cycle: Community sponsors and agencies fund the ${profConfig.shortTitle} escrow throughout the month. At month-end, final rankings lock and rewards split evenly across the Top 3 ${profConfig.name} reporters in this zone based strictly on verified alerts.`,
       };
     }
     return {
@@ -688,6 +1034,7 @@ export const PerkVaultView: React.FC = () => {
     selectedProviderDept,
     selectedContractId,
     selectedScoutCorridor,
+    selectedScoutProfession,
     providerOptions,
     contractOptions,
     scoutCorridorOptions,
@@ -851,16 +1198,20 @@ export const PerkVaultView: React.FC = () => {
           }
         }
 
+        const profConfig =
+          REPORTER_PROFESSION_CATEGORIES.find((p) => p.id === selectedScoutProfession) ||
+          REPORTER_PROFESSION_CATEGORIES[0];
+
         const effectiveBrand = provProduct
           ? provProduct.merchantName
           : activeVaultKind === 'scout_bounty_vault'
-          ? 'SafeBoda'
+          ? profConfig.defaultBrand
           : defaultBrand;
 
         const effectiveTitle = provProduct
           ? `${provProduct.merchantName} - ${provProduct.rewardHeadline} (Rank #${slot} Perk)`
           : activeVaultKind === 'scout_bounty_vault'
-          ? `SafeBoda Road Safety Bounty (Rank #${slot})`
+          ? `${profConfig.shortTitle} Award · ${profConfig.bountyType} (Rank #${slot})`
           : `${defaultBrand} Top-3 Jurisdiction Split (Rank #${slot})`;
 
         const effectiveFaceValue = provProduct ? provProduct.voucherCost : defaultFaceValue;
@@ -2255,10 +2606,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             },
             {
               id: 'scout_bounty_vault' as VaultKind,
-              title: '4. Scout & Bodaboda Vault',
-              subtitle: 'Monthly Corridor Top-3',
-              badge: 'Monthly · Top 3 Scouts',
-              desc: 'Frontline Scout & Bodaboda Road Safety Pools. Monthly final ranking splits awards across Top 3 hazard-reporting riders.',
+              title: '4. Scout & Profession Vault',
+              subtitle: 'Top-3 Across 8 Professions',
+              badge: 'Monthly · 8 Reporter Roles',
+              desc: 'Covers all 8 Reporter Profession categories (Bodaboda, Drivers, Market Vendors, Healthcare, Teachers/Youth, Artisans, Civil Servants, Citizens). Top 3 in each category can be awarded.',
               icon: Bike,
               accent: 'amber',
             },
@@ -2441,20 +2792,39 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
               {activeVaultKind === 'scout_bounty_vault' && (
                 <>
-                  <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
-                    Select Transit Stage / Road Safety Corridor
-                  </label>
-                  <select
-                    value={selectedScoutCorridor}
-                    onChange={(e) => setSelectedScoutCorridor(e.target.value)}
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    {scoutCorridorOptions.map((corr) => (
-                      <option key={corr.id} value={corr.id}>
-                        {corr.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div>
+                    <label className="text-[9.5px] font-mono font-bold uppercase text-amber-700 dark:text-amber-400 block mb-0.5">
+                      Reporter Profession Category (Top-3 Award Pool)
+                    </label>
+                    <select
+                      value={selectedScoutProfession}
+                      onChange={(e) => setSelectedScoutProfession(e.target.value)}
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    >
+                      {REPORTER_PROFESSION_CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} ({cat.fieldScoutTag.split('·')[0].trim()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block mb-0.5">
+                      Transit Stage / Road Safety Corridor
+                    </label>
+                    <select
+                      value={selectedScoutCorridor}
+                      onChange={(e) => setSelectedScoutCorridor(e.target.value)}
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      {scoutCorridorOptions.map((corr) => (
+                        <option key={corr.id} value={corr.id}>
+                          {corr.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </>
               )}
 
@@ -2544,6 +2914,43 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   </span>
                 </div>
               </div>
+
+              {/* Category Pills Strip for Scout & Profession Vault */}
+              {activeVaultKind === 'scout_bounty_vault' && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5">
+                  <span className="text-[10px] font-mono text-slate-500 font-bold uppercase shrink-0 mr-1 flex items-center gap-1">
+                    <Filter size={11} />
+                    <span>Profession Category:</span>
+                  </span>
+                  {REPORTER_PROFESSION_CATEGORIES.map((cat) => {
+                    const CatIcon = cat.icon;
+                    const isSelected = selectedScoutProfession === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setSelectedScoutProfession(cat.id)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 shadow-xs'
+                            : 'bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-[#e3e6ea] dark:border-[#262b36]'
+                        }`}
+                      >
+                        <CatIcon
+                          size={11}
+                          className={isSelected ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}
+                        />
+                        <span>{cat.shortTitle}</span>
+                        {isSelected && (
+                          <span className="px-1 py-0.2 rounded bg-amber-500/30 text-[8.5px] font-black uppercase">
+                            Top 3
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {activeJurisdictionTop3.map((cit) => (
@@ -2701,27 +3108,47 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       </div>
                     ))}
 
-                  {/* 4. Scout & Bodaboda Vault: Visible to everyone & AUTO-DISPATCHES monthly to Top-3 ranking citizens */}
-                  {activeVaultKind === 'scout_bounty_vault' && (
-                    <>
-                      <div className="px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                        <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>
-                          Automated Monthly Escrow: Auto-Dispatches on Month-End (23:59 EAT) to Locked Top-3 Citizens in {currentVaultJurisdictionMeta.jurisdictionLabel}
-                        </span>
-                      </div>
+                  {/* 4. Scout & Profession Vault: Visible to everyone & AUTO-DISPATCHES monthly + Instant Award Release */}
+                  {activeVaultKind === 'scout_bounty_vault' && (() => {
+                    const profConfig =
+                      REPORTER_PROFESSION_CATEGORIES.find((p) => p.id === selectedScoutProfession) ||
+                      REPORTER_PROFESSION_CATEGORIES[0];
+                    const ProfIcon = profConfig.icon;
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          disabled={isBatchDispatching}
+                          onClick={handleExecuteVaultDispatch}
+                          className="px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                        >
+                          <Send size={13} />
+                          <span>
+                            {isBatchDispatching
+                              ? `Dispatching Top-3 ${profConfig.shortTitle}...`
+                              : `Release Top-3 ${profConfig.shortTitle} Award`}
+                          </span>
+                        </button>
 
-                      <button
-                        type="button"
-                        disabled={isUploading}
-                        onClick={() => handleSeedPack('boda')}
-                        className="px-3 py-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <Bike size={13} className="text-amber-500" />
-                        <span>{isUploading ? 'Depositing...' : 'Instant Seed 5x Boda Pool ($0)'}</span>
-                      </button>
-                    </>
-                  )}
+                        <div className="px-3.5 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                          <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>
+                            Auto-Escrow: Month-End Top-3 Split for {profConfig.shortTitle} ({profConfig.bountyType.split(' ')[0]})
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={isUploading}
+                          onClick={() => handleSeedPack('boda')}
+                          className="px-3 py-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <ProfIcon size={13} className="text-amber-500" />
+                          <span>{isUploading ? 'Depositing...' : `Instant Seed 5x ${profConfig.shortTitle} Pool ($0)`}</span>
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <button

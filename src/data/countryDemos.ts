@@ -34,7 +34,7 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1584267385494-9fdd9a71ad61?w=800&q=80',
+        url: '/evidence/water_main_burst.jpg',
         caption: 'Trunk sewer overflow along Kindaruma Road junction',
       },
     ],
@@ -130,7 +130,7 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1594818379496-da1e345b0ded?w=800&q=80',
+        url: '/evidence/unbuilt_road_site.jpg',
         caption: 'Unbuilt drainage site despite 100% completion certificate',
       },
       { type: 'doc', name: 'NCC_Tender_Payment_Certificate_884.pdf', size: '1.4 MB' },
@@ -210,7 +210,7 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80',
+        url: '/evidence/sidewalk_damage.jpg',
         caption: 'Blocked drainage channel along hospital emergency corridor',
       },
     ],
@@ -389,7 +389,7 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1621905252472-943afaa20e20?w=800&q=80',
+        url: '/evidence/power_transformer_repair.jpg',
         caption: 'ECG rapid response bucket truck re-tensioning Kaneshie feeder',
       },
     ],
@@ -933,7 +933,7 @@ export function getDynamicCountryDemos(countryCode: CountryCode): Post[] {
       media: [
         {
           type: 'image',
-          url: 'https://images.unsplash.com/photo-1584267385494-9fdd9a71ad61?w=800&q=80',
+          url: '/evidence/pipe_repaired_nwsc.jpg',
           caption: `${waterDept?.name || countryName} emergency repair crew restoring trunk main`,
         },
       ],
@@ -1005,7 +1005,7 @@ export function getDynamicCountryDemos(countryCode: CountryCode): Post[] {
       media: [
         {
           type: 'image',
-          url: 'https://images.unsplash.com/photo-1594818379496-da1e345b0ded?w=800&q=80',
+          url: '/evidence/unbuilt_road_site.jpg',
           caption: 'Geotagged site inspection showing unstarted civil works',
         },
       ],

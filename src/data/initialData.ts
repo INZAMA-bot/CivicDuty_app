@@ -624,7 +624,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&q=80',
+        url: '/evidence/hospital_emergency_mulago.jpg',
         caption: 'Mulago Hospital Pediatric Emergency Care Unit',
       },
     ],
@@ -682,13 +682,13 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1584267385494-9fdd9a71ad61?w=800&q=80',
+        url: '/evidence/pipe_repaired_nwsc.jpg',
         caption: 'NWSC field squad completing clean pipe reinstatement',
       },
     ],
     before_after: {
-      before_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=600&q=80',
-      after_url: 'https://images.unsplash.com/photo-1584267385494-9fdd9a71ad61?w=600&q=80',
+      before_url: '/evidence/water_main_burst.jpg',
+      after_url: '/evidence/pipe_repaired_nwsc.jpg',
       before_label: '06:15 AM · Burst Main',
       after_label: '09:30 AM · Repaired & Sealed',
     },
@@ -735,7 +735,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1621905252472-943afaa20e20?w=800&q=80',
+        url: '/evidence/power_transformer_repair.jpg',
         caption: 'KPLC emergency team replacing storm-damaged conductor cables',
       },
     ],
@@ -780,7 +780,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80',
+        url: '/evidence/kigali_clean_corridor.jpg',
         caption: 'Pristine pedestrian walkways and clean drainage at Kimironko',
       },
     ],
@@ -825,7 +825,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80',
+        url: '/evidence/sidewalk_damage.jpg',
         caption: 'Drainage channel overflow near Kimironko market',
       },
     ],
@@ -911,7 +911,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80',
+        url: '/evidence/unbuilt_road_site.jpg',
         caption: 'Collapsed culvert at Unyama stream crossing',
       },
     ],
@@ -1041,13 +1041,13 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1584267385494-9fdd9a71ad61?w=800&q=80',
+        url: '/evidence/water_main_burst.jpg',
         caption: 'Burst pipe flooding the junction',
       },
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1573497491765-dccce02b29df?w=800&q=80',
-        caption: 'Sidewalk damage',
+        url: '/evidence/sidewalk_damage.jpg',
+        caption: 'Sidewalk and curb damage',
       },
     ],
     status: 'investigating',
@@ -1207,7 +1207,7 @@ export const INITIAL_POSTS: Post[] = [
       {
         type: 'video',
         url: 'https://storage.googleapis.com/coverr-main/mp4/Sound-Waves.mp4',
-        thumb: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80',
+        thumb: '/evidence/power_transformer_repair.jpg',
         caption: 'Transformer smoke on arrival',
         duration: '0:34',
       },
@@ -1226,7 +1226,7 @@ export const INITIAL_POSTS: Post[] = [
           { type: 'doc', name: 'WorkOrder_UME-2024-1847.pdf', size: '842 KB' },
           {
             type: 'image',
-            url: 'https://images.unsplash.com/photo-1621905252472-943afaa20e20?w=800&q=80',
+            url: '/evidence/power_transformer_repair.jpg',
             caption: 'Transformer replaced',
           },
         ],
@@ -1261,7 +1261,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1594818379496-da1e345b0ded?w=800&q=80',
+        url: '/evidence/unbuilt_road_site.jpg',
         caption: 'Empty site — no road construction',
       },
       { type: 'doc', name: 'procurement_notice_scan.pdf', size: '1.2 MB' },
@@ -1356,17 +1356,17 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=800&q=80',
+        url: '/evidence/matatu_swerving_pothole.jpg',
         caption: 'Pothole cluster, Nateete Rd',
       },
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80',
+        url: '/evidence/damaged_tyre_pothole.jpg',
         caption: 'Damaged vehicle tyre',
       },
       {
         type: 'image',
-        url: 'https://images.unsplash.com/photo-1547473078-330939ae9c85?w=800&q=80',
+        url: '/evidence/matatu_swerving_pothole.jpg',
         caption: 'Matatu swerving to avoid pothole',
       },
     ],

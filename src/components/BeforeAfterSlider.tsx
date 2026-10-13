@@ -43,9 +43,20 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   const [viewMode, setViewMode] = useState<'slider' | 'split'>(defaultMode);
   const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
   const [fullscreen, setFullscreen] = useState<boolean>(false);
+  const [failedBefore, setFailedBefore] = useState<boolean>(false);
+  const [failedAfter, setFailedAfter] = useState<boolean>(false);
+
+  const effectiveBeforeUrl =
+    failedBefore || !beforeUrl || beforeUrl.includes('unsplash.com')
+      ? '/evidence/water_main_burst.jpg'
+      : beforeUrl;
+  const effectiveAfterUrl =
+    failedAfter || !afterUrl || afterUrl.includes('unsplash.com')
+      ? '/evidence/pipe_repaired_nwsc.jpg'
+      : afterUrl;
 
   const sealShort = cryptoSeal ? cryptoSeal.slice(0, 10).toUpperCase() : 'SHA-256 SEALED';
-  const objFitClass = fitMode === 'contain' ? 'object-contain bg-slate-950' : 'object-cover';
+  const objFitClass = fitMode === 'contain' ? 'object-contain bg-slate-100 dark:bg-slate-900' : 'object-cover';
 
   const renderCanvas = (isFull: boolean) => {
     const sliderHeight = isFull
@@ -61,26 +72,34 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
 
     if (viewMode === 'slider') {
       return (
-        <div className={`relative w-full ${sliderHeight} overflow-hidden bg-slate-950`}>
+        <div className={`relative w-full ${sliderHeight} overflow-hidden bg-slate-100 dark:bg-slate-900`}>
           {/* After Image (Full width background) */}
           <img
-            src={afterUrl}
+            src={effectiveAfterUrl}
             alt={afterLabel}
             className={`absolute inset-0 w-full h-full ${objFitClass}`}
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              setFailedAfter(true);
+              (e.currentTarget as HTMLImageElement).src = '/evidence/pipe_repaired_nwsc.jpg';
+            }}
           />
 
           {/* Before Image (Clipped by sliderPos) */}
           <div
-            className="absolute inset-y-0 left-0 overflow-hidden bg-slate-950"
+            className="absolute inset-y-0 left-0 overflow-hidden bg-slate-100 dark:bg-slate-900"
             style={{ width: `${sliderPos}%` }}
           >
             <img
-              src={beforeUrl}
+              src={effectiveBeforeUrl}
               alt={beforeLabel}
               className={`w-full h-full ${objFitClass} max-w-none`}
               style={{ width: '100%', minWidth: '320px' }}
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                setFailedBefore(true);
+                (e.currentTarget as HTMLImageElement).src = '/evidence/water_main_burst.jpg';
+              }}
             />
           </div>
 
@@ -157,13 +176,17 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
     }
 
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-950">
-        <div className={`relative rounded-xl overflow-hidden ${splitHeight} border border-rose-500/50 bg-slate-900`}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-100 dark:bg-[#0e1116]">
+        <div className={`relative rounded-xl overflow-hidden ${splitHeight} border border-rose-500/50 bg-white dark:bg-slate-900`}>
           <img
-            src={beforeUrl}
+            src={effectiveBeforeUrl}
             alt={beforeLabel}
             className={`w-full h-full ${objFitClass}`}
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              setFailedBefore(true);
+              (e.currentTarget as HTMLImageElement).src = '/evidence/water_main_burst.jpg';
+            }}
           />
           <span className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-md bg-rose-950/90 border border-rose-500/50 text-rose-100 text-[9px] font-mono font-bold shadow">
             BEFORE: {beforeLabel}
@@ -171,10 +194,14 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
         </div>
         <div className={`relative rounded-xl overflow-hidden ${splitHeight} border border-emerald-500/50 bg-slate-900`}>
           <img
-            src={afterUrl}
+            src={effectiveAfterUrl}
             alt={afterLabel}
             className={`w-full h-full ${objFitClass}`}
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              setFailedAfter(true);
+              (e.currentTarget as HTMLImageElement).src = '/evidence/pipe_repaired_nwsc.jpg';
+            }}
           />
           <span className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-500/50 text-emerald-100 text-[9px] font-mono font-bold shadow">
             AFTER: {afterLabel}

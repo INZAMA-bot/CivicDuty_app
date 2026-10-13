@@ -22,6 +22,11 @@ import {
   Smartphone,
   CheckCircle2,
   Bike,
+  Store,
+  Car,
+  Stethoscope,
+  GraduationCap,
+  HardHat,
   Copy,
   Check,
   Printer,
@@ -32,7 +37,7 @@ import {
 interface CampaignMediaItem {
   id: string;
   title: string;
-  category: 'bodaboda' | 'bus' | 'train' | 'terminal' | 'billboard';
+  category: 'bodaboda' | 'bus' | 'train' | 'terminal' | 'billboard' | 'market' | 'taxi' | 'health' | 'teacher' | 'artisan';
   categoryLabel: string;
   imageSrc: string;
   summary: string;
@@ -103,7 +108,7 @@ export const TransitPreviewView: React.FC = () => {
       {
         id: 'market-vendors-billboard-ad',
         title: `${transitSpec.countryName} Market Vendors & Urban Market Square Billboard Campaign`,
-        category: 'billboard',
+        category: 'market',
         categoryLabel: 'Market Vendors Billboard',
         imageSrc: '/campaign/market_vendors_billboard_ad.jpg',
         summary: 'High-impact overhead commercial billboards installed above vibrant Ugandan urban markets, empowering market vendors and shoppers to report sanitation, water, power, and municipal service issues.',
@@ -115,6 +120,71 @@ export const TransitPreviewView: React.FC = () => {
           'Gives market women and traders a direct voice to municipal health, water, and electricity authorities',
           'Drives grassroots participation in Parish Vault and Private Provider Vault monthly community rankings',
           'Zero-data USSD shortcode accessible on every basic phone used by market vendors',
+        ],
+      },
+      {
+        id: 'taxi-matatu-drivers-billboard',
+        title: `${transitSpec.countryName} Taxi & Matatu Commuter Park Gantry Campaign`,
+        category: 'taxi',
+        categoryLabel: 'Matatu & Taxi Drivers Gantry Billboard',
+        imageSrc: '/campaign/taxi_park_billboard_ad.jpg',
+        summary: 'Large-scale terminal gantry billboards across Old Taxi Park, Nairobi Bus Station, and regional commuter hubs, mobilizing commercial drivers to report highway washouts, blackspots, and extortion.',
+        specs: 'Main Terminal Overhead Gantry Billboard + Windshield Livery · CivicDuty 3-Signal Branding',
+        tagline: `MATATU & TAXI DRIVERS: HIGHWAY CORRIDOR WATCHDOGS · DIAL ${transitSpec.ussdCode}`,
+        callToAction: `Dial ${transitSpec.ussdCode} Highway Toll-Free`,
+        highlights: [
+          'Overhead billboard positioned above bustling commuter taxi and matatu queues in full view of drivers',
+          'Commercial drivers earn pre-funded fuel vouchers for logging dangerous highway defects',
+          `Instant zero-data USSD ${transitSpec.ussdCode} works anywhere without data bundles`,
+          'Connects to UNRA, KeNHA, and national traffic police desks',
+        ],
+      },
+      {
+        id: 'health-center-accountability',
+        title: `${transitSpec.countryName} Healthcare Workers & Community Clinic Accountability Board`,
+        category: 'health',
+        categoryLabel: 'Healthcare Monitor Board',
+        imageSrc: '/campaign/health_clinic_billboard_ad.jpg',
+        summary: 'Wall-mounted outdoor accountability boards at public health centers and clinic triage gates, empowering health workers and patients to report drug stockouts, oxygen delays, and broken maternity equipment.',
+        specs: 'Primary Healthcare Center Entrance Billboard & Pharmacy Signage',
+        tagline: `HEALTHCARE WORKERS & PATIENTS: DEFEND YOUR CLINIC · DIAL ${transitSpec.ussdCode}`,
+        callToAction: 'Explore Clinic Quality Board',
+        highlights: [
+          'Installed at community health centers and referral hospital outpatient gates',
+          'Direct reporting channel to Ministry of Health and District Health Officers (DHO)',
+          'Healthcare monitors eligible for pre-funded clinical wellness and data allocations',
+        ],
+      },
+      {
+        id: 'teacher-youth-watch',
+        title: `${transitSpec.countryName} Teachers, Students & Youth Leaders Education Watchdog Poster`,
+        category: 'teacher',
+        categoryLabel: 'School & Youth Watch Billboard',
+        imageSrc: '/campaign/school_youth_billboard_ad.jpg',
+        summary: 'High-visibility community billboards placed at public school gates and university student hubs, engaging teachers, student leaders, and youth councils to report dilapidated classrooms and safety hazards.',
+        specs: 'School Gate Bulletin Billboard & Student Council Noticeboard Branding',
+        tagline: `TEACHERS & YOUTH SCOUTS: SAFE SCHOOL ZONES · DIAL ${transitSpec.ussdCode}`,
+        callToAction: 'View School Zone Poster',
+        highlights: [
+          'Sensitizes youth leaders, teachers, and PTAs across primary and secondary school zones',
+          'Direct citizen audit line to Ministry of Education and municipal school inspectors',
+          'Top youth reporters earn pre-funded educational data bundles and library vouchers',
+        ],
+      },
+      {
+        id: 'artisan-builders-inspector',
+        title: `${transitSpec.countryName} Artisans, Builders & Public Works Infrastructure Inspector Billboard`,
+        category: 'artisan',
+        categoryLabel: 'Artisans & Quality Inspector Signboard',
+        imageSrc: '/campaign/artisan_construction_billboard_ad.jpg',
+        summary: 'Reflective roadside construction billboards installed along ongoing road, drainage, and bridge sites, enlisting local masons, plumbers, electricians, and civil artisans as third-party workmanship inspectors.',
+        specs: 'Active Worksite Billboard & Reflective Safety Signage',
+        tagline: `ARTISANS & BUILDERS: WATCHDOG PUBLIC WORKS · DIAL ${transitSpec.ussdCode}`,
+        callToAction: 'Inspect Public Works Signboard',
+        highlights: [
+          'Installed along active UNRA, KeNHA, and municipal construction corridors',
+          'Mobilizes technical artisans to document concrete mix quality, asphalt thickness, and delayed culverts',
+          'Direct link to Contractor Watchdog Vault for verified civil inspection bounties',
         ],
       },
       {
@@ -138,7 +208,9 @@ export const TransitPreviewView: React.FC = () => {
     [transitSpec]
   );
 
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'bodaboda' | 'bus' | 'train' | 'terminal' | 'billboard' | 'strategy'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<
+    'all' | 'bodaboda' | 'bus' | 'train' | 'terminal' | 'billboard' | 'market' | 'taxi' | 'health' | 'teacher' | 'artisan' | 'strategy'
+  >('all');
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxItem, setLightboxItem] = useState<CampaignMediaItem | null>(null);
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
@@ -227,12 +299,16 @@ export const TransitPreviewView: React.FC = () => {
         {/* Category Navigation Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
           {[
-            { key: 'all', label: 'All Images', icon: Layers },
-            { key: 'bodaboda', label: 'Bodaboda Stages', icon: Bike },
+            { key: 'all', label: 'All Posters', icon: Layers },
             { key: 'bus', label: 'Kayoola Buses', icon: Bus },
             { key: 'train', label: 'Passenger Train', icon: Train },
+            { key: 'bodaboda', label: 'Bodaboda Stages', icon: Bike },
+            { key: 'market', label: 'Market Vendors', icon: Store },
+            { key: 'taxi', label: 'Taxi & Matatu', icon: Car },
+            { key: 'health', label: 'Health Clinics', icon: Stethoscope },
+            { key: 'teacher', label: 'Schools & Youth', icon: GraduationCap },
+            { key: 'artisan', label: 'Public Works Artisans', icon: HardHat },
             { key: 'terminal', label: 'Fleet Terminal', icon: ShieldCheck },
-            { key: 'billboard', label: 'Shelter Billboards', icon: Megaphone },
             { key: 'strategy', label: 'Sensitization Strategy', icon: TrendingUp },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -268,6 +344,9 @@ export const TransitPreviewView: React.FC = () => {
                   alt={activeMedia.title}
                   className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
+                  }}
                 />
                 <div className="absolute inset-0 bg-slate-950/30 pointer-events-none" />
 
@@ -281,14 +360,25 @@ export const TransitPreviewView: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Expand Lightbox Button */}
-                <button
-                  onClick={() => setLightboxItem(activeMedia)}
-                  className="absolute top-3 right-3 p-2 rounded-lg bg-black/70 backdrop-blur-md hover:bg-black/90 text-white border border-white/20 transition-colors z-10 cursor-pointer"
-                  title="Expand to Fullscreen Lightbox"
-                >
-                  <Maximize2 size={15} />
-                </button>
+                {/* Top Right Action Buttons: Download Poster + Expand Lightbox */}
+                <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                  <a
+                    href={activeMedia.imageSrc}
+                    download={`civicduty-${activeMedia.category}-campaign-poster.jpg`}
+                    className="px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-md hover:bg-black/90 text-white border border-white/20 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer shadow-sm"
+                    title="Download Poster Image for Social Media"
+                  >
+                    <Download size={13} />
+                    <span className="hidden sm:inline">Download</span>
+                  </a>
+                  <button
+                    onClick={() => setLightboxItem(activeMedia)}
+                    className="p-1.5 rounded-lg bg-black/70 backdrop-blur-md hover:bg-black/90 text-white border border-white/20 transition-colors cursor-pointer shadow-sm"
+                    title="Expand to Fullscreen Lightbox"
+                  >
+                    <Maximize2 size={15} />
+                  </button>
+                </div>
 
                 {/* Bottom Overlay Title & Tagline */}
                 <div className="absolute bottom-3 left-3 right-3 z-10 p-3 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/15">
@@ -348,14 +438,17 @@ export const TransitPreviewView: React.FC = () => {
                           : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] opacity-75 hover:opacity-100'
                       }`}
                     >
-                      <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
+                      <div className="aspect-video w-full bg-slate-100 dark:bg-slate-900 overflow-hidden relative">
                         <img
                           src={item.imageSrc}
                           alt={item.title}
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
+                          }}
                         />
-                        <div className="absolute inset-0 bg-black/45" />
+                        <div className="absolute inset-0 bg-black/30" />
                         <div className="absolute bottom-1.5 left-2 right-2 text-[9.5px] font-semibold text-white truncate font-mono">
                           {item.categoryLabel}
                         </div>
@@ -803,12 +896,22 @@ VOICEOVER: "Koona *3030# kati. CIVICDUTY: Speak, Serve, Be Heard!"`;
                   {lightboxItem.categoryLabel}
                 </span>
               </div>
-              <button
-                onClick={() => setLightboxItem(null)}
-                className="p-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-              >
-                <X size={15} />
-              </button>
+              <div className="flex items-center gap-2">
+                <a
+                  href={lightboxItem.imageSrc}
+                  download={`civicduty-${lightboxItem.category}-campaign-poster.jpg`}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Download size={12} />
+                  <span>Download</span>
+                </a>
+                <button
+                  onClick={() => setLightboxItem(null)}
+                  className="p-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
             </div>
 
             {/* Modal Image */}
@@ -818,6 +921,9 @@ VOICEOVER: "Koona *3030# kati. CIVICDUTY: Speak, Serve, Be Heard!"`;
                 alt={lightboxItem.title}
                 className="max-h-[60vh] w-auto object-contain"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
+                }}
               />
             </div>
 

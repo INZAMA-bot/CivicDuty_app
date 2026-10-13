@@ -176,10 +176,13 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-black relative">
               <img
-                src="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=400&q=80"
+                src="/evidence/water_main_burst.jpg"
                 alt="Before Incident"
                 className="w-full h-20 object-cover opacity-85"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/evidence/water_main_burst.jpg';
+                }}
               />
               <span className="absolute bottom-1 left-1 bg-rose-950/90 text-rose-200 text-[7.5px] mono font-bold px-1.5 py-0.2 rounded border border-rose-500/40">
                 BEFORE (Citizen Filed)
@@ -187,10 +190,13 @@ export const TicketAuditTimeline: React.FC<TicketAuditTimelineProps> = ({ post }
             </div>
             <div className="rounded-lg overflow-hidden border border-emerald-500/40 bg-black relative">
               <img
-                src="https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=400&q=80"
+                src="/evidence/pipe_repaired_nwsc.jpg"
                 alt="After Resolution"
                 className="w-full h-20 object-cover opacity-90"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/evidence/pipe_repaired_nwsc.jpg';
+                }}
               />
               <span className="absolute bottom-1 left-1 bg-emerald-950/90 text-emerald-200 text-[7.5px] mono font-bold px-1.5 py-0.2 rounded border border-emerald-500/40">
                 AFTER (Fixed & Sealed)
