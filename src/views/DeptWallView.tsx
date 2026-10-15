@@ -82,10 +82,22 @@ export const DeptWallView: React.FC = () => {
   const [showNudgeModal, setShowNudgeModal] = useState(false);
   const [nudgeXHandle, setNudgeXHandle] = useState('');
   const [focusedWallPostId, setFocusedWallPostId] = useState<string | null>(null);
+  const [wallVouchers, setWallVouchers] = useState<any[]>([]);
 
   const country = activeDeptCountry || user?.country || 'UG';
   const did = activeDept || 'kcca';
   const d = getDept(country, did);
+
+  React.useEffect(() => {
+    fetch(`/api/perks/vault?country=${country}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.vouchers) {
+          setWallVouchers(data.vouchers);
+        }
+      })
+      .catch(() => {});
+  }, [country]);
 
   const rawDeptPosts = posts.filter((p) => p.dept === did && p.country === country);
   const deptPosts = (showDemos ? rawDeptPosts : rawDeptPosts.filter((p) => !p.is_demo)).sort((a, b) => {
@@ -759,7 +771,7 @@ export const DeptWallView: React.FC = () => {
           { id: 'posts', label: `Public Reports (${deptPosts.length})` },
           { id: 'projects', label: `Capital Projects & Tenders (${deptProjects.length})` },
           { id: 'announcements', label: 'Gazette & Bulletins' },
-          { id: 'vouchers', label: isConsumer ? 'Loyalty Vouchers & Perks' : 'Perk Vouchers & Rewards' },
+          { id: 'vouchers', label: isConsumer ? 'Merchant Studio & Cashier POS Desk' : 'Civic Perks & Vouchers' },
         ].map((t) => (
           <button
             key={t.id}
@@ -926,19 +938,23 @@ export const DeptWallView: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Loyalty Vouchers & Perks Tab (Loyalty-as-a-Service Studio) */
+        /* Merchant Studio & POS Tab (Provider-Desk Reactive Loyalty Studio) */
         <div className="p-4 space-y-4">
           <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Store size={18} className="text-emerald-600 dark:text-emerald-400" />
                 <h3 className="text-sm font-black text-slate-950 dark:text-white">
-                  {d.name} · Merchant Loyalty &amp; Voucher Marketplace
+                  {d.name} · Merchant Studio &amp; Cashier POS Desk
                 </h3>
+                {isClaimed && (
+                  <span className="px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-emerald-600 text-white">
+                    Desk Verified
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300">
-                Generate custom discount, freebie, BOGO, gift &amp; cashback vouchers for your products &amp; services.
-                CivicDuty permanent 2% capped commission with 98% direct escrow release at checkout counter.
+                Official store loyalty and cashier redemption desk for {d.name}. Scan or enter customer voucher PINs/QRs, create discount promotions, and manage partner perks with guaranteed 98% escrow payout.
               </p>
             </div>
             <button
@@ -954,7 +970,7 @@ export const DeptWallView: React.FC = () => {
           <MerchantLoyaltyStudio
             selectedCountry={country as any}
             activeMerchantDept={did}
-            currentVouchers={[]}
+            currentVouchers={wallVouchers}
             onSelectForVaultDeposit={(product) => {
               go('vaults');
               toast(`Redirecting to Sovereign Vault to fund ${product.merchantName} voucher!`, 'emerald');

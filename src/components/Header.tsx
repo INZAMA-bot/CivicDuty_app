@@ -35,6 +35,8 @@ const VIEW_LABELS: Record<string, { section: string; title: string }> = {
   ps_executive_desk: { section: 'Apex Executive', title: 'Permanent Secretary Command' },
   ps_molg_rollout: { section: 'Apex Executive', title: 'National Rollout Matrix' },
   ps_opm_analytics: { section: 'Apex Executive', title: 'Cabinet Performance Analytics' },
+  ministerial_desk: { section: 'Apex Political', title: 'Cabinet Ministerial Command Desk' },
+  ministerial_command: { section: 'Apex Political', title: 'Cabinet Ministerial Command Desk' },
   entity: { section: 'Portals', title: 'Verified Entity Gateway' },
   entity_gateway: { section: 'Portals', title: 'Verified Entity Gateway' },
   entity_register: { section: 'Portals', title: 'Register Service Provider' },
@@ -92,8 +94,17 @@ export const Header: React.FC = () => {
   const dept = activeUser.dept ? getDept(activeUser.country, activeUser.dept) : null;
   const viewInfo = VIEW_LABELS[view] || { section: 'Workspace', title: 'CivicDuty Studio' };
 
+  const isMinister =
+    activeUser.real_title_short?.includes('Minister') ||
+    activeUser.role_label?.includes('Minister') ||
+    activeUser.deskCode?.includes('-MIN') ||
+    activeUser.deskCode === 'UG-MOLG-CABINET-MIN' ||
+    activeUser.deskCode === 'UG-MOLG-STATE-MIN';
+
   const handleOpenGovHomeDesk = () => {
-    if (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId) {
+    if (isMinister) {
+      go('ministerial_desk');
+    } else if (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId) {
       setSelectedMinistryId(psInfo.ministryId);
       go('ps_executive_desk');
     } else if (psInfo.isMoLG) {

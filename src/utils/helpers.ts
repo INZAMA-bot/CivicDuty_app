@@ -241,9 +241,13 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
     rawCode.includes('PS-DEV-') ||
     rawCode.includes('RALG') ||
     rawCode.includes('COGTA') ||
-    rawName.includes('KUMUMANYA');
+    rawName.includes('KUMUMANYA') ||
+    rawName.includes('BALAAM') ||
+    rawName.includes('NAMEERE') ||
+    rawName.includes('MAGYEZI');
 
   if (isTerritorialSuperadmin) {
+    const isUganda = user.country === 'UG';
     return {
       isPs: true,
       isMoLG: true,
@@ -251,9 +255,11 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
       ministryName: user.dept && user.dept.length > 4 ? user.dept : 'Ministry of Local Government & Territorial Administration',
       shortTitle: 'Territorial Superadmin',
       officerTitle: user.real_title_short || user.role_label || 'Permanent Secretary (National Superadmin)',
-      cabinetMinisterTitle: 'Cabinet Minister for Local Government & Territorial Administration',
-      stateMinisterTitles: ['Minister of State for Local Government', 'Minister of State for Urban Development'],
-      mandateSummary: 'National Territorial Superadmin — Commissions all regional, district/county, municipal, and sub-county/ward administrative nodes and enforces national SLA compliance.',
+      cabinetMinisterTitle: isUganda ? 'Hon. Balaam Barugahara Ateenyi (Cabinet Minister)' : 'Cabinet Minister for Local Government & Territorial Administration',
+      stateMinisterTitles: isUganda 
+        ? ['Hon. Justine Nameere (Minister of State for Local Government)', 'Hon. Victoria Rusoke Businge (State Minister)']
+        : ['Minister of State for Local Government', 'Minister of State for Urban Development'],
+      mandateSummary: 'National Territorial Superadmin — Commissions all regional, district/county, municipal, and sub-county/ward administrative nodes, ringfences PDM funds, and enforces national anti-graft SLA compliance.',
     };
   }
 

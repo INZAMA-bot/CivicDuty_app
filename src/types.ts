@@ -364,6 +364,16 @@ export interface Post {
     audio_url?: string;
   };
   hashtags?: string[];
+  frontline_scout?: {
+    is_scout: boolean;
+    category: 'bodaboda' | 'market' | 'taxi' | 'health' | 'teacher' | 'artisan';
+    category_label: string;
+    workstation_name: string;
+    stage_id?: string;
+    home_parish: string;
+    consensus_verified?: boolean;
+    scout_count_at_report?: number;
+  };
 }
 
 export interface UserProfile {
@@ -563,7 +573,10 @@ export type OfficialQueryCategory =
   | 'unattended_reports'
   | 'desk_abandonment'
   | 'procurement_audit'
-  | 'general_supervisory';
+  | 'general_supervisory'
+  | 'ministerial_directive'
+  | 'anti_graft_taskforce'
+  | 'field_audit_inquiry';
 
 export type OfficialQueryStatus =
   | 'pending_response'
@@ -615,6 +628,44 @@ export interface OfficialQuery {
   status: OfficialQueryStatus;
   response?: OfficialQueryResponse;
   determination?: OfficialQueryDetermination;
+}
+
+export interface MinisterialDirective {
+  id: string;
+  directiveRef: string;
+  country: CountryCode;
+  ministerName: string;
+  ministerTitle: string;
+  ministerDeskCode: string;
+  mandateType: 'cabinet_minister_policy' | 'state_minister_grassroots';
+  subject: string;
+  directiveType: 'anti_extortion_taskforce' | 'surprise_field_audit' | 'policy_circular' | 'pdm_ringfence' | 'public_hearing';
+  targetScope: 'national' | 'district' | 'subcounty' | 'parish';
+  targetJurisdiction: string;
+  statutoryBasis: string;
+  executiveInstructions: string;
+  psActionRequired: string;
+  iggActionRequired: string;
+  status: 'active' | 'ps_acknowledged' | 'in_execution' | 'igg_subpoena_issued' | 'closed';
+  issuedAt: string;
+  linkedQueryId?: string;
+  auditSealSha256?: string;
+}
+
+export interface EnrolledSectorMinister {
+  id: string;
+  ministryKey: string;
+  ministryName: string;
+  ministerName: string;
+  portfolio: string;
+  rank: 'cabinet_minister' | 'minister_of_state';
+  deskCode: string;
+  status: 'active' | 'invited_pending_acceptance' | 'inactive';
+  invitedBy: string;
+  invitedAt: string;
+  statutoryScope: string;
+  policyFocus: string;
+  notes?: string;
 }
 
 export interface ProjectMilestone {
@@ -940,6 +991,8 @@ export type ViewType =
   | 'entity_register'
   | 'entity_gateway'
   | 'entity_team'
+  | 'ministerial_desk'
+  | 'ministerial_command'
   | 'cd_ops';
 
 export type IdentityDocumentType =

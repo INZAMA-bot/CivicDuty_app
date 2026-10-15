@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Store,
   Plus,
@@ -29,6 +29,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { MerchantProductService, MerchantVoucherRewardType, EscrowPerkVoucher, CountryCode } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
+import { getDept } from '../utils/helpers';
 import {
   getStoredMerchantProducts,
   saveStoredMerchantProduct,
@@ -58,8 +59,21 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
 
   // Form State for Voucher Creation
   const [merchantName, setMerchantName] = useState(() => {
+    if (activeMerchantDept) {
+      const d = getDept(selectedCountry, activeMerchantDept);
+      if (d) return d.name;
+    }
     return user?.organization_name || user?.name ? `${user.organization_name || user.name} Services` : 'Kireka Beauty & Hair Salon';
   });
+
+  useEffect(() => {
+    if (activeMerchantDept) {
+      const d = getDept(selectedCountry, activeMerchantDept);
+      if (d) {
+        setMerchantName(d.name);
+      }
+    }
+  }, [activeMerchantDept, selectedCountry]);
   const [category, setCategory] = useState<string>('hospitality');
   const [parish, setParish] = useState<string>(() => {
     return user?.scope_label && user.scope_label.toLowerCase().includes('parish')

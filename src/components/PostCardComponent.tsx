@@ -322,6 +322,18 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             </span>
           </span>
 
+          {post.frontline_scout && post.frontline_scout.workstation_name && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25">
+              <MapPin size={10} className="text-emerald-600 dark:text-emerald-400" />
+              <span>{post.frontline_scout.workstation_name}</span>
+              {post.frontline_scout.consensus_verified && (
+                <span className="px-1 py-0.2 rounded bg-emerald-600 text-white text-[8px] font-sans">
+                  Certified Hub
+                </span>
+              )}
+            </span>
+          )}
+
           {totalVotes > 3 && (
             <span
               className={`text-[8.5px] px-1.5 py-0.5 rounded-full font-bold ${

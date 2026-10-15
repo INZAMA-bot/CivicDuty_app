@@ -25,7 +25,10 @@ import {
   CivicNotification,
   CitizenDirectMessage,
   TownHallSession,
+  MinisterialDirective,
+  EnrolledSectorMinister,
 } from '../types';
+import { INITIAL_ENROLLED_SECTOR_MINISTERS, INITIAL_MINISTERIAL_DIRECTIVES } from '../data/initialMinisterialData';
 import { INITIAL_PROMOTIONAL_ADS } from '../data/promotionalAds';
 import { getDynamicCountryDemos } from '../data/countryDemos';
 import {
@@ -261,6 +264,36 @@ interface AppContextType {
     }
   ) => void;
   deleteOfficialQuery: (queryId: string) => void;
+  // Ministerial Command & Oversight (Constitution Articles 111 & 117)
+  ministerialDirectives: MinisterialDirective[];
+  enrolledSectorMinisters: EnrolledSectorMinister[];
+  issueMinisterialDirective: (directive: {
+    ministerName: string;
+    ministerTitle: string;
+    ministerDeskCode: string;
+    mandateType: 'cabinet_minister_policy' | 'state_minister_grassroots';
+    subject: string;
+    directiveType: 'anti_extortion_taskforce' | 'surprise_field_audit' | 'policy_circular' | 'pdm_ringfence' | 'public_hearing';
+    targetScope: 'national' | 'district' | 'subcounty' | 'parish';
+    targetJurisdiction: string;
+    statutoryBasis: string;
+    executiveInstructions: string;
+    psActionRequired: string;
+    iggActionRequired: string;
+  }) => MinisterialDirective;
+  acknowledgeMinisterialDirectiveByPs: (directiveId: string, psNotes: string, warrantHold: boolean) => void;
+  updateMinisterialDirectiveStatus: (directiveId: string, status: MinisterialDirective['status']) => void;
+  enrollSectorMinister: (minister: {
+    ministryKey: string;
+    ministryName: string;
+    ministerName: string;
+    portfolio: string;
+    rank: 'cabinet_minister' | 'minister_of_state';
+    statutoryScope: string;
+    policyFocus: string;
+    notes?: string;
+  }) => EnrolledSectorMinister;
+  revokeSectorMinister: (id: string) => void;
   // CD-Ops Manufactured Promotional Ads & Campaigns
   promotionalAds: CdOpsPromotionalAd[];
   addPromotionalAd: (ad: CdOpsPromotionalAd) => void;
@@ -643,6 +676,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return saved ? JSON.parse(saved) : INITIAL_OFFICIAL_QUERIES;
     } catch {
       return INITIAL_OFFICIAL_QUERIES;
+    }
+  });
+
+  const [ministerialDirectives, setMinisterialDirectives] = useState<MinisterialDirective[]>(() => {
+    try {
+      const saved = localStorage.getItem('cd_ministerial_directives');
+      return saved ? JSON.parse(saved) : INITIAL_MINISTERIAL_DIRECTIVES;
+    } catch {
+      return INITIAL_MINISTERIAL_DIRECTIVES;
+    }
+  });
+
+  const [enrolledSectorMinisters, setEnrolledSectorMinisters] = useState<EnrolledSectorMinister[]>(() => {
+    try {
+      const saved = localStorage.getItem('cd_enrolled_sector_ministers');
+      return saved ? JSON.parse(saved) : INITIAL_ENROLLED_SECTOR_MINISTERS;
+    } catch {
+      return INITIAL_ENROLLED_SECTOR_MINISTERS;
     }
   });
 
@@ -1139,6 +1190,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     try {
+      localStorage.setItem('cd_ministerial_directives', JSON.stringify(ministerialDirectives));
+    } catch {}
+  }, [ministerialDirectives]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cd_enrolled_sector_ministers', JSON.stringify(enrolledSectorMinisters));
+    } catch {}
+  }, [enrolledSectorMinisters]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('cd_subscriptions', JSON.stringify(subscriptions));
     } catch {}
   }, [subscriptions]);
@@ -1438,6 +1501,189 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteOfficialQuery = (queryId: string) => {
     setOfficialQueries((prev) => prev.filter((q) => q.id !== queryId));
     toast('Query record deleted from registry', 'amber');
+  };
+
+  const issueMinisterialDirective = (data: {
+    ministerName: string;
+    ministerTitle: string;
+    ministerDeskCode: string;
+    mandateType: 'cabinet_minister_policy' | 'state_minister_grassroots';
+    subject: string;
+    directiveType: 'anti_extortion_taskforce' | 'surprise_field_audit' | 'policy_circular' | 'pdm_ringfence' | 'public_hearing';
+    targetScope: 'national' | 'district' | 'subcounty' | 'parish';
+    targetJurisdiction: string;
+    statutoryBasis: string;
+    executiveInstructions: string;
+    psActionRequired: string;
+    iggActionRequired: string;
+  }): MinisterialDirective => {
+    const actCountry = user?.country || 'UG';
+    const randomCode = Math.floor(100 + Math.random() * 900);
+    const directiveRef = `DIR-MOLG-${data.mandateType === 'cabinet_minister_policy' ? 'CABINET' : 'STATE'}-${new Date().getFullYear()}/${randomCode}`;
+    const fakeSeal = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+
+    // Automatically generate statutory query in PS MoLG and IGG queues
+    const queryCategory: OfficialQueryCategory =
+      data.directiveType === 'anti_extortion_taskforce'
+        ? 'anti_graft_taskforce'
+        : data.directiveType === 'surprise_field_audit'
+        ? 'field_audit_inquiry'
+        : 'ministerial_directive';
+
+    const linkedOfficialQuery: OfficialQuery = {
+      id: `oq-mdir-${Date.now()}-${randomCode}`,
+      queryRef: `QRY-MIN-${actCountry}-${new Date().getFullYear()}-${randomCode}`,
+      country: actCountry,
+      dept: 'molg',
+      issuerName: data.ministerName,
+      issuerTitle: `${data.ministerTitle} (Art. ${data.mandateType === 'cabinet_minister_policy' ? '111' : '117'})`,
+      issuerRole: 'platform_admin',
+      issuerRank: 5,
+      targetUnit: data.targetJurisdiction,
+      targetScope: data.targetScope,
+      targetOfficer: `Accounting Officer / CAO (${data.targetJurisdiction})`,
+      targetTitle: 'Supervising Accounting Officer',
+      category: queryCategory,
+      subject: `[MINISTERIAL DIRECTIVE ${directiveRef}] ${data.subject}`,
+      grounds: `Constitutional Political Directive pursuant to Arts 111 & 117 of Uganda Constitution. Action: ${data.executiveInstructions}. Required from PS MoLG: ${data.psActionRequired}. Escalated to IGG: ${data.iggActionRequired}`,
+      evidenceDetails: `Direct Ministerial Directive ${directiveRef} issued by ${data.ministerName}. Tamper-proof Audit Seal: ${fakeSeal.slice(0, 16)}...`,
+      deadlineHours: 48,
+      deadlineTimestamp: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+      issuedAt: new Date().toISOString(),
+      status: 'pending_response',
+    };
+
+    setOfficialQueries((prev) => [linkedOfficialQuery, ...prev]);
+
+    const newDirective: MinisterialDirective = {
+      id: `mdir-${Date.now()}-${randomCode}`,
+      directiveRef,
+      country: actCountry,
+      ministerName: data.ministerName,
+      ministerTitle: data.ministerTitle,
+      ministerDeskCode: data.ministerDeskCode,
+      mandateType: data.mandateType,
+      subject: data.subject,
+      directiveType: data.directiveType,
+      targetScope: data.targetScope,
+      targetJurisdiction: data.targetJurisdiction,
+      statutoryBasis: data.statutoryBasis,
+      executiveInstructions: data.executiveInstructions,
+      psActionRequired: data.psActionRequired,
+      iggActionRequired: data.iggActionRequired,
+      status: 'active',
+      issuedAt: new Date().toISOString(),
+      linkedQueryId: linkedOfficialQuery.id,
+      auditSealSha256: fakeSeal,
+    };
+
+    setMinisterialDirectives((prev) => [newDirective, ...prev]);
+
+    logAudit(
+      'ministerial_directive_issued',
+      directiveRef,
+      `POLITICAL DIRECTIVE ${directiveRef} issued by ${data.ministerName} (${data.ministerTitle}) targeting ${data.targetJurisdiction}. Instructions: ${data.executiveInstructions.slice(0, 100)}... Statutory query auto-dispatched to PS MoLG and IGG.`,
+      actCountry,
+      'molg'
+    );
+
+    toast(`Ministerial Directive ${directiveRef} promulgated. Dispatched to PS MoLG & IGG queues!`, 'emerald');
+    return newDirective;
+  };
+
+  const acknowledgeMinisterialDirectiveByPs = (directiveId: string, psNotes: string, warrantHold: boolean) => {
+    setMinisterialDirectives((prev) =>
+      prev.map((d) => (d.id === directiveId ? { ...d, status: warrantHold ? 'in_execution' : 'ps_acknowledged' } : d))
+    );
+
+    const directive = ministerialDirectives.find((d) => d.id === directiveId);
+    const ref = directive?.directiveRef || directiveId;
+
+    logAudit(
+      'ps_directive_action',
+      ref,
+      `PS MoLG (Accounting Officer Vote 011) executed administrative action on ${ref}: [${warrantHold ? 'WARRANT & ACCOUNT HOLD ISSUED' : 'ACKNOWLEDGED & ASSIGNED TO CAO'}]. PS Notes: ${psNotes}`,
+      directive?.country || 'UG',
+      'molg'
+    );
+
+    toast(
+      warrantHold
+        ? `PS MoLG Warrant Freeze instituted on ${ref} pursuant to PFMA Section 45.`
+        : `PS MoLG acknowledged ministerial directive ${ref} for administrative inspection.`,
+      'emerald'
+    );
+  };
+
+  const updateMinisterialDirectiveStatus = (directiveId: string, status: MinisterialDirective['status']) => {
+    setMinisterialDirectives((prev) =>
+      prev.map((d) => (d.id === directiveId ? { ...d, status } : d))
+    );
+  };
+
+  const enrollSectorMinister = (data: {
+    ministryKey: string;
+    ministryName: string;
+    ministerName: string;
+    portfolio: string;
+    rank: 'cabinet_minister' | 'minister_of_state';
+    statutoryScope: string;
+    policyFocus: string;
+    notes?: string;
+  }): EnrolledSectorMinister => {
+    const actCountry = user?.country || 'UG';
+    const deskCode = `UG-${data.ministryKey.toUpperCase()}-${data.rank === 'cabinet_minister' ? 'CABINET' : 'STATE'}-MIN`;
+    const newMinister: EnrolledSectorMinister = {
+      id: `esm-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      ministryKey: data.ministryKey,
+      ministryName: data.ministryName,
+      ministerName: data.ministerName,
+      portfolio: data.portfolio,
+      rank: data.rank,
+      deskCode,
+      status: 'active',
+      invitedBy: user?.officer_name || user?.name || 'Ben Kumumanya (PS MoLG)',
+      invitedAt: new Date().toISOString(),
+      statutoryScope: data.statutoryScope,
+      policyFocus: data.policyFocus,
+      notes: data.notes,
+    };
+
+    // Mint access code so they can log in
+    mintGovAccessCode(deskCode, {
+      country: actCountry,
+      dept: data.ministryKey,
+      scope: actCountry,
+      role: 'platform_admin',
+      is_utility: false,
+      role_label: `${data.ministerName}, ${data.portfolio} (${data.rank === 'cabinet_minister' ? 'Cabinet Minister · Art. 111' : 'Minister of State · Art. 117'})`,
+      real_title_short: `${data.rank === 'cabinet_minister' ? 'Minister' : 'State Minister'} ${data.ministerName.split(' ').slice(-1)[0]}`,
+      hierarchy_level: 'tier5_perm_sec',
+      escalation_rank: 5,
+      officer_name: data.ministerName,
+    });
+
+    setEnrolledSectorMinisters((prev) => [newMinister, ...prev]);
+
+    logAudit(
+      'ps_ministerial_enrollment',
+      deskCode,
+      `PS MoLG / Accounting Officer enrolled new sector minister: ${data.ministerName} (${data.portfolio}) with credential code ${deskCode}. Scope: ${data.statutoryScope}`,
+      actCountry,
+      data.ministryKey
+    );
+
+    toast(`Ministerial credential minted: ${deskCode} for ${data.ministerName}.`, 'emerald');
+    return newMinister;
+  };
+
+  const revokeSectorMinister = (id: string) => {
+    const target = enrolledSectorMinisters.find((m) => m.id === id);
+    if (target) {
+      revokeGovAccessCode(target.deskCode);
+      setEnrolledSectorMinisters((prev) => prev.filter((m) => m.id !== id));
+      toast(`Revoked credential for ${target.ministerName} (${target.deskCode}).`, 'amber');
+    }
   };
 
   const addPoints = (userId: string, pts: number, msg: string) => {
@@ -2797,9 +3043,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       go('company_management');
       return true;
     }
-    if (cleanCode === 'PS-MOLG-2026' || cleanCode === 'PS-MOLG-ROLLOUT') {
-      toast(`PS MoLG National Superadmin Desk mounted (${data.officer_name || 'Ben Kumumanya'}).`, 'emerald');
+    if (
+      cleanCode === 'UG-MOLG-CABINET-MIN' ||
+      cleanCode === 'UG-MOLG-STATE-MIN' ||
+      cleanCode === 'MIN-MOLG-BALAAM' ||
+      cleanCode === 'MIN-STATE-MOLG-NAMEERE' ||
+      cleanCode.endsWith('-CABINET-MIN') ||
+      cleanCode.endsWith('-STATE-MIN')
+    ) {
+      toast(`Apex Ministerial Command Mounted: ${data.officer_name || data.real_title_short} (Arts 111 & 117)`, 'emerald');
+      go('ministerial_desk');
+      return true;
+    }
+    if (cleanCode === 'UG-MOLG-PS-011' || cleanCode === 'PS-MOLG-2026' || cleanCode === 'PS-MOLG-ROLLOUT') {
+      toast(`PS MoLG National Superadmin & Accounting Officer Desk mounted (${data.officer_name || 'Ben Kumumanya'}).`, 'emerald');
       go('ps_molg_rollout');
+      return true;
+    }
+    if (cleanCode === 'UG-IGG-9999') {
+      toast(`IGG Ombudsman Portal mounted (${data.officer_name || 'Beti Kamya Turwomwe'}).`, 'rose' as any);
+      go('gov_audit');
       return true;
     }
     if (cleanCode === 'PS-OPM-2026') {
@@ -3732,6 +3995,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         respondToOfficialQuery,
         determineOfficialQuery,
         deleteOfficialQuery,
+        ministerialDirectives,
+        enrolledSectorMinisters,
+        issueMinisterialDirective,
+        acknowledgeMinisterialDirectiveByPs,
+        updateMinisterialDirectiveStatus,
+        enrollSectorMinister,
+        revokeSectorMinister,
         promotionalAds,
         addPromotionalAd,
         togglePromotionalAdStatus,

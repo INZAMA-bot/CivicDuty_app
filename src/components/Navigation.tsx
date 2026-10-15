@@ -55,11 +55,26 @@ export const Navigation: React.FC<NavigationProps> = () => {
   const psInfo = getPsMinistryInfo(activeUser);
 
   const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
-  // Strictly restrict the National "Admin" / "Superadmin" console (gov_admin) to the National Territorial Superadmin (e.g. PS MoLG)
+
+  // Check if political minister (Constitution Arts 111 & 117)
+  const isMinister =
+    activeUser.real_title_short?.includes('Minister') ||
+    activeUser.role_label?.includes('Minister') ||
+    activeUser.deskCode?.includes('-MIN') ||
+    activeUser.deskCode === 'UG-MOLG-CABINET-MIN' ||
+    activeUser.deskCode === 'UG-MOLG-STATE-MIN';
+
+  // Strictly restrict the Superadmin console to Permanent Secretaries (Vote 011 PS MoLG / accounting officers)
   const isSuperAdmin =
-    activeUser.role === 'platform_admin' ||
-    psInfo.isMoLG ||
-    activeUser.dept === 'molg';
+    !isMinister &&
+    (activeUser.role === 'platform_admin' || psInfo.isMoLG || activeUser.hierarchy_level === 'tier5_perm_sec') &&
+    (activeUser.officer_name?.includes('Kumumanya') ||
+      activeUser.real_title_short?.includes('PS') ||
+      activeUser.role_label?.includes('Permanent Secretary') ||
+      activeUser.deskCode === 'UG-MOLG-PS-011' ||
+      activeUser.deskCode === 'PS-MOLG-2026' ||
+      activeUser.deskCode === 'PS-MOLG-ROLLOUT');
+
   const isNode = activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin || psInfo.isPs;
 
   const handleApexClick = () => {
@@ -99,6 +114,17 @@ export const Navigation: React.FC<NavigationProps> = () => {
           },
         ]
       : []),
+    ...(isMinister
+      ? [
+          {
+            id: 'ministerial_desk' as ViewType,
+            label: 'Ministerial Command',
+            icon: Scale,
+            onClick: () => go('ministerial_desk'),
+            active: view === 'ministerial_desk' || view === 'ministerial_command',
+          },
+        ]
+      : []),
     ...(isSuperAdmin
       ? [
           {
@@ -122,6 +148,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
   ];
 
   const studioConsoles: { id: ViewType; label: string; icon: React.ElementType }[] = [
+    { id: 'ministerial_desk', label: 'Ministerial Desk', icon: Scale },
     { id: 'entity', label: 'Entity Gateway', icon: ShieldCheck },
     { id: 'ob2', label: 'Gov Desk Login', icon: Landmark },
     { id: 'ussd', label: 'USSD *3030#', icon: Terminal },

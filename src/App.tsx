@@ -16,6 +16,7 @@ import {
   Layers,
   Building2,
   ArrowUpRight,
+  Scale,
 } from 'lucide-react';
 
 import { SplashView } from './views/SplashView';
@@ -49,6 +50,7 @@ import { VerifyView } from './views/VerifyView';
 import { TransitPreviewView } from './views/TransitPreviewView';
 import { GovPartnershipView } from './views/GovPartnershipView';
 import { PerkVaultView } from './views/PerkVaultView';
+import { MinisterialCommandView } from './views/MinisterialCommandView';
 import { CivicDutyGuideModal } from './components/CivicDutyGuideModal';
 import { LegalTrustModal } from './components/LegalTrustModal';
 import { GlobalSocialModals } from './components/GlobalSocialModals';
@@ -199,6 +201,7 @@ const StudioRightInspector: React.FC = () => {
         </div>
         <div className="space-y-1">
           {[
+            { id: 'ministerial_desk', label: 'Ministerial Command Desk', icon: Scale },
             { id: 'depts', label: 'Service Provider Registry', icon: Building2 },
             { id: 'perk_vault', label: 'Honours & Perk Escrow', icon: Award },
             { id: 'verify', label: 'Verify SHA-256 Ledger Seal', icon: FileCheck2 },
@@ -293,6 +296,9 @@ const AppContent: React.FC = () => {
         return <PsMolgRolloutView />;
       case 'ps_executive_desk':
         return <PsExecutiveDeskView />;
+      case 'ministerial_desk':
+      case 'ministerial_command':
+        return <MinisterialCommandView />;
       case 'company_management':
       case 'cd_ops':
         return <CompanyManagementView />;

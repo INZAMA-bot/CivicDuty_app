@@ -5,6 +5,7 @@ import { COUNTRIES, TERRITORY } from '../data/countries';
 import { allDepts } from '../utils/helpers';
 import { savePerkVoucherBatchToCloud, savePerkVoucherToCloud, saveGatewayTransactionToCloud } from '../services/firestoreSync';
 import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
+import { FrontlineStageExplorer } from '../components/FrontlineStageExplorer';
 import { getStoredMerchantProducts, filterMerchantProductsByLocation, calculateVoucherEconomics } from '../data/merchantLoyaltyData';
 import {
   ArrowLeft,
@@ -171,7 +172,20 @@ export const REPORTER_PROFESSION_CATEGORIES: ReporterProfessionCategoryConfig[] 
 ];
 
 export const PerkVaultView: React.FC = () => {
-  const { user, posts, projects, profiles, addPoints, go, toast, logAudit, selectedCountry: ctxCountry } = useApp();
+  const {
+    user,
+    posts,
+    projects,
+    profiles,
+    addPoints,
+    go,
+    toast,
+    logAudit,
+    selectedCountry: ctxCountry,
+    setActiveDept,
+    setActiveDeptCountry,
+    setWallTab,
+  } = useApp();
   const studioSectionRef = React.useRef<HTMLDivElement | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>((user?.country || ctxCountry || 'UG') as CountryCode);
 
@@ -182,6 +196,13 @@ export const PerkVaultView: React.FC = () => {
     }
   }, [user?.country, ctxCountry]);
 
+  const userHomeParish = useMemo(() => {
+    if (user?.scope_label) return user.scope_label;
+    return selectedCountry === 'KE' ? 'Kilimani Ward' : selectedCountry === 'NG' ? 'Lekki Phase 1 Ward' : 'Kitintale Parish';
+  }, [user?.scope_label, selectedCountry]);
+
+  const [parishDepositMode, setParishDepositMode] = useState<'home' | 'external'>('home');
+
   // --- FIVE-VAULT ARCHITECTURE STATE ---
   const [activeVaultKind, setActiveVaultKind] = useState<VaultKind>(() => {
     if (user?.entity_category === 'private_contractor') return 'contractor_vault';
@@ -189,9 +210,17 @@ export const PerkVaultView: React.FC = () => {
     if (user?.entity_type === 'non_government_entity') return 'provider_vault';
     return 'parish_vault';
   });
-  const [selectedParish, setSelectedParish] = useState<string>(
-    user?.scope_label && user.scope_label.toLowerCase().includes('parish') ? user.scope_label : 'Kitintale Parish'
-  );
+  const [selectedParish, setSelectedParish] = useState<string>(() => {
+    if (user?.scope_label && user.scope_label.toLowerCase().includes('parish')) return user.scope_label;
+    return 'Kitintale Parish';
+  });
+
+  useEffect(() => {
+    if (parishDepositMode === 'home') {
+      setSelectedParish(userHomeParish);
+    }
+  }, [userHomeParish, parishDepositMode]);
+
   const [selectedProviderDept, setSelectedProviderDept] = useState<string>(
     user?.entity_type === 'non_government_entity' && user?.dept ? user.dept : 'umeme'
   );
@@ -217,7 +246,7 @@ export const PerkVaultView: React.FC = () => {
 
   const [vouchers, setVouchers] = useState<EscrowPerkVoucher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard' | 'merchant_studio'>('packs');
+  const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard'>('packs');
   const [merchantProducts, setMerchantProducts] = useState<MerchantProductService[]>(() => getStoredMerchantProducts());
   const [allocationSource, setAllocationSource] = useState<'utilities_supermarket' | 'merchant_loyalty'>('utilities_supermarket');
   const [merchantLocationFilterParish, setMerchantLocationFilterParish] = useState<string>(() => {
@@ -360,6 +389,23 @@ export const PerkVaultView: React.FC = () => {
       user?.organization_name?.toLowerCase().includes('construction') ||
       user?.organization_name?.toLowerCase().includes('contractor')
   );
+
+  const isCitizenOnly = !isPrivateProviderUser && !isContractorUser;
+  const [vaultCategoryView, setVaultCategoryView] = useState<'citizen_crowdsource' | 'institutional_desks'>(
+    isPrivateProviderUser || isContractorUser ? 'institutional_desks' : 'citizen_crowdsource'
+  );
+
+  useEffect(() => {
+    if (vaultCategoryView === 'citizen_crowdsource') {
+      if (activeVaultKind === 'provider_vault' || activeVaultKind === 'contractor_vault') {
+        setActiveVaultKind('parish_vault');
+      }
+    } else if (vaultCategoryView === 'institutional_desks') {
+      if (activeVaultKind !== 'provider_vault' && activeVaultKind !== 'contractor_vault') {
+        setActiveVaultKind(isContractorUser ? 'contractor_vault' : 'provider_vault');
+      }
+    }
+  }, [vaultCategoryView, isContractorUser]);
 
   const providerOptions = useMemo(() => {
     const depts = allDepts(selectedCountry);
@@ -2574,108 +2620,226 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </span>
         </div>
 
-        {/* 5-Vault Selector Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-          {[
-            {
-              id: 'parish_vault' as VaultKind,
-              title: '1. Parish Vault',
-              subtitle: 'Monthly Parish Top-3',
-              badge: 'Monthly · Parish Chief',
-              desc: 'Open to all sponsors. Ranks Parish citizens all month and awards the Top 3 evenly at month-end via Parish Chief.',
-              icon: MapPin,
-              accent: 'emerald',
-            },
-            {
-              id: 'provider_vault' as VaultKind,
-              title: '2. Private Provider Vault',
-              subtitle: 'Monthly Shop Top-3',
-              badge: 'Monthly · Shop Rank',
-              desc: 'Shop/business owners deposit all month. Monthly final ranking awards the Top 3 citizens strictly by business interactions.',
-              icon: Store,
-              accent: 'teal',
-            },
-            {
-              id: 'contractor_vault' as VaultKind,
-              title: '3. Contractor Vault',
-              subtitle: 'Monthly Watchdog Top-3',
-              badge: 'Monthly · Top 3 Watchdogs',
-              desc: 'Contractors & agencies fund project escrow. Monthly final ranking splits awards across the Top 3 Contract Watchdogs.',
-              icon: HardHat,
-              accent: 'indigo',
-            },
-            {
-              id: 'scout_bounty_vault' as VaultKind,
-              title: '4. Scout & Profession Vault',
-              subtitle: 'Top-3 Across 8 Professions',
-              badge: 'Monthly · 8 Reporter Roles',
-              desc: 'Covers all 8 Reporter Profession categories (Bodaboda, Drivers, Market Vendors, Healthcare, Teachers/Youth, Artisans, Civil Servants, Citizens). Top 3 in each category can be awarded.',
-              icon: Bike,
-              accent: 'amber',
-            },
-            {
-              id: 'individual_vault' as VaultKind,
-              title: '5. Individual Vault',
-              subtitle: 'Instant Peer Tipping',
-              badge: 'Instant · Personal Choice',
-              desc: 'No monthly wait: citizens deposit into their personal vault and immediately reward anyone (e.g. for a great post).',
-              icon: Gift,
-              accent: 'rose',
-            },
-          ].map((vCard) => {
-            const Icon = vCard.icon;
-            const isSelected = activeVaultKind === vCard.id;
-            return (
-              <button
-                key={vCard.id}
-                type="button"
-                onClick={() => {
-                  setActiveVaultKind(vCard.id);
+        {/* Decongested Vault View Segmented Switch */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="inline-flex p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+            <button
+              type="button"
+              onClick={() => {
+                setVaultCategoryView('citizen_crowdsource');
+                if (activeVaultKind === 'provider_vault' || activeVaultKind === 'contractor_vault') {
+                  setActiveVaultKind('parish_vault');
                   setLastBatchDispatchReceipt(null);
-                }}
-                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
-                  isSelected
-                    ? 'border-emerald-600 dark:border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/40'
-                    : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600'
-                }`}
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                        isSelected
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <Icon size={14} />
-                    </span>
-                    <span className="text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300">
-                      {vCard.badge}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
-                      {vCard.title}
-                    </div>
-                    <div className="text-[9.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                      {vCard.subtitle}
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {vCard.desc}
-                  </p>
-                </div>
-                <div className="pt-1.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[9.5px] font-mono font-bold">
-                  <span className={isSelected ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500'}>
-                    {isSelected ? 'Active Vault' : 'Select Vault →'}
-                  </span>
-                  {isSelected && <Check size={12} className="text-emerald-600 dark:text-emerald-400" />}
-                </div>
-              </button>
-            );
-          })}
+                }
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all cursor-pointer ${
+                vaultCategoryView === 'citizen_crowdsource'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Crowdsourced Community Vaults (3)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setVaultCategoryView('institutional_desks');
+                if (activeVaultKind !== 'provider_vault' && activeVaultKind !== 'contractor_vault') {
+                  setActiveVaultKind(isContractorUser ? 'contractor_vault' : 'provider_vault');
+                  setLastBatchDispatchReceipt(null);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                vaultCategoryView === 'institutional_desks'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Institutional &amp; Desk Vaults (2)</span>
+              {isCitizenOnly && (
+                <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 font-mono font-bold">
+                  Desk Only
+                </span>
+              )}
+            </button>
+          </div>
+
+          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+            {vaultCategoryView === 'citizen_crowdsource'
+              ? 'Public crowdsourced prize pools funded by citizens & sponsors'
+              : 'Enterprise escrow for registered Contractors & Service Provider Desks'}
+          </span>
         </div>
+
+        {/* Decongested Vault Grid: 3 Crowdsourced OR 2 Institutional */}
+        {vaultCategoryView === 'citizen_crowdsource' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              {
+                id: 'parish_vault' as VaultKind,
+                title: '1. Parish Vault',
+                subtitle: 'Monthly Parish Top-3',
+                badge: 'Monthly · Parish Chief',
+                desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Parish Chief.',
+                icon: MapPin,
+                accent: 'emerald',
+              },
+              {
+                id: 'scout_bounty_vault' as VaultKind,
+                title: '2. Scout & Profession Vault',
+                subtitle: 'Top-3 Across 8 Professions',
+                badge: 'Monthly · 8 Reporter Roles',
+                desc: 'Covers frontline categories (Bodaboda, Drivers, Market Vendors, Healthcare, Teachers, Artisans, Civil Servants, Citizens).',
+                icon: Bike,
+                accent: 'amber',
+              },
+              {
+                id: 'individual_vault' as VaultKind,
+                title: '3. Individual Vault',
+                subtitle: 'Instant Peer Tipping',
+                badge: 'Instant · Personal Choice',
+                desc: 'Zero monthly wait: citizens deposit vouchers into their personal pool and immediately tip authors for impactful field evidence.',
+                icon: Gift,
+                accent: 'rose',
+              },
+            ].map((vCard) => {
+              const Icon = vCard.icon;
+              const isSelected = activeVaultKind === vCard.id;
+              return (
+                <button
+                  key={vCard.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveVaultKind(vCard.id);
+                    setLastBatchDispatchReceipt(null);
+                  }}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-3 cursor-pointer ${
+                    isSelected
+                      ? 'border-emerald-600 dark:border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/40'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-1">
+                      <span
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <Icon size={15} />
+                      </span>
+                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300">
+                        {vCard.badge}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                        {vCard.title}
+                      </div>
+                      <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                        {vCard.subtitle}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      {vCard.desc}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[10px] font-mono font-bold">
+                    <span className={isSelected ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500'}>
+                      {isSelected ? 'Active Vault' : 'Select Vault →'}
+                    </span>
+                    {isSelected && <Check size={13} className="text-emerald-600 dark:text-emerald-400" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              {
+                id: 'provider_vault' as VaultKind,
+                title: 'Private Provider Vault',
+                subtitle: 'Monthly Customer Care & Shop Top-3',
+                badge: isPrivateProviderUser ? 'Your Registered Desk' : 'Desk-Gated',
+                desc: 'Business and store owners deposit escrow all month. Monthly final ranking awards the Top 3 citizens strictly based on customer care and service desk ratings.',
+                icon: Store,
+                accent: 'teal',
+                isOwner: isPrivateProviderUser,
+              },
+              {
+                id: 'contractor_vault' as VaultKind,
+                title: 'Contractor Watchdog Vault',
+                subtitle: 'Monthly Public Works Top-3',
+                badge: isContractorUser ? 'Your Registered Desk' : 'Desk-Gated',
+                desc: 'Civil engineering contractors & road agencies fund infrastructure project escrow. Splits awards across the Top 3 verified field watchdogs.',
+                icon: HardHat,
+                accent: 'indigo',
+                isOwner: isContractorUser,
+              },
+            ].map((vCard) => {
+              const Icon = vCard.icon;
+              const isSelected = activeVaultKind === vCard.id;
+              return (
+                <button
+                  key={vCard.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveVaultKind(vCard.id);
+                    setLastBatchDispatchReceipt(null);
+                  }}
+                  className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-3 cursor-pointer ${
+                    isSelected
+                      ? 'border-emerald-600 dark:border-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 ring-1 ring-emerald-500/40'
+                      : 'border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-1">
+                      <span
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <Icon size={15} />
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${
+                          vCard.isOwner
+                            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                            : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {vCard.badge}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                        {vCard.title}
+                      </div>
+                      <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                        {vCard.subtitle}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      {vCard.desc}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[10px] font-mono font-bold">
+                    <span className={isSelected ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500'}>
+                      {isSelected ? 'Active Institutional Desk' : 'Select Desk →'}
+                    </span>
+                    {isSelected && <Check size={13} className="text-emerald-600 dark:text-emerald-400" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Active Vault Jurisdiction Control & Live Ranking / Dispatch Engine */}
         <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
@@ -2734,22 +2898,76 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               )}
 
               {activeVaultKind === 'parish_vault' && (
-                <>
-                  <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
-                    Select Parish / Ward Jurisdiction ({selectedCountry})
-                  </label>
-                  <select
-                    value={selectedParish}
-                    onChange={(e) => setSelectedParish(e.target.value)}
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    {parishOptions.map((par) => (
-                      <option key={par} value={par}>
-                        {par}
-                      </option>
-                    ))}
-                  </select>
-                </>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[9.5px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400 block">
+                      Parish / Ward Jurisdiction ({selectedCountry})
+                    </label>
+                    <div className="flex items-center gap-1 text-[9.5px] font-mono">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setParishDepositMode('home');
+                          setSelectedParish(userHomeParish);
+                        }}
+                        className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                          parishDepositMode === 'home'
+                            ? 'bg-emerald-600 text-white font-bold'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-emerald-600'
+                        }`}
+                      >
+                        Home Parish
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setParishDepositMode('external')}
+                        className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                          parishDepositMode === 'external'
+                            ? 'bg-emerald-600 text-white font-bold'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-emerald-600'
+                        }`}
+                      >
+                        Sponsor Other
+                      </button>
+                    </div>
+                  </div>
+
+                  {parishDepositMode === 'home' ? (
+                    <div className="p-2.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800/50 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <div>
+                          <div className="text-xs font-mono font-bold text-emerald-950 dark:text-emerald-200">
+                            {userHomeParish}
+                          </div>
+                          <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400">
+                            Registered Home Member · Restricted Top-3 Award Pool
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-200/60 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-200">
+                        Home Locked
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <select
+                        value={selectedParish}
+                        onChange={(e) => setSelectedParish(e.target.value)}
+                        className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      >
+                        {parishOptions.map((par) => (
+                          <option key={par} value={par}>
+                            {par} {par === userHomeParish ? '(Your Home Parish)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="p-2 rounded bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-[10px] font-mono text-amber-900 dark:text-amber-300 leading-relaxed">
+                        <strong>External Patron Notice:</strong> Depositing into {selectedParish}. By sovereign bylaws, only verified local residents and ward whistleblowers registered in {selectedParish} can receive this monthly payout.
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {activeVaultKind === 'provider_vault' && (
@@ -3181,6 +3399,20 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   <span>Deposit Into {currentVaultJurisdictionMeta.vaultTitle.split('·')[0].trim()} →</span>
                 </button>
               </div>
+
+              {/* Frontline Scout Stages & Workstation Consensus Hub Directory */}
+              {activeVaultKind === 'scout_bounty_vault' && (
+                <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36]">
+                  <FrontlineStageExplorer
+                    country={selectedCountry}
+                    selectedParish={selectedParish}
+                    onSelectStageForCompose={(stg) => {
+                      go('compose');
+                      toast(`Opening report compose for ${stg.name}...`, 'emerald');
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             /* Individual Citizen Vault (5): Discretionary Peer-to-Peer Tipping Studio */
@@ -3312,6 +3544,39 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         </div>
       </div>
 
+      {/* Merchant Studio & Cashier POS Relocation Callout */}
+      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Store size={18} />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Merchant Studio &amp; Cashier POS Desk</span>
+              <span className="text-[9.5px] font-mono text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/15 px-2 py-0.5 rounded">
+                Service Provider Wall
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400">
+              Manage store loyalty vouchers, inventory catalog, and run the Cashier POS scanner directly on your active Service Provider Desk.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveDept(selectedProviderDept || 'shop_quality_supermarket');
+            setActiveDeptCountry(selectedCountry);
+            setWallTab('vouchers');
+            go('dept');
+          }}
+          className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
+        >
+          <Store size={13} />
+          <span>Open Provider Desk POS &rarr;</span>
+        </button>
+      </div>
+
       {/* Main Upload / Deposit Studio Card */}
       <div
         ref={studioSectionRef}
@@ -3395,17 +3660,6 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             >
               <Award size={12} />
               <span>CSR Leaderboard</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('merchant_studio')}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
-                activeTab === 'merchant_studio'
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
-              }`}
-            >
-              <Store size={12} />
-              <span>Merchant Studio &amp; POS</span>
             </button>
           </div>
         </div>
@@ -4936,31 +5190,6 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* TAB 6: MERCHANT LOYALTY STUDIO & POS COUNTER REDEEM (LAAS) */}
-        {activeTab === 'merchant_studio' && (
-          <div className="space-y-4 animate-fade-in">
-            <MerchantLoyaltyStudio
-              selectedCountry={selectedCountry}
-              activeMerchantDept={selectedProviderDept}
-              currentVouchers={vouchers}
-              onVoucherCreated={(product) => {
-                setMerchantProducts(getStoredMerchantProducts());
-                toast(`Created ${product.rewardHeadline} for ${product.merchantName}! Published to Marketplace.`, 'emerald');
-              }}
-              onVoucherRedeemed={(voucher) => {
-                setVouchers((prev) => prev.map((v) => (v.id === voucher.id ? voucher : v)));
-              }}
-              onSelectForVaultDeposit={(product) => {
-                setSelectedMerchantProduct(product);
-                setAllocationSource('merchant_loyalty');
-                setActiveTab('pay');
-                toast(`Selected ${product.merchantName} voucher for Vault Deposit!`, 'emerald');
-                studioSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-            />
           </div>
         )}
       </div>

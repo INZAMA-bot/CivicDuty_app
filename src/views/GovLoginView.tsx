@@ -173,8 +173,8 @@ export const GovLoginView: React.FC = () => {
       logAudit('gov_login', newUser.dept || 'gov', `${labelStr} signed in via code ${clean}`);
       toast(`Authenticated: ${labelStr}`, 'emerald');
 
-      // Check if this is a Read-Only External Auditor Subpoena Token (e.g. AUDIT-RO-UG-2026)
-      if (clean.startsWith('AUDIT-RO-') || match.targetView === 'gov_audit') {
+      // Check if this is a Read-Only External Auditor Subpoena Token (e.g. AUDIT-RO-UG-2026) or IGG Ombudsman Desk
+      if (clean.startsWith('AUDIT-RO-') || match.targetView === 'gov_audit' || clean.includes('IGG') || clean.includes('OMBUDSMAN') || newUser.dept === 'igg') {
         go('gov_audit');
         return;
       }

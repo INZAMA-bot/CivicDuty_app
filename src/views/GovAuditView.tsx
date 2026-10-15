@@ -22,6 +22,7 @@ import {
 import { COUNTRIES } from '../data/countries';
 import { AuditEntry, OfficialQuery } from '../types';
 import { OfficialQueryDossierModal } from '../components/OfficialQueryDossierModal';
+import { downloadForensicAuditPdf } from '../services/forensicPdfService';
 
 interface AuditSpec {
   agency: string;
@@ -494,6 +495,23 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
             >
               <FileCheck size={13} />
               <span>Compliance Certificate</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                downloadForensicAuditPdf({
+                  district: countryCode,
+                  auditorCode: user?.deskCode || 'UG-IGG-9999',
+                  targetEntity: `${countryObj.name} Sovereign Desks & Local Gov Engineering`,
+                });
+                toast('Forensic SHA-256 PDF Audit Dossier exported successfully!', 'emerald');
+              }}
+              className="px-3.5 py-1.5 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 text-xs font-mono font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              title="Download official signed forensic PDF evidence packet with SHA-256 digital signature"
+            >
+              <ShieldAlert size={13} className="text-emerald-400 dark:text-emerald-600" />
+              <span>Forensic PDF Dossier</span>
             </button>
           </div>
         </div>

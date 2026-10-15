@@ -22,8 +22,23 @@ import {
   Send,
   FileText,
   SlidersHorizontal,
+  Store,
+  Car,
+  Stethoscope,
+  GraduationCap,
+  HardHat,
+  Sparkles,
+  HeartHandshake,
 } from 'lucide-react';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
+import {
+  FrontlineScoutCategory,
+  FRONTLINE_CATEGORIES,
+  getStoredStages,
+  registerScoutWorkstationConsensus,
+  calculateGpsDistanceKm,
+  FrontlineStage,
+} from '../data/stageEstablishment';
 
 export const ComposeView: React.FC = () => {
   const {
@@ -59,6 +74,14 @@ export const ComposeView: React.FC = () => {
   const [anonymous, setAnonymous] = useState(false);
   const [gps, setGps] = useState<{ lat: string; lng: string } | null>(null);
   const [gpsStatus, setGpsStatus] = useState('GPS optional — tap to acquire');
+
+  // Frontline Scout Workstation & Consensus State
+  const [isFrontlineScout, setIsFrontlineScout] = useState(true);
+  const [scoutCategory, setScoutCategory] = useState<FrontlineScoutCategory>('bodaboda');
+  const [workstationName, setWorkstationName] = useState('Equatorial Boda Stage');
+  const [showManualGpsInput, setShowManualGpsInput] = useState(false);
+  const [manualLatInput, setManualLatInput] = useState('0.3162');
+  const [manualLngInput, setManualLngInput] = useState('32.5781');
 
   // Evidence Staging
   const [stagedMedia, setStagedMedia] = useState<
@@ -179,10 +202,11 @@ export const ComposeView: React.FC = () => {
 
   const handleAcquireGps = () => {
     if (!navigator.geolocation) {
-      toast('GPS not available on this browser', 'amber');
+      toast('GPS not available on this browser — use manual coordinate input below', 'amber');
+      setShowManualGpsInput(true);
       return;
     }
-    setGpsStatus('Acquiring...');
+    setGpsStatus('Acquiring high-precision GPS...');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = {
@@ -190,12 +214,31 @@ export const ComposeView: React.FC = () => {
           lng: pos.coords.longitude.toFixed(4),
         };
         setGps(coords);
+        setManualLatInput(coords.lat);
+        setManualLngInput(coords.lng);
         setGpsStatus(`GPS Locked · ${coords.lat}, ${coords.lng}`);
+        toast('GPS Coordinates Locked for Workstation Consensus', 'emerald');
       },
       () => {
-        setGpsStatus('GPS denied — submitting without coordinates');
-      }
+        setGpsStatus('Browser location permission denied. Please enter workstation coordinates manually below.');
+        setShowManualGpsInput(true);
+        toast('Location access blocked — enter coordinates below', 'amber');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  const handleApplyManualGps = () => {
+    const lat = parseFloat(manualLatInput);
+    const lng = parseFloat(manualLngInput);
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      toast('Enter valid latitude (-90 to 90) and longitude (-180 to 180)', 'amber');
+      return;
+    }
+    const coords = { lat: lat.toFixed(4), lng: lng.toFixed(4) };
+    setGps(coords);
+    setGpsStatus(`Manual GPS Locked · ${coords.lat}, ${coords.lng}`);
+    toast('Workstation GPS coordinates saved', 'emerald');
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,9 +315,40 @@ export const ComposeView: React.FC = () => {
       toast('Describe the issue in detail', 'red');
       return;
     }
+    if (isFrontlineScout) {
+      if (!workstationName.trim()) {
+        toast('Workstation / Stage name is mandatory for Frontline Scouts', 'red');
+        return;
+      }
+      if (!gps) {
+        toast('GPS pin is mandatory for Frontline Scout station verification', 'red');
+        return;
+      }
+    }
 
     const dRef = depts.find((item) => item.id === dept);
     const isCorrupt = category === 'corruption';
+
+    let consensusResult: any = null;
+    if (isFrontlineScout && gps) {
+      const latNum = parseFloat(gps.lat);
+      const lngNum = parseFloat(gps.lng);
+      if (!isNaN(latNum) && !isNaN(lngNum)) {
+        consensusResult = registerScoutWorkstationConsensus({
+          category: scoutCategory,
+          workstationName: workstationName.trim(),
+          lat: latNum,
+          lng: lngNum,
+          country,
+          parish: parish || 'Central Ward',
+          subcounty: subcounty || 'Central',
+          district: district || 'Kampala',
+          scoutId: user?.id || 'usr-scout',
+          scoutName: anonymous ? 'Verified Frontline Scout' : user?.name || 'Frontline Scout',
+          reportSnippet: title.trim(),
+        });
+      }
+    }
 
     const finalMedia: MediaItem[] = stagedMedia.map((m) => {
       if (m.type === 'image') return { type: 'image', url: m.url, caption: m.name || '' };
@@ -321,6 +395,16 @@ export const ComposeView: React.FC = () => {
       downvotes: 0,
       reposts: 0,
       hashtags: extractedTags.length > 0 ? extractedTags : undefined,
+      frontline_scout: isFrontlineScout && consensusResult ? {
+        is_scout: true,
+        category: scoutCategory,
+        category_label: FRONTLINE_CATEGORIES.find((c) => c.id === scoutCategory)?.label || 'Frontline Scout',
+        workstation_name: workstationName.trim(),
+        stage_id: consensusResult.stage.id,
+        home_parish: parish || consensusResult.stage.parish,
+        consensus_verified: consensusResult.stage.isCertified,
+        scout_count_at_report: consensusResult.scoutCount,
+      } : undefined,
       voice_note: voiceSaved
         ? {
             duration: voiceDuration,
@@ -355,7 +439,9 @@ export const ComposeView: React.FC = () => {
               verified_by: anonymous ? 'Verified Citizen Scout' : user?.name || 'Citizen Field Scout',
             }
           : undefined,
-      author_profession: profession,
+      author_profession: isFrontlineScout
+        ? `${FRONTLINE_CATEGORIES.find((c) => c.id === scoutCategory)?.label.split('(')[0].trim() || 'Frontline Scout'} (${workstationName.trim()})`
+        : profession,
       citizen_satisfied: category === 'praise' ? true : null,
       escalated: false,
     };
@@ -366,6 +452,10 @@ export const ComposeView: React.FC = () => {
       addPost(post);
       if (isCorrupt) {
         toast('Corruption report filed — IGG notified', 'amber');
+      } else if (consensusResult?.newlyCertified) {
+        toast(`🎉 Milestone Reached! ${consensusResult.stage.name} crossed 15 scouts within 2km and is officially established as a Certified Stage!`, 'emerald');
+      } else if (isFrontlineScout && consensusResult) {
+        toast(`Logged verified report for ${consensusResult.stage.name} (${consensusResult.scoutCount}/15 scouts)`, 'emerald');
       }
     }
     go('feed');
@@ -557,47 +647,284 @@ export const ComposeView: React.FC = () => {
               )}
             </div>
 
-            {/* Reporter Profession / Frontline Field Scout Category */}
-            <div className="pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
-              <div className="flex items-center justify-between">
+            {/* Frontline Field Scout Self-Identification & Stage Consensus Suite */}
+            <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                  <Bike size={12} className="text-amber-600 dark:text-amber-400" />
-                  <span>Reporter Profession · Field Scout Tag</span>
+                  <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Frontline Scout Self-Identification &amp; Workstation Stage</span>
                 </label>
-                <span className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                  Perk Vault Eligible
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsFrontlineScout(!isFrontlineScout)}
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border transition cursor-pointer ${
+                      isFrontlineScout
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {isFrontlineScout ? '✓ Frontline Scout Active' : 'Enable Scout Reporting'}
+                  </button>
+                  <span className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                    Bounty Vault Eligible
+                  </span>
+                </div>
               </div>
-              <select
-                value={profession}
-                onChange={(e) => setProfession(e.target.value)}
-                className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="Bodaboda Rider / Cyclist">
-                  Bodaboda Rider / Cyclist (Frontline Road Scout · Fuel &amp; Airtime Eligible)
-                </option>
-                <option value="Taxi / Matatu / Commercial Driver">
-                  Taxi / Matatu / Commercial Driver (Public Transit &amp; Highway Scout)
-                </option>
-                <option value="Market Vendor / Local Trader">
-                  Market Vendor / Local Trader (Public Space &amp; Sanitation Scout)
-                </option>
-                <option value="Healthcare Worker / Nurse / Clinical Staff">
-                  Healthcare Worker / Nurse / Clinical Staff (Health Service Monitor)
-                </option>
-                <option value="Teacher / Student / Youth Leader">
-                  Teacher / Student / Youth Leader (Education &amp; Community Watch)
-                </option>
-                <option value="Artisan / Builder / Field Technician">
-                  Artisan / Builder / Field Technician (Infrastructure Quality Inspector)
-                </option>
-                <option value="Civil Servant / Public Officer">
-                  Civil Servant / Public Officer (Internal Oversight &amp; Whistleblower)
-                </option>
-                <option value="General Resident / Commuter">
-                  General Resident / Commuter (Community Citizen)
-                </option>
-              </select>
+
+              {isFrontlineScout ? (
+                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-3">
+                  {/* Category Selection */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10.5px] font-mono text-slate-700 dark:text-slate-300 font-semibold block">
+                      1. Select Frontline Scout Category (Mandatory)
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                      {FRONTLINE_CATEGORIES.map((cat) => {
+                        const isCatSelected = scoutCategory === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              setScoutCategory(cat.id);
+                              if (!workstationName || workstationName === 'Equatorial Boda Stage') {
+                                setWorkstationName(cat.example);
+                              }
+                            }}
+                            className={`p-2 rounded-lg text-left border transition text-xs font-mono cursor-pointer ${
+                              isCatSelected
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500/50'
+                            }`}
+                          >
+                            <div className="font-bold flex items-center gap-1.5 truncate">
+                              <span>{cat.label.split('(')[0].trim()}</span>
+                            </div>
+                            <div
+                              className={`text-[9.5px] truncate pt-0.5 ${
+                                isCatSelected ? 'text-emerald-100' : 'text-slate-500'
+                              }`}
+                            >
+                              {cat.roleDescription}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Mandatory Workstation CTA */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-mono text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1">
+                        <MapPin size={12} className="text-amber-600 dark:text-amber-400" />
+                        <span>2. Name of Workstation / Stage (Mandatory CTA)</span>
+                      </label>
+                      <span className="text-[9.5px] font-mono text-amber-700 dark:text-amber-400 font-bold">
+                        Exact Name Required
+                      </span>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={workstationName}
+                      onChange={(e) => setWorkstationName(e.target.value)}
+                      placeholder="e.g. Equatorial Boda Stage, Nakasero Market Stall 4B, Kitante Primary Gate"
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
+
+                    {/* Quick Suggestions from Existing Certified Stages */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+                      <span className="text-[9.5px] font-mono text-slate-500 shrink-0">Quick Pick:</span>
+                      {getStoredStages()
+                        .filter((s) => s.country === country && s.category === scoutCategory)
+                        .slice(0, 4)
+                        .map((stg) => (
+                          <button
+                            key={stg.id}
+                            type="button"
+                            onClick={() => {
+                              setWorkstationName(stg.name);
+                              setGps({
+                                lat: stg.centerGps.lat.toFixed(4),
+                                lng: stg.centerGps.lng.toFixed(4),
+                              });
+                              setGpsStatus(`GPS Matched to Stage · ${stg.centerGps.lat}, ${stg.centerGps.lng}`);
+                              toast(`Selected ${stg.name} (${stg.scoutCount}/15 scouts)`, 'emerald');
+                            }}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 border transition ${
+                              workstationName.toLowerCase() === stg.name.toLowerCase()
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                          >
+                            {stg.name} ({stg.scoutCount} scouts)
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Consensus Rule & Auto-Compilation Status */}
+                  {workstationName.trim() && (
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#12161f] border border-emerald-500/30 space-y-1.5">
+                      {(() => {
+                        const matchingStage = getStoredStages().find(
+                          (s) =>
+                            s.country === country &&
+                            s.category === scoutCategory &&
+                            (s.normalizedName === workstationName.toLowerCase().replace(/[^\w\s]/g, '').trim() ||
+                              s.name.toLowerCase() === workstationName.toLowerCase().trim())
+                        );
+
+                        if (matchingStage) {
+                          const count = matchingStage.scoutCount;
+                          const isCert = count >= 15;
+                          return (
+                            <div>
+                              <div className="flex items-center justify-between text-xs font-mono">
+                                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                  {isCert ? (
+                                    <CheckCircle2 size={13} className="text-emerald-600" />
+                                  ) : (
+                                    <Users size={13} className="text-amber-600" />
+                                  )}
+                                  <span>{matchingStage.officialLabel}</span>
+                                </span>
+                                <span className="font-bold text-emerald-600">
+                                  {count} / 15 Scouts ({Math.min(100, Math.round((count / 15) * 100))}%)
+                                </span>
+                              </div>
+                              <p className="text-[10px] font-mono text-slate-500 pt-0.5">
+                                {isCert
+                                  ? `Officially certified stage! Verified within 2km radius. Top 3 scouts receive monthly patron prize shares.`
+                                  : `${15 - count} more scout reports with matching GPS needed to auto-compile and certify this stage.`}
+                              </p>
+                              <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                                <span className="flex items-center gap-1">
+                                  <Lock size={10} />
+                                  <span>Home Parish Lock: {matchingStage.parish}</span>
+                                </span>
+                                <span>·</span>
+                                <span className="flex items-center gap-1">
+                                  <HeartHandshake size={10} />
+                                  <span>Patron Pool: {matchingStage.patronSponsorPoolUgx.toLocaleString()} UGX</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div>
+                              <div className="text-xs font-mono font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                <Sparkles size={13} className="text-emerald-600" />
+                                <span>New Stage Incubator: &ldquo;{workstationName}&rdquo;</span>
+                              </div>
+                              <p className="text-[10px] font-mono text-slate-500 pt-0.5">
+                                When &gt;15 self-identified scouts capture GPS within 2km and this exact name, CivicDuty will auto-compile &amp; certify it as an official Bodaboda/Workstation Stage.
+                              </p>
+                              <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                                <span className="flex items-center gap-1">
+                                  <Lock size={10} />
+                                  <span>Home Parish Lock Active ({parish || 'Selected Parish'})</span>
+                                </span>
+                                <span>·</span>
+                                <span className="flex items-center gap-1">
+                                  <HeartHandshake size={10} />
+                                  <span>Patron Sponsoring Enabled</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Mandatory GPS Notification */}
+                  <div
+                    className={`p-2.5 rounded-lg border text-xs font-mono space-y-1.5 ${
+                      gps
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <MapPin size={13} className={gps ? 'text-emerald-600' : 'text-amber-600'} />
+                        <span>
+                          {gps ? `✓ Workstation GPS Locked` : `⚠️ GPS Capture Mandatory for Stage Establishment`}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAcquireGps}
+                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
+                      >
+                        {gps ? 'Re-acquire GPS' : 'Acquire Workstation GPS'}
+                      </button>
+                    </div>
+
+                    <div className="text-[10px] text-slate-600 dark:text-slate-400 flex items-center justify-between gap-2">
+                      <span>{gps ? `${gps.lat}, ${gps.lng} (Accuracy: High · Stage Radius <2km Check Active)` : gpsStatus}</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowManualGpsInput(!showManualGpsInput)}
+                        className="underline text-[9.5px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                      >
+                        {showManualGpsInput ? 'Hide Manual Input' : 'Enter GPS Manually'}
+                      </button>
+                    </div>
+
+                    {showManualGpsInput && (
+                      <div className="p-2 bg-white dark:bg-[#12161f] rounded-md border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5 pt-2">
+                        <div className="text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+                          Manual Coordinates Override (for desktop testing or denied permission):
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={manualLatInput}
+                            onChange={(e) => setManualLatInput(e.target.value)}
+                            placeholder="Latitude (e.g. 0.3162)"
+                            className="px-2 py-1 text-xs font-mono bg-white dark:bg-[#161a22] border rounded"
+                          />
+                          <input
+                            type="text"
+                            value={manualLngInput}
+                            onChange={(e) => setManualLngInput(e.target.value)}
+                            placeholder="Longitude (e.g. 32.5781)"
+                            className="px-2 py-1 text-xs font-mono bg-white dark:bg-[#161a22] border rounded"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleApplyManualGps}
+                          className="w-full py-1 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10.5px] font-mono font-bold cursor-pointer"
+                        >
+                          Apply Manual Workstation Coordinates
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Regular Citizen Profession Selector */
+                <select
+                  value={profession}
+                  onChange={(e) => setProfession(e.target.value)}
+                  className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="General Resident / Commuter">General Resident / Commuter (Community Citizen)</option>
+                  <option value="Bodaboda Rider / Cyclist">Bodaboda Rider / Cyclist</option>
+                  <option value="Taxi / Matatu / Commercial Driver">Taxi / Matatu / Commercial Driver</option>
+                  <option value="Market Vendor / Local Trader">Market Vendor / Local Trader</option>
+                  <option value="Healthcare Worker / Nurse / Clinical Staff">Healthcare Worker / Nurse / Clinical Staff</option>
+                  <option value="Teacher / Student / Youth Leader">Teacher / Student / Youth Leader</option>
+                  <option value="Artisan / Builder / Field Technician">Artisan / Builder / Field Technician</option>
+                  <option value="Civil Servant / Public Officer">Civil Servant / Public Officer</option>
+                </select>
+              )}
             </div>
           </div>
 

@@ -50,6 +50,21 @@ const CATEGORY_PRESETS: Record<OfficialQueryCategory, { label: string; defaultSu
     defaultSubject: 'Official Administrative Inquiry on Field Operational Non-Compliance',
     defaultGrounds: 'Formal inquiry into overall supervisory lagging, incomplete field inspection logs, and non-submission of periodic local governance returns.',
   },
+  ministerial_directive: {
+    label: 'Apex Ministerial Policy Directive (Arts 111 & 117)',
+    defaultSubject: 'Compliance with Cabinet Ministerial Statutory Policy Directive',
+    defaultGrounds: 'Promulgated directive from the Minister of Local Government commanding immediate policy compliance, municipal enforcement review, or council tenure directives.',
+  },
+  anti_graft_taskforce: {
+    label: 'Anti-Extortion Taskforce Referral',
+    defaultSubject: 'Ministerial Rapid Taskforce Inquiry on Municipal Extortion & Unlawful Levies',
+    defaultGrounds: 'Executive taskforce investigation initiated into illegal market cartels, unauthorized boda-boda stage receipts, and extortion syndicates.',
+  },
+  field_audit_inquiry: {
+    label: 'Grassroots Field Vigilance & PDM Sacco Audit',
+    defaultSubject: 'Surprise Field Inspection Inquiry on PDM Seed Capital & Town Agent Books',
+    defaultGrounds: 'Unannounced inspection identified discrepancies in PDM Sacco disbursement books, missing beneficiary records, or bribery of public development funds.',
+  },
 };
 
 export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProps> = ({

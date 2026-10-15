@@ -27,6 +27,7 @@ import {
   Sparkles,
   Copy,
   Maximize2,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface PromotionalAdFeedCardProps {
@@ -285,103 +286,68 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
           </div>
         </div>
 
-        {/* Photographic Campaign Poster Presentation with 1-Click CAD Livery Toggle */}
+        {/* Photographic Campaign Poster Presentation - Pure, Uncluttered, Pristine */}
         <div
           onClick={() => setDetailsModalOpen(true)}
           className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#0e1116] cursor-pointer group relative"
         >
-          {cardDisplayMode === 'poster' ? (
-            <div className="relative aspect-video w-full overflow-hidden bg-slate-950 flex items-center justify-center">
-              <img
-                src={effectiveImageSrc}
-                alt={activeAd.title}
-                className="w-full h-full object-cover group-hover:scale-[1.015] transition-transform duration-500 select-none"
-                loading="lazy"
-                onError={(e) => {
-                  // Fallback to bodaboda poster if path fails
-                  (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
+          <div className="relative aspect-video w-full overflow-hidden bg-slate-950 flex items-center justify-center">
+            <img
+              src={effectiveImageSrc}
+              alt={activeAd.title}
+              className="w-full h-full object-cover group-hover:scale-[1.015] transition-transform duration-500 select-none"
+              loading="lazy"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
+              }}
+            />
+            {/* Minimal Unobtrusive Zoom Hint on Hover */}
+            <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                onClick={handleDownloadPoster}
+                className="p-1.5 rounded-lg bg-black/75 hover:bg-black text-white border border-white/20 transition-colors shadow-sm"
+                title="Download Poster Image for Social Media"
+              >
+                <Download size={12} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDetailsModalOpen(true);
                 }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
-
-              {/* Top Left Badge Overlay */}
-              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10 pointer-events-none">
-                <span className="px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[9.5px] font-semibold uppercase font-mono flex items-center gap-1 shadow-sm">
-                  <Sparkles size={10} className="text-emerald-400" />
-                  <span>{activeAd.categoryLabel}</span>
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/20 text-white text-[9.5px] font-mono shadow-sm">
-                  {transitSpec.countryCode} Campaign Poster
-                </span>
-              </div>
-
-              {/* Top Right Actions: Switch to CAD & Quick Download */}
-              <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => setCardDisplayMode('cad')}
-                  className="px-2 py-1 rounded-md bg-black/80 backdrop-blur-md hover:bg-black text-slate-200 hover:text-white border border-white/25 text-[9.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow-sm"
-                  title="Switch to CAD Livery Blueprint"
-                >
-                  <Paintbrush size={10} />
-                  <span>CAD View</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadPoster}
-                  className="p-1.5 rounded-md bg-black/80 backdrop-blur-md hover:bg-black text-slate-200 hover:text-white border border-white/25 transition-colors cursor-pointer shadow-sm"
-                  title="Download Poster Image for Social Media"
-                >
-                  <Download size={11} />
-                </button>
-              </div>
-
-              {/* Bottom Tagline & USSD Callout */}
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between gap-2 pointer-events-none">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-white/95 font-mono font-bold drop-shadow-md truncate">
-                    {activeAd.tagline}
-                  </p>
-                </div>
-                <span className="px-2 py-0.5 rounded bg-emerald-600/95 text-white text-[9.5px] font-mono font-black shrink-0 shadow-sm">
-                  DIAL {transitSpec.ussdCode}
-                </span>
-              </div>
+                className="px-2.5 py-1.5 rounded-lg bg-black/75 hover:bg-black text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 border border-white/20 transition-colors shadow-sm"
+                title="View Full Resolution Poster"
+              >
+                <Maximize2 size={12} />
+                <span className="hidden sm:inline">Inspect Poster</span>
+              </button>
             </div>
-          ) : (
-            <div className="relative">
-              <KayoolaBusGraphic
-                showControls={false}
-                vehicleType={activeVehicleType}
-                countryCode={countryCode}
-              />
-              <div className="absolute top-2.5 right-2.5 z-10" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => setCardDisplayMode('poster')}
-                  className="px-2 py-1 rounded-md bg-black/85 backdrop-blur-md hover:bg-black text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 text-[9.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow-sm"
-                  title="Switch to Photographic Street Ad Poster"
-                >
-                  <ImageIcon size={10} />
-                  <span>Street Poster</span>
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Minimal Footer Row: Title + Share + Click for More Details */}
+        {/* Third-Party Platform Transparency Notice */}
+        <div className="px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-[10px] font-mono">
+          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 min-w-0">
+            <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
+            <span className="truncate">
+              <strong>Third-Party Civic Platform:</strong> Enabling frontline scouts to verify public service standards.
+            </span>
+          </div>
+          <span className="px-2 py-0.5 rounded bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 font-bold shrink-0 border border-emerald-500/20">
+            DIAL {transitSpec.ussdCode}
+          </span>
+        </div>
+
+        {/* Title, Tagline & Action Row */}
         <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
           <div className="min-w-0 flex-1">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
               {activeAd.title}
             </h4>
-            <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 truncate">
-              {resolvedMode === 'transit_painting'
-                ? `Official CivicDuty Livery & Paint Spec · ${
-                    selectedPillarIdx === 0 ? transitSpec.busPartnerName : transitSpec.trainOperatorName
-                  }`
-                : `Frontline Scout Mobilization · Free USSD ${transitSpec.ussdCode} · Monthly Top-3 Bounties`}
+            <p className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold truncate">
+              {activeAd.tagline}
             </p>
           </div>
 
@@ -415,8 +381,8 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
               <Info size={12} />
               <span>
                 {resolvedMode === 'transit_painting'
-                  ? 'Painting Proposal Details'
-                  : 'Campaign Details & Posters'}
+                  ? 'Fleet Painting Proposal'
+                  : 'Campaign Poster & Stage Info'}
               </span>
               <ChevronRight size={12} />
             </button>
@@ -472,7 +438,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                   }`}
                 >
                   <ImageIcon size={12} />
-                  <span>Real-Life Ad Poster</span>
+                  <span>Real Photographic Poster</span>
                 </button>
                 <button
                   type="button"
@@ -483,8 +449,17 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                       : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Paintbrush size={12} />
-                  <span>CAD Livery Schematic</span>
+                  {resolvedMode === 'transit_painting' ? (
+                    <>
+                      <Paintbrush size={12} />
+                      <span>CAD Livery Schematic</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={12} />
+                      <span>Stage Consensus &amp; Workstations</span>
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -496,7 +471,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                   }`}
                 >
                   <Share2 size={12} />
-                  <span>Social Media Post Copy</span>
+                  <span>Social Media Copy</span>
                 </button>
               </div>
 
@@ -504,18 +479,18 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                 <button
                   type="button"
                   onClick={handleDownloadPoster}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold transition cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold transition cursor-pointer"
                 >
                   <Download size={13} />
-                  <span>Download High-Res Poster (.jpg)</span>
+                  <span>Download Poster (.jpg)</span>
                 </button>
               )}
             </div>
 
-            {/* Tab 1: High-Resolution Photographic Campaign Poster */}
+            {/* Tab 1: High-Resolution Photographic Campaign Poster - Zero Obstructing Overlays */}
             {modalTab === 'poster' && (
               <div className="space-y-3">
-                <div className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-slate-950 relative aspect-video flex items-center justify-center">
+                <div className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-slate-950 aspect-video flex items-center justify-center">
                   <img
                     src={effectiveImageSrc}
                     alt={activeAd.title}
@@ -524,34 +499,121 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                       (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
                     }}
                   />
-                  <div className="absolute bottom-3 left-3 right-3 p-3 rounded-xl bg-black/80 backdrop-blur-md border border-white/20 flex items-center justify-between gap-2">
-                    <div>
-                      <div className="text-xs font-bold text-white tracking-tight">{activeAd.title}</div>
-                      <div className="text-[10px] font-mono text-emerald-400">{activeAd.tagline}</div>
-                    </div>
+                </div>
+
+                {/* Poster Caption and Details placed cleanly beneath the art */}
+                <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {activeAd.title}
+                    </h4>
+                    <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold pt-0.5">
+                      {activeAd.tagline}
+                    </p>
+                    <p className="text-[10px] font-mono text-slate-500 pt-1">
+                      Third-Party Civic Technology Platform · Toll-Free USSD {transitSpec.ussdCode}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleCopySocial}
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 cursor-pointer"
+                    >
+                      {copiedSocial ? 'Copied!' : 'Copy Caption'}
+                    </button>
                     <button
                       type="button"
                       onClick={handleDownloadPoster}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10.5px] font-mono font-bold flex items-center gap-1 cursor-pointer shrink-0"
+                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
-                      <Download size={11} />
-                      <span>Download</span>
+                      <Download size={12} />
+                      <span>Download Poster</span>
                     </button>
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono text-center">
-                  Ready-to-post high-definition 16:9 campaign asset featuring official CivicDuty branding and USSD code {transitSpec.ussdCode}.
-                </p>
               </div>
             )}
 
-            {/* Tab 2: Interactive SVG Pictorial Specification with Zoom & SVG Download */}
+            {/* Tab 2: Interactive SVG Pictorial Specification OR Frontline Stage Consensus Hub */}
             {modalTab === 'cad' && (
-              <KayoolaBusGraphic
-                showControls={true}
-                vehicleType={activeVehicleType}
-                countryCode={countryCode}
-              />
+              resolvedMode === 'transit_painting' ? (
+                <KayoolaBusGraphic
+                  showControls={true}
+                  vehicleType={activeVehicleType}
+                  countryCode={countryCode}
+                />
+              ) : (
+                <div className="p-4 sm:p-5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <Bike size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Frontline Scout Workstation Stage Establishment
+                        </h4>
+                        <p className="text-xs font-mono text-slate-500">
+                          Civic consensus rule: &gt;15 self-identified scouts capturing GPS within 2km and matching name auto-certifies the stage hub.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                      <div className="font-bold text-emerald-700 dark:text-emerald-400">1. Stage Consensus</div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        When 15+ frontline scouts submit verified GPS coordinates within 2km, the system auto-compiles and promotes it to a Certified Community Hub.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                      <div className="font-bold text-emerald-700 dark:text-emerald-400">2. Home Parish Lock</div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        Workstations are anchored to the local Parish / Ward jurisdiction, ensuring community ownership and legitimate grassroots audits.
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                      <div className="font-bold text-emerald-700 dark:text-emerald-400">3. Patron Sponsoring</div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        Diaspora and local patrons can sponsor a stage vault directly, rewarding the Top 3 frontline scouts each month.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailsModalOpen(false);
+                        go('perk_vault');
+                        toast('Opening Frontline Scout Workstation Stages Directory...', 'emerald');
+                      }}
+                      className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <ShieldCheck size={13} />
+                      <span>Explore Certified Stages Directory in Vault</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailsModalOpen(false);
+                        go('compose');
+                        toast('Opening Frontline Scout Report Compose...', 'emerald');
+                      }}
+                      className="px-4 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold text-slate-800 dark:text-slate-200 hover:border-emerald-500 transition cursor-pointer"
+                    >
+                      <Bike size={13} className="text-emerald-600" />
+                      <span>Report as Frontline Scout with GPS</span>
+                    </button>
+                  </div>
+                </div>
+              )
             )}
 
             {/* Tab 3: Social Media Copy Ready to Copy & Post */}

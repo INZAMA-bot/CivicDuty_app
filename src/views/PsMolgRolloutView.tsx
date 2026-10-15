@@ -33,8 +33,10 @@ import {
   Sliders,
   Plus,
   UserPlus,
+  Rocket,
   Key,
-  Phone
+  Phone,
+  Scale,
 } from 'lucide-react';
 import { TrafficLightLogo } from '../components/TrafficLightLogo';
 import { saveCircularNotificationToCloud } from '../services/firestoreSync';
@@ -63,6 +65,12 @@ export const PsMolgRolloutView: React.FC = () => {
     govFeedbackMessages,
     endorseModificationForCdOps,
     rejectModificationBySuperadmin,
+    ministerialDirectives,
+    acknowledgeMinisterialDirectiveByPs,
+    enrolledSectorMinisters,
+    enrollSectorMinister,
+    revokeSectorMinister,
+    directLoginWithGovCode,
   } = useApp();
   const currentCountry = (user?.country || selectedCountry || 'UG') as CountryCode;
   const [activeTab, setActiveTab] = useState<'cascade' | 'batch_mint' | 'districts' | 'inter_ps' | 'circulars' | 'pdm'>('cascade');
@@ -72,6 +80,16 @@ export const PsMolgRolloutView: React.FC = () => {
   const [circularSubject, setCircularSubject] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+
+  // Sector Minister Enrollment Modal State
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const [enrollMinistryKey, setEnrollMinistryKey] = useState('mofped');
+  const [enrollMinistryName, setEnrollMinistryName] = useState('Ministry of Finance, Planning & Economic Development');
+  const [enrollMinisterName, setEnrollMinisterName] = useState('');
+  const [enrollPortfolio, setEnrollPortfolio] = useState('');
+  const [enrollRank, setEnrollRank] = useState<'cabinet_minister' | 'minister_of_state'>('cabinet_minister');
+  const [enrollScope, setEnrollScope] = useState('');
+  const [enrollFocus, setEnrollFocus] = useState('');
 
   // Modals / Interactive Panels
   const [inspectingDistrict, setInspectingDistrict] = useState<any | null>(null);
@@ -331,6 +349,463 @@ export const PsMolgRolloutView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Apex Ministerial Political Command & Anti-Corruption Oversight Desks (May 26, 2026 Reshuffle) */}
+      {currentCountry === 'UG' && (
+        <div className="bg-white dark:bg-[#161a22] border-2 border-emerald-500/40 dark:border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 text-[10.5px] font-black uppercase tracking-wider border border-emerald-500/30 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Political Leadership · Constitution Articles 111 &amp; 117
+                </span>
+                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                  Separated from PS MoLG Statutory Accounting Officer (Vote 011 / PFMA S.45)
+                </span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Ministry of Local Government (MoLG) Apex Political Desks</span>
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <button
+                onClick={() => go('ministerial_desk')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm"
+              >
+                <Scale className="w-3.5 h-3.5" />
+                <span>Open Dedicated Ministerial Desk &rarr;</span>
+              </button>
+              <button
+                onClick={() => setEnrollModalOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors shadow-2xs"
+              >
+                <UserPlus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Enroll Sector Minister</span>
+              </button>
+              <button
+                onClick={() => go('gov_audit')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors shadow-2xs"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span>IGG Desk</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            {/* 1. Hon. Balaam Barugahara Ateenyi */}
+            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50/70 to-white dark:from-emerald-950/20 dark:to-[#12161f] border border-emerald-300/80 dark:border-emerald-600/40 flex flex-col justify-between space-y-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-600 text-white uppercase tracking-wider">
+                    Cabinet Minister (Art. 111)
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
+                    26 May 2026 – Present
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-slate-950 dark:text-white leading-snug">
+                  Hon. Balaam Barugahara Ateenyi
+                </h3>
+                <p className="text-[11.5px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <strong>Apex Political Command &amp; Anti-Graft Enforcement:</strong> Strategic policy, eradication of municipal extortion rings, market cartels, and unauthorized boda stage levies.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40 space-y-1.5">
+                <button
+                  onClick={() => {
+                    directLoginWithGovCode('UG-MOLG-CABINET-MIN');
+                  }}
+                  className="w-full text-center text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center justify-between"
+                >
+                  <span>Mount Cabinet Minister Desk</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <div className="text-[10px] font-mono text-emerald-800 dark:text-emerald-300 flex justify-between">
+                  <span>Credential:</span>
+                  <code className="font-bold">UG-MOLG-CABINET-MIN</code>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Hon. Justine Nameere */}
+            <div className="p-4 rounded-xl bg-gradient-to-br from-purple-50/70 to-white dark:from-purple-950/20 dark:to-[#12161f] border border-purple-300/80 dark:border-purple-600/40 flex flex-col justify-between space-y-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-600 text-white uppercase tracking-wider">
+                    Minister of State (Art. 117)
+                  </span>
+                  <span className="text-[10px] font-bold text-purple-700 dark:text-purple-400">
+                    26 May 2026 – Present
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-slate-950 dark:text-white leading-snug">
+                  Hon. Justine Nameere
+                </h3>
+                <p className="text-[11.5px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <strong>Grassroots Vigilance &amp; Field Audit:</strong> Unannounced spot-checks on Sub-County Town Agents, Parish Chiefs, and PDM Sacco disbursement books to catch ghost beneficiaries.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-purple-200/60 dark:border-purple-800/40 space-y-1.5">
+                <button
+                  onClick={() => {
+                    directLoginWithGovCode('UG-MOLG-STATE-MIN');
+                  }}
+                  className="w-full text-center text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-between"
+                >
+                  <span>Mount State Minister Desk</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <div className="text-[10px] font-mono text-purple-800 dark:text-purple-300 flex justify-between">
+                  <span>Credential:</span>
+                  <code className="font-bold">UG-MOLG-STATE-MIN</code>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Beti Kamya Turwomwe (IGG Ombudsman) */}
+            <div className="p-4 rounded-xl bg-gradient-to-br from-rose-50/70 to-white dark:from-rose-950/20 dark:to-[#12161f] border border-rose-300/80 dark:border-rose-600/40 flex flex-col justify-between space-y-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-rose-600 text-white uppercase tracking-wider">
+                    IGG Ombudsman
+                  </span>
+                  <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400">
+                    Chapter 13 Constitution
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-slate-950 dark:text-white leading-snug">
+                  Hon. Beti Kamya Turwomwe (IGG)
+                </h3>
+                <p className="text-[11.5px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                  <strong>Constitutional Ombudsman &amp; Interdiction:</strong> Section 19 IGG Act powers to freeze accounts, issue warrants of arrest, and interdict corrupt CAOs who violate civic SLAs.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-rose-200/60 dark:border-rose-800/40 space-y-1.5">
+                <button
+                  onClick={() => go('gov_audit')}
+                  className="w-full text-center text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors flex items-center justify-between"
+                >
+                  <span>Open Constitutional IGG Portal</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <div className="text-[10px] font-mono text-rose-800 dark:text-rose-300 flex justify-between">
+                  <span>Credential:</span>
+                  <code className="font-bold">UG-IGG-9999</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Incoming Ministerial Directives & Statutory Queries (PFMA Section 45 Execution Queue) */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                  Incoming Ministerial Directives · PS MoLG Execution Queue ({ministerialDirectives.length})
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-slate-500">
+                Action Authority: Permanent Secretary / Vote 011 Accounting Officer
+              </span>
+            </div>
+
+            <div className="space-y-2.5">
+              {ministerialDirectives.map((d) => (
+                <div
+                  key={d.id}
+                  className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                >
+                  <div className="space-y-1 max-w-2xl">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        {d.directiveRef}
+                      </span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">
+                        {d.ministerName} ({d.ministerTitle.includes('Cabinet') ? 'Cabinet Minister' : 'State Minister'})
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[9.5px] bg-slate-100 dark:bg-slate-800 font-mono">
+                        {d.targetJurisdiction}
+                      </span>
+                    </div>
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      {d.subject}
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1">
+                      <strong>PS Action Required:</strong> {d.psActionRequired}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        d.status === 'in_execution'
+                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                          : d.status === 'ps_acknowledged'
+                          ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300'
+                          : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                      }`}
+                    >
+                      {d.status.replace(/_/g, ' ')}
+                    </span>
+
+                    {d.status !== 'in_execution' && (
+                      <button
+                        onClick={() => {
+                          acknowledgeMinisterialDirectiveByPs(d.id, 'PS Kumumanya instituted Vote 011 warrant hold and assigned statutory inspection.', true);
+                        }}
+                        className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-[10.5px] font-bold transition-colors"
+                        title="Institute administrative hold on local government account under PFMA S.45"
+                      >
+                        Issue Financial Warrant Hold (PFMA S.45)
+                      </button>
+                    )}
+
+                    {d.status === 'active' && (
+                      <button
+                        onClick={() => {
+                          acknowledgeMinisterialDirectiveByPs(d.id, 'PS Kumumanya assigned inspection team to district.', false);
+                        }}
+                        className="px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-[10.5px] font-bold transition-colors"
+                      >
+                        Acknowledge &amp; Assign CAO
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Inter-Ministerial Sector Minister Enrollment & Credentialing Console */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-emerald-600" />
+                  <span>Inter-Ministerial Sector Minister Enrollment Console ({enrolledSectorMinisters.length})</span>
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Except for MoLG political leaders (Hon. Balaam &amp; Hon. Justine Nameere), ministers in other ministries are enrolled by the Permanent Secretary to preserve administrative sovereignty.
+                </p>
+              </div>
+              <button
+                onClick={() => setEnrollModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Enroll Sector Minister</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {enrolledSectorMinisters.map((esm) => (
+                <div
+                  key={esm.id}
+                  className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 text-xs space-y-1.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {esm.deskCode}
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
+                      {esm.status}
+                    </span>
+                  </div>
+                  <div className="font-black text-slate-900 dark:text-white">
+                    {esm.ministerName}
+                  </div>
+                  <div className="text-[11px] text-slate-600 dark:text-slate-300">
+                    {esm.portfolio}
+                  </div>
+                  <div className="text-[10px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                    <span>Enrolled by: {esm.invitedBy.split(' ')[0]}</span>
+                    <button
+                      onClick={() => {
+                        directLoginWithGovCode(esm.deskCode);
+                      }}
+                      className="text-emerald-600 hover:underline font-bold"
+                    >
+                      Login &rarr;
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Historical Reference Note for Outgoing Minister Raphael Magyezi */}
+          <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-600 dark:text-slate-400 gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] font-mono font-bold uppercase text-slate-700 dark:text-slate-300">
+                Historical Archive
+              </span>
+              <span>
+                <strong>Hon. Raphael Magyezi:</strong> Served as Cabinet Minister 14 Dec 2019 – May 2026. Handover finalized in May 2026; gazetted end of outgoing Local Council tenure (May 12, 2026). Archive Code: <code className="font-mono text-slate-800 dark:text-slate-200 font-bold">MIN-MOLG-MAGYEZI</code>.
+              </span>
+            </div>
+            <div className="text-[11px] font-mono shrink-0">
+              Permanent Secretary: <strong>Ben Kumumanya</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ENROLL SECTOR MINISTER MODAL */}
+      {enrollModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  Enroll Sector Minister (PS Accounting Officer Authority)
+                </h3>
+              </div>
+              <button
+                onClick={() => setEnrollModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Mint an apex ministerial access credential for a line ministry. As Permanent Secretary, you register their statutory portfolio while ringfencing Vote 011 accounting officer powers.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Target Ministry
+                </label>
+                <select
+                  value={enrollMinistryKey}
+                  onChange={(e) => {
+                    setEnrollMinistryKey(e.target.value);
+                    const map: Record<string, string> = {
+                      mofped: 'Ministry of Finance, Planning & Economic Development',
+                      mowt: 'Ministry of Works & Transport',
+                      moh: 'Ministry of Health',
+                      moes: 'Ministry of Education & Sports',
+                      mowe: 'Ministry of Water & Environment',
+                      moict: 'Ministry of ICT & National Guidance',
+                      opm: 'Office of the Prime Minister',
+                    };
+                    setEnrollMinistryName(map[e.target.value] || e.target.value.toUpperCase());
+                  }}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold"
+                >
+                  <option value="mofped">Ministry of Finance, Planning &amp; Economic Development (MoFPED)</option>
+                  <option value="mowt">Ministry of Works &amp; Transport (MoWT)</option>
+                  <option value="moh">Ministry of Health (MoH)</option>
+                  <option value="moes">Ministry of Education &amp; Sports (MoES)</option>
+                  <option value="mowe">Ministry of Water &amp; Environment (MoWE)</option>
+                  <option value="moict">Ministry of ICT &amp; National Guidance (MoICT)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Minister Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Hon. Matia Kasaija or Dr. Jane Ruth Aceng"
+                  value={enrollMinisterName}
+                  onChange={(e) => setEnrollMinisterName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Rank
+                  </label>
+                  <select
+                    value={enrollRank}
+                    onChange={(e) => setEnrollRank(e.target.value as any)}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold"
+                  >
+                    <option value="cabinet_minister">Cabinet Minister (Art. 111)</option>
+                    <option value="minister_of_state">Minister of State (Art. 117)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Portfolio Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Minister of Finance"
+                    value={enrollPortfolio}
+                    onChange={(e) => setEnrollPortfolio(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Policy Focus &amp; Statutory Oversight
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. National Budget Execution, Health Center Upgrades, Road Quality"
+                  value={enrollFocus}
+                  onChange={(e) => setEnrollFocus(e.target.value)}
+                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-900 dark:text-emerald-300">
+                <span>Generated Credential Code:</span>{' '}
+                <code className="font-bold font-mono">
+                  UG-{enrollMinistryKey.toUpperCase()}-{enrollRank === 'cabinet_minister' ? 'CABINET' : 'STATE'}-MIN
+                </code>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEnrollModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!enrollMinisterName.trim() || !enrollPortfolio.trim()) {
+                    toast('Please provide minister name and portfolio', 'amber');
+                    return;
+                  }
+                  enrollSectorMinister({
+                    ministryKey: enrollMinistryKey,
+                    ministryName: enrollMinistryName,
+                    ministerName: enrollMinisterName,
+                    portfolio: enrollPortfolio,
+                    rank: enrollRank,
+                    statutoryScope: `Policy formulation, parliamentary defense, and sector oversight for ${enrollMinistryName}`,
+                    policyFocus: enrollFocus || 'Strategic Ministerial Command',
+                  });
+                  setEnrollModalOpen(false);
+                  setEnrollMinisterName('');
+                  setEnrollPortfolio('');
+                  setEnrollFocus('');
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm"
+              >
+                Issue Ministerial Credential
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* National Superadmin Modification Clearinghouse (Accounting Officer Requests -> PS MoLG -> CD-Ops) */}
       {(govFeedbackMessages || []).filter(

@@ -215,6 +215,7 @@ export const TransitPreviewView: React.FC = () => {
   const [lightboxItem, setLightboxItem] = useState<CampaignMediaItem | null>(null);
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
   const [activeScriptTab, setActiveScriptTab] = useState<'poster' | 'radio' | 'sacco' | 'specs'>('poster');
+  const [showCadBlueprint, setShowCadBlueprint] = useState(false);
 
   const filteredMedia = selectedCategory === 'all' || selectedCategory === 'strategy'
     ? CAMPAIGN_MEDIA
@@ -336,7 +337,7 @@ export const TransitPreviewView: React.FC = () => {
         {/* Main Media Showcase (When not in pure strategy view) */}
         {selectedCategory !== 'strategy' && (
           <div className="space-y-4">
-            {/* Primary Featured Image Display */}
+            {/* Primary Featured Image Display - Clean Unobstructed High-Resolution View */}
             <div className="rounded-xl overflow-hidden bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] relative group">
               <div className="aspect-video w-full bg-slate-950 relative overflow-hidden flex items-center justify-center">
                 <img
@@ -348,62 +349,68 @@ export const TransitPreviewView: React.FC = () => {
                     (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
                   }}
                 />
-                <div className="absolute inset-0 bg-slate-950/30 pointer-events-none" />
 
-                {/* Top Badge Overlay */}
-                <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
-                  <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[9.5px] font-semibold uppercase font-mono">
-                    {activeMedia.categoryLabel}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md border border-white/20 text-white text-[9.5px] font-mono">
-                    {activeMedia.specs}
-                  </span>
-                </div>
+                {/* Minimal Top Badges & Quick Action Controls */}
+                <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[9.5px] font-semibold uppercase font-mono">
+                      {activeMedia.categoryLabel}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/20 text-white text-[9.5px] font-mono hidden sm:inline">
+                      {activeMedia.specs}
+                    </span>
+                  </div>
 
-                {/* Top Right Action Buttons: Download Poster + Expand Lightbox */}
-                <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                  <a
-                    href={activeMedia.imageSrc}
-                    download={`civicduty-${activeMedia.category}-campaign-poster.jpg`}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/70 backdrop-blur-md hover:bg-black/90 text-white border border-white/20 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer shadow-sm"
-                    title="Download Poster Image for Social Media"
-                  >
-                    <Download size={13} />
-                    <span className="hidden sm:inline">Download</span>
-                  </a>
-                  <button
-                    onClick={() => setLightboxItem(activeMedia)}
-                    className="p-1.5 rounded-lg bg-black/70 backdrop-blur-md hover:bg-black/90 text-white border border-white/20 transition-colors cursor-pointer shadow-sm"
-                    title="Expand to Fullscreen Lightbox"
-                  >
-                    <Maximize2 size={15} />
-                  </button>
-                </div>
-
-                {/* Bottom Overlay Title & Tagline */}
-                <div className="absolute bottom-3 left-3 right-3 z-10 p-3 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/15">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                        {activeMedia.title}
-                      </h3>
-                      <p className="text-[10.5px] text-emerald-400 font-semibold font-mono">
-                        {activeMedia.tagline}
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={activeMedia.imageSrc}
+                      download={`civicduty-${activeMedia.category}-campaign-poster.jpg`}
+                      className="px-2.5 py-1.5 rounded-lg bg-black/80 backdrop-blur-md hover:bg-black text-white border border-white/20 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer shadow-sm"
+                      title="Download Poster Image for Social Media"
+                    >
+                      <Download size={12} />
+                      <span className="hidden sm:inline">Download</span>
+                    </a>
                     <button
                       onClick={() => setLightboxItem(activeMedia)}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-semibold font-mono uppercase self-start sm:self-center transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-black/80 backdrop-blur-md hover:bg-black text-white border border-white/20 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer shadow-sm"
+                      title="Expand to Fullscreen Lightbox"
                     >
-                      <Eye size={12} />
-                      <span>Inspect Details</span>
+                      <Maximize2 size={12} />
+                      <span className="hidden sm:inline">Inspect Full-Res</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Description & Sensory Highlights */}
+              {/* Title, Tagline, Third-Party Platform Transparency Bar & Description */}
               <div className="p-4 sm:p-5 bg-white dark:bg-[#161a22] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                      {activeMedia.title}
+                    </h3>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold font-mono pt-0.5">
+                      {activeMedia.tagline}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setLightboxItem(activeMedia)}
+                    className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold font-mono uppercase self-start sm:self-center transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Eye size={13} />
+                    <span>View High-Res Lightbox</span>
+                  </button>
+                </div>
+
+                {/* Third-Party Platform Notice */}
+                <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-[10.5px] font-mono text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Third-Party Oversight Notice:</strong> CivicDuty is an independent civic platform empowering citizen scouts and frontline workers to verify public service standards. We are not an owner or operator of public markets, clinics, or schools.
+                  </span>
+                </div>
+
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   {activeMedia.summary}
                 </p>
@@ -461,30 +468,43 @@ export const TransitPreviewView: React.FC = () => {
           </div>
         )}
 
-        {/* Vector CAD / Livery Blueprint Section */}
+        {/* Vector CAD / Livery Blueprint Section - Expandable Engineering Specification */}
         <div className="rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] p-4 sm:p-5 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-slate-900 dark:text-white font-mono">
                 <FileCode size={14} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Adopted Vector Livery Design Blueprint</span>
+                <span>Technical Vector Livery &amp; Paint CAD Blueprints</span>
               </div>
               <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
-                1200×600 SVG vector blueprint provided for automotive signwriters &amp; vinyl printers
+                Automotive signwriting specifications, paint codes &amp; 1200×600 SVG vector blueprints
               </p>
             </div>
-            <a
-              href="/kayoola-transit-livery.svg"
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-semibold font-mono uppercase flex items-center gap-1 self-start sm:self-auto"
-            >
-              <ExternalLink size={12} />
-              <span>Direct Vector SVG</span>
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href="/kayoola-transit-livery.svg"
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-semibold font-mono uppercase flex items-center gap-1 cursor-pointer"
+              >
+                <ExternalLink size={12} />
+                <span>Direct Vector SVG</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowCadBlueprint(!showCadBlueprint)}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-semibold font-mono uppercase transition cursor-pointer shadow-xs"
+              >
+                {showCadBlueprint ? 'Hide CAD Blueprints' : 'Inspect CAD Blueprints'}
+              </button>
+            </div>
           </div>
 
-          <KayoolaBusGraphic />
+          {showCadBlueprint && (
+            <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36]">
+              <KayoolaBusGraphic />
+            </div>
+          )}
         </div>
 
         {/* Bodaboda Community Stage Poster & Market Launch Creative Suite */}
