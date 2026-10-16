@@ -117,11 +117,11 @@ export const Navigation: React.FC<NavigationProps> = () => {
     ...(isMinister
       ? [
           {
-            id: 'ministerial_desk' as ViewType,
-            label: 'Ministerial Command',
-            icon: Scale,
-            onClick: () => go('ministerial_desk'),
-            active: view === 'ministerial_desk' || view === 'ministerial_command',
+            id: 'ps_executive_desk' as ViewType,
+            label: 'Ministerial Executive Desk',
+            icon: Landmark,
+            onClick: handleApexClick,
+            active: view === 'ps_executive_desk',
           },
         ]
       : []),

@@ -643,7 +643,7 @@ export const PsMolgRolloutView: React.FC = () => {
                 Historical Archive
               </span>
               <span>
-                <strong>Hon. Raphael Magyezi:</strong> Served as Cabinet Minister 14 Dec 2019 – May 2026. Handover finalized in May 2026; gazetted end of outgoing Local Council tenure (May 12, 2026). Archive Code: <code className="font-mono text-slate-800 dark:text-slate-200 font-bold">MIN-MOLG-MAGYEZI</code>.
+                <strong>Ministerial Historical Succession:</strong> Former minister tenure concluded May 2026. Outgoing minister desk decommissioned in accordance with Constitution Art. 111. Active Ministerial Warrant: <code className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">MIN-MOLG-UG-2026</code> (Hon. Balaam Barugahara) &amp; <code className="font-mono text-purple-600 dark:text-purple-400 font-bold">STM-MOLG-UG-2026</code> (Hon. Justine Nameere).
               </span>
             </div>
             <div className="text-[11px] font-mono shrink-0">

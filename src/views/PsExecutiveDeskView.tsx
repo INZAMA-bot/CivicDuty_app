@@ -83,12 +83,17 @@ export const PsExecutiveDeskView: React.FC = () => {
   const [referralTargetMinistry, setReferralTargetMinistry] = useState<string>('');
   const [referralSubject, setReferralSubject] = useState('');
 
-  // Fetch line ministries for current country (strictly excluding Territorial Superadmin / MoLG)
+  // Fetch all ministries for current country
+  const allCountryMinistries = useMemo(() => {
+    return getMinistriesForCountry(currentCountry);
+  }, [currentCountry]);
+
+  // Line ministries for inter-PS referrals (excluding MoLG superadmin)
   const lineMinistries = useMemo(() => {
-    return getMinistriesForCountry(currentCountry).filter(
+    return allCountryMinistries.filter(
       (m) => !m.isSuperadmin && m.id !== 'PS-MOLG' && m.sector !== 'GOVERNANCE'
     );
-  }, [currentCountry]);
+  }, [allCountryMinistries]);
 
   // Strictly lock every PS and Minister to their own authenticated Ministry warrant
   const activeMinistry: MinistryProfile = useMemo(() => {
@@ -96,8 +101,14 @@ export const PsExecutiveDeskView: React.FC = () => {
     const userDept = (user?.dept || '').toLowerCase();
     const targetId = psInfo.ministryId || (userScope.startsWith('PS-') ? userScope : selectedMinistryId);
 
+    // If Minister is for MoLG, retrieve the MoLG profile so they view their Local Government portfolio
+    if (userDept === 'molg' || targetId === 'PS-MOLG') {
+      const molgProfile = allCountryMinistries.find((m) => m.id === 'PS-MOLG' || m.shortTitle.toLowerCase() === 'molg');
+      if (molgProfile) return molgProfile;
+    }
+
     if (targetId && targetId !== 'PS-MOLG') {
-      const own = lineMinistries.find(
+      const own = allCountryMinistries.find(
         (m) =>
           m.id.toUpperCase() === targetId.toUpperCase() ||
           m.code.toUpperCase() === targetId.toUpperCase() ||
@@ -106,15 +117,14 @@ export const PsExecutiveDeskView: React.FC = () => {
       if (own) return own;
     }
     if (userDept) {
-      const byDept = lineMinistries.find((m) => m.shortTitle.toLowerCase() === userDept);
+      const byDept = allCountryMinistries.find((m) => m.shortTitle.toLowerCase() === userDept);
       if (byDept) return byDept;
     }
     return (
       lineMinistries[0] ||
-      getMinistriesForCountry(currentCountry).find((m) => !m.isSuperadmin) ||
-      getMinistriesForCountry(currentCountry)[0]
+      allCountryMinistries[0]
     );
-  }, [lineMinistries, selectedMinistryId, currentCountry, psInfo, user]);
+  }, [allCountryMinistries, lineMinistries, selectedMinistryId, currentCountry, psInfo, user]);
 
   const handleRequireAccessCodeForOtherAccount = (targetLabel?: string) => {
     toast(

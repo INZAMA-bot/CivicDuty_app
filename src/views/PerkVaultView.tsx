@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { EscrowPerkVoucher, CountryCode, VaultKind, MerchantProductService, MerchantVoucherRewardType } from '../types';
+import {
+  EscrowPerkVoucher,
+  CountryCode,
+  VaultKind,
+  MerchantProductService,
+  MerchantVoucherRewardType,
+  MARKETPLACE_CATEGORIES,
+  MarketplaceCategory,
+} from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { allDepts } from '../utils/helpers';
 import { savePerkVoucherBatchToCloud, savePerkVoucherToCloud, saveGatewayTransactionToCloud } from '../services/firestoreSync';
@@ -253,6 +261,7 @@ export const PerkVaultView: React.FC = () => {
     return user?.scope_label && user.scope_label.toLowerCase().includes('parish') ? user.scope_label : 'Kitintale Parish';
   });
   const [merchantRewardTypeFilter, setMerchantRewardTypeFilter] = useState<'all' | MerchantVoucherRewardType>('all');
+  const [merchantCategoryFilter, setMerchantCategoryFilter] = useState<string>('all');
   const [selectedMerchantProduct, setSelectedMerchantProduct] = useState<MerchantProductService | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterDemoMode, setFilterDemoMode] = useState<'all' | 'live' | 'demo'>('all');
@@ -2231,6 +2240,9 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
     if (merchantRewardTypeFilter !== 'all') {
       list = list.filter((p) => p.rewardType === merchantRewardTypeFilter);
     }
+    if (merchantCategoryFilter !== 'all') {
+      list = list.filter((p) => p.category === merchantCategoryFilter);
+    }
     if (merchantLocationFilterParish && !merchantLocationFilterParish.toLowerCase().includes('all')) {
       const q = merchantLocationFilterParish.toLowerCase().replace(/parish|ward/g, '').trim();
       if (q) {
@@ -2253,7 +2265,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       );
     }
     return list;
-  }, [merchantProducts, selectedCountry, merchantRewardTypeFilter, merchantLocationFilterParish, allocationSearchQuery]);
+  }, [merchantProducts, selectedCountry, merchantRewardTypeFilter, merchantCategoryFilter, merchantLocationFilterParish, allocationSearchQuery]);
 
   // Details of the selected digital utility, supermarket, or local merchant package
   const getPackageDetails = () => {
@@ -4081,6 +4093,41 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   </div>
                 </div>
 
+                {/* 12 Marketplace Categories Filter Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider">
+                    <span>Marketplace Category</span>
+                    <span>{filteredMerchantCatalog.length} Offers Available</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                    <button
+                      type="button"
+                      onClick={() => setMerchantCategoryFilter('all')}
+                      className={`shrink-0 px-2.5 py-1 rounded-md text-[10.5px] font-mono font-semibold transition-colors cursor-pointer ${
+                        merchantCategoryFilter === 'all'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      All Categories
+                    </button>
+                    {MARKETPLACE_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setMerchantCategoryFilter(cat.id)}
+                        className={`shrink-0 px-2.5 py-1 rounded-md text-[10.5px] font-mono font-semibold transition-colors cursor-pointer ${
+                          merchantCategoryFilter === cat.id
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Grid of Merchant Vouchers */}
                 {filteredMerchantCatalog.length === 0 ? (
                   <div className="p-8 text-center text-xs font-mono text-slate-500 rounded-xl border border-dashed border-[#e3e6ea] dark:border-[#262b36] space-y-2">
@@ -4091,16 +4138,18 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       onClick={() => {
                         setMerchantLocationFilterParish('all');
                         setMerchantRewardTypeFilter('all');
+                        setMerchantCategoryFilter('all');
                       }}
                       className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-semibold text-xs cursor-pointer"
                     >
-                      Reset Parish &amp; Offer Filters
+                      Reset Parish, Offer &amp; Category Filters
                     </button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                     {filteredMerchantCatalog.map((prod) => {
                       const isSelected = selectedMerchantProduct?.id === prod.id;
+                      const catDef = MARKETPLACE_CATEGORIES.find((c) => c.id === prod.category);
                       return (
                         <button
                           key={prod.id}
@@ -4113,10 +4162,15 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                           }`}
                         >
                           <div className="space-y-1.5">
-                            <div className="flex items-start justify-between gap-1.5">
-                              <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                                {prod.rewardType.toUpperCase()}
-                              </span>
+                            <div className="flex items-start justify-between gap-1.5 flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                                  {prod.rewardType.toUpperCase()}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                  {catDef?.label || prod.category}
+                                </span>
+                              </div>
                               {isSelected && <Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 font-bold" />}
                             </div>
 

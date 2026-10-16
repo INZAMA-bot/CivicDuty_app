@@ -103,7 +103,10 @@ export const Header: React.FC = () => {
 
   const handleOpenGovHomeDesk = () => {
     if (isMinister) {
-      go('ministerial_desk');
+      if (psInfo.ministryId) {
+        setSelectedMinistryId(psInfo.ministryId);
+      }
+      go('ps_executive_desk');
     } else if (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId) {
       setSelectedMinistryId(psInfo.ministryId);
       go('ps_executive_desk');

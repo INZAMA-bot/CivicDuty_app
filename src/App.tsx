@@ -17,6 +17,7 @@ import {
   Building2,
   ArrowUpRight,
   Scale,
+  Plus,
 } from 'lucide-react';
 
 import { SplashView } from './views/SplashView';
@@ -201,12 +202,13 @@ const StudioRightInspector: React.FC = () => {
         </div>
         <div className="space-y-1">
           {[
-            { id: 'ministerial_desk', label: 'Ministerial Command Desk', icon: Scale },
+            { id: 'ps_executive_desk', label: 'Ministerial Executive Desk', icon: Scale },
+            { id: 'compose', label: 'Ticket Studio (Auto-Suggest)', icon: Plus },
+            { id: 'entity_gateway', label: 'Uganda Provider Terminal', icon: ShieldCheck },
             { id: 'depts', label: 'Service Provider Registry', icon: Building2 },
-            { id: 'perk_vault', label: 'Honours & Perk Escrow', icon: Award },
+            { id: 'perk_vault', label: 'Vault Marketplace & Perks', icon: Award },
             { id: 'verify', label: 'Verify SHA-256 Ledger Seal', icon: FileCheck2 },
             { id: 'ussd', label: 'USSD *3030# Simulator', icon: Terminal },
-            { id: 'entity', label: 'Claim Provider Desk', icon: ShieldCheck },
           ].map((tool) => {
             const Icon = tool.icon;
             return (

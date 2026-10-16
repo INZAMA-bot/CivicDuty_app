@@ -20,6 +20,14 @@ import {
   ChevronDown,
   Layers,
   Handshake,
+  GraduationCap,
+  UtensilsCrossed,
+  HeartPulse,
+  Bus,
+  Zap,
+  Building2,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { UserSession } from '../types';
 
@@ -54,7 +62,9 @@ export const GovLoginView: React.FC = () => {
   // Universal / Manual Access Code fallback
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'hierarchy' | 'ministries' | 'manual'>('hierarchy');
+  const [activeTab, setActiveTab] = useState<'hierarchy' | 'ministries' | 'providers' | 'manual'>('hierarchy');
+  const [providerSearch, setProviderSearch] = useState('');
+  const [providerCategory, setProviderCategory] = useState<string>('all');
 
   const profile = useMemo(() => getCountryDesksProfile(selectedCountry), [selectedCountry]);
 
@@ -129,13 +139,30 @@ export const GovLoginView: React.FC = () => {
       return;
     }
 
-    // 2. Check GOV_CODES or customGovCodes
+    // 2. Check GOV_CODES, customGovCodes, or profile.verifiedProviders
     let match: any = GOV_CODES[clean] || (customGovCodes ? customGovCodes[clean] : undefined);
     if (!match) {
       for (const c of countryList) {
-        getCountryDesksProfile(c.code);
+        const pProf = getCountryDesksProfile(c.code);
         if (GOV_CODES[clean]) {
           match = GOV_CODES[clean];
+          break;
+        }
+        const provMatch = pProf.verifiedProviders?.find((p) => p.code === clean);
+        if (provMatch) {
+          match = {
+            country: c.code,
+            dept: provMatch.deptId || provMatch.code.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            scope: provMatch.code.toLowerCase(),
+            role: 'node_admin',
+            is_admin: true,
+            role_label: provMatch.roleLabel,
+            organization_name: provMatch.orgName,
+            officer_name: provMatch.officerName,
+            entity_type: 'non_government_entity',
+            entity_category: provMatch.category,
+            is_utility: true,
+          };
           break;
         }
       }
@@ -149,21 +176,25 @@ export const GovLoginView: React.FC = () => {
         );
         return;
       }
-      const labelStr = match.role_label || match.label || deskTitle || 'Government Desk';
-      const shortStr = match.real_title_short || match.label || 'GOV';
+      const labelStr = match.organization_name || match.role_label || match.label || deskTitle || 'Government Desk';
+      const shortStr = match.real_title_short || match.role_label || match.label || 'GOV';
       const newUser: UserSession = {
         id: 'gov_' + Date.now(),
-        name: `${labelStr} (${match.scope_label || match.scope || targetCountry})`,
+        name: `${match.officer_name || labelStr} (${match.scope_label || match.scope || targetCountry})`,
         country: targetCountry,
         role: match.role || 'node_admin',
-        role_label: labelStr,
+        role_label: match.role_label || labelStr,
         real_title_short: shortStr,
         dept: match.dept || 'molg',
         scope: match.scope || targetCountry,
         scope_label: match.scope_label || match.scope || targetCountry,
         entity_type: match.entity_type === 'non_government_entity' ? 'non_government_entity' : 'government',
+        entity_category: match.entity_category,
+        organization_name: match.organization_name,
+        officer_name: match.officer_name,
         hierarchy_level: match.hierarchy_level,
-        is_admin: match.role === 'platform_admin' || match.role === 'node_admin',
+        is_admin: match.role === 'platform_admin' || match.role === 'node_admin' || Boolean(match.is_admin),
+        is_utility: Boolean(match.is_utility),
       };
 
       setError('');
@@ -179,16 +210,21 @@ export const GovLoginView: React.FC = () => {
         return;
       }
 
+      const isMinisterLogin =
+        clean.startsWith('MIN-') ||
+        clean.startsWith('STM-') ||
+        clean.endsWith('-CABINET-MIN') ||
+        clean.endsWith('-STATE-MIN') ||
+        labelStr.toUpperCase().includes('MINISTER');
+
       const psCheck = getPsMinistryInfo(newUser);
-      if (psCheck.isMoLG) {
+      if (psCheck.isMoLG && !isMinisterLogin) {
         go('ps_molg_rollout');
       } else if (
         (psCheck.isPs && psCheck.ministryId) ||
-        clean.startsWith('MIN-') ||
-        clean.startsWith('STM-') ||
-        labelStr.toUpperCase().includes('MINISTER')
+        isMinisterLogin
       ) {
-        setSelectedMinistryId(psCheck.ministryId || 'PS-MOWT');
+        setSelectedMinistryId(psCheck.ministryId || (clean.includes('MOLG') ? 'PS-MOLG' : 'PS-MOWT'));
         go('ps_executive_desk');
       } else {
         go('gov_inbox');
@@ -487,6 +523,11 @@ export const GovLoginView: React.FC = () => {
                   id: 'ministries',
                   label: `Accounting & Ministry Desks (${profile.accountingDesks.length})`,
                   icon: Building,
+                },
+                {
+                  id: 'providers',
+                  label: `Private Provider Desks (${profile.verifiedProviders?.length || 0})`,
+                  icon: ShieldCheck,
                 },
                 { id: 'manual', label: 'Direct Code Entry', icon: KeyRound },
               ].map((t) => {
@@ -841,6 +882,197 @@ export const GovLoginView: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* TAB: Private Provider Desks (Gayaza High, Namagunga, Café Javas, NWSC, Mulago Hospital, etc.) */}
+            {activeTab === 'providers' && (
+              <div className="space-y-3 animate-fade-in">
+                {/* Header & Category Filter Strip */}
+                <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Building2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                        <span>Private Provider &amp; Statutory Utility Desks ({profile.countryName})</span>
+                      </div>
+                      <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Operational ticket queues for accredited schools, clinics, dining, utilities, and transport operators.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 font-semibold">
+                      {profile.verifiedProviders?.length || 0} Registered Desks
+                    </span>
+                  </div>
+
+                  {/* Search and Category filter */}
+                  <div className="space-y-2 pt-1 border-t border-[#e3e6ea] dark:border-[#262b36]">
+                    <div className="relative flex items-center">
+                      <Search size={13} className="absolute left-3 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={providerSearch}
+                        onChange={(e) => setProviderSearch(e.target.value)}
+                        placeholder={`Search ${profile.countryName} schools (Gayaza, Namagunga), dining (Café Javas), utilities (NWSC)...`}
+                        className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-8 pr-8 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
+                      />
+                      {providerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setProviderSearch('')}
+                          className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                      {[
+                        { id: 'all', label: 'All Desks' },
+                        { id: 'education', label: 'Schools & Unis' },
+                        { id: 'food_dining', label: 'Food & Dining' },
+                        { id: 'health', label: 'Hospitals & Clinics' },
+                        { id: 'private_utility_telecom', label: 'Utilities & Telecom' },
+                        { id: 'banking_finance', label: 'Banks & SACCOs' },
+                        { id: 'transport_cooperative', label: 'Transit & Boda' },
+                        { id: 'private_contractor', label: 'Contractors' },
+                        { id: 'ngo_civil_society', label: 'NGOs & CSOs' },
+                      ].map((cat) => {
+                        const isSel = providerCategory === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setProviderCategory(cat.id)}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold whitespace-nowrap transition-colors border cursor-pointer ${
+                              isSel
+                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
+                                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
+                            }`}
+                          >
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Provider List */}
+                <div className="space-y-2.5">
+                  {(profile.verifiedProviders || [])
+                    .filter((p) => {
+                      if (providerCategory !== 'all' && p.category !== providerCategory) return false;
+                      if (providerSearch.trim()) {
+                        const q = providerSearch.toLowerCase();
+                        return (
+                          p.code.toLowerCase().includes(q) ||
+                          p.orgName.toLowerCase().includes(q) ||
+                          (p.officerName || '').toLowerCase().includes(q) ||
+                          (p.roleLabel || '').toLowerCase().includes(q) ||
+                          (p.categoryLabel || '').toLowerCase().includes(q)
+                        );
+                      }
+                      return true;
+                    })
+                    .map((item) => {
+                      const deskKey = `prov-${item.code}`;
+                      const isExpanded = selectedDeskKey === deskKey;
+                      const codeVal = deskCodes[deskKey] ?? '';
+
+                      return (
+                        <div
+                          key={item.code}
+                          className={`rounded-xl border transition-all overflow-hidden ${
+                            isExpanded
+                              ? 'bg-white dark:bg-[#161a22] border-emerald-500/60 shadow-xs'
+                              : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
+                          }`}
+                        >
+                          <div className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                                  {item.code}
+                                </span>
+                                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold">
+                                  {item.categoryLabel || item.category}
+                                </span>
+                                {item.qualityAudit && (
+                                  <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-semibold">
+                                    {item.qualityAudit}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm font-bold text-slate-900 dark:text-white">
+                                {item.orgName}
+                              </div>
+                              <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400">
+                                {item.officerName} · {item.roleLabel} · {item.slaHours}h SLA
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => authenticateWithCode(item.code, item.code, item.orgName)}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                title={`Auto-fill code and mount ${item.orgName} desk`}
+                              >
+                                <span>Mount Desk</span>
+                                <ArrowRight size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedDeskKey(isExpanded ? '' : deskKey)}
+                                className="p-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+                                title="Toggle manual code input"
+                              >
+                                <ChevronRight
+                                  size={14}
+                                  className={`transition-transform ${isExpanded ? 'rotate-90 text-emerald-600' : ''}`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="px-3.5 pb-3.5 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2">
+                              <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                                <span>Official Access Code for {item.orgName}:</span>
+                                <span className="font-bold text-emerald-700 dark:text-emerald-400">{item.code}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={codeVal}
+                                  onChange={(e) => {
+                                    setDeskCodes((prev) => ({ ...prev, [deskKey]: e.target.value }));
+                                    setError('');
+                                  }}
+                                  placeholder={`Enter ${item.code}`}
+                                  className="flex-1 px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      authenticateWithCode(codeVal || item.code, item.code, item.orgName);
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => authenticateWithCode(codeVal || item.code, item.code, item.orgName)}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shrink-0"
+                                >
+                                  Sign In
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             )}
 

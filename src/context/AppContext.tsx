@@ -386,6 +386,62 @@ export const DEFAULT_CITIZEN_USER: UserSession = {
 };
 
 export const INITIAL_CLAIMED_ENTITIES: Record<string, ClaimedEntityRecord> = {
+  gayaza_hs: {
+    deptId: 'gayaza_hs',
+    country: 'UG',
+    businessName: 'Gayaza High School',
+    representativeName: 'Robinah Kizito',
+    officialEmail: 'headteacher@gayazahs.sc.ug',
+    phone: '+256 414 567 401',
+    role: 'Head Teacher & Academic Administrator',
+    plan: 'national',
+    claimedAt: '2026-08-01',
+    verified: true,
+    tinOrReg: 'MoES-REG-P.012',
+    monthlyFee: 20,
+  },
+  namagunga: {
+    deptId: 'namagunga',
+    country: 'UG',
+    businessName: "Mt. St. Mary's College Namagunga",
+    representativeName: 'Sr. Mary Grace Akello',
+    officialEmail: 'headmistress@msmnamagunga.ac.ug',
+    phone: '+256 414 443 120',
+    role: 'Headmistress & Principal',
+    plan: 'national',
+    claimedAt: '2026-08-05',
+    verified: true,
+    tinOrReg: 'MoES-REG-P.045',
+    monthlyFee: 20,
+  },
+  cafe_javas: {
+    deptId: 'cafe_javas',
+    country: 'UG',
+    businessName: "Café Javas (CJ's)",
+    representativeName: 'Faruq Mandela',
+    officialEmail: 'care@cafejavas.co.ug',
+    phone: '+256 312 244 444',
+    role: 'Customer Experience Lead',
+    plan: 'district',
+    claimedAt: '2026-08-18',
+    verified: true,
+    tinOrReg: 'TIN-4019283',
+    monthlyFee: 10,
+  },
+  nwsc: {
+    deptId: 'nwsc',
+    country: 'UG',
+    businessName: 'National Water & Sewerage Corp (NWSC)',
+    representativeName: 'Dr. Eng. Silver Mugisha',
+    officialEmail: 'md@nwsc.co.ug',
+    phone: '+256 313 315 100',
+    role: 'Managing Director & Accounting Officer',
+    plan: 'national',
+    claimedAt: '2026-06-15',
+    verified: true,
+    tinOrReg: 'TIN-1004829',
+    monthlyFee: 20,
+  },
   nakasero_hosp: {
     deptId: 'nakasero_hosp',
     country: 'UG',
@@ -398,20 +454,6 @@ export const INITIAL_CLAIMED_ENTITIES: Record<string, ClaimedEntityRecord> = {
     claimedAt: '2026-08-10',
     verified: true,
     tinOrReg: 'TIN-8920192',
-    monthlyFee: 10,
-  },
-  cafe_javas: {
-    deptId: 'cafe_javas',
-    country: 'UG',
-    businessName: "Café Javas (CJ's)",
-    representativeName: 'Sarah Katusiime',
-    officialEmail: 'care@cafejavas.co.ug',
-    phone: '+256 312 244 444',
-    role: 'Customer Experience Lead',
-    plan: 'district',
-    claimedAt: '2026-08-18',
-    verified: true,
-    tinOrReg: 'TIN-4019283',
     monthlyFee: 10,
   },
   mak_univ: {
@@ -729,7 +771,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [claimedEntities, setClaimedEntities] = useState<Record<string, ClaimedEntityRecord>>(() => {
     try {
       const saved = localStorage.getItem('cd_claimed_entities');
-      return saved ? JSON.parse(saved) : INITIAL_CLAIMED_ENTITIES;
+      return saved ? { ...INITIAL_CLAIMED_ENTITIES, ...JSON.parse(saved) } : INITIAL_CLAIMED_ENTITIES;
     } catch {
       return INITIAL_CLAIMED_ENTITIES;
     }
@@ -2387,12 +2429,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       RW: 'National — All Rwanda',
       NG: 'National — All Nigeria',
     };
+    const deskCodeVal =
+      (data as any).code ||
+      (data as any).deskCode ||
+      Object.keys(GOV_CODES).find((k) => GOV_CODES[k] === data) ||
+      `DESK-${(data.dept || 'GOV').toUpperCase()}`;
+
     const session: UserSession = {
       id: 'gov-' + data.dept + '-' + Date.now(),
       role: data.role,
       country: data.country,
       dept: data.dept,
       scope: data.scope,
+      deskCode: deskCodeVal,
       is_utility: data.is_utility,
       is_admin:
         data.is_admin ??
@@ -2419,6 +2468,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       officer_name: data.officer_name,
     };
     setUser(session);
+
+    // Guaranteed ticket screen population: if this desk has no tickets in local state yet, merge from INITIAL_POSTS or seed a commissioning ticket
+    setPosts((prev) => {
+      const existing = prev.filter((p) => p.dept === data.dept);
+      if (existing.length === 0) {
+        const seedMatches = INITIAL_POSTS.filter((p) => p.dept === data.dept);
+        if (seedMatches.length > 0) {
+          const updated = [...seedMatches, ...prev];
+          try {
+            localStorage.setItem('cd_posts', JSON.stringify(updated));
+          } catch {}
+          return updated;
+        }
+        const defaultPost: Post = {
+          id: `p-${data.dept}-commissioning`,
+          country: data.country,
+          dept: data.dept,
+          lane: 'consumer',
+          territory: { district: data.scope, subcounty: data.scope, parish: data.scope },
+          citizen_id: 'sys-onboard-audit',
+          citizen_name: 'CivicDuty Provider Quality Audit',
+          citizen_rank: 'Sentinel',
+          anonymous: false,
+          category: 'other',
+          title: `Statutory Commissioning: ${data.organization_name || d.name} Desk Mounted Live`,
+          body: `Official notice of commissioning for ${data.organization_name || d.name}. Desk lead ${data.officer_name || session.real_title_short} has activated sovereign citizen engagement. SLA response target benchmarked at 24 hours pursuant to National Quality Standards.`,
+          location: data.scope || `${data.country} Commercial Precinct`,
+          gps: { lat: '0.3136', lng: '32.5811' },
+          source: 'web',
+          media: [],
+          status: 'received',
+          gov_status: 'received',
+          created_at: new Date().toISOString(),
+          comments: [
+            {
+              id: `c-${data.dept}-1`,
+              sender: `${data.officer_name || session.real_title_short}`,
+              role: 'gov',
+              body: `We confirm desk activation. Our customer care and compliance team is operational and accepting community inquiries and verification dispatches.`,
+              status_tag: 'received',
+              media: [],
+              created_at: new Date().toISOString(),
+              helpful: 12,
+              not_helpful: 0,
+            },
+          ],
+          upvotes: 45,
+          citizen_satisfied: null,
+          escalated: false,
+          is_demo: false,
+        };
+        const updated = [defaultPost, ...prev];
+        try {
+          localStorage.setItem('cd_posts', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      }
+      return prev;
+    });
+
     toast(`Desk mounted — ${session.real_title_short || titleObj.short}`, 'emerald');
     go('gov_inbox');
   };
@@ -2574,6 +2683,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
       ]);
     }
+
+    // Register into in-memory DEPARTMENTS list so all dropdowns and search bars reflect it immediately
+    if (DEPARTMENTS[data.country]) {
+      const alreadyInDept = DEPARTMENTS[data.country].consumer.some((d) => d.id === id);
+      if (!alreadyInDept) {
+        DEPARTMENTS[data.country].consumer.push({
+          id,
+          name: activeOrgName,
+          full: `${activeOrgName} (${activeProfTitle} Desk)`,
+          icon: 'store',
+          category: activeCategory as any,
+          sector: data.business_typology || activeProfTitle,
+          trustScore: 92,
+          verified: true,
+          qualityAudit: 'Onboarded Provider Desk',
+          sla: 24,
+          location: data.scope || `${data.country} Commercial Precinct`,
+        });
+      }
+    }
+
+    // Seed initial active ticket so newly mounted provider desks immediately feature active screens
+    setPosts((prev) => {
+      const existing = prev.filter((p) => p.dept === id);
+      if (existing.length === 0) {
+        const welcomePost: Post = {
+          id: `p-${id}-commissioning`,
+          country: data.country,
+          dept: id,
+          lane: 'consumer',
+          territory: { district: data.scope, subcounty: data.scope, parish: data.scope },
+          citizen_id: 'sys-onboard-audit',
+          citizen_name: 'CivicDuty Provider Onboarding Audit',
+          citizen_rank: 'Sentinel',
+          anonymous: false,
+          category: 'other',
+          title: `Statutory Commissioning: ${activeOrgName} Desk Mounted Live`,
+          body: `Official notice of commissioning for ${activeOrgName}. Desk lead ${data.officer_name || activeProfTitle} (${activeProfTitle}) has activated sovereign citizen engagement. SLA response target benchmarked at 24 hours pursuant to National Quality Standards.`,
+          location: data.scope || `${data.country} Commercial Precinct`,
+          gps: { lat: '0.3136', lng: '32.5811' },
+          source: 'web',
+          media: [],
+          status: 'received',
+          gov_status: 'received',
+          created_at: new Date().toISOString(),
+          comments: [
+            {
+              id: `c-${id}-1`,
+              sender: `${data.officer_name || activeProfTitle} (${activeProfTitle})`,
+              role: 'gov',
+              body: `We confirm desk activation. Our customer care and compliance team is operational and accepting community inquiries and verification dispatches.`,
+              status_tag: 'received',
+              media: [],
+              created_at: new Date().toISOString(),
+              helpful: 12,
+              not_helpful: 0,
+            },
+          ],
+          upvotes: 45,
+          citizen_satisfied: null,
+          escalated: false,
+          is_demo: false,
+        };
+        return [welcomePost, ...prev];
+      }
+      return prev;
+    });
 
     return { code, subId, invoiceNo };
   };
@@ -3043,21 +3219,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       go('company_management');
       return true;
     }
+    // Ministers (Cabinet & State) standard: open ps_executive_desk matching MIN-MOWT-UG-2026 standard
     if (
+      cleanCode.startsWith('MIN-') ||
+      cleanCode.startsWith('STM-') ||
       cleanCode === 'UG-MOLG-CABINET-MIN' ||
       cleanCode === 'UG-MOLG-STATE-MIN' ||
-      cleanCode === 'MIN-MOLG-BALAAM' ||
-      cleanCode === 'MIN-STATE-MOLG-NAMEERE' ||
       cleanCode.endsWith('-CABINET-MIN') ||
       cleanCode.endsWith('-STATE-MIN')
     ) {
-      toast(`Apex Ministerial Command Mounted: ${data.officer_name || data.real_title_short} (Arts 111 & 117)`, 'emerald');
-      go('ministerial_desk');
+      const minScope = data.scope && data.scope.startsWith('PS-') ? data.scope : `PS-${(data.dept || 'MOWT').toUpperCase()}`;
+      setSelectedMinistryId(minScope);
+      toast(`Apex Ministerial Desk Mounted: ${data.officer_name || data.real_title_short} (Arts 111 & 117 · Strict Jurisdictional Isolation)`, 'emerald');
+      go('ps_executive_desk');
       return true;
     }
+    // Only PS MoLG is Superadmin
     if (cleanCode === 'UG-MOLG-PS-011' || cleanCode === 'PS-MOLG-2026' || cleanCode === 'PS-MOLG-ROLLOUT') {
       toast(`PS MoLG National Superadmin & Accounting Officer Desk mounted (${data.officer_name || 'Ben Kumumanya'}).`, 'emerald');
       go('ps_molg_rollout');
+      return true;
+    }
+    // Line Ministry Permanent Secretaries -> Line Executive Desk
+    if (cleanCode.startsWith('PS-') && cleanCode !== 'PS-OPM-2026') {
+      const minId = cleanCode.replace('-2026', '');
+      setSelectedMinistryId(minId);
+      toast(`Line Ministry Accounting Officer Desk mounted: ${data.officer_name || cleanCode}`, 'emerald');
+      go('ps_executive_desk');
       return true;
     }
     if (cleanCode === 'UG-IGG-9999') {

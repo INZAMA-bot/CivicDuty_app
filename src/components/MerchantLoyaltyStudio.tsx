@@ -27,7 +27,13 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { MerchantProductService, MerchantVoucherRewardType, EscrowPerkVoucher, CountryCode } from '../types';
+import {
+  MerchantProductService,
+  MerchantVoucherRewardType,
+  EscrowPerkVoucher,
+  CountryCode,
+  MARKETPLACE_CATEGORIES,
+} from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { getDept } from '../utils/helpers';
 import {
@@ -74,7 +80,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
       }
     }
   }, [activeMerchantDept, selectedCountry]);
-  const [category, setCategory] = useState<string>('hospitality');
+  const [category, setCategory] = useState<string>('beauty_personal_care');
   const [parish, setParish] = useState<string>(() => {
     return user?.scope_label && user.scope_label.toLowerCase().includes('parish')
       ? user.scope_label
@@ -400,19 +406,18 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
 
                 <div>
                   <label className="text-[10.5px] font-mono font-bold text-slate-600 dark:text-slate-400 block mb-1">
-                    Business Category
+                    Marketplace Category
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="hospitality">💇 Salon, Spa &amp; Grooming</option>
-                    <option value="retail_shops">🛒 Supermarket, Bakery &amp; Groceries</option>
-                    <option value="transport">🛵 Bodaboda, Garage &amp; Transport</option>
-                    <option value="health">🏥 Pharmacy, Clinic &amp; Wellness</option>
-                    <option value="food_dining">☕ Cafe, Dining &amp; Food</option>
-                    <option value="retail_shops">☀️ Solar, Tech &amp; Hardware</option>
+                    {MARKETPLACE_CATEGORIES.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

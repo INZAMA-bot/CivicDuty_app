@@ -29,6 +29,9 @@ import {
   HardHat,
   Sparkles,
   HeartHandshake,
+  Search,
+  X,
+  Building2,
 } from 'lucide-react';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import {
@@ -63,6 +66,30 @@ export const ComposeView: React.FC = () => {
   const territory = TERRITORY[country] || [];
 
   const [dept, setDept] = useState(activeDept || '');
+  const [wallSearchQuery, setWallSearchQuery] = useState('');
+  const [isWallDropdownOpen, setIsWallDropdownOpen] = useState(false);
+
+  const selectedDeptObj = React.useMemo(() => {
+    return depts.find((d) => d.id === dept);
+  }, [depts, dept]);
+
+  const filteredWalls = React.useMemo(() => {
+    const q = wallSearchQuery.trim().toLowerCase();
+    if (!q) {
+      // Prioritize top statutory authorities and monitored private service walls
+      return depts.slice(0, 16);
+    }
+    return depts.filter((d) => {
+      const matchId = d.id.toLowerCase().includes(q);
+      const matchName = d.name.toLowerCase().includes(q);
+      const matchFull = (d.full || '').toLowerCase().includes(q);
+      const matchMin = (d.ministry || '').toLowerCase().includes(q);
+      const matchSector = (d.sector || '').toLowerCase().includes(q);
+      const matchCat = (d.category || '').toLowerCase().includes(q);
+      const matchLoc = (d.location || '').toLowerCase().includes(q);
+      return matchId || matchName || matchFull || matchMin || matchSector || matchCat || matchLoc;
+    });
+  }, [depts, wallSearchQuery]);
   const [profession, setProfession] = useState('Bodaboda Rider / Cyclist');
   const [othersText, setOthersText] = useState('');
   const [district, setDistrict] = useState('');
@@ -536,100 +563,173 @@ export const ComposeView: React.FC = () => {
           {/* Section 1: Target Wall & Reporter Profession */}
           <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
             <div>
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
-                1. Target Statutory Desk or Service Wall
-              </label>
-              <select
-                value={dept}
-                onChange={(e) => setDept(e.target.value)}
-                className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">Select institution, provider or desk...</option>
-                <optgroup label="── Government & Statutory Desks">
-                  {depts
-                    .filter((d) => d.lane === 'civic' || d.category === 'government')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.ministry || d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Schools & Education">
-                  {depts
-                    .filter((d) => d.category === 'education')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.full})
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Hospitals & Healthcare">
-                  {depts
-                    .filter((d) => d.category === 'health')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Hospitality & Dining">
-                  {depts
-                    .filter((d) => d.category === 'hospitality')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Finance, Banks & SACCOs">
-                  {depts
-                    .filter((d) => d.category === 'finance')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Transport & Transit SACCOs">
-                  {depts
-                    .filter((d) => d.category === 'transport')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Housing, Plazas & Markets">
-                  {depts
-                    .filter((d) => d.category === 'housing')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Utilities & Telecom">
-                  {depts
-                    .filter((d) => d.category === 'utility' || d.category === 'telecom')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── CSOs, NGOs & Contractors">
-                  {depts
-                    .filter((d) => d.category === 'cso' || d.category === 'contractor')
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} — {d.full}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="── Unlisted Entity">
-                  <option value="others">Others / Register &amp; Report Unlisted Provider</option>
-                </optgroup>
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
+                  1. Target Statutory Desk or Service Wall
+                </label>
+                <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                  <Search size={10} />
+                  <span>Interactive Search &amp; Auto-Suggest</span>
+                </span>
+              </div>
+
+              {/* If a wall is selected: render the Selected Wall Card */}
+              {selectedDeptObj ? (
+                <div className="p-3 rounded-xl bg-white dark:bg-[#161a22] border-2 border-emerald-500/40 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                      <Building2 size={20} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                          {selectedDeptObj.name}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
+                            selectedDeptObj.lane === 'civic' || selectedDeptObj.category === 'government'
+                              ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                          }`}
+                        >
+                          {selectedDeptObj.lane === 'civic' || selectedDeptObj.category === 'government'
+                            ? 'Government Desk'
+                            : 'Service Provider'}
+                        </span>
+                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                          ⏱️ {selectedDeptObj.sla || 48}h Target
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                        {selectedDeptObj.ministry || selectedDeptObj.full || selectedDeptObj.sector}
+                        {selectedDeptObj.location && ` · ${selectedDeptObj.location}`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDept('');
+                      setWallSearchQuery('');
+                      setIsWallDropdownOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                  >
+                    <Search size={13} />
+                    <span>Change Wall</span>
+                  </button>
+                </div>
+              ) : (
+                /* Search Input with Auto-Suggestions Dropdown */
+                <div className="relative">
+                  <div className="relative flex items-center">
+                    <Search size={16} className="absolute left-3 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={wallSearchQuery}
+                      onChange={(e) => {
+                        setWallSearchQuery(e.target.value);
+                        setIsWallDropdownOpen(true);
+                      }}
+                      onFocus={() => setIsWallDropdownOpen(true)}
+                      placeholder="Type letters to search any ministry, agency, school, hospital, business or service wall (e.g. NWSC, Gayaza, Café Javas, UNRA, Mulago)..."
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-9 pr-8 py-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
+                    />
+                    {wallSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWallSearchQuery('');
+                          setIsWallDropdownOpen(true);
+                        }}
+                        className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown Menu */}
+                  {isWallDropdownOpen && (
+                    <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-xl divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
+                      <div className="px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between text-[10px] font-mono text-slate-500 font-semibold">
+                        <span>
+                          {wallSearchQuery ? `Search Results (${filteredWalls.length})` : 'Popular & Monitored Service Walls'}
+                        </span>
+                        <span>Click to Select</span>
+                      </div>
+
+                      {filteredWalls.length === 0 ? (
+                        <div className="p-4 text-center space-y-2">
+                          <p className="text-xs text-slate-500 font-mono">
+                            No registered service wall matching "{wallSearchQuery}"
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDept(wallSearchQuery.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+                              setIsWallDropdownOpen(false);
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-mono font-semibold cursor-pointer"
+                          >
+                            Target Custom Wall: "{wallSearchQuery}"
+                          </button>
+                        </div>
+                      ) : (
+                        filteredWalls.map((d) => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => {
+                              setDept(d.id);
+                              setWallSearchQuery('');
+                              setIsWallDropdownOpen(false);
+                            }}
+                            className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-500/10 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 text-xs font-bold group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                                {d.name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                    {d.name}
+                                  </span>
+                                  {d.verified && (
+                                    <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                                  )}
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[8.5px] font-mono font-bold uppercase ${
+                                      d.lane === 'civic' || d.category === 'government'
+                                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    }`}
+                                  >
+                                    {d.category || (d.lane === 'civic' ? 'Government' : 'Provider')}
+                                  </span>
+                                </div>
+                                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate">
+                                  {d.ministry || d.full}
+                                  {d.location && ` · ${d.location}`}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span className="text-[10px] font-mono text-slate-500 group-hover:text-emerald-600 font-semibold">
+                                {d.sla || 48}h SLA
+                              </span>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
               {dept === 'others' && (
                 <div className="space-y-1 mt-2">
@@ -645,7 +745,6 @@ export const ComposeView: React.FC = () => {
                   </p>
                 </div>
               )}
-            </div>
 
             {/* Frontline Field Scout Self-Identification & Stage Consensus Suite */}
             <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-3">

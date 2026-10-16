@@ -99,9 +99,20 @@ export const GovInboxView: React.FC = () => {
 
   const queue = posts.filter((p) => {
     if (p.country !== user.country) return false;
-    if (!showDemos && p.is_demo) return false;
+    if (!showDemos && p.is_demo && p.dept !== user.dept) return false;
 
-    if (!isNationalScope && user.scope) {
+    // 1. Direct department or private provider desk match (Gayaza High, NWSC, Café Javas, St. Mary's Namagunga, etc.)
+    if (user.dept && p.dept === user.dept) {
+      return true;
+    }
+
+    // 2. MoFPED statutory treasury / revenue audit oversight
+    if (user.dept === 'mofped' && (p.category === 'finance' || p.dept === 'ura' || p.is_corruption)) {
+      return true;
+    }
+
+    // 3. Local Territorial scope matching for decentralized local government administrators (CAO, Town Clerk, Parish Chief)
+    if (!isNationalScope && user.scope && !user.is_utility && user.entity_type !== 'non_government_entity') {
       const sc = user.scope.toLowerCase();
       const scLabelFirst = (user.scope_label || '').split(/[ ·,(]/)[0].trim().toLowerCase();
       const matchesTerritory =
@@ -112,10 +123,8 @@ export const GovInboxView: React.FC = () => {
       return matchesTerritory;
     }
 
-    return (
-      p.dept === user.dept ||
-      (user.dept === 'mofped' && (p.category === 'finance' || p.dept === 'ura' || p.is_corruption))
-    );
+    // 4. National scope fallback
+    return isNationalScope && (p.dept === user.dept || user.role === 'platform_admin');
   });
 
   const isRO = user.role === 'read_only';

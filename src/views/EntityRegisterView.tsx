@@ -1416,13 +1416,23 @@ export const EntityDoneView: React.FC = () => {
   const countryName = COUNTRIES[res.country as CountryCode]?.name || res.country;
 
   const handleOpenDesk = () => {
-    const data = GOV_CODES[res.code];
-    if (data) {
-      execGovLoginByData(data);
-    } else {
-      toast('Entity desk activated!', 'emerald');
-      go('gov_inbox');
-    }
+    const data =
+      GOV_CODES[res.code] || {
+        country: res.country,
+        dept: res.code.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        scope: res.covered <= 1 ? 'parish' : res.covered <= 15 ? 'subcounty' : res.covered <= 150 ? 'district' : 'national',
+        role: 'node_admin' as const,
+        is_utility: true,
+        is_admin: true,
+        role_label: `${res.professionalTitle}, ${res.name}`,
+        real_title_short: res.professionalTitle,
+        organization_name: res.name,
+        officer_name: res.officerName || res.professionalTitle,
+        entity_type: 'non_government_entity' as const,
+        entity_category: (res.sectorName || 'retail_shops') as any,
+        code: res.code,
+      };
+    execGovLoginByData(data);
   };
 
   return (

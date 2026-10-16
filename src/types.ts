@@ -426,6 +426,7 @@ export interface UserSession {
   country: CountryCode;
   dept?: string;
   scope?: string;
+  deskCode?: string;
   is_utility?: boolean;
   is_admin?: boolean;
   role_label?: string;
@@ -839,6 +840,42 @@ export type VaultKind =
   | 'individual_vault';
 
 // --- PHASE 7: MERCHANT LOYALTY & VOUCHER MARKETPLACE (LOYALTY-AS-A-SERVICE) ---
+export type MarketplaceCategory =
+  | 'electronics'
+  | 'fashion_apparel'
+  | 'home_living'
+  | 'beauty_personal_care'
+  | 'groceries_consumables'
+  | 'health_wellness'
+  | 'sports_outdoors'
+  | 'automotive_motorbikes'
+  | 'toys_kids_baby'
+  | 'books_stationery'
+  | 'agriculture_industrial'
+  | 'services_digital_products';
+
+export interface MarketplaceCategoryDef {
+  id: MarketplaceCategory;
+  label: string;
+  iconName: string;
+  description: string;
+}
+
+export const MARKETPLACE_CATEGORIES: MarketplaceCategoryDef[] = [
+  { id: 'electronics', label: 'Electronics', iconName: 'Tv', description: 'Smartphones, solar kits, radios, batteries & accessories' },
+  { id: 'fashion_apparel', label: 'Fashion & Apparel', iconName: 'Shirt', description: 'Clothing, footwear, tailoring & traditional fabrics' },
+  { id: 'home_living', label: 'Home & Living', iconName: 'Home', description: 'Furniture, kitchenware, bedding & decor' },
+  { id: 'beauty_personal_care', label: 'Beauty & Personal Care', iconName: 'Sparkles', description: 'Salons, barbers, skincare, cosmetics & toiletries' },
+  { id: 'groceries_consumables', label: 'Groceries & Consumables', iconName: 'ShoppingCart', description: 'Supermarkets, bakeries, fresh food & household essentials' },
+  { id: 'health_wellness', label: 'Health & Wellness', iconName: 'HeartPulse', description: 'Pharmacies, clinics, wellness centers & diagnostics' },
+  { id: 'sports_outdoors', label: 'Sports & Outdoors', iconName: 'Activity', description: 'Sports gear, bicycles, fitness & outdoor equipment' },
+  { id: 'automotive_motorbikes', label: 'Automotive & Motorbikes', iconName: 'Bike', description: 'Bodaboda parts, vehicle servicing, lubricants & tires' },
+  { id: 'toys_kids_baby', label: 'Toys, Kids & Baby', iconName: 'Baby', description: 'Children toys, baby care, diapers & nursery items' },
+  { id: 'books_stationery', label: 'Books & Stationery', iconName: 'BookOpen', description: 'School books, scholastic supplies, printing & paper' },
+  { id: 'agriculture_industrial', label: 'Agriculture & Industrial', iconName: 'Wheat', description: 'Seeds, fertilizers, farm tools, hardware & solar pumps' },
+  { id: 'services_digital_products', label: 'Services & Digital Products', iconName: 'Smartphone', description: 'Telecom data, repair services, software & utility tokens' },
+];
+
 export type MerchantVoucherRewardType = 'discount' | 'freebie' | 'bogo' | 'gift' | 'cashback';
 
 export interface MerchantProductService {

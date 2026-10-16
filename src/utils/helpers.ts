@@ -203,7 +203,15 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
   const rawName = (user.name || user.officer_name || '').toUpperCase();
   const rawCode = (user.code || user.id || '').toUpperCase();
 
+  const isMinister =
+    rawTitle.includes('MINISTER') ||
+    rawCode.startsWith('MIN-') ||
+    rawCode.startsWith('STM-') ||
+    rawCode.endsWith('-CABINET-MIN') ||
+    rawCode.endsWith('-STATE-MIN');
+
   const isPs =
+    isMinister ||
     user.hierarchy_level === 'tier5_perm_sec' ||
     user.escalation_rank === 5 ||
     rawTitle.includes('PS ') ||
@@ -220,31 +228,48 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
     return { isPs: false, isMoLG: false, ministryId: null, ministryName: null, shortTitle: null, officerTitle: null };
   }
 
-  // 1. Check if this user is the National Territorial Superadmin (MoLG / Devolution / PO-RALG / COGTA / MINALOC / Intergovernmental)
+  // 1. Strict Jurisdictional Isolation: Ministers (Cabinet & State) are political executives (Arts 111 & 117), NOT Superadmin.
+  // When a Minister logs in (e.g. Balaam MIN-MOLG-UG-2026, Nameere STM-MOLG-UG-2026, Katumba MIN-MOWT-UG-2026),
+  // they receive their dedicated ministerial desk (ps_executive_desk), completely separate from the Superadmin (PS MoLG).
+  if (isMinister) {
+    const isUganda = user.country === 'UG';
+    const isMoLGMinister = rawTitle.includes('LOCAL GOV') || rawDept === 'molg' || rawCode.includes('MOLG');
+    const isMoWTMinister = rawTitle.includes('WORKS') || rawTitle.includes('TRANSPORT') || rawDept === 'mowt' || rawDept === 'works' || rawCode.includes('MOWT');
+    const isMoFPEDMinister = rawTitle.includes('FINANCE') || rawDept === 'mofped' || rawCode.includes('MOFPED');
+    const isMoHMinister = rawTitle.includes('HEALTH') || rawDept === 'moh' || rawDept === 'moh_ug' || rawCode.includes('MOH');
+
+    const minId = isMoLGMinister ? 'PS-MOLG' : isMoWTMinister ? 'PS-MOWT' : isMoFPEDMinister ? 'PS-MOFPED' : isMoHMinister ? 'PS-MOH' : 'PS-MOWT';
+    const minName = isMoLGMinister
+      ? 'Ministry of Local Government'
+      : isMoWTMinister
+      ? 'Ministry of Works & Transport'
+      : isMoFPEDMinister
+      ? 'Ministry of Finance, Planning & Economic Dev'
+      : isMoHMinister
+      ? 'Ministry of Health'
+      : 'Line Ministry Portfolio';
+
+    return {
+      isPs: true,
+      isMoLG: false, // Strict: NOT superadmin; separate ministerial desk following MIN-MOWT-UG-2026 standard
+      ministryId: minId,
+      ministryName: minName,
+      shortTitle: isMoLGMinister ? 'MoLG' : isMoWTMinister ? 'MoWT' : isMoFPEDMinister ? 'MoFPED' : isMoHMinister ? 'MoH' : 'Ministry',
+      officerTitle: user.real_title_short || user.role_label || 'Cabinet Minister (Executive Oversight)',
+      cabinetMinisterTitle: user.officer_name || (isMoLGMinister ? 'Hon. Balaam Barugahara Ateenyi' : 'Cabinet Minister'),
+      stateMinisterTitles: isMoLGMinister && isUganda ? ['Hon. Justine Nameere (Minister of State for Local Government)'] : [],
+      mandateSummary: 'Apex Ministerial Political Leadership & Strategic Policy Oversight pursuant to Constitution Arts. 111 & 117 and PFMA Section 45.',
+    };
+  }
+
+  // 2. National Territorial Superadmin is strictly and exclusively restricted to the Permanent Secretary (Accounting Officer) of MoLG
   const isTerritorialSuperadmin =
     Boolean(user.is_superadmin) ||
-    rawTitle.includes('MOLG') ||
-    rawTitle.includes('LOCAL GOV') ||
-    rawTitle.includes('DEVOLUTION') ||
-    rawTitle.includes('PO-RALG') ||
-    rawTitle.includes('TAMISEMI') ||
-    rawTitle.includes('MINALOC') ||
-    rawTitle.includes('COGTA') ||
-    rawTitle.includes('COOPERATIVE GOVERNANCE') ||
-    rawTitle.includes('INTERGOVERNMENTAL') ||
-    rawTitle.includes('SPECIAL DUTIES') ||
-    rawTitle.includes('PANCHAYATI') ||
-    rawTitle.includes('TERRITORIAL') ||
-    rawTitle.includes('DECENTRALIZATION') ||
-    rawTitle.includes('SUPERADMIN') ||
-    rawCode.includes('MOLG') ||
-    rawCode.includes('PS-DEV-') ||
-    rawCode.includes('RALG') ||
-    rawCode.includes('COGTA') ||
+    rawCode === 'UG-MOLG-PS-011' ||
+    rawCode === 'PS-MOLG-2026' ||
+    rawCode === 'PS-MOLG-ROLLOUT' ||
     rawName.includes('KUMUMANYA') ||
-    rawName.includes('BALAAM') ||
-    rawName.includes('NAMEERE') ||
-    rawName.includes('MAGYEZI');
+    (rawCode.startsWith('PS-MOLG') && !isMinister);
 
   if (isTerritorialSuperadmin) {
     const isUganda = user.country === 'UG';
@@ -259,7 +284,7 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
       stateMinisterTitles: isUganda 
         ? ['Hon. Justine Nameere (Minister of State for Local Government)', 'Hon. Victoria Rusoke Businge (State Minister)']
         : ['Minister of State for Local Government', 'Minister of State for Urban Development'],
-      mandateSummary: 'National Territorial Superadmin — Commissions all regional, district/county, municipal, and sub-county/ward administrative nodes, ringfences PDM funds, and enforces national anti-graft SLA compliance.',
+      mandateSummary: 'National Territorial Superadmin & Statutory Accounting Officer (PFMA S.45) — Sole administrative authority over nationwide local government nodes, PDM funds, and statutory accounting officers.',
     };
   }
 
