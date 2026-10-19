@@ -26,6 +26,9 @@ import {
   ArrowUpRight,
   LogOut,
   Globe,
+  Inbox,
+  Users,
+  Briefcase,
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
@@ -83,6 +86,14 @@ export const ProfileView: React.FC = () => {
 
   const activeCountry = activeUser.country || 'UG';
   const countryPerks = getCountryPerks(activeCountry);
+
+  const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
+  const isPrivateProvider = Boolean(
+    activeUser.entity_type === 'non_government_entity' ||
+      activeUser.dept?.startsWith('ent-') ||
+      activeUser.entity_category ||
+      ['sch_gayaza', 'cafe_javas', 'hospital_mulago_private', 'bank_stanbic', 'ent-sch-gayaza', 'ent-cafe-javas'].includes(activeUser.dept || '')
+  );
 
   const tier =
     score >= 300
@@ -199,6 +210,66 @@ export const ProfileView: React.FC = () => {
 
   return (
     <div className="animate-fade-in pb-16 px-3.5 sm:px-5 pt-4 space-y-4 text-slate-900 dark:text-slate-100">
+      {/* 0. Institutional & Verified Desk Quick-Access Card (When logged in as Official or Provider) */}
+      {(isGov || isPrivateProvider) && (
+        <div className="bg-white dark:bg-[#161a22] border-2 border-emerald-500/40 dark:border-emerald-500/30 rounded-xl overflow-hidden shadow-xs">
+          <div className="px-4 py-2.5 bg-gradient-to-r from-emerald-600/15 to-emerald-500/5 border-b border-emerald-500/20 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-ping" />
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 truncate">
+                {isPrivateProvider ? 'Institutional Provider Authority' : 'Statutory Government Authority'}
+              </span>
+            </div>
+            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300">
+              Active Executive Session
+            </span>
+          </div>
+
+          <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Building2 size={24} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                  {activeUser.organization_name || activeUser.name}
+                </div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
+                  {activeUser.real_title_short || activeUser.role_label || 'Official Executive Desk'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => go('gov_inbox')}
+                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Inbox size={14} />
+                <span>Open Desk Inbox</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => go(isPrivateProvider ? 'entity_team' : 'gov_team')}
+                className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Users size={14} />
+                <span>Team</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => go('gov_projects')}
+                className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Briefcase size={14} />
+                <span>Works</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. Primary Studio Identity Card */}
       <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
         {/* Top Metadata Strip */}

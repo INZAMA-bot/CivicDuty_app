@@ -188,6 +188,7 @@ interface AppContextType {
   addPoints: (userId: string, pts: number, msg: string) => void;
   updateUserAvatar: (userId: string, avatarUrl: string) => void;
   updateUserProfile: (userId: string, updates: Partial<UserProfile>) => void;
+  updateCurrentUser: (updates: Partial<UserSession>) => void;
   // Field Manual & User Guidance Modal
   guideModalOpen: boolean;
   guideInitialTab: string;
@@ -2826,6 +2827,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateCurrentUser = (updates: Partial<UserSession>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updatedUser: UserSession = {
+        ...prev,
+        ...updates,
+      };
+      try {
+        localStorage.setItem('cd_user', JSON.stringify(updatedUser));
+      } catch {}
+      return updatedUser;
+    });
+  };
+
   const claimEntity = (data: Omit<ClaimedEntityRecord, 'claimedAt' | 'verified'>) => {
     const record: ClaimedEntityRecord = {
       ...data,
@@ -4147,6 +4162,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addPoints,
         updateUserAvatar,
         updateUserProfile,
+        updateCurrentUser,
         guideModalOpen,
         guideInitialTab,
         openGuide,
