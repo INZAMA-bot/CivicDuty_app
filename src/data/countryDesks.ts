@@ -936,6 +936,161 @@ export function registerProfileInGovCodes(profile: CountryDesksProfile) {
   });
 }
 
+export function getGovernanceHierarchyMetadata(countryCode: string, countryName: string) {
+  switch (countryCode) {
+    case 'US':
+      return {
+        tier5Title: 'Tier 5: Federal Department / Cabinet Secretariat',
+        tier5Role: 'Cabinet Secretary / Under Secretary',
+        tier5Badge: 'SECRETARY',
+        tier4Title: 'Tier 4: Federal Regulatory Agency / Utility Commission',
+        tier4Role: 'Agency Director / Utility Commissioner',
+        tier3Title: 'Tier 3: County Executive / Board of Commissioners',
+        tier3Role: 'County Executive / County Judge',
+        tier2Title: 'Tier 2: Municipal City Hall / City Manager',
+        tier2Role: 'City Manager / Public Works Director',
+        tier1Title: 'Tier 1: Neighborhood / Precinct Advisory Commission',
+        tier1Role: 'Ward / Advisory Neighborhood Commissioner',
+        primaryUnit: 'Wards & Precincts across Municipalities',
+      };
+    case 'FR':
+      return {
+        tier5Title: 'Tier 5: Ministère / Secrétariat Général',
+        tier5Role: 'Secrétaire Général du Ministère',
+        tier5Badge: 'SECRÉTAIRE GÉNÉRAL',
+        tier4Title: 'Tier 4: Établissement Public & Opérateur National',
+        tier4Role: "Directeur Général d'Établissement Public",
+        tier3Title: 'Tier 3: Préfecture & Conseil Départemental',
+        tier3Role: 'Préfet de Département',
+        tier2Title: 'Tier 2: Mairie / Direction Générale des Services',
+        tier2Role: 'Directeur Général des Services (DGS)',
+        tier1Title: "Tier 1: Mairie d'Arrondissement & Conseil de Quartier",
+        tier1Role: 'Adjoint de Quartier / Liaison Communale',
+        primaryUnit: 'Communes & Conseils de Quartier',
+      };
+    case 'DE':
+      return {
+        tier5Title: 'Tier 5: Bundesministerium / Staatssekretariat',
+        tier5Role: 'Beamteter Staatssekretär',
+        tier5Badge: 'STAATSSEKRETÄR',
+        tier4Title: 'Tier 4: Bundesoberbehörde & Landesregulierer',
+        tier4Role: 'Präsident der Bundesbehörde',
+        tier3Title: 'Tier 3: Landkreis & Regierungsbezirk',
+        tier3Role: 'Landrat / Regierungspräsident',
+        tier2Title: 'Tier 2: Stadtverwaltung / Kommunalamt',
+        tier2Role: 'Oberbürgermeister / Amtsleiter',
+        tier1Title: 'Tier 1: Ortsbeirat & Bürgeramt Desk',
+        tier1Role: 'Ortsvorsteher / Bürgeramtsleiter',
+        primaryUnit: 'Gemeinden & Stadtbezirke',
+      };
+    case 'JP':
+      return {
+        tier5Title: 'Tier 5: 各省事務次官 (Administrative Vice-Minister)',
+        tier5Role: '事務次官 (Administrative Vice-Minister)',
+        tier5Badge: '事務次官',
+        tier4Title: 'Tier 4: 独立行政法人 & 公益インフラ公社',
+        tier4Role: '理事長 / 総裁 (President & Executive Director)',
+        tier3Title: 'Tier 3: 都道府県知事・総務部 (Prefectural Government)',
+        tier3Role: '総務部長 / 副知事 (Prefectural Executive Director)',
+        tier2Title: 'Tier 2: 市区町村役所 (City / Municipal Hall)',
+        tier2Role: '市長・区長 / 総務課長 (Municipal General Manager)',
+        tier1Title: 'Tier 1: 出張所・地域コミュニティ窓口 (Community Ward Desk)',
+        tier1Role: '窓口課長 / 地域振興係 (Community Liaison Lead)',
+        primaryUnit: '市区町村 & 丁・町内会 (Municipalities & Wards)',
+      };
+    case 'IN':
+      return {
+        tier5Title: 'Tier 5: Union Ministry / Secretary to Government of India',
+        tier5Role: 'Secretary to Government of India (IAS)',
+        tier5Badge: 'SEC GOI',
+        tier4Title: 'Tier 4: Statutory Commission & Public Sector Undertaking',
+        tier4Role: 'Chairman & Managing Director (CMD PSU)',
+        tier3Title: 'Tier 3: District Administration (Collectorate)',
+        tier3Role: 'District Magistrate (DM) / Deputy Commissioner',
+        tier2Title: 'Tier 2: Municipal Corporation / Sub-Divisional Magistrate',
+        tier2Role: 'Municipal Commissioner / SDM',
+        tier1Title: 'Tier 1: Gram Panchayat & Ward Committee',
+        tier1Role: 'Gram Panchayat Secretary / Ward Officer',
+        primaryUnit: 'Gram Panchayats & Municipal Wards',
+      };
+    case 'ZA':
+      return {
+        tier5Title: 'Tier 5: National Department / Director-General',
+        tier5Role: 'Director-General (National Department)',
+        tier5Badge: 'DIRECTOR-GEN',
+        tier4Title: 'Tier 4: State-Owned Enterprise / Utility Agency',
+        tier4Role: 'Chief Executive Officer (SOE Utility)',
+        tier3Title: 'Tier 3: Provincial Department / Municipal Council',
+        tier3Role: 'Head of Department (HoD) / Municipal Manager',
+        tier2Title: 'Tier 2: Local Municipality / Chief Financial Officer',
+        tier2Role: 'Chief Financial Officer (CFO) / Regional Director',
+        tier1Title: 'Tier 1: Municipal Ward Committee & Community Desk',
+        tier1Role: 'Ward Committee Liaison / Ward Councillor',
+        primaryUnit: 'Municipal Wards (4,468 Wards across 257 Municipalities)',
+      };
+    case 'GH':
+      return {
+        tier5Title: 'Tier 5: Line Ministry / Chief Director',
+        tier5Role: 'Chief Director (Line Ministry)',
+        tier5Badge: 'CHIEF DIRECTOR',
+        tier4Title: 'Tier 4: Statutory Authority / Public Utility',
+        tier4Role: 'Director General / Managing Director',
+        tier3Title: 'Tier 3: Regional Co-ordinating Council (RCC)',
+        tier3Role: 'Regional Co-ordinating Director (RCD)',
+        tier2Title: 'Tier 2: Metropolitan/Municipal/District Assembly (MMDA)',
+        tier2Role: 'Metropolitan/Municipal/District Co-ordinating Director (MCD)',
+        tier1Title: 'Tier 1: Unit Committee & Electoral Area Desk',
+        tier1Role: 'Unit Committee Chairman / Assembly Member',
+        primaryUnit: 'Unit Committees & Electoral Areas across 261 MMDAs',
+      };
+    case 'KE':
+      return {
+        tier5Title: 'Tier 5: State Department / Principal Secretary',
+        tier5Role: 'Principal Secretary (State Department)',
+        tier5Badge: 'PRINCIPAL SEC',
+        tier4Title: 'Tier 4: State Parastatal & Utility Authority',
+        tier4Role: 'Managing Director / Director General',
+        tier3Title: 'Tier 3: County Executive Committee (CECM) / Chief Officer',
+        tier3Role: 'County Chief Officer / Accounting Officer',
+        tier2Title: 'Tier 2: Sub-County Administration',
+        tier2Role: 'Sub-County Administrator',
+        tier1Title: 'Tier 1: Grassroots Ward Administration',
+        tier1Role: 'Ward Administrator',
+        primaryUnit: 'Wards (1,450 Ward Administrators across 47 Counties)',
+      };
+    case 'RW':
+      return {
+        tier5Title: 'Tier 5: Ministère / Secrétaire Permanent',
+        tier5Role: 'Secrétaire Permanent (Permanent Secretary)',
+        tier5Badge: 'SECRÉTAIRE PERM',
+        tier4Title: 'Tier 4: Agence Publique & Régulateur',
+        tier4Role: "Directeur Général d'Agence",
+        tier3Title: 'Tier 3: Akarere (District) / Meya & Umunyamabanga',
+        tier3Role: 'Executive Secretary of District (Umunyamabanga Nshingwabikorwa)',
+        tier2Title: 'Tier 2: Umurenge (Sector) Administration',
+        tier2Role: "Executive Secretary of Sector (Umunyamabanga w'Umurenge)",
+        tier1Title: 'Tier 1: Akagari (Cell) Liaison Desk',
+        tier1Role: "Executive Secretary of Cell (Umunyamabanga w'Akagari)",
+        primaryUnit: "Utugari n'Imirenge (Cells & Sectors)",
+      };
+    default:
+      return {
+        tier5Title: 'Tier 5: National Ministry / Executive Accounting Officer',
+        tier5Role: `Director General / Executive Secretary (${countryName})`,
+        tier5Badge: 'DIRECTOR-GEN',
+        tier4Title: 'Tier 4: Statutory Authority / National Utility',
+        tier4Role: `Managing Director / Director General (${countryName})`,
+        tier3Title: 'Tier 3: Regional / District Accounting Officer',
+        tier3Role: `District Chief Executive / Regional Director (${countryName})`,
+        tier2Title: 'Tier 2: Municipal / Local Government Administration',
+        tier2Role: `Municipal Administrator / Town Clerk (${countryName})`,
+        tier1Title: 'Tier 1: Grassroots Community / Ward Desk',
+        tier1Role: `Community Desk Officer (${countryName})`,
+        primaryUnit: `Local Administrative Units & Primary Wards in ${countryName}`,
+      };
+  }
+}
+
 // Dynamic fallback generator for any country in COUNTRIES
 export function getCountryDesksProfile(countryCode: CountryCode): CountryDesksProfile {
   const norm = (countryCode || 'UG').toUpperCase();
@@ -955,6 +1110,7 @@ export function getCountryDesksProfile(countryCode: CountryCode): CountryDesksPr
   const name = cInfo.name;
   const flag = cInfo.flag || norm;
   const curr = cInfo.currency || 'USD';
+  const govMeta = getGovernanceHierarchyMetadata(norm, name);
 
   // Synthesize realistic factual structures for this country
   const profile: CountryDesksProfile = {
@@ -964,61 +1120,61 @@ export function getCountryDesksProfile(countryCode: CountryCode): CountryDesksPr
     currency: curr,
     statutoryFramework: `Public Finance Management Act & Decentralized Governance Laws of ${name}`,
     statutoryNote: `In ${name}, statutory access is restricted to official accounting officers, public administrators, and licensed institution leads under the national public governance framework.`,
-    primaryUnitName: `Local Governance Units & Primary Wards in ${name}`,
+    primaryUnitName: govMeta.primaryUnit,
     escalationLadder: [
       {
         rank: 1,
-        title: 'Tier 1: Grassroots Community Liaison',
-        subtitle: `Local Community Officers & Ward Desks in ${name}`,
+        title: govMeta.tier1Title,
+        subtitle: `Local Community Officers & Primary Desks in ${name}`,
         badge: 'Local Desk',
         sampleCode: `${norm}-WARD-DESK-01`,
-        roleLabel: `Grassroots Desk Officer (${name})`,
+        roleLabel: govMeta.tier1Role,
         bg: 'from-amber-500/15 to-amber-600/5 border-amber-400/40 text-amber-900 dark:text-amber-300',
       },
       {
         rank: 2,
-        title: 'Tier 2: Municipal / Sub-District Office',
-        subtitle: `Town Clerks & Sub-District Administrators`,
+        title: govMeta.tier2Title,
+        subtitle: `Municipal Administrators & Local Accounting Officers`,
         badge: 'Municipal Admin',
         sampleCode: `${norm}-MUNI-OFFICE-01`,
-        roleLabel: `Municipal Administrator (${name})`,
+        roleLabel: govMeta.tier2Role,
         bg: 'from-blue-500/15 to-blue-600/5 border-blue-400/40 text-blue-900 dark:text-blue-300',
       },
       {
         rank: 3,
-        title: 'Tier 3: Regional / District Accounting Officer',
+        title: govMeta.tier3Title,
         subtitle: `District Chief Executives & Regional Directors`,
         badge: 'District Executive',
         sampleCode: `${norm}-DIST-EXEC-01`,
-        roleLabel: `District Chief Officer (${name})`,
+        roleLabel: govMeta.tier3Role,
         bg: 'from-purple-500/15 to-purple-600/5 border-purple-400/40 text-purple-900 dark:text-purple-300',
       },
       {
         rank: 4,
-        title: 'Tier 4: Statutory Agency / Utility',
+        title: govMeta.tier4Title,
         subtitle: `National Water, Power & Public Utilities in ${name}`,
         badge: 'Utility MD',
         sampleCode: `${norm}-UTILITY-ADMIN`,
-        roleLabel: `Director General Public Utilities (${name})`,
+        roleLabel: govMeta.tier4Role,
         bg: 'from-indigo-500/15 to-indigo-600/5 border-indigo-400/40 text-indigo-900 dark:text-indigo-300',
       },
       {
         rank: 5,
-        title: 'Tier 5: Line Ministry / Permanent Secretary',
-        subtitle: `Permanent Secretaries & National Treasury`,
+        title: govMeta.tier5Title,
+        subtitle: `National Treasury & Line Ministry Apex Executives`,
         badge: 'Apex Escalation',
-        sampleCode: `PS-MINISTRY-${norm}-2026`,
-        roleLabel: `Permanent Secretary (${name} Ministry)`,
+        sampleCode: `DIR-GEN-${norm}-2026`,
+        roleLabel: govMeta.tier5Role,
         bg: 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/50 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-400/30',
       },
     ],
     accountingDesks: [
-      { code: `PS-MINISTRY-${norm}-2026`, badge: 'PERM SEC', title: `Permanent Secretary (Local Government)`, deptName: `Ministry of Local Gov`, role: 'National Public Accounting Officer', borderColor: 'border-emerald-300 dark:border-emerald-500/50', textColor: 'text-emerald-700 dark:text-emerald-300' },
-      { code: `${norm}-PS-TREASURY`, badge: 'TREASURY', title: `Permanent Secretary (National Treasury)`, deptName: `Ministry of Finance`, role: 'Apex Public Finance Officer', borderColor: 'border-emerald-300 dark:border-emerald-500/50', textColor: 'text-emerald-700 dark:text-emerald-300' },
-      { code: `${norm}-DIST-EXEC-01`, badge: 'DISTRICT DIR', title: `District Chief Executive Officer`, deptName: `District Administration`, role: 'Statutory Local Accounting Officer', borderColor: 'border-teal-200 dark:border-teal-500/40', textColor: 'text-teal-700 dark:text-teal-300' },
-      { code: `${norm}-MUNI-OFFICE-01`, badge: 'TOWN CLERK', title: `Municipal Town Clerk`, deptName: `Municipal Council`, role: 'Municipal Accounting Officer', borderColor: 'border-teal-200 dark:border-teal-500/40', textColor: 'text-teal-700 dark:text-teal-300' },
-      { code: `${norm}-UTILITY-ADMIN`, badge: 'UTILITY MD', title: `Managing Director (National Utilities)`, deptName: `Public Utilities Corp`, role: 'National Utility Accounting Authority', borderColor: 'border-indigo-300 dark:border-indigo-500/40', textColor: 'text-indigo-700 dark:text-indigo-300' },
-      { code: `${norm}-WARD-DESK-01`, badge: 'LOCAL LIAISON', title: `Local Ward / Community Desk Lead`, deptName: `Community Office`, role: 'Grassroots Community Accounting Liaison', borderColor: 'border-amber-200 dark:border-amber-500/40', textColor: 'text-amber-700 dark:text-amber-300' },
+      { code: `APEX-MINISTRY-${norm}-2026`, badge: govMeta.tier5Badge, title: govMeta.tier5Role, deptName: `Ministry of Local Gov`, role: 'National Public Accounting Officer', borderColor: 'border-emerald-300 dark:border-emerald-500/50', textColor: 'text-emerald-700 dark:text-emerald-300' },
+      { code: `${norm}-APEX-TREASURY`, badge: 'TREASURY', title: `Apex Public Finance Comptroller`, deptName: `Ministry of Finance`, role: 'Apex Public Finance Officer', borderColor: 'border-emerald-300 dark:border-emerald-500/50', textColor: 'text-emerald-700 dark:text-emerald-300' },
+      { code: `${norm}-DIST-EXEC-01`, badge: 'DISTRICT DIR', title: govMeta.tier3Role, deptName: `District Administration`, role: 'Statutory Local Accounting Officer', borderColor: 'border-teal-200 dark:border-teal-500/40', textColor: 'text-teal-700 dark:text-teal-300' },
+      { code: `${norm}-MUNI-OFFICE-01`, badge: 'MUNI ADMIN', title: govMeta.tier2Role, deptName: `Municipal Council`, role: 'Municipal Accounting Officer', borderColor: 'border-teal-200 dark:border-teal-500/40', textColor: 'text-teal-700 dark:text-teal-300' },
+      { code: `${norm}-UTILITY-ADMIN`, badge: 'UTILITY MD', title: govMeta.tier4Role, deptName: `Public Utilities Corp`, role: 'National Utility Accounting Authority', borderColor: 'border-indigo-300 dark:border-indigo-500/40', textColor: 'text-indigo-700 dark:text-indigo-300' },
+      { code: `${norm}-WARD-DESK-01`, badge: 'LOCAL LIAISON', title: govMeta.tier1Role, deptName: `Community Office`, role: 'Grassroots Community Accounting Liaison', borderColor: 'border-amber-200 dark:border-amber-500/40', textColor: 'text-amber-700 dark:text-amber-300' },
     ],
     verifiedProviders: [
       { code: `SCH-${norm}-NATIONAL-01`, orgName: `${name} National Academy`, category: 'education', categoryLabel: 'Schools & Universities', officerName: 'Academic Director', roleLabel: 'Principal Desk', country: norm, flag, slaHours: 48, qualityAudit: 'National Ministry of Education' },

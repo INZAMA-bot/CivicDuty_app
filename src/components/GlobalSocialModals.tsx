@@ -33,6 +33,7 @@ import {
   MapPin,
   Camera,
   Monitor,
+  Search,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES, getDept } from '../data/countries';
@@ -89,6 +90,7 @@ export const GlobalSocialModals: React.FC = () => {
 
   const activeUser = user || ensureCitizenSession();
   const [notifFilter, setNotifFilter] = useState<'all' | 'sla_update' | 'reply' | 'upvote'>('all');
+  const [dmSearch, setDmSearch] = useState('');
   const [dmInput, setDmInput] = useState('');
   const [dmMedia, setDmMedia] = useState<Array<{ name: string; type: string; size: string; dataUrl?: string }>>([]);
   const [dmVoiceNote, setDmVoiceNote] = useState(false);
@@ -288,7 +290,48 @@ export const GlobalSocialModals: React.FC = () => {
   // 2. DIRECT MESSAGING & NEIGHBORHOOD WATCH INBOX MODAL
   const renderDmModal = () => {
     if (!dmModalOpen) return null;
-    const currentThread = dmThreads.find((t) => t.thread_id === activeDmThreadId) || dmThreads[0];
+
+    const filteredDmThreads = dmThreads.filter((th) => {
+      if (!dmSearch.trim()) return true;
+      const q = dmSearch.toLowerCase();
+      const matchName = th.participant_name.toLowerCase().includes(q);
+      const matchHandle = th.participant_handle.toLowerCase().includes(q);
+      const matchRole = th.participant_role.toLowerCase().includes(q);
+      const matchMsg = th.messages.some((m) => m.body.toLowerCase().includes(q));
+      return matchName || matchHandle || matchRole || matchMsg;
+    });
+
+    const knownDirectory: { name: string; role: string; handle: string; verified: boolean }[] = [
+      { name: 'Robinah Kizito', role: 'Head Teacher (Gayaza High School)', handle: '@robinah_kizito', verified: true },
+      { name: 'Sr. Mary Grace Akello', role: 'Headmistress (Mt. St. Mary Namagunga)', handle: '@sr_grace_akello', verified: true },
+      { name: 'Faruq Mandela', role: 'Customer Experience Lead (Café Javas)', handle: '@faruq_mandela', verified: true },
+      { name: 'Dr. Eng. Silver Mugisha', role: 'Managing Director (NWSC)', handle: '@silver_mugisha', verified: true },
+      { name: 'Dr. Rosemary Byanyima', role: 'Executive Director (Mulago Referral Hosp)', handle: '@rosemary_byanyima', verified: true },
+      { name: 'Ben Kumumanya', role: 'Permanent Secretary (MoLG Vote 011)', handle: '@ben_kumumanya', verified: true },
+      { name: 'Hon. Balaam Barugahara', role: 'Cabinet Minister (MoLG)', handle: '@balaam_barugahara', verified: true },
+      { name: 'Parish Chief Nakasero', role: 'Parish Chief (Nakasero Parish)', handle: '@parish_chief_nakasero', verified: true },
+      ...Array.from<string>(new Set(posts.map((p) => String(p.author || '')))).slice(0, 15).map((author: string) => ({
+        name: author,
+        role: 'Citizen Watchdog',
+        handle: `@${author.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        verified: false,
+      })),
+    ];
+
+    const directoryMatches = dmSearch.trim()
+      ? knownDirectory.filter((c) => {
+          const q = dmSearch.toLowerCase();
+          const matches = c.name.toLowerCase().includes(q) || c.handle.toLowerCase().includes(q) || c.role.toLowerCase().includes(q);
+          const alreadyInThreads = dmThreads.some((t) => t.participant_name.toLowerCase() === c.name.toLowerCase());
+          return matches && !alreadyInThreads;
+        })
+      : [];
+
+    const currentThread =
+      filteredDmThreads.find((t) => t.thread_id === activeDmThreadId) ||
+      dmThreads.find((t) => t.thread_id === activeDmThreadId) ||
+      filteredDmThreads[0] ||
+      dmThreads[0];
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
@@ -317,35 +360,102 @@ export const GlobalSocialModals: React.FC = () => {
           </div>
 
           <div className="flex-1 flex flex-col sm:flex-row min-h-0">
-            {/* Thread List */}
-            <div className="w-full sm:w-64 border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 overflow-y-auto p-2.5 space-y-1.5 shrink-0 max-h-40 sm:max-h-none">
-              {dmThreads.map((th) => {
-                const isSelected = currentThread?.thread_id === th.thread_id;
-                const lastMsg = th.messages[th.messages.length - 1];
-                return (
-                  <button
-                    key={th.thread_id}
-                    type="button"
-                    onClick={() => setActiveDmThreadId(th.thread_id)}
-                    className={`w-full text-left p-2.5 rounded-2xl border transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-700'
-                        : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-black truncate flex items-center gap-1">
-                        <span>{th.participant_name}</span>
-                        {th.participant_verified && <ShieldCheck size={12} className="text-emerald-500 shrink-0" />}
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">{th.participant_handle}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                      {lastMsg ? lastMsg.body : th.participant_role}
-                    </div>
-                  </button>
-                );
-              })}
+            {/* Thread List with Search Bar */}
+            <div className="w-full sm:w-72 border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 max-h-48 sm:max-h-none bg-slate-50/50 dark:bg-slate-950/30">
+              {/* Search Bar */}
+              <div className="p-2.5 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus-within:border-emerald-500 transition-colors">
+                  <Search size={13} className="text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={dmSearch}
+                    onChange={(e) => setDmSearch(e.target.value)}
+                    placeholder="Search watchdogs, neighbours, desks..."
+                    className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none"
+                  />
+                  {dmSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDmSearch('')}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Thread Items & Directory Search */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                {filteredDmThreads.length === 0 && directoryMatches.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400">
+                    No contacts matching &ldquo;{dmSearch}&rdquo;
+                  </div>
+                ) : (
+                  <>
+                    {filteredDmThreads.map((th) => {
+                      const isSelected = currentThread?.thread_id === th.thread_id;
+                      const lastMsg = th.messages[th.messages.length - 1];
+                      return (
+                        <button
+                          key={th.thread_id}
+                          type="button"
+                          onClick={() => setActiveDmThreadId(th.thread_id)}
+                          className={`w-full text-left p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-700 shadow-2xs'
+                              : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-black truncate flex items-center gap-1">
+                              <span>{th.participant_name}</span>
+                              {th.participant_verified && <ShieldCheck size={12} className="text-emerald-500 shrink-0" />}
+                            </span>
+                            <span className="text-[9px] font-mono text-slate-400">{th.participant_handle}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {lastMsg ? lastMsg.body : th.participant_role}
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {/* Directory Matches: Start new conversation */}
+                    {directoryMatches.length > 0 && (
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+                        <div className="px-2 text-[9.5px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                          Community &amp; Provider Directory ({directoryMatches.length})
+                        </div>
+                        {directoryMatches.map((c) => (
+                          <div
+                            key={c.name}
+                            className="p-2.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 dark:text-white truncate flex items-center gap-1">
+                                <span>{c.name}</span>
+                                {c.verified && <ShieldCheck size={11} className="text-emerald-500 shrink-0" />}
+                              </div>
+                              <div className="text-[9.5px] font-mono text-slate-500 truncate">{c.role}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                openDmWithCitizen(c.name, c.role);
+                                setDmSearch('');
+                              }}
+                              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold shrink-0 cursor-pointer"
+                            >
+                              + Message
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Active Conversation */}

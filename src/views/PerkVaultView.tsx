@@ -179,6 +179,107 @@ export const REPORTER_PROFESSION_CATEGORIES: ReporterProfessionCategoryConfig[] 
   },
 ];
 
+export function getLowestUnitVaultMeta(countryCode: string) {
+  switch (countryCode) {
+    case 'KE':
+    case 'NG':
+    case 'ZA':
+    case 'ZM':
+    case 'ZW':
+    case 'TZ':
+      return {
+        unitName: 'Ward',
+        unitPlural: 'Wards',
+        vaultTitle: '1. Ward Vault',
+        subtitle: 'Monthly Ward Top-3',
+        badge: 'Monthly · Ward Admin',
+        officerTitle: 'Ward Administrator',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Ward Administrator.',
+      };
+    case 'GH':
+      return {
+        unitName: 'Unit Committee',
+        unitPlural: 'Unit Committees',
+        vaultTitle: '1. Unit Committee Vault',
+        subtitle: 'Monthly Electoral Area Top-3',
+        badge: 'Monthly · Assembly Member',
+        officerTitle: 'Assembly Member',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Unit Committee Chair / Assembly Member.',
+      };
+    case 'RW':
+      return {
+        unitName: 'Cell (Akagari)',
+        unitPlural: 'Cells (Utugari)',
+        vaultTitle: '1. Cell (Akagari) Vault',
+        subtitle: 'Monthly Cell Top-3',
+        badge: 'Monthly · Umunyamabanga',
+        officerTitle: 'Cell Executive Secretary',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Cell Executive Secretary.',
+      };
+    case 'US':
+      return {
+        unitName: 'Precinct',
+        unitPlural: 'Precincts',
+        vaultTitle: '1. Precinct Vault',
+        subtitle: 'Monthly Precinct Top-3',
+        badge: 'Monthly · Commissioner',
+        officerTitle: 'Ward / Precinct Commissioner',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Ward / Precinct Commissioner.',
+      };
+    case 'GB':
+      return {
+        unitName: 'Ward',
+        unitPlural: 'Wards',
+        vaultTitle: '1. Ward Vault',
+        subtitle: 'Monthly Ward Top-3',
+        badge: 'Monthly · Ward Councillor',
+        officerTitle: 'Ward Councillor',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Ward Councillor.',
+      };
+    case 'IN':
+      return {
+        unitName: 'Panchayat',
+        unitPlural: 'Panchayats',
+        vaultTitle: '1. Panchayat Vault',
+        subtitle: 'Monthly Panchayat Top-3',
+        badge: 'Monthly · Gram Secretary',
+        officerTitle: 'Gram Panchayat Secretary',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Gram Panchayat Secretary.',
+      };
+    case 'FR':
+      return {
+        unitName: 'Commune',
+        unitPlural: 'Communes',
+        vaultTitle: '1. Commune Vault',
+        subtitle: 'Top-3 Mensuel de Commune',
+        badge: 'Mensuel · Maire',
+        officerTitle: 'Maire de Commune',
+        desc: 'Ouvert à tous les donateurs locaux. Évalue les résidents vérifiés chaque mois et attribue les récompenses aux 3 premiers via la Mairie.',
+      };
+    case 'PH':
+      return {
+        unitName: 'Barangay',
+        unitPlural: 'Barangays',
+        vaultTitle: '1. Barangay Vault',
+        subtitle: 'Monthly Barangay Top-3',
+        badge: 'Monthly · Barangay Captain',
+        officerTitle: 'Barangay Captain',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Barangay Captain.',
+      };
+    case 'UG':
+    default:
+      return {
+        unitName: 'Parish',
+        unitPlural: 'Parishes',
+        vaultTitle: '1. Parish Vault',
+        subtitle: 'Monthly Parish Top-3',
+        badge: 'Monthly · Parish Chief',
+        officerTitle: 'Parish Chief',
+        desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Parish Chief.',
+      };
+  }
+}
+
 export const PerkVaultView: React.FC = () => {
   const {
     user,
@@ -208,6 +309,8 @@ export const PerkVaultView: React.FC = () => {
     if (user?.scope_label) return user.scope_label;
     return selectedCountry === 'KE' ? 'Kilimani Ward' : selectedCountry === 'NG' ? 'Lekki Phase 1 Ward' : 'Kitintale Parish';
   }, [user?.scope_label, selectedCountry]);
+
+  const lowestMeta = useMemo(() => getLowestUnitVaultMeta(selectedCountry), [selectedCountry]);
 
   const [parishDepositMode, setParishDepositMode] = useState<'home' | 'external'>('home');
 
@@ -1010,21 +1113,15 @@ export const PerkVaultView: React.FC = () => {
 
   const currentVaultJurisdictionMeta = useMemo(() => {
     if (activeVaultKind === 'parish_vault') {
-      const lowestTitle =
-        selectedCountry === 'KE'
-          ? 'Ward Administrator'
-          : selectedCountry === 'NG'
-          ? 'Supervisory Councillor / Ward Head'
-          : 'Parish Chief (Lowest Accounting Officer)';
       return {
-        vaultTitle: `Parish Vault · ${selectedParish}`,
+        vaultTitle: `${lowestMeta.unitName} Vault · ${selectedParish}`,
         jurisdictionId: selectedParish,
         jurisdictionLabel: selectedParish,
-        dispatcherTitle: `${lowestTitle} — ${selectedParish}`,
+        dispatcherTitle: `${lowestMeta.officerTitle} — ${selectedParish}`,
         AuthorizedRoleTag: 'parish_chief' as const,
         cadenceBadge: 'Monthly Top-3 Final Award',
         rankingRule:
-          'Monthly Ranking & Awarding Cycle: Open to all sponsors throughout the month. At month-end, the final Top 3 citizens in this Parish by Reputation Standing are locked and awarded an even 1/3 split of the Parish pool, dispatched by the Parish Chief on behalf of Parish citizens.',
+          `Monthly Ranking & Awarding Cycle: Open to all community sponsors throughout the month. At month-end, the final Top 3 citizens in this ${lowestMeta.unitName} by Reputation Standing are locked and awarded an even 1/3 split of the pool, dispatched by the ${lowestMeta.officerTitle} on behalf of ${lowestMeta.unitName} citizens.`,
       };
     }
     if (activeVaultKind === 'provider_vault') {
@@ -2534,19 +2631,14 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </div>
         </div>
 
-        {/* Country Selector & Ledger Refresh */}
+        {/* Sovereign Jurisdiction Indicator (Locked to Onboarded Territory) & Ledger Refresh */}
         <div className="flex items-center gap-2">
-          <select
-            value={selectedCountry}
-            onChange={(e) => setSelectedCountry(e.target.value as CountryCode)}
-            className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
-          >
-            {Object.entries(COUNTRIES).map(([code, info]) => (
-              <option key={code} value={code}>
-                [{code}] {info.name}
-              </option>
-            ))}
-          </select>
+          <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shadow-xs">
+            <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="font-bold text-emerald-700 dark:text-emerald-400">[{selectedCountry}]</span>
+            <span>{COUNTRIES[selectedCountry]?.name || selectedCountry} Jurisdiction</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">(Onboarded Territory)</span>
+          </div>
 
           <button
             onClick={loadVaultData}
@@ -2689,10 +2781,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             {[
               {
                 id: 'parish_vault' as VaultKind,
-                title: '1. Parish Vault',
-                subtitle: 'Monthly Parish Top-3',
-                badge: 'Monthly · Parish Chief',
-                desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Parish Chief.',
+                title: lowestMeta.vaultTitle,
+                subtitle: lowestMeta.subtitle,
+                badge: lowestMeta.badge,
+                desc: lowestMeta.desc,
                 icon: MapPin,
                 accent: 'emerald',
               },
@@ -2913,7 +3005,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-[9.5px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400 block">
-                      Parish / Ward Jurisdiction ({selectedCountry})
+                      {lowestMeta.unitName} Jurisdiction ({selectedCountry})
                     </label>
                     <div className="flex items-center gap-1 text-[9.5px] font-mono">
                       <button
@@ -2928,7 +3020,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                             : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-emerald-600'
                         }`}
                       >
-                        Home Parish
+                        Home {lowestMeta.unitName}
                       </button>
                       <button
                         type="button"
@@ -3263,7 +3355,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               {/* Action Bar for Institutional Vaults (1-4) with Strict Role-Based Visibility */}
               <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* 1. Parish Vault: ONLY Parish Chief sees the release button */}
+                  {/* 1. Lowest Unit Vault (Parish/Ward/Commune): ONLY Lowest Administrative Officer sees the release button */}
                   {activeVaultKind === 'parish_vault' &&
                     (isParishChiefUser ? (
                       <button
@@ -3276,14 +3368,14 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         <span>
                           {isBatchDispatching
                             ? 'Dispatching Monthly Top-3 Batch...'
-                            : `Parish Chief Monthly Award: Release Top-3 ${selectedParish.replace(/ Parish$/i, '')} Pool`}
+                            : `${lowestMeta.officerTitle} Monthly Award: Release Top-3 ${selectedParish.replace(/ (Parish|Ward|Commune|Cell|Panchayat|Precinct)$/i, '')} Pool`}
                         </span>
                       </button>
                     ) : (
                       <div className="px-3.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-600 dark:text-slate-300 flex items-center gap-2">
                         <Lock size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                         <span>
-                          Role-Gated Dispatch: Only the <strong>Parish Chief ({selectedParish})</strong> can execute this monthly Top-3 release.
+                          Role-Gated Dispatch: Only the <strong>{lowestMeta.officerTitle} ({selectedParish})</strong> can execute this monthly Top-3 release.
                         </span>
                       </div>
                     ))}
@@ -3556,39 +3648,6 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         </div>
       </div>
 
-      {/* Merchant Studio & Cashier POS Relocation Callout */}
-      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <Store size={18} />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>Merchant Studio &amp; Cashier POS Desk</span>
-              <span className="text-[9.5px] font-mono text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/15 px-2 py-0.5 rounded">
-                Service Provider Wall
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-600 dark:text-slate-400">
-              Manage store loyalty vouchers, inventory catalog, and run the Cashier POS scanner directly on your active Service Provider Desk.
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveDept(selectedProviderDept || 'shop_quality_supermarket');
-            setActiveDeptCountry(selectedCountry);
-            setWallTab('vouchers');
-            go('dept');
-          }}
-          className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
-        >
-          <Store size={13} />
-          <span>Open Provider Desk POS &rarr;</span>
-        </button>
-      </div>
-
       {/* Main Upload / Deposit Studio Card */}
       <div
         ref={studioSectionRef}
@@ -3733,41 +3792,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   </p>
                 </div>
 
-                {/* Source Mode Toggle: Standard Packs vs Local Merchant Loyalty Vouchers */}
-                <div className="flex items-center gap-1 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setAllocationSource('utilities_supermarket')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      allocationSource === 'utilities_supermarket'
-                        ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <Package size={13} />
-                    <span>Utilities &amp; Supermarkets</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAllocationSource('merchant_loyalty');
-                      if (!selectedMerchantProduct && filteredMerchantCatalog.length > 0) {
-                        setSelectedMerchantProduct(filteredMerchantCatalog[0]);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      allocationSource === 'merchant_loyalty'
-                        ? 'bg-emerald-600 text-white'
-                        : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
-                    }`}
-                  >
-                    <Store size={13} />
-                    <span>Local Merchant Vouchers (2% Fee)</span>
-                  </button>
                 </div>
               </div>
 
-              {/* SEARCH BAR & PARISH LOCATION MATCHER */}
+              {/* SEARCH BAR & JURISDICTION LOCATION MATCHER */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#f8f9fa] dark:bg-[#0e1116] p-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
                 <div className="relative flex-1">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -3775,11 +3803,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                     type="text"
                     value={allocationSearchQuery}
                     onChange={(e) => setAllocationSearchQuery(e.target.value)}
-                    placeholder={
-                      allocationSource === 'merchant_loyalty'
-                        ? 'Search local salon, haircut, bread, garage, grocer, Kireka, Kitintale...'
-                        : 'Search 1000 KSh, supermarket, sugar, oil, fuel, data, water...'
-                    }
+                    placeholder="Search 1,000 KSh, supermarket basket, sugar, oil, fuel, data, water..."
                     className="w-full pl-8 pr-8 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                   {allocationSearchQuery && (
@@ -3794,18 +3818,18 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   )}
                 </div>
 
-                {/* Parish Location Filter (Essential for rewarding posters closer to home) */}
+                {/* Location Filter */}
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-slate-700 dark:text-slate-300">
                     <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
-                    <span>Parish:</span>
+                    <span>{lowestMeta.unitName}:</span>
                   </div>
                   <select
                     value={merchantLocationFilterParish}
                     onChange={(e) => setMerchantLocationFilterParish(e.target.value)}
                     className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   >
-                    <option value="all">All Parishes in {selectedCountry}</option>
+                    <option value="all">All {lowestMeta.unitPlural} in {selectedCountry}</option>
                     {parishOptions.map((par) => (
                       <option key={par} value={par}>
                         {par}
@@ -3815,9 +3839,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 </div>
               </div>
 
-              {/* MODE A: PRE-PACKAGED DIGITAL UTILITY & SUPERMARKET VOUCHERS */}
-              {allocationSource === 'utilities_supermarket' && (
-                <div className="space-y-3">
+              {/* PRE-PACKAGED DIGITAL UTILITY & SUPERMARKET VOUCHERS */}
+              <div className="space-y-3">
                   {/* Category Filter Bar for Packaged Vouchers */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
@@ -4056,10 +4079,9 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 </div>
               )}
             </div>
-          )}
 
-          {/* MODE B: LOCAL MERCHANT & SERVICE PROVIDER VOUCHERS (LAAS · 2% FEE · PARISH PROXIMITY) */}
-            {allocationSource === 'merchant_loyalty' && (
+          {/* MODE B: Service Provider & Merchant Loyalty moved exclusively to Provider Desk */}
+            {false && (
               <div className="space-y-3">
                 {/* Reward Type Filter Pills */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -4219,7 +4241,6 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 )}
               </div>
             )}
-          </div>
 
           {/* STEP 2: SPONSOR & PROJECT DETAILS */}
             <div className="space-y-2">
@@ -5280,7 +5301,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500"
             >
               <option value="all">All 5 Vaults</option>
-              <option value="parish_vault">1. Parish Vault</option>
+              <option value="parish_vault">{lowestMeta.vaultTitle}</option>
               <option value="provider_vault">2. Private Provider (Shop) Vault</option>
               <option value="contractor_vault">3. Contractor Watchdog Vault</option>
               <option value="scout_bounty_vault">4. Scout &amp; Bodaboda Vault</option>

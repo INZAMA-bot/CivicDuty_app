@@ -24,6 +24,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   SlidersHorizontal,
+  Briefcase,
 } from 'lucide-react';
 import { TrafficLightLogo } from './TrafficLightLogo';
 
@@ -56,7 +57,14 @@ export const Navigation: React.FC<NavigationProps> = () => {
 
   const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
 
-  // Check if political minister (Constitution Arts 111 & 117)
+  const isPrivateProvider = Boolean(
+    activeUser.entity_type === 'non_government_entity' ||
+      activeUser.dept?.startsWith('ent-') ||
+      activeUser.entity_category ||
+      ['gayaza_hs', 'namagunga', 'cafe_javas', 'mak_univ', 'mulago_hosp', 'nakasero_hosp', 'serena_hotel_kla', 'stanbic', 'centenary_bank', 'kotsa_taxi', 'kigo_contractors'].includes(activeUser.dept || '')
+  );
+
+  // Check if political minister (Constitution Arts 111 & 117 - strategic policy oversight, apolitical head, no civil service team execution)
   const isMinister =
     activeUser.real_title_short?.includes('Minister') ||
     activeUser.role_label?.includes('Minister') ||
@@ -64,7 +72,17 @@ export const Navigation: React.FC<NavigationProps> = () => {
     activeUser.deskCode === 'UG-MOLG-CABINET-MIN' ||
     activeUser.deskCode === 'UG-MOLG-STATE-MIN';
 
-  // Strictly restrict the Superadmin console to Permanent Secretaries (Vote 011 PS MoLG / accounting officers)
+  // Check if grassroots lowest administrative officer (Parish Chief / Town Agent / Ward Officer)
+  const isGrassrootsChief = Boolean(
+    activeUser.role === 'parish_chief' ||
+      activeUser.deskCode?.includes('PARISH') ||
+      activeUser.deskCode?.includes('WARD') ||
+      activeUser.hierarchy_level === 'tier1_lowest' ||
+      activeUser.real_title_short?.toLowerCase().includes('parish chief') ||
+      activeUser.real_title_short?.toLowerCase().includes('ward admin')
+  );
+
+  // Strictly restrict the Superadmin console to Permanent Secretaries (Vote 011 PS MoLG / statutory apex accounting officer)
   const isSuperAdmin =
     !isMinister &&
     (activeUser.role === 'platform_admin' || psInfo.isMoLG || activeUser.hierarchy_level === 'tier5_perm_sec') &&
@@ -75,7 +93,8 @@ export const Navigation: React.FC<NavigationProps> = () => {
       activeUser.deskCode === 'PS-MOLG-2026' ||
       activeUser.deskCode === 'PS-MOLG-ROLLOUT');
 
-  const isNode = activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin || psInfo.isPs;
+  // Statutory Accounting Officers who manage institutional staff teams (PS, CAO, Town Clerk, Utility MD)
+  const isAccountingOfficer = !isMinister && !isGrassrootsChief && (activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin || psInfo.isPs);
 
   const handleApexClick = () => {
     if (psInfo.ministryId) {
@@ -84,17 +103,34 @@ export const Navigation: React.FC<NavigationProps> = () => {
     go('ps_executive_desk');
   };
 
-  const citizenWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType }[] = [
+  const citizenWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
     { id: 'feed', label: t('feed') || 'Public Feed', icon: Layers },
     { id: 'depts', label: t('depts') || 'Service Desks', icon: Building2 },
     { id: 'perk_vault', label: 'Honours & Perks', icon: Award },
     { id: 'profile', label: t('profile') || 'My Dossier', icon: User },
   ];
 
+  // Dedicated Workspace Navigation for Private Providers (Schools, Hospitals, Restaurants, Banks, SACCOs)
+  const providerWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
+    {
+      id: 'gov_inbox',
+      label: activeUser.organization_name
+        ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 16)} Desk`
+        : 'Provider Desk',
+      icon: Building2,
+    },
+    { id: 'entity_team', label: 'Staff & Team Roster', icon: Users },
+    { id: 'entity_register', label: 'Desk Profile & Tier', icon: Layers },
+    { id: 'gov_projects', label: 'Facility Upgrades', icon: Briefcase },
+    { id: 'perk_vault', label: '5-Vault Perks', icon: Award },
+    { id: 'feed', label: 'Public Feed', icon: Eye },
+  ];
+
+  // Government Desk Workspace Navigation
   const govWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
-    { id: 'gov_inbox', label: 'Official Inbox', icon: Inbox },
-    { id: 'gov_projects', label: 'Public Works', icon: Building2 },
-    ...(isNode
+    { id: 'gov_inbox', label: isGrassrootsChief ? 'Grassroots Inbox' : 'Official Inbox', icon: Inbox },
+    { id: 'gov_projects', label: isMinister ? 'Portfolio Works' : 'Public Works', icon: Building2 },
+    ...(isAccountingOfficer
       ? [
           {
             id: 'gov_team' as ViewType,
@@ -219,59 +255,27 @@ export const Navigation: React.FC<NavigationProps> = () => {
           <div className="px-2 py-1 space-y-0.5">
             {!collapsed && (
               <div className="px-2.5 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {isGov ? 'Official Desk' : 'Workspace'}
+                {isPrivateProvider ? 'Provider Desk' : isGov ? 'Official Desk' : 'Workspace'}
               </div>
             )}
 
-            {isGov
-              ? govWorkspaceItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = item.active !== undefined ? item.active : view === item.id;
-                  return (
-                    <button
-                      key={item.label}
-                      type="button"
-                      onClick={item.onClick || (() => go(item.id))}
-                      title={item.label}
-                      className={`w-full h-8.5 rounded-lg flex items-center ${
-                        collapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
-                      } text-[12.5px] transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-slate-200/80 dark:bg-[#1e232d] text-slate-900 dark:text-white font-semibold'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/40 dark:hover:bg-[#161a22] hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-                      }`}
-                    >
-                      <Icon
-                        size={16}
-                        strokeWidth={1.75}
-                        className={`shrink-0 ${
-                          isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
-                        }`}
-                      />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </button>
-                  );
-                })
-              : citizenWorkspaceItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    view === item.id ||
-                    (item.id === 'depts' && view === 'dept_wall') ||
-                    (item.id === 'feed' && view === 'post_detail');
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => go(item.id)}
-                      title={item.label}
-                      className={`w-full h-8.5 rounded-lg flex items-center ${
-                        collapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
-                      } text-[12.5px] transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-slate-200/80 dark:bg-[#1e232d] text-slate-900 dark:text-white font-semibold'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/40 dark:hover:bg-[#161a22] hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-                      }`}
-                    >
+            {(isPrivateProvider ? providerWorkspaceItems : isGov ? govWorkspaceItems : citizenWorkspaceItems).map((item) => {
+              const Icon = item.icon;
+              const isActive = item.active !== undefined ? item.active : view === item.id;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={item.onClick || (() => go(item.id))}
+                  title={item.label}
+                  className={`w-full h-8.5 rounded-lg flex items-center ${
+                    collapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
+                  } text-[12.5px] transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-slate-200/80 dark:bg-[#1e232d] text-slate-900 dark:text-white font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/40 dark:hover:bg-[#161a22] hover:text-slate-900 dark:hover:text-slate-200 font-medium'
+                  }`}
+                >
                       <Icon
                         size={16}
                         strokeWidth={1.75}
@@ -377,7 +381,65 @@ export const Navigation: React.FC<NavigationProps> = () => {
         style={{ minHeight: '60px' }}
       >
         <div className="flex justify-around items-center h-full gap-1">
-          {isGov ? (
+          {isPrivateProvider ? (
+            <>
+              <button
+                onClick={() => go('gov_inbox')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'gov_inbox'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Building2 size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">My Desk</span>
+              </button>
+              <button
+                onClick={() => go('entity_team')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'entity_team'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Users size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Team</span>
+              </button>
+              <button
+                onClick={() => go('entity_register')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'entity_register'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Layers size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Profile</span>
+              </button>
+              <button
+                onClick={() => go('perk_vault')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'perk_vault'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Award size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Perks</span>
+              </button>
+              <button
+                onClick={() => go('feed')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'feed'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Eye size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Feed</span>
+              </button>
+            </>
+          ) : isGov ? (
             <>
               <button
                 onClick={() => go('gov_inbox')}
@@ -388,7 +450,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
                 }`}
               >
                 <Inbox size={18} strokeWidth={1.75} />
-                <span className="text-[9.5px] font-mono">Inbox</span>
+                <span className="text-[9.5px] font-mono">{isGrassrootsChief ? 'Grassroots' : 'Inbox'}</span>
               </button>
               <button
                 onClick={() => go('gov_projects')}
@@ -399,9 +461,9 @@ export const Navigation: React.FC<NavigationProps> = () => {
                 }`}
               >
                 <Building2 size={18} strokeWidth={1.75} />
-                <span className="text-[9.5px] font-mono">Works</span>
+                <span className="text-[9.5px] font-mono">{isMinister ? 'Portfolio' : 'Works'}</span>
               </button>
-              {isNode && (
+              {isAccountingOfficer && (
                 <button
                   onClick={() => go('gov_team')}
                   className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
@@ -427,7 +489,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
                   <span className="text-[9.5px] font-mono">Superadmin</span>
                 </button>
               )}
-              {psInfo.isPs && !psInfo.isMoLG && (
+              {isMinister && (
                 <button
                   onClick={handleApexClick}
                   className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
@@ -437,7 +499,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
                   }`}
                 >
                   <Landmark size={18} strokeWidth={1.75} />
-                  <span className="text-[9.5px] font-mono">Apex</span>
+                  <span className="text-[9.5px] font-mono">Minister</span>
                 </button>
               )}
               <button
