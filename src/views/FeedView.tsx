@@ -24,8 +24,7 @@ import {
   Mic,
   Video,
   Camera,
-  X,
-  Scale,
+  X
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { DeptIcon, CategoryIcon } from '../components/DeptIcon';
@@ -72,25 +71,6 @@ export const FeedView: React.FC = () => {
   const activePromotionalAds = (promotionalAds || []).filter((a) => a.published);
 
   const activeUser = user || ensureCitizenSession();
-
-  const isGrassrootsChief = Boolean(
-    activeUser.role === 'parish_chief' ||
-      activeUser.deskCode?.includes('PARISH') ||
-      activeUser.deskCode?.includes('WARD') ||
-      activeUser.hierarchy_level === 'tier1_lowest' ||
-      activeUser.hierarchy_level === 'tier1_parish' ||
-      activeUser.real_title_short?.toLowerCase().includes('parish chief') ||
-      activeUser.real_title_short?.toLowerCase().includes('town agent') ||
-      activeUser.real_title_short?.toLowerCase().includes('ward admin')
-  );
-
-  const isMinister = Boolean(
-    activeUser.real_title_short?.includes('Minister') ||
-      activeUser.role_label?.includes('Minister') ||
-      activeUser.deskCode?.includes('-MIN') ||
-      activeUser.deskCode === 'UG-MOLG-CABINET-MIN' ||
-      activeUser.deskCode === 'UG-MOLG-STATE-MIN'
-  );
 
   const followed = activeUser.followed || [];
   const normFollowed = followed.map((f) => f.replace(/^[a-z]{2}-/i, ''));
@@ -227,24 +207,15 @@ export const FeedView: React.FC = () => {
       {/* 1. Sticky Feed Tabs Header — Mobile-First Thumb Reach */}
       <div className="sticky top-0 z-10 border-b border-[#e3e6ea] dark:border-[#262b36] flex bg-white dark:bg-[#161a22] transition-colors">
         {[
-          {
-            id: 'following',
-            label: isGrassrootsChief ? 'Grassroots Radar' : t('following') || 'Monitored Desks',
-            icon: Users,
-          },
+          { id: 'following', label: t('following') || 'Monitored Desks', icon: Users },
           { id: 'trending', label: t('trending') || 'Top Dispatches', icon: TrendingUp },
-          {
-            id: 'near_me',
-            label: isGrassrootsChief ? 'Parish Watch' : t('nearMe') || 'GIS Radar',
-            icon: Radio,
-          },
+          { id: 'near_me', label: t('nearMe') || 'GIS Radar', icon: Radio },
         ].map((tabItem) => {
           const Icon = tabItem.icon;
           const isOn = feedTab === tabItem.id;
           return (
             <button
               key={tabItem.id}
-              type="button"
               onClick={() => setFeedTab(tabItem.id as any)}
               className={`feed-tab flex-1 flex items-center justify-center gap-1.5 py-2.5 transition-colors font-semibold text-[11.5px] sm:text-xs cursor-pointer ${
                 isOn
@@ -262,42 +233,6 @@ export const FeedView: React.FC = () => {
           );
         })}
       </div>
-
-      {/* Role-Specific Grassroots / Ministerial Context Banner */}
-      {isGrassrootsChief && (
-        <div className="px-3.5 sm:px-4 py-2 bg-amber-500/10 border-b border-amber-500/25 flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-1.5 font-mono text-amber-900 dark:text-amber-300 min-w-0">
-            <Radio size={13} className="text-amber-600 animate-pulse shrink-0" />
-            <span className="font-bold shrink-0">Grassroots Feed</span>
-            <span>·</span>
-            <span className="truncate">{activeUser.organization_name || activeUser.scope_label || 'Local Parish Node'}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => go('gov_inbox')}
-            className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 hover:underline shrink-0"
-          >
-            Grassroots Inbox →
-          </button>
-        </div>
-      )}
-      {isMinister && (
-        <div className="px-3.5 sm:px-4 py-2 bg-indigo-500/10 border-b border-indigo-500/25 flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-1.5 font-mono text-indigo-900 dark:text-indigo-300 min-w-0">
-            <Scale size={13} className="text-indigo-600 shrink-0" />
-            <span className="font-bold shrink-0">Portfolio Dispatches</span>
-            <span>·</span>
-            <span className="truncate">Cabinet Strategic Oversight (Read-Only · Arts 111 &amp; 117)</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => go('ps_executive_desk')}
-            className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0"
-          >
-            Ministerial Executive Desk →
-          </button>
-        </div>
-      )}
 
       {/* 2. Search + Quick Filter Strip (Consolidated for Phone Viewports) */}
       <div className="px-3.5 sm:px-4 pt-3 pb-2 bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">

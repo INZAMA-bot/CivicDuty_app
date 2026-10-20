@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept, pathStr, timeAgo } from '../utils/helpers';
-import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon, Gift, Sparkles, Ticket, Copy, Check } from 'lucide-react';
+import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { NoteBox } from '../components/NoteBox';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
@@ -18,37 +18,6 @@ export const GovReplyView: React.FC = () => {
   const [customBeforeUrl, setCustomBeforeUrl] = useState<string>('');
   const [beforeLabel, setBeforeLabel] = useState<string>('Citizen Field Report');
   const [afterLabel, setAfterLabel] = useState<string>('');
-
-  // Optional Courtesy Voucher / Resolution Token (Customer Care Loop)
-  const isSchool = Boolean(
-    user?.dept?.includes('gayaza') ||
-    user?.organization_name?.toLowerCase().includes('school') ||
-    user?.organization_name?.toLowerCase().includes('college') ||
-    user?.entity_category === 'education'
-  );
-  const isDining = Boolean(
-    user?.dept?.includes('javas') ||
-    user?.organization_name?.toLowerCase().includes('cafe') ||
-    user?.organization_name?.toLowerCase().includes('restaurant') ||
-    user?.entity_category === 'food_dining' ||
-    user?.entity_category === 'hospitality'
-  );
-
-  const [attachCourtesyVoucher, setAttachCourtesyVoucher] = useState<boolean>(false);
-  const [courtesyBrand, setCourtesyBrand] = useState<string>(
-    user?.organization_name || user?.real_title_short || 'CivicDuty Provider Desk'
-  );
-  const [courtesyTitle, setCourtesyTitle] = useState<string>(
-    isSchool
-      ? '10,000 UGX School Scholastic & Stationery Voucher'
-      : isDining
-      ? '5,000 UGX Café Javas Coffee / Snack Voucher'
-      : 'MTN 1.5GB Civic Data Bundle'
-  );
-  const [courtesyValue, setCourtesyValue] = useState<number>(isSchool ? 10000 : 5000);
-  const [courtesyNote, setCourtesyNote] = useState<string>(
-    'Thank you for bringing this to our attention. Please accept this courtesy token from our team in appreciation for your constructive feedback.'
-  );
 
   useEffect(() => {
     if (!activePost || !user || user.role === 'read_only') {
@@ -118,45 +87,6 @@ export const GovReplyView: React.FC = () => {
       return { type: 'doc' as const, name: m.name, size: m.size };
     });
 
-    const isKe = user.country === 'KE';
-    const curr = isKe ? 'KES' : user.country === 'NG' ? 'NGN' : 'UGX';
-    const codeSuffix = Math.floor(1000 + Math.random() * 9000);
-    const cleanPrefix = (courtesyBrand || user.organization_name || d.name).replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase() || 'CVIC';
-    const vCode = `${cleanPrefix}-${courtesyValue >= 1000 ? Math.round(courtesyValue / 1000) + 'K' : courtesyValue}-${codeSuffix}`;
-    const ussdStr = isKe ? `*141*${vCode}#` : `*303*${vCode}#`;
-
-    const courtesyVoucherPayload = attachCourtesyVoucher
-      ? {
-          voucherCode: vCode,
-          brand: courtesyBrand || user.organization_name || d.name,
-          title: courtesyTitle || `${courtesyBrand || user.organization_name || d.name} Courtesy Token`,
-          faceValue: courtesyValue,
-          currency: curr,
-          ussdCode: ussdStr,
-          qrCodeData: `CIVIC-${vCode}`,
-          note: courtesyNote.trim() || 'Issued in appreciation for your verified civic feedback.',
-        }
-      : undefined;
-
-    if (courtesyVoucherPayload) {
-      fetch('/api/perks/courtesy-voucher', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipientName: p.citizen_name || 'Citizen Observer',
-          recipientContact: p.citizen_id || 'Citizen Account',
-          postId: p.id,
-          brand: courtesyVoucherPayload.brand,
-          title: courtesyVoucherPayload.title,
-          faceValue: courtesyVoucherPayload.faceValue,
-          currency: courtesyVoucherPayload.currency,
-          country: user.country,
-          citationNote: courtesyVoucherPayload.note,
-          dispatchedBy: user.real_title_short || user.organization_name || d.name,
-        }),
-      }).catch(() => {});
-    }
-
     const comment = {
       id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       sender: `${user.real_title_short || d.name} · ${user.scope_label || ''}`,
@@ -167,7 +97,6 @@ export const GovReplyView: React.FC = () => {
       created_at: new Date().toISOString(),
       helpful: 0,
       not_helpful: 0,
-      courtesy_voucher: courtesyVoucherPayload,
     };
 
     addCommentToPost(p.id, comment);
@@ -190,30 +119,16 @@ export const GovReplyView: React.FC = () => {
       logAudit(
         'resolve',
         p.id,
-        `Resolved with ${proofMedia.length} proof file(s)${beforeAfterPayload ? ' + Auto-Paired Before & After Proof' : ''}${courtesyVoucherPayload ? ` + Attached Courtesy Voucher (${courtesyVoucherPayload.currency} ${courtesyVoucherPayload.faceValue} ${courtesyVoucherPayload.voucherCode})` : ''}`
+        `Resolved with ${proofMedia.length} proof file(s)${beforeAfterPayload ? ' + Auto-Paired Before & After Proof' : ''}`
       );
       if (p.citizen_id) {
         addPoints(p.citizen_id, 250, '+250pts · Issue resolved by GOV');
       }
-      toast(
-        courtesyVoucherPayload
-          ? `Resolved with ${courtesyVoucherPayload.currency} ${courtesyVoucherPayload.faceValue.toLocaleString()} courtesy token & proof published!`
-          : 'Resolved — Before & After proof published & citizen notified to confirm',
-        'emerald'
-      );
+      toast('Resolved — Before & After proof published & citizen notified to confirm', 'emerald');
     } else {
       updatePostStatus(p.id, status, beforeAfterPayload);
-      logAudit(
-        'reply',
-        p.id,
-        `Status → ${status}${proofMedia.length ? `, ${proofMedia.length} proof file(s)` : ''}${courtesyVoucherPayload ? ` + Attached Courtesy Voucher (${courtesyVoucherPayload.voucherCode})` : ''}`
-      );
-      toast(
-        courtesyVoucherPayload
-          ? `Response posted + ${courtesyVoucherPayload.currency} ${courtesyVoucherPayload.faceValue.toLocaleString()} courtesy token dispatched to citizen!`
-          : 'Response posted',
-        'amber'
-      );
+      logAudit('reply', p.id, `Status → ${status}${proofMedia.length ? `, ${proofMedia.length} proof file(s)` : ''}`);
+      toast('Response posted', 'amber');
     }
 
     go('gov_inbox');
@@ -424,150 +339,6 @@ export const GovReplyView: React.FC = () => {
           {!canResolve && (
             <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 pt-1 font-semibold">
               <Lock size={12} /> Upload proof to enable Resolve
-            </div>
-          )}
-        </div>
-
-        {/* OPTIONAL COURTESY VOUCHER / RESOLUTION TOKEN (CUSTOMER CARE LOOP) */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-br from-amber-500/10 via-emerald-500/5 to-transparent border border-amber-500/30 space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={attachCourtesyVoucher}
-                onChange={(e) => setAttachCourtesyVoucher(e.target.checked)}
-                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-[#e3e6ea] dark:border-[#262b36] cursor-pointer"
-              />
-              <div className="flex items-center gap-1.5">
-                <Gift size={15} className="text-amber-500" />
-                <span className="text-xs font-bold font-mono text-slate-900 dark:text-white">
-                  Attach an Optional Courtesy Voucher / Resolution Token
-                </span>
-              </div>
-            </label>
-            <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25 font-bold">
-              Optional Care Loop
-            </span>
-          </div>
-
-          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-            Attach a digital utility, grocery, dining, or scholastic voucher to this resolution. The citizen receives an instant USSD code &amp; QR token in their response notification.
-          </p>
-
-          {attachCourtesyVoucher && (
-            <div className="space-y-3 pt-2 border-t border-amber-500/20 animate-fade-in text-xs">
-              {/* Presets Grid */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 font-bold block">
-                  Select Voucher Package
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {[
-                    ...(isSchool
-                      ? [
-                          { title: '10,000 UGX School Scholastic & Stationery Voucher', val: 10000, brand: user?.organization_name || 'Gayaza High School', cat: 'books_stationery' },
-                          { title: '15,000 UGX School Uniform Subsidy Token', val: 15000, brand: user?.organization_name || 'Gayaza High School', cat: 'fashion_apparel' },
-                          { title: '5,000 UGX Canteen Meal / Snack Token', val: 5000, brand: user?.organization_name || 'Gayaza High School', cat: 'groceries_consumables' },
-                          { title: 'MTN 1.5GB Student Research Data Pack', val: 8000, brand: 'MTN Uganda', cat: 'telco_data' },
-                        ]
-                      : isDining
-                      ? [
-                          { title: '5,000 UGX Café Javas Coffee / Beverage Token', val: 5000, brand: user?.organization_name || 'Café Javas', cat: 'food_dining' },
-                          { title: '15,000 UGX Customer Appreciation Dining Voucher', val: 15000, brand: user?.organization_name || 'Café Javas', cat: 'food_dining' },
-                          { title: '10,000 UGX Bakery & Dessert Coupon', val: 10000, brand: user?.organization_name || 'Café Javas', cat: 'food_dining' },
-                          { title: 'MTN 1.5GB Civic Feedback Data Pack', val: 8000, brand: 'MTN Uganda', cat: 'telco_data' },
-                        ]
-                      : [
-                          { title: '8,000 UGX MTN 1.5GB Civic Data Bundle', val: 8000, brand: 'MTN Uganda', cat: 'telco_data' },
-                          { title: '5,000 UGX NWSC 1,000L Household Water Token', val: 5000, brand: 'NWSC Uganda', cat: 'water_utility' },
-                          { title: '10,000 UGX Umeme Yaka Power Token', val: 10000, brand: 'Umeme Power', cat: 'electricity' },
-                          { title: '5,000 UGX SafeBoda Transit Ride Credit', val: 5000, brand: 'SafeBoda', cat: 'transit_credit' },
-                        ]),
-                  ].map((pkg, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setCourtesyTitle(pkg.title);
-                        setCourtesyValue(pkg.val);
-                        setCourtesyBrand(pkg.brand);
-                      }}
-                      className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
-                        courtesyTitle === pkg.title
-                          ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-200 shadow-2xs'
-                          : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="font-bold text-xs truncate">{pkg.title}</div>
-                      <div className="text-[10px] font-mono text-slate-500 flex items-center justify-between mt-0.5">
-                        <span>{pkg.brand}</span>
-                        <strong className="text-emerald-700 dark:text-emerald-400">
-                          {user.country === 'KE' ? 'KES' : 'UGX'} {pkg.val.toLocaleString()}
-                        </strong>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Amount and Citation Note */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-slate-500 block mb-1 font-bold">
-                    Custom Voucher Face Value ({user.country === 'KE' ? 'KES' : 'UGX'})
-                  </label>
-                  <input
-                    type="number"
-                    value={courtesyValue}
-                    onChange={(e) => setCourtesyValue(Number(e.target.value))}
-                    min={1000}
-                    step={1000}
-                    className="w-full px-3 py-1.5 text-xs font-mono font-bold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116] text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-slate-500 block mb-1 font-bold">
-                    Voucher Provider / Brand Label
-                  </label>
-                  <input
-                    type="text"
-                    value={courtesyBrand}
-                    onChange={(e) => setCourtesyBrand(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs font-bold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116] text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-mono uppercase text-slate-500 block mb-1 font-bold">
-                  Personalized Appreciation / Apology Note
-                </label>
-                <textarea
-                  rows={2}
-                  value={courtesyNote}
-                  onChange={(e) => setCourtesyNote(e.target.value)}
-                  placeholder="Thank you for bringing this issue to our attention..."
-                  className="w-full p-2.5 text-xs rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116] text-slate-900 dark:text-white leading-relaxed resize-none"
-                />
-              </div>
-
-              {/* Live Preview Card */}
-              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Ticket size={16} className="text-emerald-600" />
-                  <div>
-                    <span className="font-bold text-slate-900 dark:text-white text-xs block">
-                      Preview: {courtesyTitle}
-                    </span>
-                    <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400">
-                      Dispatched instantly via USSD ({user.country === 'KE' ? '*141#' : '*303#'}) &amp; QR Voucher
-                    </span>
-                  </div>
-                </div>
-                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-emerald-600 text-white">
-                  98% Escrow Settle Guarantee
-                </span>
-              </div>
             </div>
           )}
         </div>

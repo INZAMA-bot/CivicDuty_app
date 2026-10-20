@@ -233,16 +233,6 @@ export interface Comment {
   parent_id?: string;
   reply_to_sender?: string;
   upvotes?: number;
-  courtesy_voucher?: {
-    voucherCode: string;
-    brand: string;
-    title: string;
-    faceValue: number;
-    currency: string;
-    ussdCode?: string;
-    qrCodeData?: string;
-    note?: string;
-  };
 }
 
 export interface CivicPollOption {

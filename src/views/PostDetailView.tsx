@@ -48,9 +48,6 @@ import {
   Check,
   Image as ImageIcon,
   Video,
-  Copy,
-  Ticket,
-  Sparkles,
 } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { RichCivicText } from '../components/RichCivicText';
@@ -1691,56 +1688,6 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                   <div>
                     <p className="text-[9px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Government Proof Uploaded</p>
                     <MediaCard media={c.media} postId={p.id + '-c' + i} onToast={(msg) => toast(msg)} />
-                  </div>
-                )}
-
-                {/* Optional Courtesy Voucher / Resolution Token Card */}
-                {c.courtesy_voucher && (
-                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-emerald-500/5 border border-emerald-500/30 text-xs space-y-2 animate-fade-in shadow-xs">
-                    <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5 flex-wrap gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Gift size={14} className="text-amber-500 shrink-0" />
-                        <span className="font-bold text-slate-900 dark:text-white font-mono text-[11px]">
-                          Official Courtesy Voucher / Resolution Token Attached
-                        </span>
-                      </div>
-                      <span className="px-2 py-0.5 rounded font-mono font-black text-[9.5px] bg-emerald-600 text-white shadow-2xs">
-                        {c.courtesy_voucher.currency} {Number(c.courtesy_voucher.faceValue).toLocaleString()} VALUE
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <div className="font-bold text-slate-900 dark:text-white text-xs">
-                          {c.courtesy_voucher.title}
-                        </div>
-                        <div className="text-[10.5px] text-slate-600 dark:text-slate-300">
-                          {c.courtesy_voucher.note || 'Issued in appreciation for your verified civic feedback.'}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="px-2 py-1 rounded-lg bg-white dark:bg-[#0e1116] border border-emerald-500/30 font-mono font-black text-[11px] text-emerald-700 dark:text-emerald-400 select-all">
-                          {c.courtesy_voucher.voucherCode}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(c.courtesy_voucher?.voucherCode || '');
-                            toast(`Voucher code ${c.courtesy_voucher?.voucherCode} copied!`, 'emerald');
-                          }}
-                          className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 cursor-pointer border border-emerald-500/25"
-                          title="Copy voucher code"
-                        >
-                          <Copy size={13} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400 pt-1 border-t border-emerald-500/10">
-                      <span>Redeem via USSD: <strong className="text-emerald-600 dark:text-emerald-400">{c.courtesy_voucher.ussdCode || `*303*${c.courtesy_voucher.voucherCode}#`}</strong></span>
-                      <span className="text-amber-600 dark:text-amber-400 font-bold">100% Cashless Escrow Protected</span>
-                    </div>
                   </div>
                 )}
 

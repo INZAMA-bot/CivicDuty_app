@@ -211,7 +211,7 @@ function entityPrice(n: number, kind: string, iv: 'annual' | 'monthly', country:
 }
 
 export const EntityRegisterView: React.FC = () => {
-  const { go, registerNewEntity, toast, selectedCountry, user, setUser, updateCurrentUser, logAudit } = useApp();
+  const { go, registerNewEntity, toast, selectedCountry, user, updateCurrentUser, logAudit } = useApp();
 
   const isExistingProvider = Boolean(
     user && (user.entity_type === 'non_government_entity' || user.is_utility)
@@ -356,7 +356,7 @@ export const EntityRegisterView: React.FC = () => {
     const activeOfficer = officerName.trim() || user?.officer_name || user?.name || effectiveProfessionalTitle;
     const activeScope = parish || subcounty || district || user?.scope || 'd-kla';
 
-    const updates = {
+    updateCurrentUser({
       organization_name: activeName,
       officer_name: activeOfficer,
       name: activeOfficer,
@@ -370,13 +370,7 @@ export const EntityRegisterView: React.FC = () => {
       parish: parish || user?.parish,
       scope: activeScope,
       jurisdiction_label: `${activeName} (${tier.name} · ${slaTargetHours}h SLA)`,
-    };
-
-    if (typeof updateCurrentUser === 'function') {
-      updateCurrentUser(updates);
-    } else if (typeof setUser === 'function' && user) {
-      setUser({ ...user, ...updates });
-    }
+    });
 
     logAudit(
       'provider_profile_updated',
