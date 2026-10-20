@@ -1,82 +1,181 @@
-# Implementation Plan: Five-Vault Civic & Community Reward Architecture
+# Provider Desk Navigation & Desk Owner Permission Alignment Plan
 
-## 1. Architectural Overview
-We will evolve the CivicDuty Perk & Escrow system into **Five Purpose-Built Vaults**, combining **four algorithmic, jurisdiction-ranked institutional vaults** (with locked Top-3 splits) and **one discretionary peer-to-peer citizen vault**:
-
-1. **Parish Vault (`parish_vault`) — Grassroots Territorial Escrow**
-   - **Jurisdiction Scope**: Scoped per Parish / Ward (`territory.parish` within the active country).
-   - **Depositors**: Open to all sponsors (diaspora citizens, local well-wishers, NGOs, corporate CSR, or government community grants).
-   - **Ranking Engine**: Automatically computes **Parish Reputation Standing** strictly from civic activity inside that Parish (verified reports filed in the parish, resolved local issues, and community upvotes/corroborations).
-   - **Locked Top-3 Split & Parish Chief Dispatch**: Every deposit or batch is split evenly across the **Top 3 ranked citizens** in that Parish (`33.3%` / 1 voucher each per 3-pack). The **Parish Chief (Lowest Accounting Officer)** dispatches the reward on behalf of the Parish; the recipient list is **strictly locked** so the Parish Chief cannot alter or cherry-pick recipients—only verify and sign the batch release into the cryptographic audit ledger.
-
-2. **Private Provider Vault (`provider_vault`) — Shop & Business Community Service Escrow**
-   - **Jurisdiction Scope**: Strictly scoped to a specific registered business, shop, clinic, hospitality venue, or utility branch (`deptId`).
-   - **Depositors**: Deposited by the Shop Owner / Business Representative as a community service and customer appreciation gesture.
-   - **Ranking Engine**: Automatically computes an **Entity Interaction Score** based strictly on a citizen's verified interactions with that specific business (constructive feedback, quality audits, praise reports, verified resolution confirmations, and helpful community notes on that shop's wall). Global XP is ignored.
-   - **Locked Top-3 One-Click Batch Dispatch**: Systematically locks onto the **Top 3 interacting citizens** for that business and splits the vault deposit evenly across them via a **One-Click Batch Dispatch** action.
-
-3. **Contractor Vault (`contractor_vault`) — Public Works Watchdog Escrow**
-   - **Jurisdiction Scope**: Strictly scoped to a specific Public Works Contract (`projectId`).
-   - **Depositors**: Deposited by the contracted engineering firm (as Field Data & Watchdog Reimbursement) or supervising agency.
-   - **Ranking Engine**: Ranks citizens strictly by their **Contract Watchdog Score** on that project (geotagged photo/video field reports, compiled witness dossiers, defect flags, and milestone verification participation).
-   - **Locked Top-3 One-Click Batch Dispatch**: Automatically splits the vault deposit evenly across the **Top 3 Watchdogs** for that contract with a **One-Click Batch Dispatch** button, ensuring critical defect spotters and milestone verifiers are rewarded without interference.
-
-4. **Frontline Scout & Bodaboda Road Safety Bounty Vault (`scout_bounty_vault`) — Transit & Hazard Bounty Escrow**
-   - **Jurisdiction Scope**: Strictly scoped per **Transit Stage, Highway Corridor, or Road Safety Jurisdiction** (e.g., *Kampala Metro Bodaboda Stages*, *Northern Bypass & Bwaise Corridor*, *Entebbe Highway Stage*, or country-specific Matatu/Okada/Danfo/Tuk-tuk corridors and Transport/Works desks).
-   - **Depositors**: Open to Corporate CSR sponsors (Telcos, Fuel & Mobility companies, Banks, Insurers), Transit Cooperatives, and Road/Transport Authorities.
-   - **Ranking Engine**: Automatically computes **Frontline Scout & Road Safety Standing** strictly from road-safety and frontline hazard participation in that corridor (`pothole`, `transport`, `water`, and `power` hazard reports, geotagged camera/voice evidence, corroborated rider witness reports, and commuter upvotes).
-   - **Locked Top-3 One-Click Batch Dispatch**: Every bounty pool deposit is automatically split evenly across the **Top 3 ranked Frontline Scouts / Bodaboda Riders** in that jurisdiction (`33.3%` / 1 voucher each per 3-pack). The Top-3 list is strictly locked to prevent favoritism and released via **One-Click Batch Dispatch** (delivering instant transit/fuel vouchers, airtime/data bundles, or utility tokens via SMS/USSD).
-
-5. **Individual Citizen Vault (`individual_vault`) — Peer-to-Peer Discretionary Vault**
-   - **Jurisdiction Scope**: Personal to the logged-in citizen (`user.id`).
-   - **Depositors**: Citizens deposit utility vouchers or top up their personal vault via Mobile Money / Card.
-   - **Discretionary Peer Reward (Feed + Perk Vault)**: Citizens have 100% personal choice over who to reward—either by clicking the **"Reward Author"** button directly on any post in the Civic Feed / Post Detail view, or by selecting a citizen/post inside the Individual Vault tab in `PerkVaultView`.
+Revised work plan to preserve the restored Government Desk layout at 100% fidelity, restrict all department section edits strictly to verified desk owners, align Provider Desks navigation with the exact specification (removing Feed, adding Exit, Inbox, Works, Team, Audit), and solidify previously agreed architectural conclusions (Five-Vault system, peer tipping, and cashier POS workflows).
 
 ---
 
-## 2. Data Model & State Updates (`src/types.ts` & `src/context/AppContext.tsx`)
-- **Extend `EscrowPerkVoucher`**:
-  - Add `vaultType?: 'parish_vault' | 'provider_vault' | 'contractor_vault' | 'scout_bounty_vault' | 'individual_vault'`.
-  - Add `jurisdictionId?: string` (Parish name for `parish_vault`, `deptId` for `provider_vault`, `projectId` for `contractor_vault`, Corridor/Stage ID for `scout_bounty_vault`, or `citizenId` for `individual_vault`).
-  - Add `jurisdictionLabel?: string` (human-readable Parish, Shop, Contract, or Scout Corridor name).
-  - Add `rankedSlot?: 1 | 2 | 3` and `rankingScoreAtDispatch?: number` to record the exact algorithmic standing at the moment of Top-3 batch dispatch.
-  - Add `authorizedDispatcherRole?: 'parish_chief' | 'provider_owner' | 'contractor_or_authority' | 'scout_corridor_coordinator' | 'citizen_peer'`.
-- **Jurisdiction Leaderboard Calculators**:
-  - Build deterministic ranking calculators that inspect live `posts`, `comments`, and `compiled_reports` for:
-    1. **Parish Vault**: `computeParishTopCitizens(parishName, country)`
-    2. **Private Provider Vault**: `computeProviderTopCitizens(deptId, country)`
-    3. **Contractor Vault**: `computeContractorTopWatchdogs(projectId, country)`
-    4. **Frontline Scout & Bodaboda Vault**: `computeScoutCorridorTopRiders(corridorId, country)`
-  - Each calculator returns the **Top 3 ranked participants** along with their transparent score breakdown (Reports Filed, Geotagged/Resolved Proof, Community Upvotes) so the UI displays why each recipient earned Rank #1, #2, and #3.
+## User Review & Critical Decisions
+
+> [!IMPORTANT]
+> **Strict Government Desk Immunity**: As explicitly instructed, **zero changes** will be made to any part of the Government Desk views (`GovInboxView` sovereign sections, stats docket, 5-Vault Monthly Perks console, grassroots action flows, or styling). It remains 100% locked.
+
+> [!IMPORTANT]
+> **Department Section Edit Lockdown (Desk Owner Only)**:
+> - **Zero Public Tampering**: General citizens, anonymous visitors, or officers from other institutions cannot edit or mutate department names, descriptions, contacts, avatars, or SLAs.
+> - **Verified Desk Owner Authorization**: Only the authenticated desk owner (`user.dept === did` or `user.organization_name === d.name` or claimed owner of that specific desk) can access the edit studio, change avatars/hotlines, or update profile data in `DepartmentsView` and `DeptWallView`.
+> - **Context-Layer Guard**: In `AppContext.tsx`, `updateClaimedEntityDetails` enforces strict ownership validation so rogue updates are rejected with an explicit permission notice.
+
+> [!NOTE]
+> **Provider Desk Navigation Alignment**:
+> - **Bottom Nav Bar (Mobile)**: Matches your screenshot: `[Inbox]` (selected), `[Works]`, `[Team]`, `[Audit]`, and `[Exit]` (red power icon). The `Feed` tab is completely removed; the Inbox is sufficient for handling dispatches and inquiries.
+> - **Desktop Sidebar**: Remove `Public Feed` from `providerWorkspaceItems`, add `Audit Chain`, and update the desktop footer exit button to cleanly terminate the provider session (`setUser(null); go('splash');`).
 
 ---
 
-## 3. UI & Workflow Changes
+## 1. Overview & Core Concept
 
-### A. `src/views/PerkVaultView.tsx` — Five-Vault Architecture & Jurisdiction Rankers
-- **5-Vault Selector Matrix**:
-  - Replace the legacy single-pool banner with an interactive **5-Vault Architecture Switcher**:
-    1. **Parish Vault** (Grassroots Reputation Standing · Dispatched by Parish Chief)
-    2. **Private Provider Vault** (Shop/Business Community Service · Strictly Entity Interactions)
-    3. **Contractor Vault** (Public Works Watchdog Standing · Top Contract Watchdogs)
-    4. **Frontline Scout & Bodaboda Vault** (Road Safety & Hazard Bounty Pools · Top Corridor Scouts)
-    5. **Individual Citizen Vault** (Personal Deposit · Discretionary Peer-to-Peer Rewards)
-- **Deposit Flow Tailored per Vault**:
-  - When depositing into any of the **4 Institutional Vaults** (`parish_vault`, `provider_vault`, `contractor_vault`, `scout_bounty_vault`), deposits are structured into **3-Way Even Split Batches** (1/3 each for Rank #1, Rank #2, and Rank #3 in that jurisdiction) and preview the live Top 3 leaderboard before checkout.
-  - When depositing into an **Individual Vault**, vouchers are added to the citizen's personal discretionary vault balance for 1-click peer tipping.
-- **Locked Top-3 One-Click Batch Dispatch Panel**:
-  - Displays the selected jurisdiction's live **Top 3 Leaderboard** with a **"Locked Top-3 Algorithmic Split"** badge (recipients cannot be manually swapped).
-  - For **Parish Vaults**, enforces the Parish Chief fiduciary dispatch workflow and logs the release to the Audit Chain.
-  - For **Private Provider**, **Contractor**, and **Frontline Scout & Bodaboda** Vaults, provides a **One-Click Batch Dispatch** button that releases the 3 vouchers simultaneously to Rank #1, #2, and #3 via SMS/USSD.
-
-### B. `src/views/FeedView.tsx` & `src/views/PostDetailView.tsx` — Direct "Reward" Button on Posts
-- Add a **"Reward"** action button on feed posts and post detail views.
-- Clicking **"Reward"** opens an **Individual Vault Peer Reward Modal**:
-  - Shows the post author's name, post title, and the citizen's available Individual Vault vouchers (plus an instant 1-click deposit option if their Individual Vault is empty).
-  - Lets the citizen attach a brief appreciation note and immediately dispatch a utility voucher to the post author.
+- **What It Does**:
+  1. **Department Section Ownership Security**: Locks down the Service Registry (`DepartmentsView`) and Department Wall (`DeptWallView`) so that only verified desk owners and authorized accounting officers can edit department identity, branding, contacts, and SLA parameters. Citizens and visitors enjoy clean, read-only transparency (filing dispatches, viewing SLA compliance, staking, and claiming unclaimed entities).
+  2. **Provider Desk Navigation Parity**: Equips registered businesses, schools, hospitals, utilities, and contractors with an authoritative operational console strictly focused on their institutional duties: triage incoming inquiries/complaints in **Inbox**, track facility upgrades in **Works**, manage assigned staff in **Team**, inspect transparency logs in **Audit**, and immediately sign out via **Exit**.
+  3. **Zero Government Desk Tampering**: Ensures the Nakasero Parish Chief / Town Agent layout, 48-hour SLA metrics, Sovereign Government Desk allocations, and 5-Vault Monthly Top-3 Merit console remain identical to the restored baseline.
+  4. **Foundation Synthesis (Previously Agreed Conclusions)**:
+     - **Five-Vault Civic & Community Reward Engine**:
+       1. *Parish Vault*: Scoped per parish, locked 33.3% Top-3 split, signed by Parish Chief.
+       2. *Provider Vault*: Scoped per business, 1-click batch dispatch to top interacting patrons.
+       3. *Contractor Vault*: Scoped per public works contract, 1-click batch dispatch to top milestone/defect watchdogs.
+       4. *Frontline Scout & Bodaboda Vault*: Scoped per transit corridor/stage, instant fuel/transit/airtime voucher split.
+       5. *Individual Citizen Vault*: Discretionary peer-to-peer tipping directly on posts via the "Reward Author" button or in-vault dispatch.
+     - **Cashier POS & Merchant Loyalty Studio**: Fast voucher code redemption for registered merchants and schools.
+     - **Firestore Cloud Sync**: Persistent synchronization to `ai-studio-civicduty-5180c226-cff7-4d82-aacd-1ff8a588daae`.
 
 ---
 
-## 4. Verification Plan
-- Run `compile_applet` to verify zero TypeScript or build errors across `types.ts`, `AppContext.tsx`, `PerkVaultView.tsx`, `FeedView.tsx`, and `PostDetailView.tsx`.
-- Verify that all five vaults calculate rankings accurately per jurisdiction, enforce the locked Top-3 split for the four institutional vaults, and allow direct peer-to-peer post tipping from the Individual Vault.
+## 2. User Experience & Visual Design
+
+### Department Section: Permission-Aware UI Behavior
+
+```
+┌────────────────────────────────────────────────────────┐
+│ Gayaza High School / NWSC / Café Javas Wall            │
+├────────────────────────────────────────────────────────┤
+│ Citizen / Visitor View:                                │
+│ • Verified Provider Badge · Staking [+ Stake]         │
+│ • SLA Telemetry & Public Accountability Docket         │
+│ • [+ File Report] & Counter QR Placard                 │
+│ • [Edit Wall Details] & Camera Icon: HIDDEN            │
+├────────────────────────────────────────────────────────┤
+│ Verified Desk Owner View:                              │
+│ • Active Desk Lead Indicator · Authorized Admin        │
+│ • [Edit Wall Details] button visible                   │
+│ • Camera icon on avatar visible                        │
+│ • Modal allows updating contacts, logo & description   │
+└────────────────────────────────────────────────────────┘
+```
+
+### Key Navigation Layouts
+
+#### A. Government Desk (100% Preserved - Untouched)
+```
+┌────────────────────────────────────────────────────────┐
+│ Parish Chief (Nakasero)     8 PENDING    38% resolved │
+│ KCCA · Parish Chief / Town Agent                       │
+│ Sovereign Government Desk · State-Funded Allocation    │
+│ [ 5-Vault Monthly Perks → ]                            │
+│ ┌────────────────────────────────────────────────────┐ │
+│ │ ENTITY CIVIC PERKS & MONTHLY TOP-3 MERIT VAULT     │ │
+│ │ MONTHLY TOP-3 SPLIT (33.3% EACH)                   │ │
+│ └────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────┘
+  [ Grassroots ]    [ Works ]    [ Audit ]    [ Exit ⏻ ]
+```
+
+#### B. Provider Desk (Updated with Feed Removed & Exit Added)
+```
+┌────────────────────────────────────────────────────────┐
+│ Gayaza High School / Café Javas / NWSC Branch          │
+│ Verified Provider Desk · National Tier                 │
+│ [ Cashier POS Desk ]  [ Team (N) ]  [ 5-Vault Perks ]  │
+│ ┌────────────────────────────────────────────────────┐ │
+│ │ Inquiries & Tickets Queue / Merchant POS Terminal  │ │
+│ └────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────┘
+  [ Inbox ]    [ Works ]    [ Team ]    [ Audit ]    [ Exit ⏻ ]
+```
+
+- **Bottom Tab Roster for Providers**:
+  1. **Inbox** (`gov_inbox`): Ticket queue, parent/customer inquiries, SLA countdown, and reply composer.
+  2. **Works** (`gov_projects`): Campus/facility infrastructure upgrades, contractor tracking, and milestone monitoring.
+  3. **Team** (`entity_team`): Authorized staff members, role delegation, and operator credentials.
+  4. **Audit** (`gov_audit`): Tamper-proof cryptographic ledger of all status transitions and POS redemptions.
+  5. **Exit** (`setUser(null); go('splash');`): Red power button icon for instant secure desk logout.
+
+---
+
+## 3. Key Product Decisions & Trade-Offs
+
+### 1. Department Edit Authorization Gate
+- **Chosen Approach**: Multi-tier desk ownership verification:
+  1. Check if logged-in user matches `user.dept === did` or `user.organization_name === d.name`.
+  2. Check if user is the registered `owner_admin` or claimed representative for the entity.
+  3. If not verified, hide all edit triggers (buttons, photo edit icons, modal forms).
+  4. At context invocation (`updateClaimedEntityDetails`), verify authorization before committing changes to memory and Firestore.
+- **Why**: Protects official government departments and reputable private institutions from unauthorized edits by third parties or general public users, guaranteeing institutional credibility.
+
+### 2. Provider Desk Navigation Alignment
+- **Chosen Approach**: Completely remove the `Feed` tab from private provider desks and replace it with `Exit` (matching Government Desk).
+- **Why**: As you noted, the Inbox is sufficient for handling customer inquiries and dispatches. The Exit button provides instant workstation logout for shared staff computers.
+
+---
+
+## 4. Technical Architecture & Implementation Steps
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         App Navigation                           │
+└──────────────────────────────────────────────────────────────────┘
+                                │
+        ┌───────────────────────┴───────────────────────┐
+        ▼                                               ▼
+┌───────────────────────────────┐       ┌──────────────────────────────┐
+│       Government Desk         │       │        Provider Desk         │
+│  (100% Locked & Preserved)    │       │     (Aligned to Screenshot)  │
+├───────────────────────────────┤       ├──────────────────────────────┤
+│ • Grassroots Inbox            │       │ • Inbox (Inquiries/Tickets)  │
+│ • Works (Public Projects)     │       │ • Works (Facility Projects)  │
+│ • Audit (Sovereign Ledger)    │       │ • Team (Staff Roster)        │
+│ • Exit (Red Power Logout)     │       │ • Audit (Activity Ledger)    │
+│ • 5-Vault Monthly Perks       │       │ • Exit (Red Power Logout)    │
+└───────────────────────────────┘       └──────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│             Department & Desk Owner Security Layer               │
+├────────────────────────────────────────────────────────────────┤
+│ • DepartmentsView & DeptWallView: Edit actions strictly locked   │
+│   to verified desk owner (isDeskOwner). Citizens see read-only.  │
+│ • AppContext: updateClaimedEntityDetails verifies ownership.     │
+└──────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                   Five-Vault Architecture Engine                 │
+├──────────────────────────────────────────────────────────────────┤
+│ 1. Parish Vault (Grassroots Escrow · Locked Top-3)               │
+│ 2. Provider Vault (Shop/Clinic Service · Locked Top-3)           │
+│ 3. Contractor Vault (Public Works Watchdogs · Locked Top-3)      │
+│ 4. Scout Bounty Vault (Road Safety Corridor · Locked Top-3)     │
+│ 5. Individual Vault (Discretionary Peer Post-Tipping)            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Planned Code Adjustments:
+1. **`src/views/DeptWallView.tsx` & `src/views/DepartmentsView.tsx`**:
+   - Ensure all edit wall buttons, avatar upload triggers, and inline edit actions strictly require `isDeskOwner === true`.
+   - Citizens and visitors see clean read-only profiles without any editing controls.
+2. **`src/context/AppContext.tsx`**:
+   - In `updateClaimedEntityDetails`, verify that the active user is the authorized desk administrator for `deptId` before saving changes to local state and Firestore.
+3. **`src/components/Navigation.tsx`**:
+   - Update `isPrivateProvider` mobile navigation bar:
+     - Replace `[My Desk, Team, Profile, Perks, Feed]` with `[Inbox, Works, Team, Audit, Exit]`.
+     - Set `Exit` button to red power icon with `setUser(null); go('splash');`.
+   - Update `providerWorkspaceItems` (desktop):
+     - Remove `feed` tab.
+     - Add `Audit Chain` (`gov_audit`).
+     - Align desktop exit action to cleanly log out provider session.
+4. **`src/views/GovInboxView.tsx`**:
+   - Keep government desk branches 100% intact.
+   - For provider desk view, ensure smooth routing to Works (`gov_projects`), Team (`entity_team`), and Audit (`gov_audit`).
+5. **Synthesis of Five-Vault & Peer Reward Features**:
+   - Ensure the five vaults (`parish_vault`, `provider_vault`, `contractor_vault`, `scout_bounty_vault`, `individual_vault`) operate smoothly across `PerkVaultView.tsx` and `PostCardComponent.tsx` (peer tipping modal).
+6. **Verification**:
+   - Run `compile_applet` to guarantee complete build integrity and zero regressions.

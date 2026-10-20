@@ -41,6 +41,15 @@ import {
   Clock,
   ArrowUpRight,
   CheckCircle,
+  Ticket,
+  Coins,
+  FileSpreadsheet,
+  Download,
+  Scale,
+  Power,
+  Camera,
+  Mail,
+  Save,
 } from 'lucide-react';
 import { tiersFor } from '../data/tiers';
 import { getCountryPerks } from '../data/countryPerks';
@@ -51,6 +60,10 @@ import { COUNTRIES } from '../data/countries';
 export const GovInboxView: React.FC = () => {
   const {
     user,
+    setUser,
+    setActiveDept,
+    getClaimedEntity,
+    updateClaimedEntityDetails,
     posts,
     teamMembers,
     govTab,
@@ -58,6 +71,7 @@ export const GovInboxView: React.FC = () => {
     setActivePost,
     go,
     updatePostStatus,
+    addCommentToPost,
     logAudit,
     toast,
     activeDeptCountry,
@@ -98,6 +112,33 @@ export const GovInboxView: React.FC = () => {
     awardedPoints: number;
     timestamp: string;
   } | null>(null);
+
+  // Cashier Operator Role & Z-Report Shift State
+  const [posCashierRole, setPosCashierRole] = useState<'cashier_1' | 'cashier_2' | 'lead_bursar'>('cashier_1');
+  const [isPosPinLocked, setIsPosPinLocked] = useState<boolean>(false);
+  const [posPinInput, setPosPinInput] = useState<string>('');
+  const [shiftRedeemedCount, setShiftRedeemedCount] = useState<number>(4);
+  const [shiftGrossValue, setShiftGrossValue] = useState<number>(65000);
+  const [shiftTransactions, setShiftTransactions] = useState<Array<{ code: string; desc: string; amount: number; time: string; cashier: string }>>([
+    { code: 'CJ-LUNCH-15K-9021', desc: '15% Customer Loyalty Lunch Perk', amount: 15000, time: '11:42 AM', cashier: 'Cashier #1 (Counter)' },
+    { code: 'SCH-STATIONERY-10K-08', desc: '10,000 UGX Scholastic Books Token', amount: 10000, time: '12:15 PM', cashier: 'Cashier #1 (Counter)' },
+    { code: 'SHOP-30K-BASKET-102', desc: 'Household Essentials Basket', amount: 30000, time: '01:05 PM', cashier: 'Cashier #1 (Counter)' },
+    { code: 'CJ-COFFEE-10K-8821', desc: '10,000 UGX Artisan Brew & Brioche', amount: 10000, time: '02:20 PM', cashier: 'Cashier #1 (Counter)' },
+  ]);
+  const [showZReportModal, setShowZReportModal] = useState<boolean>(false);
+  const [zReportData, setZReportData] = useState<any | null>(null);
+
+  // Countertop QR Placard Kit State
+  const [showPlacardModal, setShowPlacardModal] = useState<boolean>(false);
+
+  // Optional Courtesy Voucher / Resolution Token for Private Provider Desk (Option 2 - Customer Care Loop)
+  const [providerAttachCourtesy, setProviderAttachCourtesy] = useState<boolean>(false);
+  const [providerCourtesyTitle, setProviderCourtesyTitle] = useState<string>('5,000 UGX Courtesy Resolution Token');
+  const [providerCourtesyBrand, setProviderCourtesyBrand] = useState<string>('');
+  const [providerCourtesyValue, setProviderCourtesyValue] = useState<number>(5000);
+  const [providerCourtesyNote, setProviderCourtesyNote] = useState<string>(
+    'Thank you for your valuable feedback. Please accept this courtesy token from our team in appreciation for your patience.'
+  );
 
   // Official Institutional Circulars / Bulletins State
   const [bulletinTitle, setBulletinTitle] = useState('');
@@ -191,6 +232,75 @@ export const GovInboxView: React.FC = () => {
       setHqRoom(countryPerks.hqRoom);
     }
   }, [activeCountry]);
+
+  // Provider Desk Profile & Settings Studio State
+  const [profileOrgName, setProfileOrgName] = useState('');
+  const [profileDesc, setProfileDesc] = useState('');
+  const [profileLocation, setProfileLocation] = useState('');
+  const [profileHotline, setProfileHotline] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profileWebsite, setProfileWebsite] = useState('');
+  const [profileRepName, setProfileRepName] = useState('');
+  const [profileRepRole, setProfileRepRole] = useState('');
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState('');
+  const [profileSla, setProfileSla] = useState('24');
+
+  useEffect(() => {
+    if (user && user.dept) {
+      const cr = getClaimedEntity(user.dept);
+      const curDept = getDept(user.country, user.dept);
+      setProfileOrgName(cr?.businessName || user.organization_name || curDept.name || '');
+      setProfileDesc(cr?.customDescription || curDept.full || '');
+      setProfileLocation(cr?.customLocation || curDept.location || 'Wakiso District, Uganda');
+      setProfileHotline(cr?.customHotline || cr?.phone || user.contact_phone || '+256 414 567 401');
+      setProfileEmail(cr?.officialEmail || 'contact@entity.org');
+      setProfileWebsite(cr?.customWebsite || 'https://gayazahs.sc.ug');
+      setProfileRepName(cr?.representativeName || user.officer_name || user.name || 'Robinah Kizito');
+      setProfileRepRole(cr?.role || user.real_title_short || 'Head Teacher & Statutory Administrator');
+      setProfileAvatarUrl(cr?.customAvatarUrl || '');
+      setProfileSla(String(curDept.sla || 24));
+    }
+  }, [user?.dept, user?.organization_name]);
+
+  const handleProfileAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setProfileAvatarUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProviderProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!profileOrgName.trim()) {
+      toast('Organization name cannot be empty.', 'amber');
+      return;
+    }
+    const did = user.dept || 'kcca';
+    updateClaimedEntityDetails(did, {
+      businessName: profileOrgName.trim(),
+      customDescription: profileDesc.trim(),
+      customLocation: profileLocation.trim(),
+      customHotline: profileHotline.trim(),
+      officialEmail: profileEmail.trim(),
+      customWebsite: profileWebsite.trim(),
+      representativeName: profileRepName.trim(),
+      role: profileRepRole.trim(),
+      customAvatarUrl: profileAvatarUrl.trim(),
+    });
+    setUser({
+      ...user,
+      organization_name: profileOrgName.trim(),
+      officer_name: profileRepName.trim(),
+      real_title_short: profileRepRole.trim(),
+    });
+    toast('Desk Profile & Institutional configuration saved successfully.', 'emerald');
+  };
 
   if (!user) return null;
 
@@ -486,6 +596,15 @@ export const GovInboxView: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setShowPlacardModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Preview & print official countertop tent card"
+              >
+                <QrCode size={13} className="text-amber-500" />
+                <span>Countertop QR Sign</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => go('entity_team')}
                 className="px-3 py-1.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
               >
@@ -499,6 +618,19 @@ export const GovInboxView: React.FC = () => {
               >
                 <Award size={13} />
                 <span>5-Vault Perks</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUser(null);
+                  toast('Logged out of Provider Desk successfully.', 'emerald');
+                  go('splash');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                title="Exit Provider Desk & Sign Out"
+              >
+                <Power size={13} className="text-rose-600 dark:text-rose-400" />
+                <span>Exit Desk</span>
               </button>
             </div>
           </div>
@@ -539,7 +671,7 @@ export const GovInboxView: React.FC = () => {
             { id: 'projects' as const, label: isSchool ? `Campus Works & Upgrades (${sampleFacilityProjects.length})` : `Facility Projects (${sampleFacilityProjects.length})`, icon: Briefcase },
             { id: 'team' as const, label: isSchool ? `Academic Staff Roster (${myTeam.length})` : `Staff Roster (${myTeam.length})`, icon: Users },
             { id: 'perks' as const, label: 'Monthly Merit Vault Rewards', icon: Award },
-            { id: 'profile' as const, label: 'Desk Settings & Tier', icon: Layers },
+            { id: 'profile' as const, label: 'Profile & Institution Settings', icon: Layers },
           ].map((tab) => {
             const Icon = tab.icon;
             const isTabActive = providerDeskTab === tab.id;
@@ -797,6 +929,122 @@ export const GovInboxView: React.FC = () => {
                       />
                     </div>
 
+                    {/* OPTIONAL COURTESY VOUCHER (CUSTOMER CARE LOOP) */}
+                    <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-500/10 via-emerald-500/5 to-transparent border border-amber-500/30 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={providerAttachCourtesy}
+                            onChange={(e) => setProviderAttachCourtesy(e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-[#e3e6ea] dark:border-[#262b36] cursor-pointer"
+                          />
+                          <div className="flex items-center gap-1.5">
+                            <Gift size={14} className="text-amber-500" />
+                            <span className="text-xs font-bold font-mono text-slate-900 dark:text-white">
+                              Attach an Optional Courtesy Voucher / Resolution Token
+                            </span>
+                          </div>
+                        </label>
+                        <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25 font-bold">
+                          Optional Care Token
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                        Optionally reward or apologize to this citizen by attaching an instant voucher token (e.g. coffee, canteen meal, research data bundle, or stationery).
+                      </p>
+
+                      {providerAttachCourtesy && (
+                        <div className="space-y-2.5 pt-2 border-t border-amber-500/20 animate-fade-in text-xs">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {[
+                              ...(isSchool
+                                ? [
+                                    { title: '10,000 UGX School Scholastic & Stationery Voucher', val: 10000 },
+                                    { title: '15,000 UGX School Uniform Subsidy Token', val: 15000 },
+                                    { title: '5,000 UGX Canteen Meal / Snack Token', val: 5000 },
+                                    { title: 'MTN 1.5GB Student Research Data Pack', val: 8000 },
+                                  ]
+                                : isRestaurant
+                                ? [
+                                    { title: '5,000 UGX Café Javas Coffee / Beverage Token', val: 5000 },
+                                    { title: '15,000 UGX Customer Appreciation Dining Voucher', val: 15000 },
+                                    { title: '10,000 UGX Bakery & Gourmet Snack Voucher', val: 10000 },
+                                    { title: 'MTN 1.5GB Feedback Data Pack', val: 8000 },
+                                  ]
+                                : [
+                                    { title: '5,000 UGX Customer Care Resolution Token', val: 5000 },
+                                    { title: '10,000 UGX Verified Patron Courtesy Token', val: 10000 },
+                                    { title: '8,000 UGX MTN 1.5GB Civic Data Bundle', val: 8000 },
+                                    { title: '5,000 UGX SafeBoda Transit Ride Credit', val: 5000 },
+                                  ]),
+                            ].map((preset, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  setProviderCourtesyTitle(preset.title);
+                                  setProviderCourtesyValue(preset.val);
+                                  setProviderCourtesyBrand(user.organization_name || d.name);
+                                }}
+                                className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${
+                                  providerCourtesyTitle === preset.title
+                                    ? 'border-emerald-500 bg-emerald-500/15 text-emerald-950 dark:text-emerald-200'
+                                    : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116] text-slate-700 dark:text-slate-300'
+                                }`}
+                              >
+                                <div className="font-bold text-[11px] truncate">{preset.title}</div>
+                                <div className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
+                                  UGX {preset.val.toLocaleString()}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[9.5px] font-mono uppercase text-slate-500 block mb-0.5 font-bold">
+                                Token Value (UGX)
+                              </label>
+                              <input
+                                type="number"
+                                value={providerCourtesyValue}
+                                onChange={(e) => setProviderCourtesyValue(Number(e.target.value))}
+                                step={1000}
+                                min={1000}
+                                className="w-full px-2.5 py-1 text-xs font-mono font-bold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116]"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9.5px] font-mono uppercase text-slate-500 block mb-0.5 font-bold">
+                                Issued By Brand
+                              </label>
+                              <input
+                                type="text"
+                                value={providerCourtesyBrand || user.organization_name || d.name}
+                                onChange={(e) => setProviderCourtesyBrand(e.target.value)}
+                                className="w-full px-2.5 py-1 text-xs font-bold rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116]"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[9.5px] font-mono uppercase text-slate-500 block mb-0.5 font-bold">
+                              Apology / Appreciation Note
+                            </label>
+                            <input
+                              type="text"
+                              value={providerCourtesyNote}
+                              onChange={(e) => setProviderCourtesyNote(e.target.value)}
+                              placeholder="Thank you for bringing this to our attention..."
+                              className="w-full px-2.5 py-1 text-xs rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116]"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Digital Seal & Officer Signature */}
                     <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
@@ -831,13 +1079,71 @@ export const GovInboxView: React.FC = () => {
                             toast('Please enter a response body.', 'amber');
                             return;
                           }
+
+                          let courtesyPayload: any = undefined;
+
+                          if (providerAttachCourtesy) {
+                            const isKe = user.country === 'KE';
+                            const curr = isKe ? 'KES' : user.country === 'NG' ? 'NGN' : 'UGX';
+                            const codeSuffix = Math.floor(1000 + Math.random() * 9000);
+                            const cleanPrefix = (providerCourtesyBrand || user.organization_name || d.name).replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase() || 'CVIC';
+                            const vCode = `${cleanPrefix}-${providerCourtesyValue >= 1000 ? Math.round(providerCourtesyValue / 1000) + 'K' : providerCourtesyValue}-${codeSuffix}`;
+                            const ussdStr = isKe ? `*141*${vCode}#` : `*303*${vCode}#`;
+
+                            courtesyPayload = {
+                              voucherCode: vCode,
+                              brand: providerCourtesyBrand || user.organization_name || d.name,
+                              title: providerCourtesyTitle || `${providerCourtesyBrand || user.organization_name || d.name} Courtesy Token`,
+                              faceValue: providerCourtesyValue,
+                              currency: curr,
+                              ussdCode: ussdStr,
+                              qrCodeData: `CIVIC-${vCode}`,
+                              note: providerCourtesyNote.trim() || 'Issued in appreciation for your feedback.',
+                            };
+
+                            fetch('/api/perks/courtesy-voucher', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                recipientName: replyTicket.author || replyTicket.citizen_name || 'Citizen Patron',
+                                recipientContact: replyTicket.citizen_id || 'Citizen Account',
+                                postId: replyTicket.id,
+                                brand: courtesyPayload.brand,
+                                title: courtesyPayload.title,
+                                faceValue: courtesyPayload.faceValue,
+                                currency: courtesyPayload.currency,
+                                country: user.country,
+                                citationNote: courtesyPayload.note,
+                                dispatchedBy: user.organization_name || d.name,
+                                merchantId: user.dept,
+                              }),
+                            }).catch(() => {});
+                          }
+
+                          addCommentToPost(replyTicket.id, {
+                            id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                            sender: `${user.organization_name || d.name} · ${user.name || 'Executive Desk'}`,
+                            role: 'gov',
+                            body: replyText.trim(),
+                            status_tag: replyStatus,
+                            created_at: new Date().toISOString(),
+                            helpful: 0,
+                            not_helpful: 0,
+                            courtesy_voucher: courtesyPayload,
+                          });
+
                           updatePostStatus(replyTicket.id, replyStatus);
                           logAudit(
                             'provider_ticket_response',
                             replyTicket.id,
-                            `${user.organization_name || d.name} responded to ticket #${replyTicket.id}: "${replyText.slice(0, 50)}..."`
+                            `${user.organization_name || d.name} responded to ticket #${replyTicket.id}: "${replyText.slice(0, 50)}..."${courtesyPayload ? ` + Attached Courtesy Token (${courtesyPayload.currency} ${courtesyPayload.faceValue} ${courtesyPayload.voucherCode})` : ''}`
                           );
-                          toast(`Official response dispatched and signed with ${user.organization_name || d.name} seal!`, 'emerald');
+                          toast(
+                            courtesyPayload
+                              ? `Official response + ${courtesyPayload.currency} ${courtesyPayload.faceValue.toLocaleString()} courtesy token dispatched to citizen!`
+                              : `Official response dispatched and signed with ${user.organization_name || d.name} seal!`,
+                            'emerald'
+                          );
                           setReplyTicket(null);
                         }}
                         className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
@@ -858,6 +1164,51 @@ export const GovInboxView: React.FC = () => {
         {/* ================================================================= */}
         {providerDeskTab === 'merchant_pos' && (
           <div className="space-y-4 animate-fade-in">
+            {/* Sector Quality & Accreditation Banner */}
+            {isRestaurant ? (
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-950 dark:text-white">Hospitality &amp; Food Safety Standards</span>
+                      <span className="px-2 py-0.5 rounded font-mono font-bold text-[9px] bg-emerald-600 text-white">Grade A Certified</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      UNBS Food Safety Reg #UNBS-F-9021 · KCCA Public Health Sanitary Permit · 100% Halal Verified Kitchen
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 rounded-lg">
+                    Peak-Hour Cashier Mode Active
+                  </span>
+                </div>
+              </div>
+            ) : isSchool ? (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                    <Award size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-950 dark:text-white">Ministry of Education &amp; Sports Accreditation</span>
+                      <span className="px-2 py-0.5 rounded font-mono font-bold text-[9px] bg-emerald-600 text-white">UNEB Centre #U0033</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      MoES Statutory School License #MOES-SEC-012 · Canteen, Bookshop &amp; Tuition Subsidy Settlement Terminal
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 rounded-lg shrink-0">
+                  Bursary Escrow Ready
+                </span>
+              </div>
+            ) : null}
+
             {/* Quick Cashier Redemption & POS Scanner Terminal */}
             <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/30 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-emerald-500/20 pb-3">
@@ -872,9 +1223,22 @@ export const GovInboxView: React.FC = () => {
                     Front-desk and cashier verification desk. Enter customer 8-digit voucher PINs, scan QR codes, validate tuition subsidies, and settle with guaranteed 98% escrow payout.
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 self-start sm:self-auto">
-                  POS Online
-                </span>
+
+                {/* Operator Switch & Terminal Lock */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <select
+                    value={posCashierRole}
+                    onChange={(e) => setPosCashierRole(e.target.value as any)}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#0e1116] border border-emerald-500/30 text-[11px] font-mono font-bold text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="cashier_1">Operator: Cashier #1 (Main Counter)</option>
+                    <option value="cashier_2">Operator: Cashier #2 (Fast-Track / Canteen)</option>
+                    <option value="lead_bursar">Operator: Lead Bursar / General Manager</option>
+                  </select>
+                  <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-bold uppercase tracking-wider shrink-0">
+                    POS Online
+                  </span>
+                </div>
               </div>
 
               {/* Cashier Voucher PIN Input & Fast Redemption Form */}
@@ -889,7 +1253,7 @@ export const GovInboxView: React.FC = () => {
                       type="text"
                       value={posCodeInput}
                       onChange={(e) => setPosCodeInput(e.target.value)}
-                      placeholder="e.g. CJ-LUNCH-10K-9921, SCH-50K-UNIFORM-01..."
+                      placeholder="e.g. CJ-LUNCH-10K-9921, SCH-50K-UNIFORM-01, SHOP-1000KSH-UG..."
                       className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] font-mono font-bold text-xs uppercase text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -906,6 +1270,20 @@ export const GovInboxView: React.FC = () => {
                         ? '10% School Uniform & Tuition Subsidy Credit'
                         : `${user.organization_name || d.name} 15% Customer Loyalty Perk`;
                       const discountVal = isTuition ? 'UGX 50,000' : 'UGX 15,000 (15% Off)';
+                      const valNum = isTuition ? 50000 : code.includes('25K') ? 25000 : code.includes('30K') ? 30000 : 15000;
+
+                      setShiftRedeemedCount((prev) => prev + 1);
+                      setShiftGrossValue((prev) => prev + valNum);
+                      setShiftTransactions((prev) => [
+                        {
+                          code,
+                          desc,
+                          amount: valNum,
+                          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                          cashier: posCashierRole === 'cashier_1' ? 'Cashier #1 (Main Counter)' : posCashierRole === 'cashier_2' ? 'Cashier #2 (Fast-Track)' : 'Bursar / Manager Desk',
+                        },
+                        ...prev,
+                      ]);
 
                       setPosValidationResult({
                         success: true,
@@ -981,6 +1359,108 @@ export const GovInboxView: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* CASHIER SHIFT RECONCILIATION & END-OF-DAY Z-REPORT DOCKET */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet size={18} className="text-emerald-600" />
+                    <h3 className="text-sm sm:text-base font-bold text-slate-950 dark:text-white">
+                      Cashier Shift Reconciliation &amp; Daily Z-Report
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Live settlement ledger for {user.organization_name || d.name}. Automatically credits 98% net face value into merchant escrow.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const gross = shiftGrossValue;
+                    const commission = Math.round(gross * 0.02);
+                    const netPayout = gross - commission;
+                    setZReportData({
+                      zReportNo: `ZR-${activeCountry}-${Math.floor(100000 + Math.random() * 900000)}`,
+                      generatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                      dateStr: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                      merchantName: user.organization_name || d.name,
+                      operator: posCashierRole === 'cashier_1' ? 'Cashier #1 (Main Counter)' : posCashierRole === 'cashier_2' ? 'Cashier #2 (Fast-Track)' : 'Bursar / Manager Desk',
+                      redeemedCount: shiftRedeemedCount,
+                      grossSales: gross,
+                      platformFee: commission,
+                      netEscrow: netPayout,
+                      settlementDestination: 'MTN MoMo Merchant Code #901824 / Stanbic Bank Escrow',
+                      transactions: shiftTransactions,
+                    });
+                    setShowZReportModal(true);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 transition-colors"
+                >
+                  <Printer size={13} />
+                  <span>Generate &amp; Print Shift Z-Report</span>
+                </button>
+              </div>
+
+              {/* 4-Stat Metric Summary Bar */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                  <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Vouchers Verified</span>
+                  <div className="text-lg font-black font-mono text-slate-900 dark:text-white mt-0.5">{shiftRedeemedCount}</div>
+                  <span className="text-[9.5px] text-slate-400 font-mono">Current shift volume</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                  <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Gross Sales Value</span>
+                  <div className="text-lg font-black font-mono text-slate-900 dark:text-white mt-0.5">
+                    UGX {shiftGrossValue.toLocaleString()}
+                  </div>
+                  <span className="text-[9.5px] text-slate-400 font-mono">Face value redeemed</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                  <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Platform Fee (2%)</span>
+                  <div className="text-lg font-black font-mono text-amber-600 mt-0.5">
+                    UGX {Math.round(shiftGrossValue * 0.02).toLocaleString()}
+                  </div>
+                  <span className="text-[9.5px] text-slate-400 font-mono">CivicDuty fee</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                  <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Net Escrow Payout (98%)</span>
+                  <div className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                    UGX {Math.round(shiftGrossValue * 0.98).toLocaleString()}
+                  </div>
+                  <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">100% Guaranteed</span>
+                </div>
+              </div>
+
+              {/* Itemized Transactions Table */}
+              <div className="space-y-2 pt-1">
+                <span className="text-xs font-bold font-mono text-slate-900 dark:text-white block">
+                  Recent Shift Redemptions Ledger
+                </span>
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                  {shiftTransactions.map((tx, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-xs font-mono"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <strong className="text-slate-900 dark:text-white">{tx.code}</strong>
+                          <span className="text-slate-500 truncate text-[11px]">{tx.desc}</span>
+                        </div>
+                        <span className="text-[9.5px] text-slate-400">
+                          {tx.time} · Operator: {tx.cashier}
+                        </span>
+                      </div>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                        +UGX {tx.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Merchant Loyalty Studio Integration */}
@@ -1277,39 +1757,535 @@ export const GovInboxView: React.FC = () => {
         )}
 
         {/* ================================================================= */}
-        {/* TAB 7: DESK PROFILE & TIER SETTINGS */}
+        {/* TAB 7: PROFILE & INSTITUTION SETTINGS STUDIO */}
         {/* ================================================================= */}
         {providerDeskTab === 'profile' && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+          <div className="space-y-4 animate-fade-in">
+            {/* Top Overview & Action Header */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  Desk Profile, Branding &amp; Subscription Tier
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Manage official institution motto, hotline, emergency contacts, and active subscription tier.
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    Institutional Profile &amp; Desk Configuration Studio
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Manage official institution branding, campus location, public contact hotlines, statutory leadership, and response SLAs.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => go('entity_register')}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Edit3 size={13} />
-                <span>Edit Full Profile Studio</span>
-              </button>
+
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const did = user.dept || d.id;
+                    setActiveDept(did);
+                    go('dept_wall');
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                  title="Preview how citizens view your public department wall"
+                >
+                  <ExternalLink size={13} className="text-emerald-600" />
+                  <span>Preview Citizen Wall</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => go('entity_team')}
+                  className="px-3 py-1.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Users size={13} className="text-emerald-600" />
+                  <span>Manage Team ({myTeam.length})</span>
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase">Organization Name</span>
-                <div className="font-bold text-slate-900 dark:text-white">{user.organization_name || d.name}</div>
-                <div className="text-slate-500">{d.location || 'Wakiso District, Uganda'}</div>
+            {/* Verified Partner Accreditation & Active Plan Status Card */}
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/25 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 uppercase tracking-wide">
+                      Verified Founding Partner · 100% Free Trial Active
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      $0 DUE TODAY
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] text-slate-600 dark:text-slate-300 mt-0.5">
+                    {d.qualityAudit || 'Statutory Accreditation License #P.012'} · Unlimited Staff Seats · Guaranteed {profileSla}h SLA Active
+                  </p>
+                </div>
               </div>
-              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase">Accreditation</span>
-                <div className="font-bold text-emerald-600">{d.qualityAudit || 'MoES Registered P.012'}</div>
-                <div className="text-slate-500">Status: Verified Official Provider</div>
+
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <div className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#161a22] border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold">
+                  SLA Compliance: {resPct}%
+                </div>
+                <div className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#161a22] border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold">
+                  Active Tickets: {pendingCount}
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Editing Form */}
+            <form onSubmit={handleSaveProviderProfile} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Section 1: Institution Identity & Crest */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3.5">
+                  <div className="flex items-center gap-2 pb-2 border-b border-[#e3e6ea] dark:border-[#262b36]">
+                    <Building2 size={15} className="text-emerald-600" />
+                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      1. Brand Identity &amp; Official Crest
+                    </h4>
+                  </div>
+
+                  {/* Logo / Crest Uploader */}
+                  <div className="flex items-center gap-3.5 pt-1">
+                    <div className="relative group shrink-0">
+                      {profileAvatarUrl ? (
+                        <img
+                          src={profileAvatarUrl}
+                          alt="Crest / Logo"
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500/30 bg-[#f8f9fa] dark:bg-[#0e1116]"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-[#f8f9fa] dark:bg-[#0e1116] border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                          <DeptIcon dept={d} size={28} />
+                        </div>
+                      )}
+                      <label className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xs cursor-pointer border-2 border-white dark:border-[#161a22]">
+                        <Camera size={12} />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfileAvatarUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">Institution Crest / Logo</div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                        PNG, JPG, or SVG. Visible across citizen feeds, public accountability wall, and official bulletins.
+                      </p>
+                      <label className="inline-flex items-center gap-1 text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer">
+                        <span>Upload new badge...</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfileAvatarUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400">
+                      Institution / Business Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={profileOrgName}
+                      onChange={(e) => setProfileOrgName(e.target.value)}
+                      placeholder="e.g. Gayaza High School"
+                      className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400">
+                      Institutional Mission / Tagline
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={profileDesc}
+                      onChange={(e) => setProfileDesc(e.target.value)}
+                      placeholder="e.g. Never Give Up · First-class Christian girls boarding secondary school established 1905."
+                      className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 resize-none leading-relaxed"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: Contact Channels & Campus Location */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3.5">
+                  <div className="flex items-center gap-2 pb-2 border-b border-[#e3e6ea] dark:border-[#262b36]">
+                    <MapPin size={15} className="text-emerald-600" />
+                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      2. Public Contact &amp; Campus Location
+                    </h4>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <MapPin size={12} className="text-slate-400" />
+                      <span>Physical Campus / Headquarters Address *</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={profileLocation}
+                      onChange={(e) => setProfileLocation(e.target.value)}
+                      placeholder="e.g. Kasangati Town Council, Gayaza Road, Wakiso District"
+                      className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <Phone size={12} className="text-slate-400" />
+                        <span>Public Hotline</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={profileHotline}
+                        onChange={(e) => setProfileHotline(e.target.value)}
+                        placeholder="+256 414 567 401"
+                        className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <Mail size={12} className="text-slate-400" />
+                        <span>Support Email</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={profileEmail}
+                        onChange={(e) => setProfileEmail(e.target.value)}
+                        placeholder="headteacher@gayazahs.sc.ug"
+                        className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Globe size={12} className="text-slate-400" />
+                      <span>Official Website URL</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={profileWebsite}
+                      onChange={(e) => setProfileWebsite(e.target.value)}
+                      placeholder="https://gayazahs.sc.ug"
+                      className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 3: Statutory Leadership & SLA Commitment */}
+                <div className="md:col-span-2 p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3.5">
+                  <div className="flex items-center gap-2 pb-2 border-b border-[#e3e6ea] dark:border-[#262b36]">
+                    <ShieldCheck size={15} className="text-emerald-600" />
+                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      3. Statutory Leadership &amp; Service Standards
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400">
+                        Desk Lead / Accounting Officer
+                      </label>
+                      <input
+                        type="text"
+                        value={profileRepName}
+                        onChange={(e) => setProfileRepName(e.target.value)}
+                        placeholder="e.g. Robinah Kizito"
+                        className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400">
+                        Designation / Official Title
+                      </label>
+                      <input
+                        type="text"
+                        value={profileRepRole}
+                        onChange={(e) => setProfileRepRole(e.target.value)}
+                        placeholder="Head Teacher & Academic Administrator"
+                        className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-mono font-semibold uppercase text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <Clock size={12} className="text-slate-400" />
+                        <span>Customer Response SLA</span>
+                      </label>
+                      <select
+                        value={profileSla}
+                        onChange={(e) => setProfileSla(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        <option value="12">12 Hours (Rapid Priority SLA)</option>
+                        <option value="24">24 Hours (Founding Partner Standard)</option>
+                        <option value="48">48 Hours (Routine Standard SLA)</option>
+                        <option value="72">72 Hours (Extended Complex SLA)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Action Footer */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="text-xs text-slate-500 font-mono">
+                  All updates sync live to the public department wall and verified partner registry.
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+                  >
+                    <Save size={14} />
+                    <span>Save Desk Profile Updates</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* MODAL 1: OFFICIAL SHIFT Z-REPORT MODAL */}
+        {/* ================================================================= */}
+        {showZReportModal && zReportData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
+            <div className="w-full max-w-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100 flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between bg-[#f8f9fa] dark:bg-[#0e1116]">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet size={18} className="text-emerald-600" />
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-950 dark:text-white">
+                      Official Cashier Shift Z-Report &amp; Settlement Docket
+                    </h3>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      Report Ref: {zReportData.zReportNo} · {zReportData.dateStr}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowZReportModal(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Printable Body */}
+              <div className="p-5 space-y-4 overflow-y-auto print:p-0">
+                {/* Formal Receipt Box */}
+                <div className="p-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-[#f8f9fa] dark:bg-[#0e1116] space-y-3 font-mono text-xs">
+                  <div className="text-center pb-2 border-b border-dashed border-slate-300 dark:border-slate-700 space-y-0.5">
+                    <div className="font-black text-sm uppercase tracking-wider text-slate-900 dark:text-white">
+                      {zReportData.merchantName}
+                    </div>
+                    <div className="text-[10px] text-slate-500 uppercase">
+                      CivicDuty Verified Provider Terminal · End-of-Day Closeout
+                    </div>
+                    <div className="text-[9.5px] text-slate-400">
+                      Generated at: {zReportData.generatedAt} · Operator: {zReportData.operator}
+                    </div>
+                  </div>
+
+                  {/* Summary Totals Table */}
+                  <div className="space-y-1.5 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Vouchers Verified &amp; Settled:</span>
+                      <strong className="text-slate-900 dark:text-white">{zReportData.redeemedCount}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Gross Redeemed Face Value:</span>
+                      <strong className="text-slate-900 dark:text-white">UGX {zReportData.grossSales.toLocaleString()}</strong>
+                    </div>
+                    <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                      <span>CivicDuty Platform Fee (2%):</span>
+                      <span>-UGX {zReportData.platformFee.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-dashed border-slate-300 dark:border-slate-700 pt-1.5 text-xs font-black text-emerald-600 dark:text-emerald-400">
+                      <span>Net Escrow Disbursement (98%):</span>
+                      <span>UGX {zReportData.netEscrow.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-[10px] space-y-0.5">
+                    <div className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 size={12} />
+                      <span>Settlement Status: AUTOMATIC ESCROW RELEASED</span>
+                    </div>
+                    <div className="text-slate-500 truncate">
+                      Credited To: {zReportData.settlementDestination}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Itemized Shift Transactions */}
+                <div className="space-y-1.5 text-xs font-mono">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">Itemized Vouchers Ledger</span>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {(zReportData.transactions || []).map((t: any, i: number) => (
+                      <div key={i} className="flex justify-between text-[11px] py-1 border-b border-[#e3e6ea] dark:border-[#262b36]">
+                        <span className="text-slate-700 dark:text-slate-300 truncate max-w-[280px]">
+                          <strong>{t.code}</strong> · {t.desc}
+                        </span>
+                        <span className="text-emerald-600 font-bold shrink-0">
+                          UGX {t.amount.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between bg-[#f8f9fa] dark:bg-[#0e1116]">
+                <span className="text-[10px] font-mono text-slate-400">
+                  Cryptographically sealed with SHA-256
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowZReportModal(false)}
+                    className="px-3 py-1.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.print();
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Printer size={13} />
+                    <span>Print Z-Report</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* MODAL 2: COUNTERTOP QR PLACARD KIT MODAL */}
+        {/* ================================================================= */}
+        {showPlacardModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
+            <div className="w-full max-w-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100 flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between bg-[#f8f9fa] dark:bg-[#0e1116]">
+                <div className="flex items-center gap-2">
+                  <QrCode size={18} className="text-emerald-600" />
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-950 dark:text-white">
+                      Official Countertop QR Placard &amp; Table Standee Kit
+                    </h3>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      Ready to Print (A4 / Counter Tent Stand)
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPlacardModal(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Printable Standee Preview */}
+              <div className="p-5 overflow-y-auto">
+                <div className="p-6 rounded-2xl bg-gradient-to-b from-white via-slate-50 to-slate-100 dark:from-[#1a1f29] dark:via-[#161a22] dark:to-[#0e1116] border-2 border-emerald-500/40 text-center space-y-4 shadow-lg">
+                  {/* Standee Crest */}
+                  <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 shadow-xs">
+                    <DeptIcon dept={d} size={36} />
+                  </div>
+
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-wider border border-emerald-500/30">
+                      <ShieldCheck size={12} />
+                      <span>Verified CivicDuty Provider Desk</span>
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-black text-slate-950 dark:text-white mt-1.5">
+                      {user.organization_name || d.name}
+                    </h2>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">
+                      {d.location || 'Uganda Network'} · Guaranteed {d.sla || 48}hr Response SLA
+                    </p>
+                  </div>
+
+                  {/* Big QR Code Box */}
+                  <div className="p-5 rounded-2xl bg-white border border-slate-200 inline-block shadow-inner">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://civicduty.ug/wall/${d.id}`}
+                      alt="CivicDuty Official Countertop QR Code"
+                      className="w-40 h-40 mx-auto"
+                    />
+                    <div className="text-[10px] font-mono font-bold text-slate-800 mt-2">
+                      SCAN TO OPEN OFFICIAL DESK
+                    </div>
+                  </div>
+
+                  {/* 3 Clear Instructions */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-left text-[10.5px] pt-1">
+                    <div className="p-2.5 rounded-xl bg-white/70 dark:bg-[#161a22]/70 border border-[#e3e6ea] dark:border-[#262b36] space-y-0.5">
+                      <strong className="text-slate-900 dark:text-white block font-mono">1. Bulletins</strong>
+                      <span className="text-slate-500">Read official term dates &amp; circulars.</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/70 dark:bg-[#161a22]/70 border border-[#e3e6ea] dark:border-[#262b36] space-y-0.5">
+                      <strong className="text-slate-900 dark:text-white block font-mono">2. Vouchers</strong>
+                      <span className="text-slate-500">Redeem loyalty perks at counter.</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-white/70 dark:bg-[#161a22]/70 border border-[#e3e6ea] dark:border-[#262b36] space-y-0.5">
+                      <strong className="text-slate-900 dark:text-white block font-mono">3. Feedback</strong>
+                      <span className="text-slate-500">Submit verified tickets &amp; reviews.</span>
+                    </div>
+                  </div>
+
+                  {/* USSD Prompt */}
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10.5px] font-mono text-slate-500">
+                    No smartphone? Dial toll-free <strong className="text-emerald-600 dark:text-emerald-400 font-bold">*3030*{d.id}#</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between bg-[#f8f9fa] dark:bg-[#0e1116]">
+                <span className="text-[10px] font-mono text-slate-400">
+                  Ready to print or laminate for front counter
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPlacardModal(false)}
+                    className="px-3 py-1.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.print();
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Printer size={13} />
+                    <span>Print Placard (A4 / Standee)</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

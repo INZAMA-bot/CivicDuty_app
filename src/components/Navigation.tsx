@@ -55,14 +55,15 @@ export const Navigation: React.FC<NavigationProps> = () => {
   const activeUser = user || ensureCitizenSession();
   const psInfo = getPsMinistryInfo(activeUser);
 
-  const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
-
   const isPrivateProvider = Boolean(
     activeUser.entity_type === 'non_government_entity' ||
       activeUser.dept?.startsWith('ent-') ||
       activeUser.entity_category ||
       ['gayaza_hs', 'namagunga', 'cafe_javas', 'mak_univ', 'mulago_hosp', 'nakasero_hosp', 'serena_hotel_kla', 'stanbic', 'centenary_bank', 'kotsa_taxi', 'kigo_contractors'].includes(activeUser.dept || '')
   );
+
+  const isGov = !isPrivateProvider && ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
+
 
   // Check if political minister (Constitution Arts 111 & 117 - strategic policy oversight, apolitical head, no civil service team execution)
   const isMinister =
@@ -78,7 +79,9 @@ export const Navigation: React.FC<NavigationProps> = () => {
       activeUser.deskCode?.includes('PARISH') ||
       activeUser.deskCode?.includes('WARD') ||
       activeUser.hierarchy_level === 'tier1_lowest' ||
+      activeUser.hierarchy_level === 'tier1_parish' ||
       activeUser.real_title_short?.toLowerCase().includes('parish chief') ||
+      activeUser.real_title_short?.toLowerCase().includes('town agent') ||
       activeUser.real_title_short?.toLowerCase().includes('ward admin')
   );
 
@@ -123,13 +126,12 @@ export const Navigation: React.FC<NavigationProps> = () => {
     { id: 'entity_register', label: 'Desk Profile & Tier', icon: Layers },
     { id: 'gov_projects', label: 'Facility Upgrades', icon: Briefcase },
     { id: 'perk_vault', label: '5-Vault Perks', icon: Award },
-    { id: 'feed', label: 'Public Feed', icon: Eye },
   ];
 
   // Government Desk Workspace Navigation
   const govWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
-    { id: 'gov_inbox', label: isGrassrootsChief ? 'Grassroots Inbox' : 'Official Inbox', icon: Inbox },
-    { id: 'gov_projects', label: isMinister ? 'Portfolio Works' : 'Public Works', icon: Building2 },
+    { id: 'gov_inbox', label: isGrassrootsChief ? 'Grassroots Inbox' : isMinister ? 'Portfolio Inbox' : 'Official Inbox', icon: Inbox },
+    { id: 'gov_projects', label: isMinister ? 'Portfolio Works (RO)' : 'Public Works', icon: Building2 },
     ...(isAccountingOfficer
       ? [
           {
@@ -154,8 +156,8 @@ export const Navigation: React.FC<NavigationProps> = () => {
       ? [
           {
             id: 'ps_executive_desk' as ViewType,
-            label: 'Ministerial Executive Desk',
-            icon: Landmark,
+            label: 'Ministerial Executive (RO)',
+            icon: Scale,
             onClick: handleApexClick,
             active: view === 'ps_executive_desk',
           },
@@ -165,7 +167,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
       ? [
           {
             id: 'gov_admin' as ViewType,
-            label: 'Superadmin',
+            label: 'Superadmin Console',
             icon: SlidersHorizontal,
             onClick: () => go('gov_admin'),
             active: view === 'gov_admin',
@@ -179,8 +181,8 @@ export const Navigation: React.FC<NavigationProps> = () => {
           },
         ]
       : []),
-    { id: 'gov_audit', label: 'Audit Chain', icon: Scale },
-    { id: 'feed', label: 'Public Feed', icon: Eye },
+    { id: 'gov_audit', label: 'Audit Chain', icon: FileCheck2 },
+    { id: 'feed', label: isGrassrootsChief ? 'Grassroots Feed' : 'Public Feed', icon: Eye },
   ];
 
   const studioConsoles: { id: ViewType; label: string; icon: React.ElementType }[] = [
@@ -205,7 +207,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
           {/* Top Studio Brand Header */}
           <div className="h-13 px-3 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 shrink-0 bg-white dark:bg-[#161a22]">
             <div
-              onClick={() => go(isGov ? 'gov_inbox' : 'feed')}
+              onClick={() => go(isGov || isPrivateProvider ? 'gov_inbox' : 'feed')}
               className="flex items-center gap-2 min-w-0 cursor-pointer group"
               title="CivicDuty Studio"
             >
@@ -236,26 +238,70 @@ export const Navigation: React.FC<NavigationProps> = () => {
             </button>
           </div>
 
-          {/* Primary Studio Action Button (+ Create new dispatch) */}
+          {/* Primary Action Button (Tailored to logged-in desk mode) */}
           <div className="p-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => go('compose')}
-              title="File New Civic Dispatch"
-              className={`w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center ${
-                collapsed ? 'justify-center px-0' : 'justify-start px-3 gap-2'
-              } transition-colors cursor-pointer`}
-            >
-              <Plus size={16} strokeWidth={2} className="shrink-0" />
-              {!collapsed && <span className="truncate">+ New Civic Dispatch</span>}
-            </button>
+            {isGov ? (
+              <button
+                type="button"
+                onClick={() => go(isMinister ? 'ps_executive_desk' : 'gov_inbox')}
+                title={isGrassrootsChief ? 'Grassroots Inbox' : isMinister ? 'Ministerial Portfolio Desk' : 'Official Jurisdiction Inbox'}
+                className={`w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center ${
+                  collapsed ? 'justify-center px-0' : 'justify-start px-3 gap-2'
+                } transition-colors cursor-pointer`}
+              >
+                <Inbox size={16} strokeWidth={2} className="shrink-0" />
+                {!collapsed && (
+                  <span className="truncate">
+                    {isGrassrootsChief ? 'Grassroots Inbox' : isMinister ? 'Ministerial Desk' : 'Official Inbox'}
+                  </span>
+                )}
+              </button>
+            ) : isPrivateProvider ? (
+              <button
+                type="button"
+                onClick={() => go('gov_inbox')}
+                title="Provider Operations Desk"
+                className={`w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center ${
+                  collapsed ? 'justify-center px-0' : 'justify-start px-3 gap-2'
+                } transition-colors cursor-pointer`}
+              >
+                <Building2 size={16} strokeWidth={2} className="shrink-0" />
+                {!collapsed && (
+                  <span className="truncate">
+                    {activeUser.organization_name
+                      ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 16)} Desk`
+                      : 'Provider Desk'}
+                  </span>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => go('compose')}
+                title="File New Civic Dispatch"
+                className={`w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center ${
+                  collapsed ? 'justify-center px-0' : 'justify-start px-3 gap-2'
+                } transition-colors cursor-pointer`}
+              >
+                <Plus size={16} strokeWidth={2} className="shrink-0" />
+                {!collapsed && <span className="truncate">+ New Civic Dispatch</span>}
+              </button>
+            )}
           </div>
 
           {/* Primary Workspace Links */}
           <div className="px-2 py-1 space-y-0.5">
             {!collapsed && (
               <div className="px-2.5 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                {isPrivateProvider ? 'Provider Desk' : isGov ? 'Official Desk' : 'Workspace'}
+                {isPrivateProvider
+                  ? 'Provider Desk'
+                  : isGov
+                  ? isGrassrootsChief
+                    ? 'Grassroots Desk'
+                    : isMinister
+                    ? 'Ministerial Desk (RO)'
+                    : 'Official Desk'
+                  : 'Workspace'}
               </div>
             )}
 
@@ -276,55 +322,57 @@ export const Navigation: React.FC<NavigationProps> = () => {
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/40 dark:hover:bg-[#161a22] hover:text-slate-900 dark:hover:text-slate-200 font-medium'
                   }`}
                 >
-                      <Icon
-                        size={16}
-                        strokeWidth={1.75}
-                        className={`shrink-0 ${
-                          isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
-                        }`}
-                      />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </button>
-                  );
-                })}
-          </div>
-
-          {/* Studio Consoles & Tools */}
-          <div className="px-2 py-2 mt-1 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-0.5">
-            {!collapsed && (
-              <div className="px-2.5 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                Portals &amp; Consoles
-              </div>
-            )}
-            {studioConsoles.map((tool) => {
-              const Icon = tool.icon;
-              const isActive = view === tool.id;
-              return (
-                <button
-                  key={tool.id}
-                  type="button"
-                  onClick={() => go(tool.id)}
-                  title={tool.label}
-                  className={`w-full h-8 rounded-lg flex items-center ${
-                    collapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
-                  } text-[12px] transition-colors cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-200/80 dark:bg-[#1e232d] text-slate-900 dark:text-white font-semibold'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/40 dark:hover:bg-[#161a22] hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-                  }`}
-                >
                   <Icon
-                    size={15}
+                    size={16}
                     strokeWidth={1.75}
                     className={`shrink-0 ${
                       isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
                     }`}
                   />
-                  {!collapsed && <span className="truncate">{tool.label}</span>}
+                  {!collapsed && <span className="truncate">{item.label}</span>}
                 </button>
               );
             })}
           </div>
+
+          {/* Studio Consoles & Tools - Exclusively for citizen/visitor portal exploration */}
+          {!isGov && !isPrivateProvider && (
+            <div className="px-2 py-2 mt-1 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-0.5">
+              {!collapsed && (
+                <div className="px-2.5 pb-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Portals &amp; Consoles
+                </div>
+              )}
+              {studioConsoles.map((tool) => {
+                const Icon = tool.icon;
+                const isActive = view === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    onClick={() => go(tool.id)}
+                    title={tool.label}
+                    className={`w-full h-8 rounded-lg flex items-center ${
+                      collapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
+                    } text-[12px] transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-slate-200/80 dark:bg-[#1e232d] text-slate-900 dark:text-white font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/40 dark:hover:bg-[#161a22] hover:text-slate-900 dark:hover:text-slate-200 font-medium'
+                    }`}
+                  >
+                    <Icon
+                      size={15}
+                      strokeWidth={1.75}
+                      className={`shrink-0 ${
+                        isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    />
+                    {!collapsed && <span className="truncate">{tool.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Bottom Studio Footer */}
@@ -356,20 +404,20 @@ export const Navigation: React.FC<NavigationProps> = () => {
           <button
             type="button"
             onClick={() => {
-              if (isGov) setUser(null);
+              if (isGov || isPrivateProvider) setUser(null);
               go('splash');
             }}
-            title={isGov ? 'Exit Official Desk' : 'Console Overview'}
+            title={isGov ? 'Exit Official Desk' : isPrivateProvider ? 'Exit Provider Desk' : 'Switch Portal'}
             className={`w-full h-8 rounded-lg flex items-center ${
               collapsed ? 'justify-center px-0' : 'px-2.5 gap-2.5'
             } text-[12px] font-medium text-slate-600 dark:text-slate-400 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer`}
           >
-            {isGov ? (
-              <Power size={15} strokeWidth={1.75} className="shrink-0" />
+            {isGov || isPrivateProvider ? (
+              <Power size={15} strokeWidth={1.75} className="shrink-0 text-rose-500" />
             ) : (
               <Shield size={15} strokeWidth={1.75} className="shrink-0" />
             )}
-            {!collapsed && <span className="truncate">{isGov ? 'Exit Official Desk' : 'Switch Portal'}</span>}
+            {!collapsed && <span className="truncate">{isGov ? 'Exit Official Desk' : isPrivateProvider ? 'Exit Provider Desk' : 'Switch Portal'}</span>}
           </button>
         </div>
       </aside>
@@ -386,19 +434,30 @@ export const Navigation: React.FC<NavigationProps> = () => {
               <button
                 onClick={() => go('gov_inbox')}
                 className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'gov_inbox'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                  view === 'gov_inbox' || view === 'gov_reply'
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Inbox size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Inbox</span>
+              </button>
+              <button
+                onClick={() => go('gov_projects')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'gov_projects' || view === 'project'
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 <Building2 size={18} strokeWidth={1.75} />
-                <span className="text-[9.5px] font-mono">My Desk</span>
+                <span className="text-[9.5px] font-mono">Works</span>
               </button>
               <button
                 onClick={() => go('entity_team')}
                 className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
                   view === 'entity_team'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
@@ -406,37 +465,25 @@ export const Navigation: React.FC<NavigationProps> = () => {
                 <span className="text-[9.5px] font-mono">Team</span>
               </button>
               <button
-                onClick={() => go('entity_register')}
+                onClick={() => go('gov_audit')}
                 className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'entity_register'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                  view === 'gov_audit'
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                <Layers size={18} strokeWidth={1.75} />
-                <span className="text-[9.5px] font-mono">Profile</span>
+                <Scale size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Audit</span>
               </button>
               <button
-                onClick={() => go('perk_vault')}
-                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'perk_vault'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
+                onClick={() => {
+                  setUser(null);
+                  go('splash');
+                }}
+                className="flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-rose-500 dark:text-rose-400 cursor-pointer"
               >
-                <Award size={18} strokeWidth={1.75} />
-                <span className="text-[9.5px] font-mono">Perks</span>
-              </button>
-              <button
-                onClick={() => go('feed')}
-                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'feed'
-                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                <Eye size={18} strokeWidth={1.75} />
-                <span className="text-[9.5px] font-mono">Feed</span>
+                <Power size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Exit</span>
               </button>
             </>
           ) : isGov ? (
@@ -444,18 +491,18 @@ export const Navigation: React.FC<NavigationProps> = () => {
               <button
                 onClick={() => go('gov_inbox')}
                 className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'gov_inbox'
+                  view === 'gov_inbox' || view === 'gov_reply'
                     ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 <Inbox size={18} strokeWidth={1.75} />
-                <span className="text-[9.5px] font-mono">{isGrassrootsChief ? 'Grassroots' : 'Inbox'}</span>
+                <span className="text-[9.5px] font-mono">{isGrassrootsChief ? 'Grassroots' : isMinister ? 'Inbox' : 'Inbox'}</span>
               </button>
               <button
                 onClick={() => go('gov_projects')}
                 className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'gov_projects'
+                  view === 'gov_projects' || view === 'project'
                     ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}

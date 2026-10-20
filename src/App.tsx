@@ -232,7 +232,15 @@ const StudioRightInspector: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { view, guideModalOpen, closeGuide, guideInitialTab, legalModalOpen, closeLegalCenter, legalInitialTab } = useApp();
+  const { user, ensureCitizenSession, view, guideModalOpen, closeGuide, guideInitialTab, legalModalOpen, closeLegalCenter, legalInitialTab } = useApp();
+  const activeUser = user || ensureCitizenSession();
+  const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
+  const isPrivateProvider = Boolean(
+    activeUser.entity_type === 'non_government_entity' ||
+      activeUser.dept?.startsWith('ent-') ||
+      activeUser.entity_category ||
+      ['gayaza_hs', 'namagunga', 'cafe_javas', 'mak_univ', 'mulago_hosp', 'nakasero_hosp', 'serena_hotel_kla', 'stanbic', 'centenary_bank', 'kotsa_taxi', 'kigo_contractors'].includes(activeUser.dept || '')
+  );
 
   const renderView = () => {
     switch (view) {
@@ -328,7 +336,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  const showRightInspector = ['feed', 'depts', 'dept_wall', 'post_detail', 'compose', 'profile'].includes(view);
+  const showRightInspector = !isGov && !isPrivateProvider && ['feed', 'depts', 'dept_wall', 'post_detail', 'compose', 'profile'].includes(view);
   const isFullWidthView = [
     'transit_preview',
     'livery',

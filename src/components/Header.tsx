@@ -11,6 +11,7 @@ import {
   Bell,
   MessageSquare,
   SlidersHorizontal,
+  Power,
 } from 'lucide-react';
 import { TrafficSignalHUD } from './TrafficSignalHUD';
 import { TrafficLightLogo } from './TrafficLightLogo';
@@ -51,6 +52,7 @@ const VIEW_LABELS: Record<string, { section: string; title: string }> = {
 export const Header: React.FC = () => {
   const {
     user,
+    setUser,
     ensureCitizenSession,
     selectedCountry,
     view,
@@ -85,7 +87,14 @@ export const Header: React.FC = () => {
     'ob3',
   ].includes(view);
 
-  const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
+  const isPrivateProvider = Boolean(
+    activeUser.entity_type === 'non_government_entity' ||
+      activeUser.dept?.startsWith('ent-') ||
+      activeUser.entity_category ||
+      ['gayaza_hs', 'namagunga', 'cafe_javas', 'mak_univ', 'mulago_hosp', 'nakasero_hosp', 'serena_hotel_kla', 'stanbic', 'centenary_bank', 'kotsa_taxi', 'kigo_contractors'].includes(activeUser.dept || '')
+  );
+
+  const isGov = !isPrivateProvider && ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
   const profile = profiles[activeUser.id] || { civic_score: 50 };
   const currentCountry = (isGov && !isPortalAuthView ? activeUser.country : selectedCountry || activeUser.country || 'UG').toUpperCase();
   const rolloutData = getNationalRolloutArrangements(currentCountry);
@@ -221,6 +230,34 @@ export const Header: React.FC = () => {
                     {activeUser.real_title_short || activeUser.role_label || 'Desk'}
                   </span>
                 </button>
+              ) : isPrivateProvider ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => go('gov_inbox')}
+                    title="Open Provider Operations Desk"
+                    className="h-8 px-2 sm:px-2.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-500 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Building size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="max-w-[120px] truncate">
+                      {activeUser.organization_name
+                        ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 16)}`
+                        : 'Provider Desk'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUser(null);
+                      go('splash');
+                    }}
+                    title="Exit Provider Desk & Sign Out"
+                    className="h-8 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <Power size={12} strokeWidth={2} />
+                    <span className="hidden sm:inline">Exit</span>
+                  </button>
+                </div>
               ) : (
                 <button
                   type="button"

@@ -114,6 +114,20 @@ export const DeptWallView: React.FC = () => {
   const isClaimed = isEntityClaimed(did);
   const claimRecord = getClaimedEntity(did);
 
+  // Strictly check if current logged-in user is the owner/authorized officer of this desk
+  const isDeskOwner = Boolean(
+    user && (
+      user.dept === did ||
+      user.dept === d.id ||
+      (user.organization_name && d.name && (
+        user.organization_name.toLowerCase().includes(d.name.toLowerCase()) ||
+        d.name.toLowerCase().includes(user.organization_name.toLowerCase())
+      )) ||
+      (user.entity_type === 'non_government_entity' && user.dept === did) ||
+      (user.role === 'node_admin' && (user.dept === did || user.dept === d.id))
+    )
+  );
+
   const displayWallName = claimRecord?.businessName || d.name;
   const displayWallDesc = claimRecord?.customDescription || d.full;
   const displayWallLocation = claimRecord?.customLocation || d.location || `${COUNTRIES[country]?.name || 'National'} Service Network`;
@@ -216,6 +230,11 @@ export const DeptWallView: React.FC = () => {
 
   const handleSaveWallEdits = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isDeskOwner) {
+      toast('Permission denied: Only authorized desk administrators can modify wall profile details.', 'red');
+      setShowEditWallModal(false);
+      return;
+    }
     if (!editBusinessName.trim()) {
       toast('Business / Desk name cannot be empty.', 'amber');
       return;
@@ -452,7 +471,7 @@ export const DeptWallView: React.FC = () => {
                   <DeptIcon dept={d} size={24} />
                 </div>
               )}
-              {isConsumer && isClaimed && (
+              {isDeskOwner && (
                 <button
                   type="button"
                   onClick={openEditWallStudio}
@@ -504,7 +523,7 @@ export const DeptWallView: React.FC = () => {
             </div>
           </div>
 
-          {isConsumer && isClaimed && (
+          {isDeskOwner && (
             <button
               type="button"
               onClick={openEditWallStudio}
@@ -529,29 +548,38 @@ export const DeptWallView: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={openEditWallStudio}
-                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-white dark:bg-[#161a22] border border-emerald-400 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1 cursor-pointer"
-                >
-                  <Edit3 size={11} />
-                  <span>Edit Wall Profile &amp; Location</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEmbedModal(true)}
-                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 transition-all cursor-pointer"
-                >
-                  <Code size={12} />
-                  <span>Embed Trust Badge</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => go('entity')}
-                  className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Provider Portal</span>
-                </button>
+                {isDeskOwner ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={openEditWallStudio}
+                      className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-white dark:bg-[#161a22] border border-emerald-400 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit3 size={11} />
+                      <span>Edit Wall Profile &amp; Location</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowEmbedModal(true)}
+                      className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Code size={12} />
+                      <span>Embed Trust Badge</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => go('gov_inbox')}
+                      className="px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold bg-emerald-700 hover:bg-emerald-800 text-white flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Open Desk →</span>
+                    </button>
+                  </>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold bg-white/80 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1">
+                    <CheckCircle2 size={11} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Official Sovereign Desk Active</span>
+                  </span>
+                )}
               </div>
             </div>
           ) : (

@@ -1375,6 +1375,131 @@ Session ended.`;
     });
   });
 
+  // POST /api/perks/courtesy-voucher - Issues an optional courtesy token on inquiry resolution
+  app.post('/api/perks/courtesy-voucher', (req, res) => {
+    const {
+      recipientName,
+      recipientContact,
+      postId,
+      brand,
+      title,
+      category = 'hospitality',
+      faceValue,
+      currency,
+      country = 'UG',
+      citationNote,
+      dispatchedBy,
+      merchantId,
+    } = req.body || {};
+
+    if (!recipientName) {
+      return res.status(400).json({ error: 'recipientName is required' });
+    }
+
+    const fv = Number(faceValue) || (country === 'KE' ? 250 : 5000);
+    const curr = currency || (country === 'KE' ? 'KES' : country === 'NG' ? 'NGN' : 'UGX');
+    const bName = brand || 'CivicDuty Provider Desk';
+    const codeSuffix = Math.floor(1000 + Math.random() * 9000);
+    const cleanPrefix = bName.replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase() || 'CVIC';
+    const voucherCode = `${cleanPrefix}-${fv >= 1000 ? Math.round(fv / 1000) + 'K' : fv}-${codeSuffix}`;
+    const pin = `${Math.floor(100000 + Math.random() * 900000)}`;
+    const nowIso = new Date().toISOString();
+
+    const newVoucher = {
+      id: `PV-COURTESY-${Date.now()}-${codeSuffix}`,
+      voucherCode,
+      pin,
+      category,
+      brand: bName,
+      title: title || `${bName} Courtesy Token (${curr} ${fv.toLocaleString()})`,
+      faceValue: fv,
+      currency: curr,
+      country,
+      sponsoredBy: dispatchedBy || bName,
+      sponsorType: 'authority',
+      vaultType: 'provider_vault',
+      jurisdictionLabel: bName,
+      batchId: `BATCH-COURTESY-${Date.now().toString(36).toUpperCase()}`,
+      status: 'dispatched',
+      createdAt: nowIso,
+      expiryDate: '2026-12-31',
+      redemptionUssdString: country === 'KE' ? `*141*${voucherCode}#` : `*303*${voucherCode}#`,
+      qrCodeData: `CIVIC-${voucherCode}`,
+      dispatchedTo: {
+        recipientName,
+        recipientContact: recipientContact || 'Citizen Observer',
+        dispatchedAt: nowIso,
+        dispatchedBy: dispatchedBy || bName,
+        citationNote: citationNote || 'Courtesy token issued in appreciation for verified citizen feedback.',
+        postOrProjectId: postId || 'CIVIC-INQUIRY',
+        smsDeliveryStatus: 'delivered',
+        ethicalNonInterferenceAck: true,
+      },
+      merchantId: merchantId || undefined,
+      merchantName: bName,
+      merchantPayout: {
+        payoutAmount: Math.round(fv * 0.98),
+        commissionAmount: Math.round(fv * 0.02),
+        commissionRate: 0.02,
+        payoutStatus: 'escrowed',
+      },
+    };
+
+    inMemoryPerkVouchers.unshift(newVoucher);
+
+    res.json({
+      success: true,
+      message: `Courtesy voucher ${voucherCode} created and dispatched to ${recipientName}.`,
+      voucher: newVoucher,
+    });
+  });
+
+  // GET /api/merchant-loyalty/z-report - Generates live End-of-Day Z-Report reconciliation
+  app.get('/api/merchant-loyalty/z-report', (req, res) => {
+    const { merchantId, merchantName, country = 'UG', cashierId } = req.query as Record<string, string>;
+
+    const matchingRedeemed = inMemoryPerkVouchers.filter((v) => {
+      if (v.status !== 'redeemed') return false;
+      if (country && v.country?.toUpperCase() !== country.toUpperCase()) return false;
+      if (merchantId && v.merchantId && v.merchantId !== merchantId) return false;
+      if (merchantName && v.brand && !v.brand.toLowerCase().includes(merchantName.toLowerCase())) return false;
+      return true;
+    });
+
+    const totalRedeemedCount = matchingRedeemed.length;
+    const grossRedeemedValue = matchingRedeemed.reduce((acc, v) => acc + (Number(v.faceValue) || 0), 0);
+    const platformCommission = Math.round(grossRedeemedValue * 0.02);
+    const netEscrowPayout = grossRedeemedValue - platformCommission;
+    const currency = matchingRedeemed[0]?.currency || (country === 'KE' ? 'KES' : 'UGX');
+    const zReportNo = `ZR-${country}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    res.json({
+      success: true,
+      zReportNo,
+      generatedAt: new Date().toISOString(),
+      cashierOperator: cashierId || 'Terminal Lead / Cashier #1',
+      merchantName: merchantName || 'Verified Provider Desk',
+      country,
+      currency,
+      metrics: {
+        totalVouchersRedeemed: totalRedeemedCount,
+        grossSalesValue: grossRedeemedValue,
+        platformFeePct: 2,
+        platformFeeAmount: platformCommission,
+        netEscrowDisbursement: netEscrowPayout,
+        settlementStatus: 'AUTOMATIC_ESCROW_RELEASED',
+        settlementChannel: 'MTN MoMo / Airtel Money Escrow Direct Clearing',
+      },
+      itemizedLedger: matchingRedeemed.slice(0, 20).map((v) => ({
+        code: v.voucherCode,
+        title: v.title,
+        amount: v.faceValue,
+        redeemedAt: v.merchantPayout?.releasedAt || v.updatedAt || new Date().toISOString(),
+        verifiedBy: v.pointOfSaleVerification?.verifiedBy || 'Cashier Desk',
+      })),
+    });
+  });
+
   // ============================================================================
   // CD-OPS AI ARCHITECTURAL & PROMPT RECOMMENDATION ENGINE (GEMINI API)
   // ============================================================================

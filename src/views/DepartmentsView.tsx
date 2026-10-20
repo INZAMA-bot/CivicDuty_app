@@ -277,11 +277,12 @@ export const DepartmentsView: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setShowRegisterModal(true)}
+              onClick={() => go('entity_register')}
               className="px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-slate-800 dark:text-slate-200 font-mono font-semibold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Register a new verified institutional or commercial provider desk"
             >
               <Plus size={13} />
-              <span>Register</span>
+              <span>Register Desk</span>
             </button>
           </div>
         </div>
@@ -470,10 +471,10 @@ export const DepartmentsView: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => setShowRegisterModal(true)}
+              onClick={() => go('entity_register')}
               className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Plus size={14} /> Register New Entity
+              <Plus size={14} /> Register New Desk
             </button>
           </div>
         ) : (

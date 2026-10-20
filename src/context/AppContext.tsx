@@ -188,6 +188,7 @@ interface AppContextType {
   addPoints: (userId: string, pts: number, msg: string) => void;
   updateUserAvatar: (userId: string, avatarUrl: string) => void;
   updateUserProfile: (userId: string, updates: Partial<UserProfile>) => void;
+  updateCurrentUser: (updates: Partial<UserSession>) => void;
   // Field Manual & User Guidance Modal
   guideModalOpen: boolean;
   guideInitialTab: string;
@@ -2826,6 +2827,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateCurrentUser = (updates: Partial<UserSession>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updatedUser: UserSession = {
+        ...prev,
+        ...updates,
+      };
+      try {
+        localStorage.setItem('cd_user', JSON.stringify(updatedUser));
+      } catch {}
+      return updatedUser;
+    });
+  };
+
   const claimEntity = (data: Omit<ClaimedEntityRecord, 'claimedAt' | 'verified'>) => {
     const record: ClaimedEntityRecord = {
       ...data,
@@ -2928,6 +2943,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateClaimedEntityDetails = (deptId: string, updates: Partial<ClaimedEntityRecord>) => {
+    // Strictly restrict edits to the verified desk owner / authorized administrator
+    const isOwner = Boolean(
+      user && (
+        user.dept === deptId ||
+        user.role === 'platform_admin' ||
+        (user.organization_name && (
+          user.organization_name.toLowerCase().includes(deptId.toLowerCase()) ||
+          deptId.toLowerCase().includes(user.organization_name.toLowerCase())
+        )) ||
+        (user.entity_type === 'non_government_entity' && user.dept === deptId) ||
+        (user.role === 'node_admin' && (user.dept === deptId || user.is_admin))
+      )
+    );
+
+    if (!isOwner) {
+      toast('Permission denied: Only the verified desk owner can modify entity details.', 'red');
+      return;
+    }
+
     const country = activeDeptCountry || user?.country || 'UG';
     const baseDept = getDept(country, deptId);
     const existing = claimedEntities[deptId] || {
@@ -4147,6 +4181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addPoints,
         updateUserAvatar,
         updateUserProfile,
+        updateCurrentUser,
         guideModalOpen,
         guideInitialTab,
         openGuide,
