@@ -53,6 +53,8 @@ import { RolloutSupervisionStructure } from '../components/RolloutSupervisionStr
 import { DistrictSupervisionStructure } from '../components/DistrictSupervisionStructure';
 import { SubcountySupervisionStructure } from '../components/SubcountySupervisionStructure';
 import { ParishSupervisionStructure } from '../components/ParishSupervisionStructure';
+import { AgencySupervisionStructure } from '../components/AgencySupervisionStructure';
+import { OmbudsmanSupervisionStructure } from '../components/OmbudsmanSupervisionStructure';
 import { SovereignBatchCommissioning } from '../components/SovereignBatchCommissioning';
 import { ExecutiveTierAnalytics } from '../components/ExecutiveTierAnalytics';
 
@@ -271,6 +273,26 @@ export const GovTeamView: React.FC = () => {
   );
 
   const { tier, districtObj, subcountyObj, parishObj } = jurisdiction;
+
+  const isOmbudsman = Boolean(
+    user?.dept === 'igg' ||
+    user?.real_title_short?.toLowerCase().includes('igg') ||
+    user?.real_title_short?.toLowerCase().includes('ombudsman') ||
+    user?.role_label?.toLowerCase().includes('ombudsman') ||
+    user?.role_label?.toLowerCase().includes('inspector general') ||
+    user?.organization_name?.toLowerCase().includes('inspectorate')
+  );
+
+  const isStatutoryAgency = Boolean(
+    !isOmbudsman && (
+      tier === 4 ||
+      user?.hierarchy_level === 'tier4_agency' ||
+      user?.is_utility ||
+      ['nwsc', 'unra', 'ura', 'nema', 'caa', 'era', 'ucc'].includes(user?.dept || '') ||
+      user?.organization_name?.toLowerCase().includes('corporation') ||
+      user?.organization_name?.toLowerCase().includes('authority')
+    )
+  );
 
   // Geographic state locked to statutory station where appropriate
   const [district, setDistrict] = useState(() => {
@@ -779,6 +801,10 @@ export const GovTeamView: React.FC = () => {
                 ? `Tier 5 · ${psInfo.ministryName} (${countryMeta.name}) · Strict Ministry Jurisdiction`
                 : tier === 5
                 ? `Tier 5 · ${rolloutConfig.superadmin.title} (${countryMeta.name})`
+                : isOmbudsman
+                ? `Tier 4 · Constitutional Oversight & Anti-Corruption Ombudsman (${countryMeta.name})`
+                : isStatutoryAgency || tier === 4
+                ? `Tier 4 · Statutory Corporation & National Operations (${countryMeta.name})`
                 : tier === 3
                 ? `Tier 3: CAO "${districtObj?.name || countryMeta.name} District"`
                 : tier === 2
@@ -796,16 +822,26 @@ export const GovTeamView: React.FC = () => {
               ? `${psInfo.ministryName} — Ministerial Cabinet & Sector Team Roster`
               : tier === 5
               ? `${rolloutConfig.superadmin.ministry} (${countryMeta.name}) — National Supervisory Roster`
+              : isOmbudsman
+              ? `Inspectorate of Government (IGG) — Ombudsman Chambers & Regional Bureau Roster`
+              : isStatutoryAgency || tier === 4
+              ? `${d.name} — Corporate Operations & Regional Directorate Roster`
               : tier === 3
               ? `Tier 3: CAO "${districtObj?.name || 'District'}" — Administration Roster`
               : tier === 2
               ? `Tier 2: SAS "${subcountyObj?.name || 'Sub-County'}" — LLG Administration Roster`
-              : `Tier 1: "${parishObj?.name || 'Parish'}" — Administrative Unit Roster`}
+              : `Tier 1: "${parishObj?.name || 'Parish'}" — Grassroots Frontline Command & Village Telemetry`}
           </h1>
 
           <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
             {isLinePs
               ? `Strictly scoped to ${psInfo.ministryName} (${countryMeta.name}). Invite and commission your Cabinet Minister, Ministers of State, Undersecretary, Technical Directors, and Internal Auditors.`
+              : isOmbudsman
+              ? `Chapter 13 Constitutional Mandate for elimination of corruption, abuse of office, and public injustice across all MDAs and Local Governments.`
+              : isStatutoryAgency || tier === 4
+              ? `National operational asset management, regional network branches, emergency maintenance crews, and commercial service delivery for ${countryMeta.name}.`
+              : tier === 1
+              ? `Parish Development Model (PDM) frontline command, PDC secretariat, agricultural extension, and volunteer village chairpersons read-only telemetry.`
               : `Official civil service roster, desk delegation, successor handovers, and supervisory oversight for ${countryMeta.name}.`}
           </p>
         </div>
@@ -816,7 +852,7 @@ export const GovTeamView: React.FC = () => {
             <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">{user.officer_name || user.name || 'Supervisor'}</div>
           </div>
           <span className="text-[10px] font-mono font-bold px-3 py-1.5 rounded-lg bg-emerald-600 text-white uppercase tracking-wider">
-            {isLinePs ? `${psInfo.shortTitle} PS` : `TIER ${tier} NODE`}
+            {isLinePs ? `${psInfo.shortTitle} PS` : isOmbudsman ? 'TIER 4 OMBUDSMAN' : isStatutoryAgency ? 'TIER 4 UTILITY' : `TIER ${tier} NODE`}
           </span>
         </div>
       </div>
@@ -833,6 +869,10 @@ export const GovTeamView: React.FC = () => {
               ? `Ministry Mandate Only (${psInfo.shortTitle})`
               : tier === 5
               ? `National Territorial Oversight (${countryMeta.name})`
+              : isOmbudsman
+              ? `Constitutional Oversight Mandate (Articles 223–232)`
+              : isStatutoryAgency || tier === 4
+              ? `Sectoral Statutory Mandate (${d.name})`
               : tier === 3
               ? `District Accounting Officer (${districtObj?.name || 'District'})`
               : tier === 2
@@ -852,19 +892,29 @@ export const GovTeamView: React.FC = () => {
               As <strong>{rolloutConfig.superadmin.title} ({rolloutConfig.superadmin.name})</strong>, you oversee national territorial decentralization across <strong>{countryMeta.name}</strong> ({rolloutConfig.nodes.length} regional/district nodes), including commissioning of Regional/District Accounting Officers and coordination with {countryMeta.name}&apos;s Sister Ministries.
             </>
           )}
-          {!isLinePs && tier === 3 && (
+          {isOmbudsman && (
+            <>
+              As <strong>Inspector General of Government / Ombudsman</strong>, you exercise supreme constitutional oversight under Articles 223–232 of the Constitution. Your team spans specialized Forensic Investigators, Ombudsman Officers, Leadership Code Compliance Auditors, and 16 Regional Inspectorate Bureaus.
+            </>
+          )}
+          {!isOmbudsman && (isStatutoryAgency || tier === 4) && (
+            <>
+              Under the <strong>{d.name} Act</strong>, you hold statutory authority for national asset operations, commercial service reliability, and regional network distribution across <strong>{countryMeta.name}</strong>. Your roster covers Executive Directors, Regional Area Managers, and Emergency Rapid Response Crews.
+            </>
+          )}
+          {!isOmbudsman && !isStatutoryAgency && tier === 3 && (
             <>
               Under the Local Governments Act, the <strong>Chief Administrative Officer (CAO)</strong> is the head of the civil service and accounting officer of <strong>{districtObj?.name}</strong>. Your dashboard and invitation authority are strictly restricted to officers you supervise directly.
             </>
           )}
-          {!isLinePs && tier === 2 && (
+          {!isOmbudsman && !isStatutoryAgency && tier === 2 && (
             <>
               As <strong>Sub-County Accounting Officer</strong> of <strong>{subcountyObj?.name}</strong>, you directly supervise Parish/Ward Chiefs, Community Development Officers, and field extension personnel within your sub-county.
             </>
           )}
-          {!isLinePs && tier === 1 && (
+          {!isOmbudsman && !isStatutoryAgency && tier === 1 && (
             <>
-              As <strong>Parish Chief / Ward Administrator</strong> of <strong>{parishObj?.name}</strong>, you coordinate the grassroots committee, supervising village chairpersons and community monitors.
+              As <strong>Parish Chief / Ward Administrator</strong> of <strong>{parishObj?.name}</strong>, you coordinate the frontline grassroots committee, supervising the PDM SACCO focal person, community development officers, and volunteer village chairpersons with read-only telemetry.
             </>
           )}
         </p>
@@ -913,6 +963,10 @@ export const GovTeamView: React.FC = () => {
           {/* TIER-TAILORED SUPERVISION MATRIX */}
           {isLinePs ? null : tier === 5 ? (
             <RolloutSupervisionStructure onPrefillManualForm={handlePrefillManual} />
+          ) : isOmbudsman ? (
+            <OmbudsmanSupervisionStructure onPrefillManualForm={handlePrefillManual} />
+          ) : isStatutoryAgency || tier === 4 ? (
+            <AgencySupervisionStructure deptId={user.dept || 'nwsc'} onPrefillManualForm={handlePrefillManual} />
           ) : tier === 3 ? (
             <DistrictSupervisionStructure districtId={districtObj.id} onPrefillManualForm={handlePrefillManual} />
           ) : tier === 2 ? (
@@ -933,9 +987,10 @@ export const GovTeamView: React.FC = () => {
           {/* ========================================================================= */}
           {/* SECTION 1: APPOINTMENT / INVITATION SECTION                                */}
           {/* Tier 5 (MoLG Territorial Superadmin): Handled inside RolloutSupervision   */}
+          {/* Statutory Agency / Ombudsman: Handled inside dedicated structure tools  */}
           {/* Line Ministry PS OR Tier 1-3: Direct-Report Statutory Appointment Form    */}
           {/* ========================================================================= */}
-          {tier === 5 && !isLinePs ? null : (
+          {(tier === 5 && !isLinePs) || isOmbudsman || isStatutoryAgency || tier === 4 ? null : (
             <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
         <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

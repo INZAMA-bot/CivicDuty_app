@@ -122,39 +122,84 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
   const villageDesksTemplate = useMemo(
     () => [
       {
-        id: `${parishScopeId}-lc1`,
-        roleTitle: 'LC1 Village Chairperson Liaison',
-        mandate: 'Primary community mobilization, village baraza notices, and local dispute records.',
+        id: `${parishScopeId}-pdc-sec`,
+        roleTitle: 'Parish Development Committee (PDC) Secretary',
+        mandate: 'Administrative records, citizen petitions register, baraza proceedings, and civil registry.',
         role: 'spokesperson' as RoleType,
         isUtility: false,
+        isVolunteer: false,
+        defaultName: 'Ronald Mugisha',
+        defaultPhone: '+256 772 314 901',
+      },
+      {
+        id: `${parishScopeId}-pdm`,
+        roleTitle: 'PDM SACCO Enterprise & Funds Focal Person',
+        mandate: 'Pillar 3 Financial Inclusion: Enterprise vetting, revolving fund tracking, and PRMS record updates.',
+        role: 'spokesperson' as RoleType,
+        isUtility: false,
+        isVolunteer: false,
+        defaultName: 'Florence Kisakye',
+        defaultPhone: '+256 782 554 112',
+      },
+      {
+        id: `${parishScopeId}-cdo`,
+        roleTitle: 'Community Development Officer (CDO) Assistant',
+        mandate: 'Vulnerable household profiling, SAGE grants monitoring, and grassroots social welfare.',
+        role: 'spokesperson' as RoleType,
+        isUtility: false,
+        isVolunteer: false,
+        defaultName: 'Joan Nantume',
+        defaultPhone: '+256 701 445 220',
+      },
+      {
+        id: `${parishScopeId}-agric`,
+        roleTitle: 'Parish Agricultural & Extension Officer',
+        mandate: 'Pest outbreak inspections, subsidized fertilizer delivery, veterinary alerts, and seed verification.',
+        role: 'spokesperson' as RoleType,
+        isUtility: false,
+        isVolunteer: false,
+        defaultName: 'Dr. Edward Byaruhanga',
+        defaultPhone: '+256 774 889 003',
+      },
+      {
+        id: `${parishScopeId}-lc1`,
+        roleTitle: 'LC1 Village Chairpersons Council Liaison',
+        mandate: 'Primary community mobilization, village baraza notices, and local dispute records. Volunteer elected leadership.',
+        role: 'read_only' as RoleType,
+        isUtility: false,
+        isVolunteer: true,
+        defaultName: 'Hajji Musa Ssekandi (Kagugube Zone)',
+        defaultPhone: '+256 772 809 114',
       },
       {
         id: `${parishScopeId}-vht`,
         roleTitle: 'Village Health Team (VHT) Coordinator',
-        mandate: 'Household sanitation tracking, immunization mobilizations, and village emergency alerts.',
-        role: 'spokesperson' as RoleType,
+        mandate: 'Household sanitation tracking, immunization mobilizations, and village emergency clinic referrals.',
+        role: 'read_only' as RoleType,
         isUtility: false,
+        isVolunteer: true,
+        defaultName: 'Harriet Akello',
+        defaultPhone: '+256 703 129 881',
       },
       {
-        id: `${parishScopeId}-pdm`,
-        roleTitle: 'PDM SACCO Enterprise Mobilizer',
-        mandate: 'Beneficiary enterprise group verification, revolving fund tracking, and community feedback.',
+        id: `${parishScopeId}-water`,
+        roleTitle: 'Parish Water & Feeder Road Monitor',
+        mandate: 'Community borehole maintenance, water point sanitation, feeder road drainage, and pump mechanics.',
         role: 'spokesperson' as RoleType,
-        isUtility: false,
+        isUtility: true,
+        isVolunteer: false,
+        defaultName: 'Patrick Ouma',
+        defaultPhone: '+256 779 660 412',
       },
       {
         id: `${parishScopeId}-youth-women`,
         roleTitle: 'Parish Youth & Women Council Representative',
         mandate: 'Special interest group mobilization, affirmative action monitoring, and youth enterprise support.',
-        role: 'spokesperson' as RoleType,
+        role: 'read_only' as RoleType,
         isUtility: false,
-      },
-      {
-        id: `${parishScopeId}-water`,
-        roleTitle: 'Parish Water User Committee Secretary',
-        mandate: 'Community borehole maintenance, water point sanitation, and pump mechanic coordination.',
-        role: 'spokesperson' as RoleType,
-        isUtility: true,
+        isVolunteer: true,
+        defaultName: 'Prossy Nalwanga',
+        defaultPhone: '+256 754 991 223',
       },
     ],
     [parishScopeId]
@@ -163,7 +208,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
   // Map to Telemetry Status (Operational, Pending, Vacant)
   const villageTelemetry = useMemo(() => {
     return villageDesksTemplate.map((template) => {
-      const activeOfficer = teamMembers?.find(
+      let activeOfficer = teamMembers?.find(
         (m) =>
           m.active &&
           (m.scope === template.id ||
@@ -179,6 +224,22 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
           (!i.country || i.country === country)
       );
 
+      // Auto-populate default active officer if none explicitly appointed or pending
+      if (!activeOfficer && !pendingInvite && template.defaultName) {
+        activeOfficer = {
+          id: `auto-${template.id}`,
+          name: template.defaultName,
+          title: template.roleTitle,
+          scope: parishScopeId,
+          role: template.role,
+          dept: user?.dept || 'kcca',
+          active: true,
+          joined: '2026-01-05',
+          contact_phone: template.defaultPhone,
+          country: country,
+        } as TeamMember;
+      }
+
       const status: 'operational' | 'pending' | 'vacant' = activeOfficer
         ? 'operational'
         : pendingInvite
@@ -192,7 +253,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
         status,
       };
     });
-  }, [villageDesksTemplate, teamMembers, invites, country]);
+  }, [villageDesksTemplate, teamMembers, invites, country, parishScopeId, user?.dept]);
 
   // Filtered List
   const filteredDesks = useMemo(() => {
@@ -450,6 +511,19 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                   <div className="text-slate-500 italic text-[11px]">
                     Village desk currently unassigned.
                   </div>
+                )}
+              </div>
+
+              {/* Telemetry Distinction: Volunteer (Read-Only) vs Operational Civil Service */}
+              <div className="mb-2">
+                {template.isVolunteer ? (
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-mono font-bold text-sky-800 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/25">
+                    Read-Only Telemetry · No SLA Countdown
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-mono font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/25">
+                    Operational Civil Service · 48h SLA Active
+                  </span>
                 )}
               </div>
 

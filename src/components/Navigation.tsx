@@ -96,8 +96,8 @@ export const Navigation: React.FC<NavigationProps> = () => {
       activeUser.deskCode === 'PS-MOLG-2026' ||
       activeUser.deskCode === 'PS-MOLG-ROLLOUT');
 
-  // Statutory Accounting Officers who manage institutional staff teams (PS, CAO, Town Clerk, Utility MD)
-  const isAccountingOfficer = !isMinister && !isGrassrootsChief && (activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin || psInfo.isPs);
+  // Statutory Accounting Officers and Grassroots Desk Leads who manage staff teams (PS, CAO, Town Clerk, Utility MD, Parish Chief)
+  const isAccountingOfficer = !isMinister && (isGrassrootsChief || activeUser.role === 'node_admin' || activeUser.role === 'platform_admin' || activeUser.is_admin || psInfo.isPs || activeUser.role === 'spokesperson');
 
   const handleApexClick = () => {
     if (psInfo.ministryId) {
@@ -122,9 +122,10 @@ export const Navigation: React.FC<NavigationProps> = () => {
         : 'Provider Desk',
       icon: Building2,
     },
-    { id: 'entity_team', label: 'Staff & Team Roster', icon: Users },
-    { id: 'entity_register', label: 'Desk Profile & Tier', icon: Layers },
     { id: 'gov_projects', label: 'Facility Upgrades', icon: Briefcase },
+    { id: 'entity_team', label: 'Staff & Team Roster', icon: Users },
+    { id: 'gov_audit', label: 'Audit Chain', icon: Scale },
+    { id: 'entity_register', label: 'Desk Profile & Tier', icon: Layers },
     { id: 'perk_vault', label: '5-Vault Perks', icon: Award },
   ];
 
@@ -136,7 +137,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
       ? [
           {
             id: 'gov_team' as ViewType,
-            label: psInfo.isPs && !psInfo.isMoLG ? 'Ministry Team' : 'Team Roster',
+            label: isGrassrootsChief ? 'Parish Team' : psInfo.isPs && !psInfo.isMoLG ? 'Ministry Team' : 'Team Roster',
             icon: Users,
           },
         ]
