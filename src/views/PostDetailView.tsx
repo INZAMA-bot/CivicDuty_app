@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { catByID, escalationFor, getDept, pathStr, slaStatus, srcLabel, timeAgo, stripDecorativeEmojis } from '../utils/helpers';
 import {
   ChevronLeft,
+  ChevronRight,
   Lock,
   AlertTriangle,
   ArrowUp,
@@ -91,6 +92,7 @@ export const PostDetailView: React.FC = () => {
     bookmarks,
     toggleBookmark,
     setActiveHashtagFilter,
+    setActivePost,
   } = useApp();
 
   const [replyToSender, setReplyToSender] = useState<string | null>(null);
@@ -110,6 +112,10 @@ export const PostDetailView: React.FC = () => {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [acquiredGps, setAcquiredGps] = useState<{ lat: string; lng: string } | null>(null);
   const [gpsStatus, setGpsStatus] = useState<string>('Not acquired');
+
+  // Touch Swipe Gesture Tracking for fluid next/previous post navigation
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
 
   // Dispute & Ratification Form States
   const [showDisputeForm, setShowDisputeForm] = useState(false);
@@ -137,6 +143,48 @@ export const PostDetailView: React.FC = () => {
   }
 
   const p = posts.find((item) => item.id === activePost.id) || activePost;
+
+  // Active post list for Next / Prev navigation within the active feed/country
+  const postsList = posts.filter((item) => item.country === p.country);
+  const currentIndex = postsList.findIndex((item) => item.id === p.id);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < postsList.length - 1;
+
+  const handlePrevPost = () => {
+    if (hasPrev) {
+      const prevPost = postsList[currentIndex - 1];
+      setActivePost(prevPost);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast(`Switched to Dispatch #${prevPost.id.slice(-6).toUpperCase()}`, 'info');
+    }
+  };
+
+  const handleNextPost = () => {
+    if (hasNext) {
+      const nextPost = postsList[currentIndex + 1];
+      setActivePost(nextPost);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast(`Switched to Dispatch #${nextPost.id.slice(-6).toUpperCase()}`, 'info');
+    }
+  };
+
+  // Keyboard navigation: Left/Right arrows or J/K keys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const targetTag = (e.target as HTMLElement)?.tagName;
+      if (['INPUT', 'TEXTAREA'].includes(targetTag) || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+      if (e.key === 'ArrowRight' || e.key === 'j' || e.key === 'J') {
+        if (hasNext) handleNextPost();
+      } else if (e.key === 'ArrowLeft' || e.key === 'k' || e.key === 'K') {
+        if (hasPrev) handlePrevPost();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, postsList, hasNext, hasPrev]);
+
   const compiledCount = p.compiled_count || (p.compiled_reports ? p.compiled_reports.length + 1 : 1);
   const candidateDuplicatePosts = posts.filter(
     (other) =>
@@ -357,15 +405,74 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
   };
 
   return (
-    <div className="animate-fade-in pb-20 text-slate-950 dark:text-white">
-      {/* Top Header Bar */}
+    <div
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+      }}
+      onTouchEnd={(e) => {
+        const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+        const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+        // Check if swipe is horizontal (> 65px) and predominantly horizontal (|deltaX| > |deltaY| * 1.5)
+        if (Math.abs(deltaX) > 65 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+          if (deltaX < 0 && hasNext) {
+            handleNextPost();
+          } else if (deltaX > 0 && hasPrev) {
+            handlePrevPost();
+          }
+        }
+      }}
+      className="animate-fade-in pb-20 text-slate-950 dark:text-white"
+    >
+      {/* Top Header Bar with Fluid Dispatch Switcher */}
       <div className="px-4 pt-4 pb-3.5 border-b border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 transition-colors shadow-2xs">
-        <button
-          onClick={() => go(prevView || 'feed')}
-          className="flex items-center gap-1.5 text-xs mono font-black text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 mb-3 transition-colors"
-        >
-          <ChevronLeft size={16} /> Back to Dashboard
-        </button>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <button
+            onClick={() => go(prevView || 'feed')}
+            className="flex items-center gap-1.5 text-xs mono font-black text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+          >
+            <ChevronLeft size={16} /> Back to Dashboard
+          </button>
+
+          {/* Quick-Triage Dispatch Switcher Pill */}
+          {postsList.length > 1 && (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-2 py-0.5 text-[11px] font-mono shadow-xs">
+              <button
+                type="button"
+                onClick={handlePrevPost}
+                disabled={!hasPrev}
+                className={`p-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer ${
+                  hasPrev
+                    ? 'text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800'
+                    : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                }`}
+                title="Previous Dispatch (Left Arrow or K)"
+              >
+                <ChevronLeft size={14} />
+                <span className="text-[10px] font-bold hidden sm:inline">Prev</span>
+              </button>
+
+              <span className="px-1.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                #{currentIndex + 1} / {postsList.length}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleNextPost}
+                disabled={!hasNext}
+                className={`p-1 rounded-lg flex items-center gap-1 transition-colors cursor-pointer ${
+                  hasNext
+                    ? 'text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800'
+                    : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                }`}
+                title="Next Dispatch (Right Arrow or J)"
+              >
+                <span className="text-[10px] font-bold hidden sm:inline">Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2 flex-wrap justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="p-1 rounded bg-slate-100 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 flex items-center justify-center">
@@ -1985,6 +2092,44 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
         entityName={user?.dept_label || d.name}
         contextTitle={p.title}
       />
+
+      {/* Floating Quick-Triage Pill for Mobile Thumb Browsing */}
+      {postsList.length > 1 && (
+        <aside
+          aria-label="Dispatch navigation"
+          className="fixed bottom-6 right-4 sm:right-8 z-30 flex items-center gap-1.5 bg-white/95 dark:bg-[#161a22]/95 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 rounded-full px-3 py-1.5 shadow-xl font-mono text-xs select-none"
+        >
+          <button
+            type="button"
+            onClick={handlePrevPost}
+            disabled={!hasPrev}
+            className={`p-1 rounded-full transition-colors ${
+              hasPrev
+                ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer'
+                : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+            }`}
+            title="Previous Dispatch (Left Arrow or K)"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="px-1 text-[10.5px] font-bold text-slate-600 dark:text-slate-300">
+            {currentIndex + 1} / {postsList.length}
+          </span>
+          <button
+            type="button"
+            onClick={handleNextPost}
+            disabled={!hasNext}
+            className={`p-1 rounded-full transition-colors ${
+              hasNext
+                ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer'
+                : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+            }`}
+            title="Next Dispatch (Right Arrow or J)"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </aside>
+      )}
     </div>
   );
 };

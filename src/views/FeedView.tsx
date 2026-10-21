@@ -69,6 +69,24 @@ export const FeedView: React.FC = () => {
   const [showBookmarksOnly, setShowBookmarksOnly] = useState<boolean>(false);
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
 
+  // Preserve & Restore Feed Scroll Position
+  useEffect(() => {
+    const saved = sessionStorage.getItem('civic_feed_scroll');
+    if (saved) {
+      const y = parseInt(saved, 10);
+      if (!isNaN(y) && y > 0) {
+        setTimeout(() => {
+          window.scrollTo({ top: y, behavior: 'instant' });
+        }, 30);
+      }
+    }
+    const handleScroll = () => {
+      sessionStorage.setItem('civic_feed_scroll', String(window.scrollY));
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const activePromotionalAds = (promotionalAds || []).filter((a) => a.published);
 
   const activeUser = user || ensureCitizenSession();

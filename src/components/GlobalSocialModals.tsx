@@ -34,6 +34,8 @@ import {
   Camera,
   Monitor,
   Search,
+  ChevronDown,
+  Maximize2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES, getDept } from '../data/countries';
@@ -44,6 +46,7 @@ export const GlobalSocialModals: React.FC = () => {
     user,
     ensureCitizenSession,
     posts,
+    setPosts,
     setActivePost,
     go,
     toast,
@@ -108,6 +111,7 @@ export const GlobalSocialModals: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Town Hall state
+  const [barazaMinimized, setBarazaMinimized] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
   const [micMuted, setMicMuted] = useState(true);
   const [cameraOn, setCameraOn] = useState(false);
@@ -1215,7 +1219,7 @@ export const GlobalSocialModals: React.FC = () => {
 
   // 5. LIVE DIGITAL BARAZA / TOWN HALL VIDEO + AUDIO BROADCAST MODAL — Google AI Studio Aesthetic
   const renderTownHallModal = () => {
-    if (!activeTownHall) return null;
+    if (!activeTownHall || barazaMinimized) return null;
     const th: TownHallSession = activeTownHall;
     const cInfo = COUNTRIES[th.country] || COUNTRIES.UG;
     const isVideoStage = (th.has_video ?? true) && barazaViewMode === 'video';
@@ -1235,7 +1239,7 @@ export const GlobalSocialModals: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
               {/* Switch between HD Video Stage and Low-Data Audio Mode */}
               <button
                 type="button"
@@ -1247,19 +1251,79 @@ export const GlobalSocialModals: React.FC = () => {
                 <span>{barazaViewMode === 'video' ? 'Low-Data Audio' : 'HD Video Stage'}</span>
               </button>
 
+              {/* Minimize to Persistent Background Mini-Player (Like Twitter / X Spaces) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setBarazaMinimized(true);
+                  toast('Live Baraza minimized to background audio player', 'info');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                title="Minimize and continue browsing feed"
+              >
+                <ChevronDown size={12} />
+                <span>Minimize</span>
+              </button>
+
+              {/* Conclude and Archive into Certified Public Record on Feed */}
+              <button
+                type="button"
+                onClick={() => {
+                  const archivePost: Post = {
+                    id: `baraza-rec-${Date.now()}`,
+                    country: th.country || 'UG',
+                    dept: 'mowt',
+                    lane: 'civic',
+                    territory: {
+                      district: 'Kampala District',
+                      subcounty: 'Kampala Central Division',
+                      parish: 'Nakasero Parish',
+                    },
+                    citizen_id: 'host-baraza',
+                    citizen_name: th.host_name,
+                    citizen_rank: 'Accountability Lead',
+                    anonymous: false,
+                    category: 'other',
+                    title: `[CIVIC BARAZA RECORD] ${th.title}`,
+                    body: `Statutory recorded proceedings from ${th.dept_name} Town Hall session. Topic Tag: ${th.topic_tag}. Presided by ${th.host_name} with ${th.listeners_count} citizens tuned in. Forensic audio testimony and verbatim citizen floor ledger cryptographically archived.`,
+                    location: 'Nakasero Parish, Kampala',
+                    source: 'web',
+                    media: [
+                      {
+                        type: 'voice',
+                        duration: '42:18',
+                        caption: 'Live Town Hall Audio & Statutory Transcript',
+                      },
+                    ],
+                    voice_note: {
+                      duration: '42:18',
+                      language: 'Uganda Official Hearing Audio',
+                      transcript: `Official live proceedings recorded from ${th.dept_name} Town Hall session. Topic: ${th.topic_tag}. Presided by ${th.host_name} with ${th.listeners_count} citizens tuned in.`,
+                    },
+                    status: 'resolved',
+                    created_at: new Date().toISOString(),
+                    comments: [],
+                    upvotes: 64,
+                    downvotes: 0,
+                  };
+                  setPosts((prev) => [archivePost, ...prev]);
+                  setActiveTownHall(null);
+                  setBarazaMinimized(false);
+                  toast('Live Baraza recorded & archived to Public Feed!', 'emerald');
+                }}
+                className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                title="Conclude Baraza & Publish Certified Record to Feed"
+              >
+                <FileCheck2 size={11} />
+                <span className="hidden sm:inline">Conclude &amp; Archive</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
                   setActiveTownHall(null);
-                  setHostBarazaModalOpen(true);
+                  setBarazaMinimized(false);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-semibold transition-colors cursor-pointer"
-              >
-                + Host New
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTownHall(null)}
                 className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-600 text-rose-700 dark:text-rose-300 hover:text-white border border-rose-500/20 text-[10px] font-mono font-semibold transition-colors cursor-pointer"
               >
                 Leave
@@ -1725,6 +1789,85 @@ export const GlobalSocialModals: React.FC = () => {
     );
   };
 
+  // 7. Persistent Floating Live Baraza Mini-Player (Like Twitter / X Spaces)
+  const renderFloatingBarazaDock = () => {
+    if (!activeTownHall || !barazaMinimized) return null;
+    const th = activeTownHall;
+    return (
+      <aside
+        aria-label="Live town hall broadcast"
+        className="fixed bottom-20 left-3 right-3 sm:left-auto sm:right-6 sm:bottom-6 sm:w-96 z-40 bg-slate-900/95 dark:bg-[#12161f]/95 text-white border border-emerald-500/50 rounded-2xl p-3 shadow-2xl backdrop-blur-md flex items-center justify-between gap-2.5 animate-slide-up select-none"
+      >
+        <div
+          onClick={() => setBarazaMinimized(false)}
+          className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
+          title="Click to Maximize Live Baraza Stage"
+        >
+          <div className="relative shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-600/30 border border-emerald-500/60 flex items-center justify-center text-emerald-400">
+              {th.has_video ? <Video size={16} /> : <Radio size={16} />}
+            </div>
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 border-2 border-slate-900 animate-pulse" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8.5px] font-mono font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                LIVE BARAZA
+              </span>
+              <span className="text-slate-500">·</span>
+              <span className="text-[9px] font-mono text-emerald-400 font-semibold truncate">
+                {th.listeners_count} listening
+              </span>
+            </div>
+            <p className="text-xs font-bold text-white truncate group-hover:text-emerald-300 transition-colors">
+              {th.title}
+            </p>
+            <p className="text-[10px] text-slate-400 font-mono truncate">
+              Host: {th.host_name}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setMicMuted(!micMuted);
+              toast(micMuted ? 'Mic live' : 'Mic muted', 'emerald');
+            }}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              !micMuted ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'
+            }`}
+            title={micMuted ? 'Unmute Mic' : 'Mute Mic'}
+          >
+            {micMuted ? <MicOff size={13} /> : <Mic size={13} />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setBarazaMinimized(false)}
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 cursor-pointer"
+            title="Maximize Baraza Stage"
+          >
+            <Maximize2 size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTownHall(null);
+              setBarazaMinimized(false);
+              toast('Left Baraza session', 'info');
+            }}
+            className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-600 border border-rose-500/40 text-rose-300 hover:text-white cursor-pointer"
+            title="Leave Room"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      </aside>
+    );
+  };
+
   return (
     <>
       {renderNotificationModal()}
@@ -1732,6 +1875,7 @@ export const GlobalSocialModals: React.FC = () => {
       {renderPublicProfileModal()}
       {renderSocialActionModal()}
       {renderTownHallModal()}
+      {renderFloatingBarazaDock()}
       {renderHostBarazaModal()}
     </>
   );

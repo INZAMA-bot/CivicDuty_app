@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MediaItem } from '../types';
 import {
   Play,
@@ -18,6 +18,8 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   ShieldCheck,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface MediaCardProps {
@@ -37,6 +39,10 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
   const [imageFit, setImageFit] = useState<'contain' | 'cover'>('cover');
   const [multiImageMode, setMultiImageMode] = useState<'stage' | 'grid'>('stage');
   const [activeStageImgIdx, setActiveStageImgIdx] = useState<number>(0);
+  const [showTranscript, setShowTranscript] = useState<boolean>(true);
+
+  const imgTouchStartX = useRef<number>(0);
+  const imgTouchStartY = useRef<number>(0);
 
   const [videoFit, setVideoFit] = useState<'contain' | 'cover'>('contain');
   const [theaterVideoUrl, setTheaterVideoUrl] = useState<{ url: string; caption?: string; duration?: string } | null>(null);
@@ -168,15 +174,22 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
       {/* 1. FULL-FIDELITY IMAGE GALLERY & VIEWER */}
       {images.length > 0 && (
         <div className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#12161f] shadow-xs">
-          {/* Image Viewer Header Bar */}
+          {/* Image Viewer Header Bar — Clean Global Standard */}
           <div className="px-3 py-2 bg-[#f8f9fa] dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 flex-wrap text-[10px] font-mono text-slate-700 dark:text-slate-300">
-            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
-              <ImageIcon size={12} />
-              <span>
-                {images.length === 1
-                  ? 'HIGH-RESOLUTION FIELD PHOTOGRAPH'
-                  : `PHOTO EVIDENCE GALLERY (${images.length} IMAGES)`}
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                <ImageIcon size={13} />
+                <span>
+                  {images.length === 1
+                    ? 'FIELD EVIDENCE PHOTOGRAPH'
+                    : 'PHOTO EVIDENCE GALLERY'}
+                </span>
+              </div>
+              {images.length > 1 && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9px] font-bold">
+                  {activeStageImgIdx + 1} of {images.length}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -185,22 +198,24 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                   <button
                     type="button"
                     onClick={() => setMultiImageMode('stage')}
-                    className={`px-2 py-0.5 rounded text-[9.5px] font-semibold cursor-pointer ${
+                    className={`px-2 py-0.5 rounded text-[9.5px] font-semibold cursor-pointer transition-colors ${
                       multiImageMode === 'stage'
                         ? 'bg-emerald-600 text-white'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
+                    title="Swipeable Carousel Mode"
                   >
-                    Full Stage
+                    Carousel
                   </button>
                   <button
                     type="button"
                     onClick={() => setMultiImageMode('grid')}
-                    className={`px-2 py-0.5 rounded text-[9.5px] font-semibold flex items-center gap-1 cursor-pointer ${
+                    className={`px-2 py-0.5 rounded text-[9.5px] font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
                       multiImageMode === 'grid'
                         ? 'bg-emerald-600 text-white'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
+                    title="Compare Side-by-Side in Grid"
                   >
                     <LayoutGrid size={10} />
                     <span>Grid ({images.length})</span>
@@ -210,42 +225,52 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
               <button
                 type="button"
-                onClick={() => setImageFit(imageFit === 'contain' ? 'cover' : 'contain')}
-                className="px-2 py-0.5 rounded-md bg-white dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-[9.5px] font-semibold cursor-pointer"
-                title="Switch between Full Fill and Uncropped View"
-              >
-                {imageFit === 'contain' ? 'Full Uncropped' : 'Cinema Fill'}
-              </button>
-
-              <button
-                type="button"
                 onClick={() => {
                   setZoomLevel(1);
                   setLightboxIdx(activeStageImgIdx);
                 }}
-                className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white text-[9.5px] font-semibold flex items-center gap-1 cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                title="Inspect in Fullscreen Forensic Lightbox"
               >
-                <Maximize2 size={10} />
-                <span>Fullscreen</span>
+                <Maximize2 size={11} />
+                <span>Inspect</span>
               </button>
             </div>
           </div>
 
-          {/* Single Image OR Multi-Image Full Stage View */}
+          {/* Single Image OR Multi-Image Swipeable Carousel Stage */}
           {(images.length === 1 || multiImageMode === 'stage') && currentStageImage && (
             <div className="relative group">
               <div
+                onTouchStart={(e) => {
+                  imgTouchStartX.current = e.touches[0].clientX;
+                  imgTouchStartY.current = e.touches[0].clientY;
+                }}
+                onTouchEnd={(e) => {
+                  if (images.length <= 1) return;
+                  const deltaX = e.changedTouches[0].clientX - imgTouchStartX.current;
+                  const deltaY = e.changedTouches[0].clientY - imgTouchStartY.current;
+                  if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                    if (deltaX < 0) {
+                      // Swipe left -> next image
+                      setActiveStageImgIdx((prev) => (prev + 1) % images.length);
+                    } else {
+                      // Swipe right -> prev image
+                      setActiveStageImgIdx((prev) => (prev - 1 + images.length) % images.length);
+                    }
+                  }
+                }}
                 onClick={() => {
                   setZoomLevel(1);
                   setLightboxIdx(activeStageImgIdx);
                 }}
-                className="w-full min-h-[220px] max-h-[460px] bg-slate-100 dark:bg-[#0e1116] flex items-center justify-center overflow-hidden cursor-zoom-in relative"
+                className="w-full min-h-[220px] max-h-[460px] bg-slate-900 flex items-center justify-center overflow-hidden cursor-zoom-in relative select-none"
               >
                 {/* Background Placeholder Watermark in case of slow network */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 pointer-events-none p-4 text-center">
                   <ImageIcon size={32} className="opacity-40 mb-1" />
-                  <span className="text-[10px] font-mono font-medium text-slate-500">Citizen Evidence Photograph</span>
-                  <span className="text-[9px] font-mono text-slate-400 truncate max-w-xs">{currentStageImage.caption}</span>
+                  <span className="text-[10px] font-mono font-medium text-slate-400">Citizen Evidence Photograph</span>
+                  <span className="text-[9px] font-mono text-slate-500 truncate max-w-xs">{currentStageImage.caption}</span>
                 </div>
 
                 <img
@@ -260,11 +285,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                       e.currentTarget as HTMLImageElement
                     )
                   }
-                  className={`w-full transition-all duration-300 relative z-1 select-none ${
-                    imageFit === 'contain'
-                      ? 'max-h-[460px] object-contain'
-                      : 'h-[300px] sm:h-[380px] object-cover'
-                  }`}
+                  className="w-full h-[320px] sm:h-[400px] object-cover transition-all duration-300 relative z-1"
                 />
 
                 {images.length > 1 && (
@@ -275,7 +296,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         e.stopPropagation();
                         setActiveStageImgIdx((prev) => (prev - 1 + images.length) % images.length);
                       }}
-                      className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/70 hover:bg-emerald-600 text-white border border-white/20 transition-colors cursor-pointer z-10"
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-emerald-600 text-white border border-white/20 transition-all cursor-pointer z-10 hidden sm:flex items-center justify-center"
                     >
                       <ChevronLeft size={16} />
                     </button>
@@ -285,7 +306,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         e.stopPropagation();
                         setActiveStageImgIdx((prev) => (prev + 1) % images.length);
                       }}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/70 hover:bg-emerald-600 text-white border border-white/20 transition-colors cursor-pointer z-10"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/60 hover:bg-emerald-600 text-white border border-white/20 transition-all cursor-pointer z-10 hidden sm:flex items-center justify-center"
                     >
                       <ChevronRight size={16} />
                     </button>
@@ -293,17 +314,34 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                 )}
               </div>
 
+              {/* Touch Swipe Dots Indicator for Multi-Image Posts */}
+              {images.length > 1 && (
+                <div className="flex items-center justify-center gap-1.5 py-1.5 bg-[#f8f9fa] dark:bg-[#161a22] border-t border-[#e3e6ea] dark:border-[#262b36]">
+                  {images.map((_, dotIdx) => (
+                    <button
+                      key={dotIdx}
+                      type="button"
+                      onClick={() => setActiveStageImgIdx(dotIdx)}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        dotIdx === activeStageImgIdx
+                          ? 'w-5 bg-emerald-500'
+                          : 'w-1.5 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                      }`}
+                      title={`Photo #${dotIdx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Caption & Counter Bar */}
               {(currentStageImage.caption || images.length > 1) && (
                 <div className="px-3.5 py-2 bg-[#f8f9fa] dark:bg-[#161a22] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-[11px] text-slate-700 dark:text-slate-200">
                   <span className="truncate font-medium">
                     {currentStageImage.caption || `Evidence Photograph #${activeStageImgIdx + 1}`}
                   </span>
-                  {images.length > 1 && (
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
-                      {activeStageImgIdx + 1} / {images.length}
-                    </span>
-                  )}
+                  <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
+                    Tap image to inspect
+                  </span>
                 </div>
               )}
 
@@ -507,15 +545,36 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
             </div>
           </div>
 
-          {/* Full Verbatim Transcript Box */}
+          {/* Full Verbatim Transcript Box with Clean Toggle */}
           {effectiveVoice.transcript && (
-            <div className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-indigo-200/70 dark:border-indigo-900/50 space-y-1">
-              <div className="text-[9px] font-mono font-bold uppercase text-indigo-700 dark:text-indigo-400">
-                Verbatim Audio Transcript:
-              </div>
-              <p className="text-xs italic text-slate-800 dark:text-slate-200 leading-relaxed">
-                {effectiveVoice.transcript}
-              </p>
+            <div className="rounded-xl bg-white/90 dark:bg-slate-900/90 border border-indigo-200/70 dark:border-indigo-900/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowTranscript((prev) => !prev)}
+                className="w-full px-3 py-2 flex items-center justify-between gap-2 text-[9.5px] font-mono font-bold uppercase text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+              >
+                <span>Verbatim Audio Transcript &amp; English Translation</span>
+                <span className="flex items-center gap-1 text-[9px] font-semibold lowercase">
+                  {showTranscript ? (
+                    <>
+                      <span>hide</span>
+                      <ChevronUp size={12} />
+                    </>
+                  ) : (
+                    <>
+                      <span>show</span>
+                      <ChevronDown size={12} />
+                    </>
+                  )}
+                </span>
+              </button>
+              {showTranscript && (
+                <div className="px-3 pb-3 pt-1 border-t border-indigo-100 dark:border-indigo-950/80 animate-fade-in">
+                  <p className="text-xs italic text-slate-800 dark:text-slate-200 leading-relaxed">
+                    {effectiveVoice.transcript}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
