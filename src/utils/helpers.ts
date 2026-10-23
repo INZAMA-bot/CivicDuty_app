@@ -111,17 +111,43 @@ export function slaStatus(post: Post) {
   return { label: `${fmtSLA(rem)}`, color: '#f59e0b', pct: Math.round((hrs / d.sla) * 100), overdue: false, fmt: `${fmtSLA(rem)} left` };
 }
 
-export function pathStr(country: CountryCode, t: { district?: string; subcounty?: string; parish?: string }) {
+export function pathStr(country: CountryCode, t: { district?: string; subcounty?: string; parish?: string; ward?: string; village?: string }) {
   if (!t || !TERRITORY[country]) return '';
   const parts: string[] = [];
   if (COUNTRIES[country]) parts.push(COUNTRIES[country].name);
-  const dist = TERRITORY[country]?.find((x) => x.id === t.district);
+  const dist = TERRITORY[country]?.find((x) => x.id === t.district || x.name === t.district);
   if (dist) parts.push(dist.name);
-  const sc = dist?.children?.find((x) => x.id === t.subcounty);
+  const sc = dist?.children?.find((x) => x.id === (t.ward || t.subcounty) || x.name === (t.ward || t.subcounty));
   if (sc) parts.push(sc.name);
-  const parish = sc?.children?.find((x) => x.id === t.parish);
+  const parish = sc?.children?.find((x) => x.id === t.parish || x.name === t.parish);
   if (parish) parts.push(parish.name);
+  if (t.village) parts.push(t.village);
   return parts.join(' › ');
+}
+
+export function getPostGrassroots(country: CountryCode, p: Post) {
+  const t = p.territory;
+  const dist = TERRITORY[country]?.find((x) => x.id === t?.district || x.name === t?.district);
+  const districtName = dist?.name || t?.district || '';
+
+  const sc = dist?.children?.find((x) => x.id === (t?.ward || t?.subcounty) || x.name === (t?.ward || t?.subcounty));
+  const rawWard = p.ward || t?.ward || sc?.name || t?.subcounty || '';
+  // Clean up ward label if needed
+  const wardName = rawWard ? rawWard.replace(/Division$/i, 'Ward').replace(/Sub-County$/i, 'Ward') : 'Local Ward';
+
+  const parishNode = sc?.children?.find((x) => x.id === t?.parish || x.name === t?.parish);
+  const rawParish = p.parish || parishNode?.name || t?.parish || '';
+  const parishName = rawParish ? (rawParish.toLowerCase().includes('parish') ? rawParish : `${rawParish} Parish`) : 'Local Parish';
+
+  const rawGrassroot = p.grassroot || p.village || p.cell || t?.village || t?.cell || t?.grassroot || '';
+  const grassrootName = rawGrassroot || (parishName ? `${parishName.replace(/ Parish/i, '')} Cell` : 'Grassroot Node');
+
+  return {
+    district: districtName,
+    ward: wardName,
+    parish: parishName,
+    grassroot: grassrootName,
+  };
 }
 
 const CODE_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';

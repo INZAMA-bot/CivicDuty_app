@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Bell,
@@ -36,10 +36,24 @@ import {
   Search,
   ChevronDown,
   Maximize2,
+  Calendar,
+  Pin,
+  Volume2,
+  SlidersHorizontal,
+  Settings,
+  Layers,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES, getDept } from '../data/countries';
-import { Post, TownHallSession } from '../types';
+import { Post, TownHallSession, TownHallHandRaise, TownHallMessage } from '../types';
+import {
+  sendTownHallMessageToCloud,
+  subscribeToTownHallMessagesFromCloud,
+  setTownHallHandRaiseInCloud,
+  deleteTownHallHandInCloud,
+  subscribeToTownHallHandsFromCloud,
+  updateTownHallInCloud,
+} from '../services/firestoreSync';
 
 export const GlobalSocialModals: React.FC = () => {
   const {
@@ -89,6 +103,8 @@ export const GlobalSocialModals: React.FC = () => {
     hostBarazaModalOpen,
     setHostBarazaModalOpen,
     createTownHall,
+    updateTownHallSession,
+    concludeTownHallSession,
   } = useApp();
 
   const activeUser = user || ensureCitizenSession();
@@ -123,10 +139,144 @@ export const GlobalSocialModals: React.FC = () => {
   const [newBarazaDept, setNewBarazaDept] = useState('Municipal Works & Water Desk');
   const [newBarazaCoHost, setNewBarazaCoHost] = useState('Chief Municipal Engineer');
   const [newBarazaMode, setNewBarazaMode] = useState<'video_stage' | 'field_cam' | 'audio_low_data'>('video_stage');
-  const [barazaChat, setBarazaChat] = useState<Array<{ id: string; sender: string; text: string; time: string; mediaBadge?: string }>>([
+  const [scheduleForLater, setScheduleForLater] = useState(false);
+  const [scheduledDateTime, setScheduledDateTime] = useState('');
+  const [showModerationPanel, setShowModerationPanel] = useState(false);
+  const [audioVolume, setAudioVolume] = useState<number>(0);
+  const [broadcastDurationSec, setBroadcastDurationSec] = useState<number>(142);
+  const [barazaHands, setBarazaHands] = useState<TownHallHandRaise[]>([]);
+
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const [barazaChat, setBarazaChat] = useState<Array<{ id: string; sender: string; text: string; time: string; mediaBadge?: string; mediaUrl?: string; created_at?: string }>>([
     { id: 'bc-1', sender: 'Grace Akello (@grace_watchdog)', text: 'Thank you Permanent Secretary for joining this live video baraza on drainage SLAs.', time: '2m ago' },
     { id: 'bc-2', sender: 'David Mukasa (Boda Scout)', text: 'Can the municipal engineer confirm when culvert works begin on Ward 2?', time: '1m ago', mediaBadge: 'Photo Evidence + GPS Attached' },
   ]);
+
+  // Is current user host or administrative moderator
+  const isHost = Boolean(
+    activeTownHall && (
+      activeTownHall.host_name === (activeUser.officer_name || activeUser.name) ||
+      (activeUser.name && activeTownHall.host_name.toLowerCase().includes(activeUser.name.toLowerCase())) ||
+      activeUser.role === 'platform_admin' ||
+      activeUser.role === 'node_admin' ||
+      activeUser.role === 'spokesperson' ||
+      activeTownHall.id.startsWith('th-custom-')
+    )
+  );
+
+  // Real-time Firestore sync for Town Hall Floor Chat & Hands Queue
+  useEffect(() => {
+    if (!activeTownHall?.id) return;
+    const unsubMsgs = subscribeToTownHallMessagesFromCloud(activeTownHall.id, (cloudMsgs) => {
+      if (cloudMsgs && cloudMsgs.length > 0) {
+        setBarazaChat(cloudMsgs);
+      }
+    });
+
+    const unsubHands = subscribeToTownHallHandsFromCloud(activeTownHall.id, (cloudHands) => {
+      setBarazaHands(cloudHands);
+      // Check if my hand raise status was changed by host
+      const myHand = cloudHands.find((h) => h.userId === activeUser.id);
+      if (myHand) {
+        if (myHand.status === 'speaking' && myHand.hasMic && micMuted) {
+          toast('The Host granted you the Stage Microphone!', 'emerald');
+        }
+      }
+    });
+
+    return () => {
+      unsubMsgs();
+      unsubHands();
+    };
+  }, [activeTownHall?.id, activeUser.id]);
+
+  // Real Web Audio Decibel Capture & Frequency Analyser loop
+  useEffect(() => {
+    let animId: number;
+    let fallbackInterval: NodeJS.Timeout;
+
+    if (!micMuted && activeTownHall) {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            audioStreamRef.current = stream;
+            try {
+              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+              const ctx = new AudioContextClass();
+              audioContextRef.current = ctx;
+              const source = ctx.createMediaStreamSource(stream);
+              const analyser = ctx.createAnalyser();
+              analyser.fftSize = 64;
+              source.connect(analyser);
+              const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+              const checkVolume = () => {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                  sum += dataArray[i];
+                }
+                const avg = sum / dataArray.length;
+                setAudioVolume(Math.min(100, Math.round(avg * 1.6)));
+                animId = requestAnimationFrame(checkVolume);
+              };
+              checkVolume();
+            } catch {
+              fallbackInterval = setInterval(() => {
+                setAudioVolume(Math.floor(25 + Math.random() * 65));
+              }, 120);
+            }
+          })
+          .catch(() => {
+            // Simulated decibels if user denies mic or device has no mic
+            fallbackInterval = setInterval(() => {
+              setAudioVolume(Math.floor(20 + Math.random() * 70));
+            }, 140);
+          });
+      }
+    } else {
+      setAudioVolume(0);
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((t) => t.stop());
+        audioStreamRef.current = null;
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+    }
+
+    return () => {
+      cancelAnimationFrame(animId);
+      clearInterval(fallbackInterval);
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
+  }, [micMuted, activeTownHall]);
+
+  // Live broadcast recording timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (activeTownHall && !barazaMinimized) {
+      timer = setInterval(() => {
+        setBroadcastDurationSec((sec) => sec + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [activeTownHall, barazaMinimized]);
+
+  const formatBroadcastTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   const handleDmFileSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaCategory: string) => {
     const files = e.target.files;
@@ -1217,38 +1367,68 @@ export const GlobalSocialModals: React.FC = () => {
     );
   };
 
-  // 5. LIVE DIGITAL BARAZA / TOWN HALL VIDEO + AUDIO BROADCAST MODAL — Google AI Studio Aesthetic
+  // 5. LIVE DIGITAL BARAZA / TOWN HALL VIDEO + AUDIO BROADCAST MODAL — Sovereign Deck
   const renderTownHallModal = () => {
     if (!activeTownHall || barazaMinimized) return null;
     const th: TownHallSession = activeTownHall;
     const cInfo = COUNTRIES[th.country] || COUNTRIES.UG;
     const isVideoStage = (th.has_video ?? true) && barazaViewMode === 'video';
+    const raisedHandsCount = barazaHands.filter((h) => h.status === 'raised').length;
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-sm animate-fade-in">
-        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+        <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl max-w-2xl w-full max-h-[94vh] flex flex-col shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100">
           {/* Studio Top Header Bar */}
-          <div className="px-4 py-3 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 shrink-0">
+          <div className="px-4 py-2.5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[9.5px] font-mono font-bold uppercase flex items-center gap-1 shrink-0">
+              <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[9px] font-mono font-bold uppercase flex items-center gap-1 shrink-0">
                 {th.has_video ? <Video size={10} strokeWidth={2} /> : <Radio size={10} strokeWidth={2} />}
                 <span>{th.has_video ? 'LIVE VIDEO BARAZA' : 'LIVE AUDIO BARAZA'}</span>
               </span>
+
+              {/* Live Broadcast Recording Counter */}
+              <span className="px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/40 text-rose-300 text-[9px] font-mono font-bold flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                <span>{formatBroadcastTimer(broadcastDurationSec)} · REC</span>
+              </span>
+
               <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400 truncate">
                 {th.country} · {cInfo.name} · <strong className="text-emerald-700 dark:text-emerald-400">{th.topic_tag}</strong>
               </span>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              {/* Host Stage Moderation Deck Toggle */}
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={() => setShowModerationPanel(!showModerationPanel)}
+                  className={`px-2.5 py-1 rounded-lg border text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer transition-colors ${
+                    showModerationPanel
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500'
+                  }`}
+                  title="Open Host Moderation Stage Deck & Floor Queue"
+                >
+                  <SlidersHorizontal size={11} />
+                  <span>Stage Floor</span>
+                  {raisedHandsCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[8.5px] font-mono font-bold">
+                      {raisedHandsCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
               {/* Switch between HD Video Stage and Low-Data Audio Mode */}
               <button
                 type="button"
                 onClick={() => setBarazaViewMode(barazaViewMode === 'video' ? 'audio' : 'video')}
                 className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer"
-                title="Switch between Live Video Feed and Low-Data Audio Mode"
+                title="Switch between Live Video Feed and Low-Data 2G/3G Audio Mode"
               >
                 {barazaViewMode === 'video' ? <Radio size={11} /> : <Video size={11} />}
-                <span>{barazaViewMode === 'video' ? 'Low-Data Audio' : 'HD Video Stage'}</span>
+                <span className="hidden sm:inline">{barazaViewMode === 'video' ? '2G/3G Radio' : 'HD Video'}</span>
               </button>
 
               {/* Minimize to Persistent Background Mini-Player (Like Twitter / X Spaces) */}
@@ -1266,57 +1446,59 @@ export const GlobalSocialModals: React.FC = () => {
               </button>
 
               {/* Conclude and Archive into Certified Public Record on Feed */}
-              <button
-                type="button"
-                onClick={() => {
-                  const archivePost: Post = {
-                    id: `baraza-rec-${Date.now()}`,
-                    country: th.country || 'UG',
-                    dept: 'mowt',
-                    lane: 'civic',
-                    territory: {
-                      district: 'Kampala District',
-                      subcounty: 'Kampala Central Division',
-                      parish: 'Nakasero Parish',
-                    },
-                    citizen_id: 'host-baraza',
-                    citizen_name: th.host_name,
-                    citizen_rank: 'Accountability Lead',
-                    anonymous: false,
-                    category: 'other',
-                    title: `[CIVIC BARAZA RECORD] ${th.title}`,
-                    body: `Statutory recorded proceedings from ${th.dept_name} Town Hall session. Topic Tag: ${th.topic_tag}. Presided by ${th.host_name} with ${th.listeners_count} citizens tuned in. Forensic audio testimony and verbatim citizen floor ledger cryptographically archived.`,
-                    location: 'Nakasero Parish, Kampala',
-                    source: 'web',
-                    media: [
-                      {
-                        type: 'voice',
-                        duration: '42:18',
-                        caption: 'Live Town Hall Audio & Statutory Transcript',
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const archivePost: Post = {
+                      id: `baraza-rec-${Date.now()}`,
+                      country: th.country || 'UG',
+                      dept: 'mowt',
+                      lane: 'civic',
+                      territory: {
+                        district: 'Kampala District',
+                        subcounty: 'Kampala Central Division',
+                        parish: 'Nakasero Parish',
                       },
-                    ],
-                    voice_note: {
-                      duration: '42:18',
-                      language: 'Uganda Official Hearing Audio',
-                      transcript: `Official live proceedings recorded from ${th.dept_name} Town Hall session. Topic: ${th.topic_tag}. Presided by ${th.host_name} with ${th.listeners_count} citizens tuned in.`,
-                    },
-                    status: 'resolved',
-                    created_at: new Date().toISOString(),
-                    comments: [],
-                    upvotes: 64,
-                    downvotes: 0,
-                  };
-                  setPosts((prev) => [archivePost, ...prev]);
-                  setActiveTownHall(null);
-                  setBarazaMinimized(false);
-                  toast('Live Baraza recorded & archived to Public Feed!', 'emerald');
-                }}
-                className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                title="Conclude Baraza & Publish Certified Record to Feed"
-              >
-                <FileCheck2 size={11} />
-                <span className="hidden sm:inline">Conclude &amp; Archive</span>
-              </button>
+                      citizen_id: activeUser.id,
+                      citizen_name: th.host_name,
+                      citizen_rank: 'Accountability Lead',
+                      anonymous: false,
+                      category: 'other',
+                      title: `[CIVIC BARAZA RECORD] ${th.title}`,
+                      body: `Official recorded proceedings from ${th.dept_name} Town Hall session. Topic Tag: ${th.topic_tag}. Presided by ${th.host_name} with ${th.listeners_count} citizens tuned in. Broadcast duration: ${formatBroadcastTimer(broadcastDurationSec)}. Certified verbatim citizen floor testimony and forensic audit transcript recorded.`,
+                      location: `${cInfo.name} National Hearing Studio`,
+                      source: 'web',
+                      media: [
+                        {
+                          type: 'voice',
+                          duration: formatBroadcastTimer(broadcastDurationSec),
+                          caption: 'Live Town Hall Audio & Statutory Transcript',
+                        },
+                      ],
+                      voice_note: {
+                        duration: formatBroadcastTimer(broadcastDurationSec),
+                        language: 'Uganda Official Hearing Audio',
+                        transcript: `Official live proceedings recorded from ${th.dept_name} Town Hall session. Topic: ${th.topic_tag}. Presided by ${th.host_name} with ${th.listeners_count} citizens tuned in.`,
+                      },
+                      status: 'resolved',
+                      created_at: new Date().toISOString(),
+                      comments: [],
+                      upvotes: 64,
+                      downvotes: 0,
+                    };
+                    setPosts((prev) => [archivePost, ...prev]);
+                    concludeTownHallSession(th.id);
+                    setBarazaMinimized(false);
+                    toast('Live Baraza recorded & archived to Public Feed!', 'emerald');
+                  }}
+                  className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Conclude Baraza & Publish Certified Record to Feed"
+                >
+                  <FileCheck2 size={11} />
+                  <span className="hidden sm:inline">Conclude &amp; Archive</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1333,8 +1515,8 @@ export const GlobalSocialModals: React.FC = () => {
 
           {/* Room Switcher (Switch seamlessly between multiple live Barazas) */}
           {townHalls && townHalls.length > 1 && (
-            <div className="px-4 py-2 border-b border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-              <span className="text-[9.5px] font-mono uppercase text-slate-400 shrink-0">
+            <div className="px-4 py-1.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+              <span className="text-[9px] font-mono uppercase text-slate-400 shrink-0">
                 Live Rooms ({townHalls.length}):
               </span>
               {townHalls.map((room, rIdx) => (
@@ -1342,21 +1524,168 @@ export const GlobalSocialModals: React.FC = () => {
                   key={room.id}
                   type="button"
                   onClick={() => setActiveTownHall(room)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-semibold shrink-0 border cursor-pointer transition-colors flex items-center gap-1 ${
+                  className={`px-2 py-0.5 rounded-lg text-[9.5px] font-mono font-semibold shrink-0 border cursor-pointer transition-colors flex items-center gap-1 ${
                     room.id === th.id
                       ? 'bg-emerald-600 text-white border-emerald-600'
                       : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
                   }`}
                 >
-                  {room.has_video ? <Video size={10} /> : <Radio size={10} />}
+                  {room.has_video ? <Video size={9} /> : <Radio size={9} />}
                   <span>#{rIdx + 1} {room.topic_tag} ({room.listeners_count})</span>
                 </button>
               ))}
             </div>
           )}
 
+          {/* Pinned Evidence Banner (Pinned to Stage Screen for all Viewers) */}
+          {th.pinned_evidence_title && (
+            <div className="px-4 py-2 bg-amber-500/10 dark:bg-amber-950/40 border-b border-amber-500/30 flex items-center justify-between gap-2 shrink-0 animate-fade-in">
+              <div className="flex items-center gap-2 min-w-0">
+                <Pin size={13} className="text-amber-600 dark:text-amber-400 shrink-0 rotate-45" />
+                <div className="min-w-0">
+                  <span className="text-[9px] font-mono uppercase font-bold text-amber-700 dark:text-amber-300 block">
+                    PINNED STAGE EVIDENCE · {th.pinned_evidence_badge || 'Citizen Field Proof'}
+                  </span>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    {th.pinned_evidence_title}
+                  </p>
+                </div>
+              </div>
+              {isHost && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateTownHallSession(th.id, {
+                      pinned_evidence_title: '',
+                      pinned_evidence_badge: '',
+                    });
+                    toast('Evidence unpinned from stage screen', 'info');
+                  }}
+                  className="text-[10px] font-mono text-slate-400 hover:text-rose-500 cursor-pointer shrink-0"
+                >
+                  Unpin
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Host Stage Moderation Deck Drawer */}
+          {isHost && showModerationPanel && (
+            <div className="p-3.5 bg-slate-900 text-white border-b border-slate-800 space-y-2.5 shrink-0 animate-slide-down">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal size={13} className="text-emerald-400" />
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-400">
+                    Host Stage Deck &amp; Citizen Hand-Raise Queue
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mutedSpeakers = th.speakers.map((sp, idx) => (idx === 0 ? sp : { ...sp, speaking: false, is_muted: true }));
+                      updateTownHallSession(th.id, { speakers: mutedSpeakers });
+                      toast('Muted all floor participants on stage', 'amber');
+                    }}
+                    className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[9.5px] font-mono cursor-pointer"
+                  >
+                    Mute Floor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModerationPanel(false)}
+                    className="text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {barazaHands.length === 0 ? (
+                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-center text-[10.5px] font-mono text-slate-400">
+                  No citizens currently raising their hand in the floor queue.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                  {barazaHands.map((h) => (
+                    <div
+                      key={h.id}
+                      className="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-bold truncate text-[11px] text-white flex items-center gap-1.5">
+                          <Hand size={11} className="text-amber-400 shrink-0" />
+                          <span>{h.userName}</span>
+                        </div>
+                        <div className="text-[9px] font-mono text-slate-400 truncate">
+                          {h.userRole} · Status: <span className="text-emerald-400 font-semibold">{h.status}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        {h.status !== 'speaking' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTownHallHandRaiseInCloud(th.id, {
+                                ...h,
+                                status: 'speaking',
+                                hasMic: true,
+                              });
+                              const exists = th.speakers.some((s) => s.name === h.userName);
+                              if (!exists) {
+                                const nextSpeakers = [
+                                  ...th.speakers,
+                                  { name: h.userName, role: `${h.userRole} · Floor Speaker`, speaking: true, video_on: h.hasVideo },
+                                ];
+                                updateTownHallSession(th.id, { speakers: nextSpeakers });
+                              }
+                              toast(`Granted stage microphone to ${h.userName}`, 'emerald');
+                            }}
+                            className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[9.5px] font-mono font-bold cursor-pointer"
+                          >
+                            Grant Mic
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTownHallHandRaiseInCloud(th.id, {
+                                ...h,
+                                status: 'dismissed',
+                                hasMic: false,
+                              });
+                              const filteredSpeakers = th.speakers.filter((s) => s.name !== h.userName);
+                              updateTownHallSession(th.id, { speakers: filteredSpeakers });
+                              toast(`Revoked stage microphone from ${h.userName}`, 'amber');
+                            }}
+                            className="px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white text-[9.5px] font-mono cursor-pointer"
+                          >
+                            Mute
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteTownHallHandInCloud(th.id, h.id);
+                            toast(`Removed ${h.userName} from hand queue`, 'info');
+                          }}
+                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white cursor-pointer"
+                          title="Dismiss from queue"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Stage Metadata & Live Video / Audio Speakers Grid */}
-          <div className="p-4 border-b border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] space-y-3 shrink-0">
+          <div className="p-3 sm:p-4 border-b border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] space-y-3 shrink-0">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">
@@ -1385,14 +1714,15 @@ export const GlobalSocialModals: React.FC = () => {
             {/* Live Video Feeds & Speaker Stage Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {th.speakers.map((sp, i) => {
-                const isSpeaking = sp.speaking || (i === 2 && !micMuted);
-                const showCam = isVideoStage && (sp.video_on || (i === 2 && cameraOn));
+                const isCurrentUserSpeaker = sp.name === activeUser.name || (i === 2 && !micMuted);
+                const isSpeaking = sp.speaking || isCurrentUserSpeaker;
+                const showCam = isVideoStage && (sp.video_on || (isCurrentUserSpeaker && cameraOn));
                 return (
                   <div
                     key={i}
                     className={`rounded-xl border overflow-hidden transition-colors flex flex-col justify-between ${
                       isSpeaking
-                        ? 'bg-[#0e1116] border-emerald-500'
+                        ? 'bg-[#0e1116] border-emerald-500 ring-1 ring-emerald-500/50'
                         : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36]'
                     }`}
                   >
@@ -1409,11 +1739,30 @@ export const GlobalSocialModals: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Center Avatar & Live Audio Waveform Bars */}
+                        {/* Center Avatar & Animated Audio Equalizer Waveform */}
                         <div className="flex flex-col items-center justify-center my-auto z-10">
-                          <div className="w-10 h-10 rounded-full bg-emerald-600/25 border border-emerald-400 flex items-center justify-center font-mono font-bold text-xs text-emerald-300">
+                          <div className="w-10 h-10 rounded-full bg-emerald-600/25 border border-emerald-400 flex items-center justify-center font-mono font-bold text-xs text-emerald-300 relative">
                             {sp.name.slice(0, 2).toUpperCase()}
+                            {isSpeaking && (
+                              <span className="absolute -bottom-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-slate-900 animate-ping" />
+                            )}
                           </div>
+
+                          {/* Dynamic Frequency Waveform Indicator */}
+                          {isSpeaking && (
+                            <div className="flex items-end justify-center gap-0.5 h-3 mt-1.5">
+                              {[0.4, 0.9, 0.6, 1.0, 0.5].map((scale, barIdx) => {
+                                const heightPercent = Math.max(20, Math.min(100, Math.round((audioVolume || 45) * scale)));
+                                return (
+                                  <span
+                                    key={barIdx}
+                                    className="w-1 rounded-full bg-emerald-400 transition-all duration-75"
+                                    style={{ height: `${heightPercent}%` }}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between text-[9px] font-mono text-slate-300 z-10 bg-black/60 px-2 py-1 rounded">
@@ -1424,9 +1773,9 @@ export const GlobalSocialModals: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 text-center space-y-1">
+                      <div className="p-3 text-center space-y-1.5">
                         <div
-                          className={`w-9 h-9 rounded-lg mx-auto flex items-center justify-center font-mono font-bold text-xs border ${
+                          className={`w-9 h-9 rounded-lg mx-auto flex items-center justify-center font-mono font-bold text-xs border relative ${
                             isSpeaking
                               ? 'bg-emerald-600 text-white border-emerald-500'
                               : 'bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
@@ -1434,6 +1783,23 @@ export const GlobalSocialModals: React.FC = () => {
                         >
                           {sp.name.slice(0, 2).toUpperCase()}
                         </div>
+
+                        {/* Frequency Waveform on Audio-Only Avatar */}
+                        {isSpeaking && (
+                          <div className="flex items-end justify-center gap-0.5 h-2.5 mx-auto">
+                            {[0.4, 0.9, 0.6, 1.0, 0.5].map((scale, barIdx) => {
+                              const heightPercent = Math.max(25, Math.min(100, Math.round((audioVolume || 40) * scale)));
+                              return (
+                                <span
+                                  key={barIdx}
+                                  className="w-0.5 rounded-full bg-emerald-500 transition-all duration-75"
+                                  style={{ height: `${heightPercent}%` }}
+                                />
+                              );
+                            })}
+                          </div>
+                        )}
+
                         <div className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 truncate">
                           {sp.name}
                         </div>
@@ -1460,17 +1826,35 @@ export const GlobalSocialModals: React.FC = () => {
           {/* Live Town Hall Floor Q&A Ledger */}
           <div className="p-3.5 sm:p-4 flex-1 overflow-y-auto space-y-2 bg-[#f8f9fa] dark:bg-[#0e1116]">
             <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
-              <span>Live Citizen Floor Q&amp;A &amp; Multimedia Evidence</span>
-              <span>SHA-256 Transcript</span>
+              <span>Live Citizen Floor Q&amp;A &amp; Multimedia Evidence ({barazaChat.length})</span>
+              <span>SHA-256 Transcript Sync</span>
             </div>
             {barazaChat.map((c) => (
               <div
                 key={c.id}
-                className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs space-y-1"
+                className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs space-y-1 group"
               >
                 <div className="flex items-center justify-between text-[10px] font-mono">
                   <span className="font-semibold text-emerald-700 dark:text-emerald-400">{c.sender}</span>
-                  <span className="text-slate-400 dark:text-slate-500">{c.time}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 dark:text-slate-500">{c.time}</span>
+                    {isHost && c.mediaBadge && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateTownHallSession(th.id, {
+                            pinned_evidence_title: c.text.slice(0, 180),
+                            pinned_evidence_badge: c.mediaBadge || 'Citizen Evidence',
+                          });
+                          toast('Pinned citizen floor evidence to the main stage screen!', 'emerald');
+                        }}
+                        className="text-[9.5px] font-mono font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Pin size={10} className="rotate-45" />
+                        <span>Pin to Stage</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-slate-700 dark:text-slate-200 leading-relaxed">{c.text}</p>
                 {c.mediaBadge && (
@@ -1522,19 +1906,19 @@ export const GlobalSocialModals: React.FC = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!barazaQuestion.trim() && !barazaMediaTag) return;
-                setBarazaChat((prev) => [
-                  ...prev,
-                  {
-                    id: 'bc-' + Date.now(),
-                    sender: `${activeUser.name || 'Verified Citizen'} (Floor Intervention)`,
-                    text: barazaQuestion.trim() || 'Submitted multimedia field evidence to the live Baraza stage.',
-                    time: 'Just now',
-                    mediaBadge: barazaMediaTag || undefined,
-                  },
-                ]);
+                const newMsg = {
+                  townHallId: th.id,
+                  sender: `${activeUser.officer_name || activeUser.name || 'Verified Citizen'} (${activeUser.role_label || 'Citizen Watchdog'})`,
+                  text: barazaQuestion.trim() || 'Submitted multimedia field evidence to the live Baraza stage.',
+                  time: 'Just now',
+                  mediaBadge: barazaMediaTag || undefined,
+                  created_at: new Date().toISOString(),
+                };
+                setBarazaChat((prev) => [...prev, { id: 'bc-' + Date.now(), ...newMsg }]);
+                sendTownHallMessageToCloud(th.id, newMsg).catch(() => {});
                 setBarazaQuestion('');
                 setBarazaMediaTag(null);
-                toast('Contribution logged to Live Digital Baraza stage!', 'emerald');
+                toast('Contribution published live to town hall floor!', 'emerald');
               }}
               className="flex items-center gap-2"
             >
@@ -1559,11 +1943,11 @@ export const GlobalSocialModals: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setMicMuted(!micMuted);
-                    toast(micMuted ? 'Microphone unmuted for floor intervention' : 'Microphone muted', 'emerald');
+                    toast(micMuted ? 'Microphone unmuted · Live Audio Streaming' : 'Microphone muted', 'emerald');
                   }}
                   className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-semibold flex items-center gap-1.5 border cursor-pointer transition-colors ${
                     !micMuted
-                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-500/30'
                       : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
                   }`}
                 >
@@ -1596,17 +1980,30 @@ export const GlobalSocialModals: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setHandRaised(!handRaised);
-                    toast(
-                      !handRaised
-                        ? 'Hand raised! Moderator notified to grant floor mic/camera.'
-                        : 'Hand lowered',
-                      'emerald'
-                    );
+                    const myHandId = `hand-${activeUser.id}`;
+                    if (!handRaised) {
+                      setHandRaised(true);
+                      setTownHallHandRaiseInCloud(th.id, {
+                        id: myHandId,
+                        townHallId: th.id,
+                        userId: activeUser.id,
+                        userName: activeUser.officer_name || activeUser.name || 'Citizen Watchdog',
+                        userRole: activeUser.role_label || 'Citizen Observer',
+                        status: 'raised',
+                        hasMic: false,
+                        hasVideo: false,
+                        raised_at: new Date().toISOString(),
+                      }).catch(() => {});
+                      toast('Hand raised! Host moderator notified in the stage queue.', 'emerald');
+                    } else {
+                      setHandRaised(false);
+                      deleteTownHallHandInCloud(th.id, myHandId).catch(() => {});
+                      toast('Hand lowered', 'info');
+                    }
                   }}
                   className={`px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono font-semibold flex items-center gap-1.5 border cursor-pointer transition-colors ${
                     handRaised
-                      ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40'
+                      ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 ring-2 ring-amber-500/30'
                       : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
                   }`}
                 >
@@ -1616,7 +2013,7 @@ export const GlobalSocialModals: React.FC = () => {
               </div>
 
               <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 hidden sm:inline">
-                Statutory Video &amp; Audio Ledger
+                Real-Time Firestore Sync
               </span>
             </div>
           </div>
@@ -1625,7 +2022,7 @@ export const GlobalSocialModals: React.FC = () => {
     );
   };
 
-  // 6. HOST / START NEW DIGITAL BARAZA STUDIO MODAL (WITH LIVE VIDEO & FIELD CAM OPTIONS)
+  // 6. HOST / START NEW DIGITAL BARAZA STUDIO MODAL (WITH LIVE VIDEO, FIELD CAM & SCHEDULING OPTIONS)
   const renderHostBarazaModal = () => {
     if (!hostBarazaModalOpen) return null;
     const cCode = activeUser.country || 'UG';
@@ -1669,15 +2066,65 @@ export const GlobalSocialModals: React.FC = () => {
                 co_host_name: newBarazaCoHost,
                 has_video: newBarazaMode !== 'audio_low_data',
                 broadcast_mode: newBarazaMode,
+                scheduled_at: scheduleForLater ? scheduledDateTime || new Date(Date.now() + 86400000).toISOString().slice(0, 16) : undefined,
               });
               setNewBarazaTitle('');
+              setScheduleForLater(false);
+              setScheduledDateTime('');
             }}
             className="p-4 space-y-3"
           >
+            {/* Broadcast Timing: Live Now vs Scheduled */}
+            <div className="flex items-center justify-between p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="flex items-center gap-2">
+                <Calendar size={13} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="text-xs font-semibold">Broadcast Timing:</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setScheduleForLater(false)}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors cursor-pointer ${
+                    !scheduleForLater
+                      ? 'bg-rose-600 text-white'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Live Now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleForLater(true)}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold transition-colors cursor-pointer ${
+                    scheduleForLater
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Schedule Later
+                </button>
+              </div>
+            </div>
+
+            {scheduleForLater && (
+              <div className="space-y-1 animate-fade-in">
+                <label className="text-[10px] font-mono uppercase font-semibold text-slate-500 dark:text-slate-400 block">
+                  Select Broadcast Date &amp; Time *
+                </label>
+                <input
+                  type="datetime-local"
+                  value={scheduledDateTime}
+                  onChange={(e) => setScheduledDateTime(e.target.value)}
+                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  required={scheduleForLater}
+                />
+              </div>
+            )}
+
             {/* Broadcast Mode Selector: HD Video Stage vs Field Inspection Camera vs Low-Data Audio */}
             <div>
               <label className="text-[10px] font-mono uppercase font-semibold text-slate-500 dark:text-slate-400 block mb-1.5">
-                1. Select Broadcast Mode (Video or Audio)
+                Select Broadcast Mode (Video or Audio)
               </label>
               <div className="grid grid-cols-3 gap-1.5">
                 {[
@@ -1709,7 +2156,7 @@ export const GlobalSocialModals: React.FC = () => {
 
             <div>
               <label className="text-[10px] font-mono uppercase font-semibold text-slate-500 dark:text-slate-400 block mb-1">
-                2. Baraza Agenda / Session Title *
+                Baraza Agenda / Session Title *
               </label>
               <input
                 type="text"
@@ -1773,14 +2220,22 @@ export const GlobalSocialModals: React.FC = () => {
                 type="submit"
                 className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer"
               >
-                {newBarazaMode === 'audio_low_data' ? <Radio size={13} /> : <Video size={13} />}
-                <span>
-                  {newBarazaMode === 'audio_low_data'
-                    ? 'Launch Audio Room'
-                    : newBarazaMode === 'field_cam'
-                    ? 'Launch Live Field Cam'
-                    : 'Launch Live Video Stage'}
-                </span>
+                {scheduleForLater ? (
+                  <>
+                    <Calendar size={13} />
+                    <span>Schedule Baraza Session</span>
+                  </>
+                ) : newBarazaMode === 'audio_low_data' ? (
+                  <>
+                    <Radio size={13} />
+                    <span>Launch Audio Room</span>
+                  </>
+                ) : (
+                  <>
+                    <Video size={13} />
+                    <span>Launch Live Video Stage</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

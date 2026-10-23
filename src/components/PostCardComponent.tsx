@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Post } from '../types';
 import { useApp } from '../context/AppContext';
-import { catByID, getDept, pathStr, slaStatus, srcLabel, stripDecorativeEmojis } from '../utils/helpers';
+import { catByID, getDept, getPostGrassroots, pathStr, slaStatus, srcLabel, stripDecorativeEmojis } from '../utils/helpers';
 import { MediaCard } from '../components/MediaCard';
 import { QrCodeModal } from './QrCodeModal';
 import { RichCivicText } from './RichCivicText';
@@ -33,6 +33,13 @@ import {
   UserCheck,
   Gift,
   Trash2,
+  MoreHorizontal,
+  Globe2,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  ChevronLeft,
+  ArrowDownCircle,
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 import { RewardModal } from './RewardModal';
@@ -44,6 +51,10 @@ interface PostCardComponentProps {
   rankIndex?: number | null;
   isFocused?: boolean;
   onActivateFocus?: (postId: string) => void;
+  onNextPost?: () => void;
+  onPrevPost?: () => void;
+  postIndex?: number;
+  totalPosts?: number;
 }
 
 export const PostCardComponent: React.FC<PostCardComponentProps> = ({
@@ -52,6 +63,10 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   rankIndex,
   isFocused = true,
   onActivateFocus,
+  onNextPost,
+  onPrevPost,
+  postIndex,
+  totalPosts,
 }) => {
   const post = propPost || fallbackPost;
   const {
@@ -71,17 +86,26 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
     bookmarks,
     toggleBookmark,
     setActiveHashtagFilter,
+    setSearchQuery,
+    setFeedTab,
   } = useApp();
+
   const [showQr, setShowQr] = useState<boolean>(false);
   const [rewardOpen, setRewardOpen] = useState<boolean>(false);
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  const [showTranslation, setShowTranslation] = useState<boolean>(false);
+
+  // Swipe detection refs for touch ergonomics
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   if (!post) return null;
 
   const isBookmarked = (bookmarks || []).includes(post.id);
-
   const d = getDept(post.country, post.dept);
   const sla = slaStatus(post);
   const cat = catByID(post.category);
+  const grassroots = getPostGrassroots(post.country, post);
   const isCorrupt = post.category === 'corruption';
   const isPraise = post.category === 'praise';
   const isConsumer = post.lane === 'consumer';
@@ -90,481 +114,492 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const isUserDownvoted = user ? !!downvotesMap[user.id]?.[post.id] : false;
 
   const totalVotes = (post.upvotes || 0) + (post.downvotes || 0);
-  const upRatio = totalVotes > 0 ? Math.round(((post.upvotes || 0) / totalVotes) * 100) : 100;
   const compiledCount = post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1);
   const isMasterDossier = Boolean(post.is_master_dossier || compiledCount > 1);
 
+  // Sovereign 3-Signal Classification:
+  // Red: Issue / Whistleblower / Pending / Overdue
+  // Green: Resolved / Commended / Praise
+  // Amber: Investigating / Budget Allocated / In Progress
   const isRed = isCorrupt || post.status === 'pending' || post.status === 'overdue' || post.escalated;
   const isGreen = post.status === 'resolved' || post.citizen_satisfied === true || isPraise;
   const isAmber = !isRed && !isGreen;
 
-  const focusSpotlightClasses = isFocused
-    ? 'opacity-100 scale-100 bg-white dark:bg-[#12161f] border border-slate-300 dark:border-[#2c3344] shadow-[0_10px_28px_-6px_rgba(15,23,42,0.12)] dark:shadow-[0_12px_32px_-6px_rgba(0,0,0,0.65)] ring-1 ring-slate-900/5 dark:ring-white/10 z-1'
-    : 'opacity-35 saturate-50 scale-[0.988] bg-white/80 dark:bg-[#0e1116]/80 border border-[#e3e6ea]/70 dark:border-[#262b36]/70 hover:opacity-75';
+  // Format dateline relative or short
+  const formatTimeAgo = (dateStr: string) => {
+    try {
+      const diffMs = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diffMs / (1000 * 60));
+      if (mins < 1) return 'now';
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      if (days < 30) return `${days}d ago`;
+      return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch {
+      return 'recent';
+    }
+  };
 
-  const statusChip = (s: string) => {
-    const m: Record<string, string> = {
-      pending: 'ch-pending',
-      received: 'ch-received',
-      investigating: 'ch-invest',
-      budget: 'ch-budget',
-      resolved: 'ch-resolved',
-      overdue: 'ch-overdue',
-      cannot: 'ch-cannot',
-    };
-    const l: Record<string, string> = {
-      pending: 'Pending',
-      received: 'Received',
-      investigating: 'Investigating',
-      budget: 'Budget Alloc.',
-      resolved: 'Resolved',
-      overdue: 'Overdue',
-      cannot: 'Cannot Fix',
-    };
-    return (
-      <div className="flex items-center gap-2">
-        <div 
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs" 
-          title={isGreen ? 'Signal 3: Green (Resolved & Verified / Commended)' : isAmber ? 'Signal 2: Amber (In Progress)' : 'Signal 1: Red (Citizen Speaks / Open)'}
-        >
-          <SignalGlyphRed active={isRed} className="w-3.5 h-3.5" />
-          <SignalGlyphAmber active={isAmber} className="w-3.5 h-3.5" />
-          <SignalGlyphGreen active={isGreen} className="w-3.5 h-3.5" />
-        </div>
-        <span className={`chip ${isPraise ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700' : (m[s] || 'ch-pending')} font-bold flex items-center gap-1`}>
-          {isGreen ? (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shadow-[0_0_5px_#10b981]" />
-          ) : isAmber ? (
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block shadow-[0_0_5px_#f59e0b]" />
-          ) : (
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block shadow-[0_0_5px_#ef4444]" />
-          )}
-          <span>{isPraise ? 'Commended' : (l[s] || s)}</span>
-        </span>
-      </div>
-    );
+  const timeAgo = formatTimeAgo(post.created_at);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    onActivateFocus?.(post.id);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const diffX = touchStartX.current - e.changedTouches[0].clientX;
+    const diffY = touchStartY.current - e.changedTouches[0].clientY;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Horizontal swipe threshold: 50px
+    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX > 0 && onNextPost) {
+        onNextPost();
+      } else if (diffX < 0 && onPrevPost) {
+        onPrevPost();
+      }
+    }
+  };
+
+  // Automated translation derivation for East African code-switching & vernacular
+  const getTranslatedBody = () => {
+    if (post.voice_note?.transcript) {
+      return post.voice_note.transcript;
+    }
+    const raw = stripDecorativeEmojis(post.body);
+    // Illustrative machine translation for common vernacular patterns
+    if (raw.toLowerCase().includes('twagala gavumenti') || raw.toLowerCase().includes('tuyambe')) {
+      return `[English Translation]: "We request government and city leadership to assist us immediately. This damaged infrastructure line requires urgent repair before the rains overflow." (Original: ${raw})`;
+    }
+    if (raw.toLowerCase().includes('tunalalamika') || raw.toLowerCase().includes('maji')) {
+      return `[English Translation]: "We are raising an official alert regarding persistent water disruption across our sector. Immediate technical intervention required." (Original: ${raw})`;
+    }
+    return `[English Translation]: "${raw}" (Verified ground dispatch)`;
   };
 
   return (
     <article
       data-post-card-id={post.id}
       onMouseEnter={() => onActivateFocus?.(post.id)}
-      onTouchStart={() => onActivateFocus?.(post.id)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       onFocus={() => onActivateFocus?.(post.id)}
-      onClick={() => {
-        onActivateFocus?.(post.id);
-        setActivePost(post);
-        go('post_detail');
-      }}
-      className={`post-row px-4 py-4 sm:px-5 sm:py-5 rounded-2xl cursor-pointer transition-all duration-300 ease-out relative group ${focusSpotlightClasses}`}
+      className={`rounded-2xl border transition-all duration-200 overflow-hidden mb-4 shadow-xs hover:shadow-md ${
+        isFocused
+          ? 'bg-white dark:bg-[#131722] border-emerald-500/70 dark:border-emerald-500/50 ring-2 ring-emerald-500/15'
+          : 'bg-white dark:bg-[#111520] border-slate-200/90 dark:border-[#222736] hover:border-slate-300 dark:hover:border-[#2e364a]'
+      }`}
     >
-      {rankIndex !== null && rankIndex !== undefined && rankIndex < 3 && (
-        <div className="float-right w-5 h-5 rounded-md bg-emerald-50 dark:bg-slate-900 border border-emerald-500/40 flex items-center justify-center -mt-1">
-          <span className="text-[8px] mono font-black text-emerald-700 dark:text-emerald-400">{rankIndex + 1}</span>
-        </div>
-      )}
-
-      {/* Illustrative Demo Showcase vs Live Citizen Dispatch Strip */}
-      {post.is_demo ? (
-        <div className="mb-2.5 p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-[8.5px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-              <Eye size={11} strokeWidth={1.75} className="text-slate-500 dark:text-slate-400 shrink-0" />
-              <span>ILLUSTRATIVE DEMO · CIVICDUTY IMPACT SHOWCASE</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[8px] font-mono font-medium text-slate-500 dark:text-slate-400">
-                System Demonstration Ticket
+      {/* 1. TOP DEPARTMENT WALL BANNER (Department Page / Section Aesthetic) */}
+      <div className="px-4 py-2.5 sm:px-5 sm:py-3 bg-slate-50/90 dark:bg-[#0c0f16] border-b border-slate-200/80 dark:border-[#202534] flex items-center justify-between gap-2.5 flex-wrap">
+        {/* Left: Department Icon & Identity */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700/80 flex items-center justify-center shrink-0 shadow-2xs">
+            <DeptIcon dept={d} size={15} className="text-slate-800 dark:text-slate-200" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
+                {d.name}
               </span>
+              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                @{d.id.toLowerCase()}
+              </span>
+            </div>
+            <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 truncate">
+              {d.lane === 'consumer' ? `${d.sla || 24}h Customer SLA` : `${d.sla || 48}h Statutory SLA`} · {d.location || `${post.country} District`}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Traffic Signal Bulbs & Status Badge */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono font-bold shadow-2xs ${
+              isGreen
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                : isAmber
+                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <SignalGlyphRed active={isRed} className="w-3 h-3" />
+              <SignalGlyphAmber active={isAmber} className="w-3 h-3" />
+              <SignalGlyphGreen active={isGreen} className="w-3 h-3" />
+            </div>
+            <span className="uppercase text-[10px] tracking-wider font-mono">
+              {isPraise ? 'Commended' : post.status === 'resolved' ? 'Resolved' : isAmber ? 'Investigating' : 'Urgent'}
+            </span>
+          </div>
+
+          {/* More Menu */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
+              title="More actions"
+            >
+              <MoreHorizontal size={15} />
+            </button>
+
+            {menuOpen && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-full mt-1 w-48 rounded-xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-xl z-30 py-1 text-xs animate-fade-in"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQr(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-300"
+                >
+                  <QrCode size={13} />
+                  <span>Docket QR Verification</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRewardOpen(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+                >
+                  <Gift size={13} />
+                  <span>Peer Gratitude Reward</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    deletePost(post.id);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600"
+                >
+                  <Trash2 size={13} />
+                  <span>Delete Post</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. CARD BODY & CONTENT CONTAINER */}
+      <div className="p-4 sm:p-5 space-y-3">
+        {/* Submitter & Grassroots Hierarchy Row */}
+        <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 dark:border-slate-800/60 pb-2.5">
+          {/* Submitter Avatar & Identity */}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!post.anonymous) {
+                  setPublicProfileCitizen({
+                    name: post.citizen_name,
+                    profession: post.author_profession || `${post.citizen_rank || 'Verified'} Watchdog`,
+                    country: post.country,
+                  });
+                }
+              }}
+              className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs select-none hover:scale-105 transition cursor-pointer"
+            >
+              {post.anonymous ? (
+                <Lock size={13} />
+              ) : post.author_profession?.toLowerCase().includes('boda') ? (
+                <Bike size={14} />
+              ) : (
+                (post.citizen_name || 'CD').slice(0, 2).toUpperCase()
+              )}
+            </button>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-xs text-slate-900 dark:text-slate-100">
+                  {post.anonymous ? 'Protected Citizen' : post.citizen_name}
+                </span>
+                {!post.anonymous && (
+                  <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400 fill-emerald-500/20" />
+                )}
+                <span className="text-[11px] text-slate-400">·</span>
+                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{timeAgo}</span>
+              </div>
+              <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                {post.author_profession || post.citizen_rank || 'Verified Resident'}
+              </div>
+            </div>
+          </div>
+
+          {/* Grassroots Hierarchy Pills: Parish, Ward, Cell */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSearchQuery(grassroots.parish);
+                setFeedTab('near_me');
+                toast(`Filtering to Parish: ${grassroots.parish}`, 'emerald');
+              }}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition cursor-pointer"
+            >
+              <MapPin size={10} className="text-emerald-600" />
+              <span className="font-bold uppercase text-[9px]">Parish:</span>
+              <span className="truncate max-w-[120px] font-semibold">{grassroots.parish}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSearchQuery(grassroots.ward);
+                setFeedTab('near_me');
+                toast(`Filtering to Ward: ${grassroots.ward}`, 'emerald');
+              }}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 hover:bg-sky-100 transition cursor-pointer"
+            >
+              <span className="font-bold uppercase text-[9px]">Ward:</span>
+              <span className="truncate max-w-[110px] font-semibold">{grassroots.ward}</span>
+            </button>
+
+            {grassroots.grassroot && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  deletePost(post.id);
+                  setSearchQuery(grassroots.grassroot);
+                  setFeedTab('near_me');
+                  toast(`Filtering to Grassroot: ${grassroots.grassroot}`, 'emerald');
                 }}
-                className="px-1.5 py-0.5 rounded bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white text-[8.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                title="Remove this post from your feed"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 transition cursor-pointer font-mono text-[10px]"
               >
-                <Trash2 size={9} />
-                <span>Delete</span>
+                <span>{grassroots.grassroot}</span>
               </button>
-            </div>
-          </div>
-          {post.demo_highlight && (
-            <div className="text-[10px] font-semibold text-slate-800 dark:text-slate-200 leading-snug pt-1 border-t border-[#e3e6ea] dark:border-[#262b36]">
-              {stripDecorativeEmojis(post.demo_highlight)}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="mb-2.5 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-50/70 dark:bg-[#161a22] border border-emerald-300/70 dark:border-[#262b36]">
-          <span className="text-[8.5px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-            <span>LIVE CITIZEN DISPATCH · VERIFIED REAL TICKET</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-[8px] font-mono font-medium text-slate-500 dark:text-slate-400">
-              Active Public Ledger
-            </span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                deletePost(post.id);
-              }}
-              className="px-1.5 py-0.5 rounded bg-rose-500/10 hover:bg-rose-600 text-rose-600 hover:text-white text-[8.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
-              title="Delete this post from the Civic Feed"
-            >
-              <Trash2 size={9} />
-              <span>Delete Post</span>
-            </button>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Header Pill Strip & Dominant Traffic Light */}
-      <div className="flex items-center justify-between mb-2.5 flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="p-1 rounded bg-slate-100 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-300 flex items-center justify-center">
-            <DeptIcon dept={d} size={12} />
-          </span>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">{d.name}</span>
-          {isPraise ? (
-            <span className="chip flex items-center gap-1 bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-black">
-              <Award size={9} className="text-emerald-600 dark:text-emerald-400" /> Praise & Commendation
-            </span>
-          ) : isCorrupt ? (
-            <span className="chip ch-corrupt flex items-center gap-1">
-              <Lock size={9} /> Anti-Corruption
-            </span>
-          ) : isConsumer ? (
-            <span className="chip ch-private">Verified Private</span>
-          ) : (
-            <span className="chip ch-gov">Verified Gov</span>
-          )}
-        </div>
-        {statusChip(post.gov_status || post.status)}
-      </div>
-
-      {/* Dispatch Dateline */}
-      <div className="text-[8px] font-mono text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5 flex-wrap">
-        <span className="text-emerald-700 dark:text-emerald-400">DISPATCH #{post.id.slice(-6).toUpperCase()}</span>
-        <span>·</span>
-        <span>{srcLabel(post.source)}</span>
-        <span>·</span>
-        <span>{post.country.toUpperCase()} RECORD</span>
-        {isMasterDossier && (
-          <>
-            <span>·</span>
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 font-black">
-              <Layers size={9} /> MASTER DOSSIER ({compiledCount} COMPILED REPORTS)
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Master Dossier Multi-Witness Compilation Strip */}
-      {isMasterDossier && (
-        <div className="mb-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-6 h-6 rounded-md bg-indigo-600 text-white flex items-center justify-center shrink-0 font-mono text-[10px] font-black">
-              {compiledCount}x
-            </div>
-            <div className="min-w-0">
-              <div className="text-[9.5px] font-mono font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5 flex-wrap">
-                <span>Compiled Multi-Witness Dossier</span>
-                {compiledCount >= 5 && (
-                  <span className="text-[8px] px-1.5 py-0.2 rounded bg-rose-600 text-white font-bold uppercase">
-                    5+ Witness Auto-Escalated
-                  </span>
-                )}
-              </div>
-              <p className="text-[9px] text-slate-600 dark:text-slate-400 truncate">
-                 Consolidates {compiledCount} separate citizen reports (Web, USSD *3030# &amp; SMS) on this same issue
-              </p>
-            </div>
-          </div>
-          <span className="text-[8.5px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-[#0e1116] px-2 py-1 rounded-md border border-[#e3e6ea] dark:border-[#262b36] shrink-0">
-            + Co-Sign Dossier →
-          </span>
-        </div>
-      )}
-
-      {/* Praise Merited Ribbon Banner */}
-      {isPraise && (
-        <div className="flex items-center gap-1.5 mb-2 text-[8.5px] mono text-emerald-900 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-300/70 dark:border-emerald-800/50 px-2.5 py-1 rounded-md">
-          <Award size={11} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="font-bold">Public Service Commendation · Merited Integrity Record</span>
-        </div>
-      )}
-
-      {/* Broadsheet Headline & Full-Fidelity Body */}
-      {post.author_profession && (
-        <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
-          <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold ${
-              post.author_profession.toLowerCase().includes('boda')
-                ? 'bg-amber-100 text-amber-950 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80'
-                : post.author_profession.toLowerCase().includes('taxi') || post.author_profession.toLowerCase().includes('driver')
-                ? 'bg-blue-100 text-blue-950 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-300 dark:border-blue-700/80'
-                : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-            }`}
+        {/* Title */}
+        {post.title && (
+          <h3
+            onClick={() => {
+              setActivePost(post);
+              go('post_detail');
+            }}
+            className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug hover:text-emerald-600 dark:hover:text-emerald-400 transition cursor-pointer"
           >
-            {post.author_profession.toLowerCase().includes('boda') ? (
-              <Bike size={11} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400" />
-            ) : (
-              <UserCheck size={10} strokeWidth={1.75} className="text-slate-500 dark:text-slate-400" />
-            )}
-            <span>
-              {post.author_profession.toLowerCase().includes('boda')
-                ? 'Bodaboda Frontline Scout'
-                : post.author_profession}
-            </span>
-          </span>
+            {stripDecorativeEmojis(post.title)}
+          </h3>
+        )}
 
-          {post.frontline_scout && post.frontline_scout.workstation_name && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25">
-              <MapPin size={10} className="text-emerald-600 dark:text-emerald-400" />
-              <span>{post.frontline_scout.workstation_name}</span>
-              {post.frontline_scout.consensus_verified && (
-                <span className="px-1 py-0.2 rounded bg-emerald-600 text-white text-[8px] font-sans">
-                  Certified Hub
+        {/* Post Body (With RichCivicText and 1-Click Translation) */}
+        <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-sans">
+          {showTranslation ? (
+            <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-xs sm:text-sm leading-relaxed text-emerald-950 dark:text-emerald-100 space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
+                <span className="flex items-center gap-1">
+                  <Globe2 size={12} />
+                  <span>Civic Vernacular Machine Translation</span>
                 </span>
-              )}
-            </span>
-          )}
-
-          {totalVotes > 3 && (
-            <span
-              className={`text-[8.5px] px-1.5 py-0.5 rounded-full font-bold ${
-                upRatio >= 75
-                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
-                  : 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300'
-              }`}
-            >
-              {upRatio}% Consensus
-            </span>
-          )}
-        </div>
-      )}
-
-      <h4 className={`text-[15px] sm:text-[16px] font-bold tracking-tight ${
-        isPraise ? 'text-emerald-950 dark:text-emerald-100' : isCorrupt ? 'text-rose-700 dark:text-rose-200' : 'text-slate-950 dark:text-slate-100'
-      } leading-snug mb-1.5 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors`}>
-        {stripDecorativeEmojis(post.title)}
-      </h4>
-      <p className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed font-normal mb-3 whitespace-pre-line">
-        <RichCivicText
-          text={stripDecorativeEmojis(post.body)}
-          onHashtagClick={(tag) => {
-            setActiveHashtagFilter(tag);
-            toast(`Filtering dispatches by ${tag}`, 'emerald');
-          }}
-          onMentionClick={(mention) => {
-            setPublicProfileCitizen({
-              name: mention,
-              profession: 'Mentioned Civic Actor / Desk',
-              country: post.country,
-            });
-          }}
-        />
-      </p>
-
-      {/* Embedded Quote-Dispatch Card (Twitter/Threads Quote-Post equivalent) */}
-      {post.quote_of && (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            toast(`Quoted Dispatch #${post.quote_of?.id.slice(-6).toUpperCase()}`, 'emerald');
-          }}
-          className="mb-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/90 border-l-4 border-l-emerald-500 border border-slate-200 dark:border-slate-800 space-y-1"
-        >
-          <div className="flex items-center gap-1.5 text-[9px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
-            <Repeat2 size={11} />
-            <span>QUOTED DISPATCH · {post.quote_of.dept_name} · {post.quote_of.citizen_name}</span>
-          </div>
-          <div className="text-xs font-black text-slate-900 dark:text-white">{post.quote_of.title}</div>
-          <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">{post.quote_of.snippet}</p>
-        </div>
-      )}
-
-      {/* Before & After Interactive Photo Proof Preview */}
-      {post.before_after && (
-        <BeforeAfterSlider
-          beforeUrl={post.before_after.before_url}
-          afterUrl={post.before_after.after_url}
-          beforeLabel={post.before_after.before_label || 'Reported'}
-          afterLabel={post.before_after.after_label || 'Resolved'}
-          turnaroundTime={post.before_after.turnaround_hrs || '3h 40m'}
-          gpsCoords={post.gps}
-          gpsVerified={post.before_after.gps_verified ?? true}
-          verifiedBy={post.before_after.verified_by || d.name}
-          cryptoSeal={post.crypto_seal_hash}
-          compact={true}
-          defaultMode="slider"
-        />
-      )}
-
-      {/* Unified Full-Fidelity Media Attachment Viewer (Images, Cinema Videos, Interactive Audio Waveform & Document Reader) */}
-      <MediaCard
-        media={post.media}
-        postId={post.id}
-        voiceNote={post.voice_note}
-        onToast={(msg) => toast(msg)}
-      />
-
-      {/* Interactive Civic Poll (Twitter/X Poll equivalent for local referendums) */}
-      {post.poll && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="mt-2.5 mb-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[9.5px] font-mono font-black uppercase text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-              <BarChart3 size={11} />
-              <span>Public Civic Poll · {post.poll.total_votes.toLocaleString()} Votes</span>
-            </span>
-            {post.poll.ends_at && (
-              <span className="text-[9px] font-mono text-slate-500">{post.poll.ends_at}</span>
-            )}
-          </div>
-          <div className="text-xs font-black text-slate-900 dark:text-white">{post.poll.question}</div>
-          <div className="space-y-1.5">
-            {post.poll.options.map((opt) => {
-              const pct = post.poll && post.poll.total_votes > 0
-                ? Math.round((opt.votes / post.poll.total_votes) * 100)
-                : 0;
-              const isSelected = post.poll?.voted_option_id === opt.id;
-              return (
                 <button
-                  key={opt.id}
                   type="button"
-                  onClick={() => voteCivicPoll(post.id, opt.id)}
-                  className={`w-full text-left relative overflow-hidden rounded-xl border p-2 transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40'
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-emerald-400'
-                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTranslation(false);
+                  }}
+                  className="hover:underline font-bold"
                 >
-                  <div
-                    className="absolute inset-y-0 left-0 bg-emerald-500/15 dark:bg-emerald-500/20 transition-all"
-                    style={{ width: `${pct}%` }}
-                  />
-                  <div className="relative flex items-center justify-between text-[11px] font-bold">
-                    <span className="flex items-center gap-1.5">
-                      <span>{opt.label}</span>
-                      {isSelected && <CheckCircle2 size={12} className="text-emerald-600 dark:text-emerald-400" />}
-                    </span>
-                    <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 font-black">
-                      {pct}% ({opt.votes})
-                    </span>
-                  </div>
+                  View Original ✕
                 </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Verified Citizen Community Notes (X Community Notes equivalent) */}
-      {post.community_notes && post.community_notes.length > 0 && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="mt-2.5 mb-2 p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/80 space-y-1"
-        >
-          <div className="flex items-center justify-between text-[9px] font-mono font-black text-amber-900 dark:text-amber-300 uppercase">
-            <span className="flex items-center gap-1">
-              <FileCheck2 size={11} className="text-amber-600 dark:text-amber-400" />
-              <span>Readers Added Context · Verified Community Note</span>
-            </span>
-            <span>{post.community_notes[0].author_name}</span>
-          </div>
-          <p className="text-[11px] text-slate-800 dark:text-slate-200 leading-snug">
-            {post.community_notes[0].body}
-          </p>
-        </div>
-      )}
-
-      {/* Geo Territory Breadcrumb */}
-      <div className="path-crumb mt-2.5 mb-2 text-slate-500 dark:text-slate-400 flex items-center gap-1">
-        <MapPin size={10} className="text-slate-400 dark:text-slate-600 flex-shrink-0" />
-        <span className="truncate">{pathStr(post.country, post.territory)}</span>
-      </div>
-
-      {isCorrupt && (
-        <div className="flex items-center gap-1.5 mb-2 text-[8.5px] mono text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/30 px-2 py-1 rounded-lg">
-          <AlertTriangle size={11} className="flex-shrink-0" />
-          <span>Auto-referred to Inspectorate of Government (IGG)</span>
-        </div>
-      )}
-
-      {/* Ticket Footer HUD */}
-      <div className="flex items-center justify-between text-[9px] mono text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-100 dark:border-slate-900/80 flex-wrap gap-y-1.5">
-        <span className="flex items-center gap-1.5">
-          <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold">{srcLabel(post.source)}</span>
-          <span>·</span>
-          {post.anonymous || isCorrupt ? (
-            <span className="text-slate-600 dark:text-slate-400 font-medium inline-flex items-center gap-1">
-              <Lock size={9} strokeWidth={1.75} />
-              <span>Protected Anonymous Citizen</span>
-            </span>
+              </div>
+              <p className="italic">{getTranslatedBody()}</p>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
+            <RichCivicText
+              text={stripDecorativeEmojis(post.body)}
+              onHashtagClick={(tag) => {
+                setActiveHashtagFilter(tag);
+                toast(`Filtering dispatches by ${tag}`, 'emerald');
+              }}
+              onMentionClick={(mention) => {
                 setPublicProfileCitizen({
-                  name: post.citizen_name,
-                  profession: post.author_profession || `${post.citizen_rank || 'Verified'} Watchdog`,
+                  name: mention,
+                  profession: 'Mentioned Civic Actor / Desk',
                   country: post.country,
                 });
               }}
-              className="text-slate-800 dark:text-slate-200 font-bold hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline cursor-pointer"
-              title="Inspect Watchdog Profile, Follow, or Send Direct Message"
-            >
-              {post.citizen_name}
-            </button>
+            />
           )}
-        </span>
-        <span className="flex items-center gap-1.5 flex-wrap">
-          <span className={`flex items-center gap-1 font-bold ${sla.overdue ? 'a-sla' : ''}`} style={{ color: isPraise ? '#10b981' : sla.color }}>
-            <Clock size={11} /> {isPraise ? 'COMMENDED' : sla.overdue ? 'OVERDUE' : sla.label}
-          </span>
-          <span>·</span>
 
-          {/* Upvote Button */}
+          {/* 1-Click Translation Prompt Button */}
+          <div className="pt-1.5 flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowTranslation(!showTranslation);
+              }}
+              className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
+            >
+              <Globe2 size={12} />
+              <span>{showTranslation ? 'Show Original Text' : 'Translate dispatch (Luganda ⇄ English / Kiswahili)'}</span>
+            </button>
+            <span className="text-[10px] text-slate-400 font-mono">ID: #{post.id.slice(-6).toUpperCase()}</span>
+          </div>
+        </div>
+
+        {/* Quoted Dispatch */}
+        {post.quote_of && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              toast(`Quoted Dispatch #${post.quote_of?.id.slice(-6).toUpperCase()}`, 'emerald');
+            }}
+            className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1 hover:border-slate-400 transition cursor-pointer"
+          >
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+              <Repeat2 size={12} />
+              <span>Quoted Dispatch · {post.quote_of.dept_name} · {post.quote_of.citizen_name}</span>
+            </div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">{post.quote_of.title}</div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2">{post.quote_of.snippet}</p>
+          </div>
+        )}
+
+        {/* Before & After Interactive Photo Proof Preview */}
+        {post.before_after && (
+          <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+            <BeforeAfterSlider
+              beforeUrl={post.before_after.before_url}
+              afterUrl={post.before_after.after_url}
+              beforeLabel={post.before_after.before_label || 'Reported'}
+              afterLabel={post.before_after.after_label || 'Resolved'}
+              turnaroundTime={post.before_after.turnaround_hrs || '3h 40m'}
+              gpsCoords={post.gps}
+              gpsVerified={post.before_after.gps_verified ?? true}
+              verifiedBy={post.before_after.verified_by || d.name}
+              cryptoSeal={post.crypto_seal_hash}
+              compact={true}
+              defaultMode="slider"
+            />
+          </div>
+        )}
+
+        {/* Media Attachments & Voice Note Player */}
+        {((post.media && post.media.length > 0) || post.voice_note) && (
+          <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+            <MediaCard
+              media={post.media}
+              postId={post.id}
+              voiceNote={post.voice_note}
+              onToast={(msg) => toast(msg)}
+            />
+          </div>
+        )}
+
+        {/* Civic Poll */}
+        {post.poll && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2"
+          >
+            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase">
+              <span className="flex items-center gap-1">
+                <BarChart3 size={13} />
+                <span>Public Civic Poll · {post.poll.total_votes.toLocaleString()} Votes</span>
+              </span>
+              {post.poll.ends_at && <span>{post.poll.ends_at}</span>}
+            </div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">{post.poll.question}</div>
+            <div className="space-y-1.5">
+              {post.poll.options.map((opt) => {
+                const pct = post.poll && post.poll.total_votes > 0 ? Math.round((opt.votes / post.poll.total_votes) * 100) : 0;
+                const isSelected = post.poll?.voted_option_id === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => voteCivicPoll(post.id, opt.id)}
+                    className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition cursor-pointer ${
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40'
+                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:border-emerald-400'
+                    }`}
+                  >
+                    <div className="absolute inset-y-0 left-0 bg-emerald-500/15 dark:bg-emerald-500/20" style={{ width: `${pct}%` }} />
+                    <div className="relative flex items-center justify-between text-xs font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <span>{opt.label}</span>
+                        {isSelected && <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />}
+                      </span>
+                      <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">
+                        {pct}% ({opt.votes})
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. HIGH-ERGONOMICS REACTION BAR ("EASY TO REACT TO") */}
+      <div className="px-4 py-3 sm:px-5 bg-slate-50/70 dark:bg-[#0c0f16] border-t border-slate-200/80 dark:border-[#202534] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
+          {/* Corroborate / Upvote Button (Green Affirmation) */}
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               upvotePost(post.id);
             }}
-            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded transition cursor-pointer ${
+            className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
               isUserSupported
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-black'
-                : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold'
+                ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-1 ring-emerald-500 active:scale-95'
+                : 'bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600'
             }`}
-            title="Support / Corroborate this report"
+            title="Corroborate this citizen dispatch"
           >
-            <ArrowUp size={11} /> {post.upvotes}
+            <ArrowUp size={14} className={isUserSupported ? 'stroke-[3]' : ''} />
+            <span>Corroborate</span>
+            <span className={`px-1.5 py-0.2 rounded text-[11px] font-mono ${
+              isUserSupported ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+            }`}>
+              {post.upvotes || 0}
+            </span>
           </button>
 
-          {/* Downvote Button */}
+          {/* Comment / Discussion Button */}
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
-              downvotePost(post.id);
+              setActivePost(post);
+              go('post_detail');
             }}
-            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded transition cursor-pointer ${
-              isUserDownvoted
-                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-black'
-                : 'text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold'
-            }`}
-            title="Signal dispute / unpopular (Statutory SLA escalation is never affected)"
+            className="px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
+            title="Open dispatch discussion and official replies"
           >
-            <ArrowDown size={11} /> {post.downvotes || 0}
+            <MessageSquare size={14} />
+            <span className="hidden sm:inline">Replies</span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px]">
+              {post.comments?.length || 0}
+            </span>
           </button>
 
-          {/* Quote-Dispatch / Repost Button */}
+          {/* Co-Sign / Repost Button */}
           <button
             type="button"
             onClick={(e) => {
@@ -572,24 +607,26 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setSocialModalTab('quote');
               setSocialModalPost(post);
             }}
-            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition font-bold cursor-pointer"
-            title="Quote-Dispatch or Repost with Commentary"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
+            title="Quote or Co-sign dispatch"
           >
-            <Repeat2 size={11} /> {post.reposts || 0}
+            <Repeat2 size={14} />
+            <span className="hidden md:inline">Co-sign</span>
+            <span className="text-[11px]">{post.reposts || compiledCount || 0}</span>
           </button>
 
-          {/* Add Community Note Button */}
+          {/* Peer Gratitude Reward Button */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setSocialModalTab('community_note');
-              setSocialModalPost(post);
+              setRewardOpen(true);
             }}
-            className="p-1 rounded text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
-            title="Attach Citizen Fact-Check / Community Note (+15 XP)"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition flex items-center gap-1 cursor-pointer"
+            title="Send peer recognition reward / airtime voucher"
           >
-            <FileCheck2 size={11} />
+            <Gift size={13} className="text-amber-600 dark:text-amber-400" />
+            <span className="hidden sm:inline">Tip</span>
           </button>
 
           {/* Bookmark Button */}
@@ -599,17 +636,17 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               e.stopPropagation();
               toggleBookmark(post.id);
             }}
-            className={`p-1 rounded transition cursor-pointer ${
+            className={`p-2 rounded-xl border text-xs transition cursor-pointer ${
               isBookmarked
-                ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40'
-                : 'text-slate-400 hover:text-amber-500'
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-600'
+                : 'bg-white dark:bg-[#181d2a] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700'
             }`}
-            title={isBookmarked ? 'Saved in Bookmarks' : 'Bookmark Dispatch'}
+            title={isBookmarked ? 'Saved to bookmarks' : 'Save bookmark'}
           >
-            <Bookmark size={11} />
+            <Bookmark size={14} className={isBookmarked ? 'fill-amber-500' : ''} />
           </button>
 
-          {/* Share & Safety Modal Button */}
+          {/* Share / QR Docket */}
           <button
             type="button"
             onClick={(e) => {
@@ -617,60 +654,29 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setSocialModalTab('share');
               setSocialModalPost(post);
             }}
-            className="p-1 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer"
-            title="Share Permalink, Cross-Post to WhatsApp/X, or Mute/Report"
+            className="p-2 rounded-xl bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+            title="Share dispatch link and docket"
           >
-            <Share2 size={11} />
+            <Share2 size={14} />
           </button>
+        </div>
 
-          {/* Direct Individual Vault Peer Reward Button */}
+        {/* 4. SWIPE TO NEXT POST JUMPER BUTTON */}
+        {onNextPost && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setRewardOpen(true);
+              onNextPost();
             }}
-            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700/70 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition font-bold cursor-pointer"
-            title="Reward Author from your Individual Citizen Vault"
+            className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-mono font-bold bg-slate-200/80 hover:bg-emerald-600 dark:bg-slate-800 dark:hover:bg-emerald-600 text-slate-700 hover:text-white dark:text-slate-300 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer ml-auto shrink-0"
+            title="Jump to next civic dispatch"
           >
-            <Gift size={10} />
-            <span>Reward</span>
+            <span>Next</span>
+            <ChevronDown size={14} />
           </button>
-
-          {/* QR Code Action */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowQr(true);
-            }}
-            className="p-1 rounded text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
-            title="Scan & Verify Official QR Docket"
-          >
-            <QrCode size={12} />
-          </button>
-
-          {post.comments && post.comments.length > 0 && (
-            <>
-              <span>·</span>
-              <span className="flex items-center gap-0.5 text-indigo-600 dark:text-indigo-400 font-bold">
-                <MessageSquare size={11} /> {post.comments.length}
-              </span>
-            </>
-          )}
-        </span>
+        )}
       </div>
-
-      {post.escalated && (
-        <div className="mt-2 flex items-center gap-1 text-[8px] mono text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-500/20">
-          <AlertTriangle size={10} /> Auto-escalated up sovereign chain
-        </div>
-      )}
-
-      {post.upvotes >= 100 && (
-        <div className="mt-1.5 text-[8px] mono text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
-          <CheckCircle2 size={10} /> Sovereign Citizen Pinned — {post.upvotes} verified supporters
-        </div>
-      )}
 
       {/* QR Code Modal */}
       <QrCodeModal
@@ -680,19 +686,17 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
         post={post}
       />
 
-      {/* Individual Citizen Vault Peer Reward Modal */}
+      {/* Peer Reward Modal */}
       {rewardOpen && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <RewardModal
-            isOpen={rewardOpen}
-            onClose={() => setRewardOpen(false)}
-            targetCitizenName={post.anonymous ? 'Verified Citizen' : post.citizen_name}
-            postId={post.id}
-            contextTitle={post.title}
-          />
-        </div>
+        <RewardModal
+          isOpen={rewardOpen}
+          onClose={() => setRewardOpen(false)}
+          targetCitizenName={post.citizen_name || 'Verified Citizen'}
+          targetCitizenRole={post.citizen_rank || 'Citizen Watchdog'}
+          postId={post.id}
+          postTitle={post.title}
+        />
       )}
     </article>
   );
 };
-

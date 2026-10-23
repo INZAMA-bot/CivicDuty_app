@@ -217,6 +217,61 @@
         "clicks": { "type": "number" }
       },
       "required": ["id", "title", "category", "tagline", "summary", "published", "postedAt"]
+    },
+    "TownHall": {
+      "title": "TownHall",
+      "description": "Live digital baraza and broadcast town hall session across sovereign jurisdictions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "country": { "type": "string", "maxLength": 8 },
+        "title": { "type": "string", "maxLength": 256 },
+        "host_name": { "type": "string", "maxLength": 128 },
+        "host_title": { "type": "string", "maxLength": 128 },
+        "dept_name": { "type": "string", "maxLength": 128 },
+        "topic_tag": { "type": "string", "maxLength": 64 },
+        "listeners_count": { "type": "number" },
+        "is_live": { "type": "boolean" },
+        "has_video": { "type": "boolean" },
+        "broadcast_mode": { "type": "string", "enum": ["video_stage", "field_cam", "audio_low_data"] },
+        "video_stream_label": { "type": "string", "maxLength": 128 },
+        "pinned_evidence_title": { "type": "string", "maxLength": 256 },
+        "pinned_evidence_badge": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "country", "title", "host_name", "dept_name", "topic_tag", "is_live", "created_at"]
+    },
+    "TownHallMessage": {
+      "title": "TownHallMessage",
+      "description": "Floor questions, transcripts, and multimedia evidence contributed during a town hall.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "townHallId": { "type": "string", "maxLength": 128 },
+        "sender": { "type": "string", "maxLength": 128 },
+        "text": { "type": "string", "maxLength": 2000 },
+        "time": { "type": "string", "maxLength": 64 },
+        "mediaBadge": { "type": "string", "maxLength": 128 },
+        "created_at": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "townHallId", "sender", "text", "created_at"]
+    },
+    "TownHallHandRaise": {
+      "title": "TownHallHandRaise",
+      "description": "Citizen hand raise queue for speaking permission on stage.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "townHallId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 128 },
+        "userRole": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["raised", "speaking", "dismissed"] },
+        "hasMic": { "type": "boolean" },
+        "hasVideo": { "type": "boolean" },
+        "raised_at": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "townHallId", "userId", "userName", "status", "raised_at"]
     }
   },
   "firestore": {
@@ -263,6 +318,18 @@
     "/promotional_ads/{adId}": {
       "schema": "PromotionalAd",
       "description": "CD-Ops manufactured promotional ads and sensitization campaigns broadcast on the civic feed."
+    },
+    "/townhalls/{townHallId}": {
+      "schema": "TownHall",
+      "description": "Live digital baraza and broadcast town hall session across sovereign jurisdictions."
+    },
+    "/townhalls/{townHallId}/messages/{messageId}": {
+      "schema": "TownHallMessage",
+      "description": "Floor questions, transcripts, and multimedia evidence contributed during a town hall."
+    },
+    "/townhalls/{townHallId}/hands/{handId}": {
+      "schema": "TownHallHandRaise",
+      "description": "Citizen hand raise queue for speaking permission on stage."
     }
   }
 }

@@ -34,6 +34,9 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
     go,
     openGuide,
     setUser,
+    showDemos,
+    setShowDemos,
+    toast,
   } = useApp();
 
   const [open, setOpen] = useState(false);
@@ -199,7 +202,61 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
             </div>
           </div>
 
-          {/* 4. Documentation & Quick Consoles */}
+          {/* 4. Launch Mode: Demos & Mannequins */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                4. National Launch Mode
+              </span>
+              <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                !showDemos 
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' 
+                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+              }`}>
+                {!showDemos ? 'LIVE PRODUCTION' : 'SANDBOX DEMOS'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <button
+                type="button"
+                onClick={() => {
+                  if (showDemos) {
+                    setShowDemos(false);
+                    toast('Production Mode Active: All demo & mannequin posts turned OFF platform-wide.', 'emerald');
+                  }
+                }}
+                className={`min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  !showDemos
+                    ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Disable all demo posts for live launch"
+              >
+                <span>Demos Off</span>
+                {!showDemos && <Check size={11} strokeWidth={2} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!showDemos) {
+                    setShowDemos(true);
+                    toast('Sandbox Mode Active: Illustrative demo mannequin posts enabled.', 'amber');
+                  }
+                }}
+                className={`min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  showDemos
+                    ? 'bg-amber-600 text-white shadow-2xs font-bold'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+                title="Enable sample demo posts for testing and exhibition"
+              >
+                <span>Demos On</span>
+                {showDemos && <Check size={11} strokeWidth={2} />}
+              </button>
+            </div>
+          </div>
+
+          {/* 5. Documentation & Quick Consoles */}
           <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-1">
             <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block pb-0.5">
               Documentation &amp; Consoles

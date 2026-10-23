@@ -22,6 +22,9 @@ import {
   EscrowPerkVoucher,
   CdOpsPromotionalAd,
   CompiledWitnessReport,
+  TownHallSession,
+  TownHallMessage,
+  TownHallHandRaise,
 } from '../types';
 import { INITIAL_POSTS } from '../data/initialData';
 
@@ -540,6 +543,214 @@ export function subscribeToPromotionalAdsFromCloud(
   );
   return unsubscribe;
 }
+
+/**
+ * Persists a live Town Hall / Baraza broadcast session to Cloud Firestore
+ */
+export async function saveTownHallToCloud(th: TownHallSession): Promise<void> {
+  const path = `townhalls/${th.id}`;
+  try {
+    const payload = {
+      id: th.id,
+      country: th.country || 'UG',
+      title: th.title.slice(0, 256),
+      host_name: th.host_name.slice(0, 128),
+      host_title: (th.host_title || 'Civic Moderator').slice(0, 128),
+      dept_name: (th.dept_name || 'Public Desk').slice(0, 128),
+      topic_tag: th.topic_tag.slice(0, 64),
+      listeners_count: Number(th.listeners_count || 1),
+      is_live: Boolean(th.is_live),
+      has_video: Boolean(th.has_video),
+      broadcast_mode: th.broadcast_mode || 'video_stage',
+      video_stream_label: (th.video_stream_label || '').slice(0, 128),
+      pinned_evidence_title: (th.pinned_evidence_title || '').slice(0, 256),
+      pinned_evidence_badge: (th.pinned_evidence_badge || '').slice(0, 128),
+      pinned_evidence_url: (th.pinned_evidence_url || '').slice(0, 512),
+      created_at: th.created_at || new Date().toISOString(),
+      scheduled_at: (th.scheduled_at || '').slice(0, 64),
+      speakers: (th.speakers || []).map((sp) => ({
+        name: sp.name.slice(0, 128),
+        role: sp.role.slice(0, 128),
+        speaking: Boolean(sp.speaking),
+        video_on: Boolean(sp.video_on),
+        camera_label: (sp.camera_label || '').slice(0, 64),
+        is_muted: Boolean(sp.is_muted),
+      })),
+    };
+    await setDoc(doc(db, 'townhalls', th.id), payload, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Updates an active Town Hall session in Cloud Firestore
+ */
+export async function updateTownHallInCloud(
+  townHallId: string,
+  updates: Partial<TownHallSession>
+): Promise<void> {
+  const path = `townhalls/${townHallId}`;
+  try {
+    await updateDoc(doc(db, 'townhalls', townHallId), updates as any);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+/**
+ * Deletes or concludes a Town Hall session from Cloud Firestore
+ */
+export async function deleteTownHallFromCloud(townHallId: string): Promise<void> {
+  const path = `townhalls/${townHallId}`;
+  try {
+    await deleteDoc(doc(db, 'townhalls', townHallId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+/**
+ * Subscribes in real-time to active Town Hall broadcast sessions by Country
+ */
+export function subscribeToTownHallsFromCloud(
+  country: CountryCode,
+  onTownHallsReceived: (sessions: TownHallSession[]) => void
+): () => void {
+  const q = query(collection(db, 'townhalls'), where('country', '==', country));
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const halls: TownHallSession[] = [];
+      snapshot.forEach((docSnap) => {
+        halls.push(docSnap.data() as TownHallSession);
+      });
+      onTownHallsReceived(halls);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.GET, 'townhalls');
+    }
+  );
+  return unsubscribe;
+}
+
+/**
+ * Submits a citizen floor question, transcript, or evidence badge in real-time
+ */
+export async function sendTownHallMessageToCloud(
+  townHallId: string,
+  msg: Omit<TownHallMessage, 'id'> & { id?: string }
+): Promise<void> {
+  const msgId = msg.id || `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const path = `townhalls/${townHallId}/messages/${msgId}`;
+  try {
+    const payload = {
+      id: msgId,
+      townHallId,
+      sender: msg.sender.slice(0, 128),
+      text: msg.text.slice(0, 2000),
+      time: msg.time || 'Just now',
+      mediaBadge: (msg.mediaBadge || '').slice(0, 128),
+      mediaUrl: (msg.mediaUrl || '').slice(0, 512),
+      created_at: msg.created_at || new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'townhalls', townHallId, 'messages', msgId), payload);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Subscribes to real-time floor contributions in a specific Town Hall
+ */
+export function subscribeToTownHallMessagesFromCloud(
+  townHallId: string,
+  onMessagesReceived: (messages: TownHallMessage[]) => void
+): () => void {
+  const collRef = collection(db, 'townhalls', townHallId, 'messages');
+  const unsubscribe = onSnapshot(
+    collRef,
+    (snapshot) => {
+      const msgs: TownHallMessage[] = [];
+      snapshot.forEach((docSnap) => {
+        msgs.push(docSnap.data() as TownHallMessage);
+      });
+      msgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      onMessagesReceived(msgs);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.GET, `townhalls/${townHallId}/messages`);
+    }
+  );
+  return unsubscribe;
+}
+
+/**
+ * Sets or updates a citizen's hand raise / speaking status in the town hall
+ */
+export async function setTownHallHandRaiseInCloud(
+  townHallId: string,
+  hand: TownHallHandRaise
+): Promise<void> {
+  const path = `townhalls/${townHallId}/hands/${hand.id}`;
+  try {
+    const payload = {
+      id: hand.id,
+      townHallId,
+      userId: hand.userId.slice(0, 128),
+      userName: hand.userName.slice(0, 128),
+      userRole: (hand.userRole || 'Citizen').slice(0, 128),
+      status: hand.status,
+      hasMic: Boolean(hand.hasMic),
+      hasVideo: Boolean(hand.hasVideo),
+      raised_at: hand.raised_at || new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'townhalls', townHallId, 'hands', hand.id), payload, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Removes a hand raise from the queue
+ */
+export async function deleteTownHallHandInCloud(
+  townHallId: string,
+  handId: string
+): Promise<void> {
+  const path = `townhalls/${townHallId}/hands/${handId}`;
+  try {
+    await deleteDoc(doc(db, 'townhalls', townHallId, 'hands', handId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+/**
+ * Subscribes to the real-time hand raise queue for stage floor management
+ */
+export function subscribeToTownHallHandsFromCloud(
+  townHallId: string,
+  onHandsReceived: (hands: TownHallHandRaise[]) => void
+): () => void {
+  const collRef = collection(db, 'townhalls', townHallId, 'hands');
+  const unsubscribe = onSnapshot(
+    collRef,
+    (snapshot) => {
+      const hands: TownHallHandRaise[] = [];
+      snapshot.forEach((docSnap) => {
+        hands.push(docSnap.data() as TownHallHandRaise);
+      });
+      hands.sort((a, b) => new Date(a.raised_at).getTime() - new Date(b.raised_at).getTime());
+      onHandsReceived(hands);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.GET, `townhalls/${townHallId}/hands`);
+    }
+  );
+  return unsubscribe;
+}
+
 
 
 

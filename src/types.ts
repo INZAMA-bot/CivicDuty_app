@@ -274,6 +274,10 @@ export interface PostTerritory {
   district: string;
   subcounty: string;
   parish: string;
+  ward?: string;
+  village?: string;
+  cell?: string;
+  grassroot?: string;
 }
 
 export interface EscalationRecord {
@@ -312,6 +316,11 @@ export interface Post {
   dept: string;
   lane: LaneType;
   territory: PostTerritory;
+  ward?: string;
+  parish?: string;
+  village?: string;
+  cell?: string;
+  grassroot?: string;
   citizen_id: string;
   citizen_name: string;
   citizen_rank: string;
@@ -471,6 +480,15 @@ export interface UserSession {
   permit_label?: string;
   permit_number?: string;
   permit_expiry?: string;
+  parish_ward?: string;
+  parish?: string;
+  ward?: string;
+  village?: string;
+  grassroot?: string;
+  district?: string;
+  subcounty?: string;
+  rank?: string;
+  profession?: string;
 }
 
 export interface GovCodeData {
@@ -1140,14 +1158,44 @@ export interface TownHallSession {
   has_video?: boolean;
   broadcast_mode?: 'video_stage' | 'field_cam' | 'audio_low_data';
   video_stream_label?: string;
+  pinned_evidence_title?: string;
+  pinned_evidence_badge?: string;
+  pinned_evidence_url?: string;
+  created_at?: string;
+  scheduled_at?: string;
   speakers: Array<{
     name: string;
     role: string;
     speaking?: boolean;
     video_on?: boolean;
     camera_label?: string;
+    is_muted?: boolean;
   }>;
 }
+
+export interface TownHallMessage {
+  id: string;
+  townHallId: string;
+  sender: string;
+  text: string;
+  time: string;
+  mediaBadge?: string;
+  mediaUrl?: string;
+  created_at: string;
+}
+
+export interface TownHallHandRaise {
+  id: string;
+  townHallId: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  status: 'raised' | 'speaking' | 'dismissed';
+  hasMic: boolean;
+  hasVideo: boolean;
+  raised_at: string;
+}
+
 
 
 

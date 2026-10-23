@@ -62,6 +62,10 @@ import {
   savePromotionalAdToCloud,
   deletePromotionalAdFromCloud,
   subscribeToPromotionalAdsFromCloud,
+  saveTownHallToCloud,
+  updateTownHallInCloud,
+  deleteTownHallFromCloud,
+  subscribeToTownHallsFromCloud,
 } from '../services/firestoreSync';
 import {
   GovFeedbackMessage,
@@ -370,7 +374,10 @@ interface AppContextType {
     co_host_name?: string;
     has_video?: boolean;
     broadcast_mode?: 'video_stage' | 'field_cam' | 'audio_low_data';
+    scheduled_at?: string;
   }) => void;
+  updateTownHallSession: (townHallId: string, updates: Partial<TownHallSession>) => void;
+  concludeTownHallSession: (townHallId: string) => void;
   activeHashtagFilter: string | null;
   setActiveHashtagFilter: (tag: string | null) => void;
 }
@@ -1212,6 +1219,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     return () => unsubscribe();
   }, []);
+
+  // Real-time Cloud Firestore subscription for Live Town Halls & Barazas
+  useEffect(() => {
+    const activeCountry = user?.country || selectedCountry || 'UG';
+    const unsubscribe = subscribeToTownHallsFromCloud(activeCountry, (cloudHalls) => {
+      if (!cloudHalls) return;
+      setCustomTownHalls(cloudHalls);
+    });
+    return () => unsubscribe();
+  }, [selectedCountry, user?.country]);
 
   useEffect(() => {
     try {
@@ -4021,6 +4038,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { name: 'Health Center In-Charge', role: 'Medical Stores Liaison', speaking: false, video_on: false },
       ],
     },
+    {
+      id: `th-sched-1-${activeCountryCode}`,
+      title: `${activeCountryObj.name} Nationwide Anti-Corruption Whistleblower & Parish Audit Assembly`,
+      host_name: 'Inspectorate of Government & Civic Watchdogs',
+      host_title: 'National Anti-Corruption Bureau',
+      dept_name: 'Inspectorate of Government (IGG)',
+      country: activeCountryCode,
+      listeners_count: 512,
+      is_live: false,
+      has_video: true,
+      broadcast_mode: 'video_stage',
+      video_stream_label: 'SCHEDULED NATIONWIDE CITIZEN ASSEMBLY',
+      topic_tag: '#NationalIntegrityBaraza',
+      scheduled_at: new Date(Date.now() + 86400000 * 2).toISOString(),
+      speakers: [
+        { name: 'Dep. Inspector General', role: 'Host · Ombudsman Officer', speaking: false, video_on: true, camera_label: 'Ombudsman Chamber' },
+        { name: 'Auditor General Lead', role: 'Co-Host · Forensic Audit', speaking: false, video_on: true },
+        { name: 'Citizen Anti-Graft Scout', role: 'Citizen Intervenor', speaking: false, video_on: false },
+      ],
+    },
   ];
 
   const townHalls: TownHallSession[] = [
@@ -4035,6 +4072,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     co_host_name,
     has_video = true,
     broadcast_mode = 'video_stage',
+    scheduled_at,
   }: {
     title: string;
     topic_tag: string;
@@ -4042,6 +4080,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     co_host_name?: string;
     has_video?: boolean;
     broadcast_mode?: 'video_stage' | 'field_cam' | 'audio_low_data';
+    scheduled_at?: string;
   }) => {
     const activeU = user || DEFAULT_CITIZEN_USER;
     const hostName =
@@ -4063,9 +4102,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dept_name: dept_name.trim() || 'Municipal Accountability Desk',
       country: activeCountryCode,
       listeners_count: 18,
-      is_live: true,
+      is_live: !scheduled_at,
       has_video,
       broadcast_mode,
+      scheduled_at,
+      created_at: new Date().toISOString(),
       video_stream_label:
         broadcast_mode === 'field_cam'
           ? 'ON-SITE FIELD CAMERA · GPS VERIFIED'
@@ -4088,9 +4129,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setCustomTownHalls((prev) => [newSession, ...prev]);
     setHostBarazaModalOpen(false);
-    setActiveTownHall(newSession);
-    logAudit('HOST_BARAZA', newSession.id, `${hostName} launched Live Digital Baraza (${has_video ? 'Video + Audio' : 'Audio'}): "${newSession.title}" (${cleanTag})`);
-    toast(`Live Digital Baraza (${has_video ? 'Video + Audio Stage' : 'Audio Stage'}) launched!`, 'emerald');
+    if (!scheduled_at) {
+      setActiveTownHall(newSession);
+    }
+    saveTownHallToCloud(newSession).catch((err) => {
+      console.warn('Syncing townhall to cloud deferred:', err);
+    });
+    logAudit('HOST_BARAZA', newSession.id, `${hostName} launched ${scheduled_at ? 'Scheduled' : 'Live'} Digital Baraza (${has_video ? 'Video + Audio' : 'Audio'}): "${newSession.title}" (${cleanTag})`);
+    toast(`${scheduled_at ? 'Upcoming Baraza scheduled' : 'Live Digital Baraza launched across nationwide network'}!`, 'emerald');
+  };
+
+  const updateTownHallSession = (townHallId: string, updates: Partial<TownHallSession>) => {
+    setCustomTownHalls((prev) =>
+      prev.map((th) => (th.id === townHallId ? { ...th, ...updates } : th))
+    );
+    if (activeTownHall?.id === townHallId) {
+      setActiveTownHall({ ...activeTownHall, ...updates });
+    }
+    updateTownHallInCloud(townHallId, updates).catch(() => {});
+  };
+
+  const concludeTownHallSession = (townHallId: string) => {
+    setCustomTownHalls((prev) => prev.filter((th) => th.id !== townHallId));
+    if (activeTownHall?.id === townHallId) {
+      setActiveTownHall(null);
+    }
+    deleteTownHallFromCloud(townHallId).catch(() => {});
+    logAudit('CONCLUDE_BARAZA', townHallId, `Digital Baraza ${townHallId} concluded & archived.`);
+    toast('Live Baraza concluded and broadcast decommissioned.', 'amber');
   };
 
   return (
@@ -4270,6 +4336,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hostBarazaModalOpen,
         setHostBarazaModalOpen,
         createTownHall,
+        updateTownHallSession,
+        concludeTownHallSession,
         activeHashtagFilter,
         setActiveHashtagFilter,
       }}

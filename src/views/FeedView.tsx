@@ -26,13 +26,22 @@ import {
   Camera,
   X,
   Scale,
+  Calendar,
+  Bell,
+  BellRing,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
+import { CivicFeedDispatcher } from '../components/CivicFeedDispatcher';
+import { AccountabilityDocket } from '../components/AccountabilityDocket';
+import { COUNTRIES } from '../data/countries';
 import { DeptIcon, CategoryIcon } from '../components/DeptIcon';
 import { GeospatialSignalMap } from '../components/GeospatialSignalMap';
-import { TrafficSignalHUD } from '../components/TrafficSignalHUD';
+import { TrafficSignalHUD, SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from '../components/TrafficSignalHUD';
 import { PromotionalAdFeedCard } from '../components/PromotionalAdFeedCard';
-import { catByID, getDept, slaStatus } from '../utils/helpers';
+import { catByID, getDept, getPostGrassroots, slaStatus } from '../utils/helpers';
 import { TicketCategory } from '../types';
 
 export const FeedView: React.FC = () => {
@@ -62,12 +71,42 @@ export const FeedView: React.FC = () => {
     bookmarks,
     mutedAuthors,
     blockedAuthors,
+    setUser,
+    toast,
   } = useApp();
 
   const [gisViewMode, setGisViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [selectedCategory, setSelectedCategory] = useState<TicketCategory | 'all'>('all');
   const [showBookmarksOnly, setShowBookmarksOnly] = useState<boolean>(false);
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
+  const [showBarazaDeck, setShowBarazaDeck] = useState<boolean>(false);
+  const [barazaDeckTab, setBarazaDeckTab] = useState<'live' | 'upcoming'>('live');
+
+  // Grassroots Hierarchy filter state for "Near Me"
+  const [nearMeLevel, setNearMeLevel] = useState<'all' | 'parish' | 'ward' | 'grassroot'>('all');
+  const [activeParish, setActiveParish] = useState<string>(() => user?.parish || user?.parish_ward || 'Nakasero Parish');
+  const [activeWard, setActiveWard] = useState<string>(() => user?.ward || 'Central Ward');
+  const [activeGrassroot, setActiveGrassroot] = useState<string>(() => user?.grassroot || user?.village || 'Lumumba Cell');
+  const [showGrassrootsModal, setShowGrassrootsModal] = useState<boolean>(false);
+  const [remindedBarazas, setRemindedBarazas] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem('civicduty_baraza_reminders');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleBarazaReminder = (id: string, _title: string) => {
+    setRemindedBarazas((prev) => {
+      const nextVal = !prev[id];
+      const next = { ...prev, [id]: nextVal };
+      try {
+        localStorage.setItem('civicduty_baraza_reminders', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Preserve & Restore Feed Scroll Position
   useEffect(() => {
@@ -122,7 +161,7 @@ export const FeedView: React.FC = () => {
     normFollowed.includes(p.dept) ||
     followed.includes(`${activeUser.country.toLowerCase()}-${p.dept}`)
   );
-  // If user switched to a country where they haven't pinned specific desks yet, show all country dispatches
+  
   const followPosts =
     matchedFollowPosts.length > 0
       ? allC.filter(
@@ -134,7 +173,61 @@ export const FeedView: React.FC = () => {
             p.is_master_dossier
         )
       : allC;
-  const trendPosts = [...allC].sort((a, b) => b.upvotes - a.upvotes);
+  const toggleFollowDept = (deptId: string) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const current = prev.followed || [];
+      const isF = current.includes(deptId);
+      const updated = isF ? current.filter((x) => x !== deptId) : [...current, deptId];
+      toast(isF ? `Unfollowed @${deptId}` : `Following @${deptId} dispatches!`, 'emerald');
+      return { ...prev, followed: updated };
+    });
+  };
+
+  // Trending ranked by citizen corroborations, reposts & comments
+  const trendPosts = [...allC].sort((a, b) => {
+    const scoreA = (a.upvotes || 0) * 2 + (a.reposts || 0) * 3 + (a.comments?.length || 0) * 2;
+    const scoreB = (b.upvotes || 0) * 2 + (b.reposts || 0) * 3 + (b.comments?.length || 0) * 2;
+    return scoreB - scoreA;
+  });
+
+  // Near Me grassroots hierarchy filtering (Parish, Ward, Grassroot)
+  const nearMePosts = allC.filter((p) => {
+    const g = getPostGrassroots(p.country, p);
+    const parishClean = activeParish.replace(/ Parish/i, '').toLowerCase();
+    const wardClean = activeWard.replace(/ Ward/i, '').toLowerCase();
+    const grassrootClean = activeGrassroot.toLowerCase();
+
+    if (nearMeLevel === 'parish') {
+      return (
+        g.parish.toLowerCase().includes(parishClean) ||
+        p.body.toLowerCase().includes(parishClean) ||
+        p.location.toLowerCase().includes(parishClean)
+      );
+    }
+    if (nearMeLevel === 'ward') {
+      return (
+        g.ward.toLowerCase().includes(wardClean) ||
+        p.body.toLowerCase().includes(wardClean) ||
+        p.location.toLowerCase().includes(wardClean)
+      );
+    }
+    if (nearMeLevel === 'grassroot') {
+      return (
+        g.grassroot.toLowerCase().includes(grassrootClean) ||
+        p.body.toLowerCase().includes(grassrootClean) ||
+        p.location.toLowerCase().includes(grassrootClean)
+      );
+    }
+    // 'all' level: matches parish, ward, subcounty or district
+    return (
+      g.parish.toLowerCase().includes(parishClean) ||
+      g.ward.toLowerCase().includes(wardClean) ||
+      p.location.toLowerCase().includes(parishClean) ||
+      p.location.toLowerCase().includes(wardClean) ||
+      (activeUser.district && p.territory?.district?.toLowerCase().includes(activeUser.district.toLowerCase()))
+    );
+  });
 
   const base = selectedCategory === 'praise' 
     ? allC 
@@ -142,7 +235,7 @@ export const FeedView: React.FC = () => {
       ? followPosts 
       : feedTab === 'trending' 
         ? trendPosts 
-        : allC;
+        : (nearMePosts.length > 0 ? nearMePosts : allC);
 
   const matchesQuery = (p: any, q: string) => {
     if (!q) return true;
@@ -170,7 +263,6 @@ export const FeedView: React.FC = () => {
     return p.category === selectedCategory;
   };
 
-  // Always sort Live Citizen Dispatches (!is_demo) above Illustrative Demo Showcases (is_demo)
   const display = base
     .filter((p) => !(mutedAuthors || []).includes(p.citizen_name) && !(blockedAuthors || []).includes(p.citizen_name))
     .filter((p) => (showBookmarksOnly ? (bookmarks || []).includes(p.id) : true))
@@ -191,482 +283,753 @@ export const FeedView: React.FC = () => {
     });
 
   const total = allC.length;
-  const resolved = allC.filter((p) => p.status === 'resolved').length;
-  const overdue = allC.filter((p) => p.escalated || p.status === 'overdue').length;
-  const corruptCt = allC.filter((p) => p.category === 'corruption').length;
-  const praiseCt = allC.filter((p) => p.category === 'praise').length;
-  const topPraise = allC.find((p) => p.category === 'praise');
+  const redCount = allC.filter(
+    (p) => p.category === 'corruption' || p.status === 'pending' || p.status === 'overdue' || p.escalated
+  ).length;
+  const amberCount = allC.filter(
+    (p) => (p.status === 'investigating' || p.status === 'budget' || p.status === 'received') && p.category !== 'corruption'
+  ).length;
+  const greenCount = allC.filter(
+    (p) => p.status === 'resolved' || p.citizen_satisfied === true || p.category === 'praise'
+  ).length;
 
-  // Ensure initial reading focus is on the top visible post card
+  const liveBarazaRooms = (townHalls || []).filter((th) => {
+    if (!th.scheduled_at) return true;
+    const t = new Date(th.scheduled_at).getTime();
+    return isNaN(t) || t <= Date.now();
+  });
+
+  const upcomingBarazaRooms = (townHalls || []).filter((th) => {
+    if (!th.scheduled_at) return false;
+    const t = new Date(th.scheduled_at).getTime();
+    return !isNaN(t) && t > Date.now();
+  });
+
+  const activeTopBaraza = liveBarazaRooms[0] || null;
+
+  const [currentPostIndex, setCurrentPostIndex] = useState<number>(0);
+
+  // Sync index when focusedCardId changes
   useEffect(() => {
-    if (display.length > 0 && (!focusedCardId || !display.some((p) => p.id === focusedCardId))) {
-      setFocusedCardId(display[0].id);
+    if (focusedCardId) {
+      const idx = display.findIndex((p) => p.id === focusedCardId);
+      if (idx !== -1) setCurrentPostIndex(idx);
     }
-  }, [display.length, feedTab, selectedCategory]);
+  }, [focusedCardId, display]);
 
-  // Viewport reading spotlight: as the user scrolls/swaps to the next post card,
-  // what they were reading dims away while the next post turns on visually clear.
-  const updateReadingSpotlightOnScroll = useCallback(() => {
-    const container = document.getElementById('feed-list');
-    if (!container) return;
-    const cards = container.querySelectorAll<HTMLElement>('[data-post-card-id]');
-    if (!cards.length) return;
+  const goToNextPost = useCallback(() => {
+    if (display.length === 0) return;
+    const nextIdx = Math.min(display.length - 1, currentPostIndex + 1);
+    setCurrentPostIndex(nextIdx);
+    const target = display[nextIdx];
+    if (target) {
+      setFocusedCardId(target.id);
+      const el = document.querySelector(`[data-post-card-id="${target.id}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [currentPostIndex, display]);
 
-    const viewportCenterY = window.innerHeight * 0.45;
-    let closestId: string | null = null;
-    let minDistance = Infinity;
+  const goToPrevPost = useCallback(() => {
+    if (display.length === 0) return;
+    const prevIdx = Math.max(0, currentPostIndex - 1);
+    setCurrentPostIndex(prevIdx);
+    const target = display[prevIdx];
+    if (target) {
+      setFocusedCardId(target.id);
+      const el = document.querySelector(`[data-post-card-id="${target.id}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [currentPostIndex, display]);
 
-    cards.forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      // Ignore cards completely off-screen
-      if (rect.bottom < 60 || rect.top > window.innerHeight - 40) return;
-      const cardCenterY = rect.top + rect.height / 2;
-      const dist = Math.abs(cardCenterY - viewportCenterY);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestId = el.getAttribute('data-post-card-id');
+  // Keyboard navigation shortcuts (J / ArrowDown = Next, K / ArrowUp = Prev)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        goToNextPost();
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        goToPrevPost();
       }
-    });
-
-    if (closestId) {
-      setFocusedCardId((prev) => (prev === closestId ? prev : closestId));
-    }
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('scroll', updateReadingSpotlightOnScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', updateReadingSpotlightOnScroll);
     };
-  }, [updateReadingSpotlightOnScroll]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [goToNextPost, goToPrevPost]);
 
   return (
-    <div className="animate-fade-in pb-16 text-slate-950 dark:text-white">
-      {/* 1. Sticky Feed Tabs Header — Mobile-First Thumb Reach */}
-      <div className="sticky top-0 z-10 border-b border-[#e3e6ea] dark:border-[#262b36] flex bg-white dark:bg-[#161a22] transition-colors">
-        {[
-          {
-            id: 'following',
-            label: isGrassrootsChief ? 'Grassroots Radar' : t('following') || 'Monitored Desks',
-            icon: Users,
-          },
-          { id: 'trending', label: t('trending') || 'Top Dispatches', icon: TrendingUp },
-          {
-            id: 'near_me',
-            label: isGrassrootsChief ? 'Parish Watch' : t('nearMe') || 'GIS Radar',
-            icon: Radio,
-          },
-        ].map((tabItem) => {
-          const Icon = tabItem.icon;
-          const isOn = feedTab === tabItem.id;
-          return (
+    <div className="min-h-screen text-slate-950 dark:text-white bg-white dark:bg-[#0e1116] border-x border-slate-200 dark:border-[#262b36] pb-24">
+      {/* 1. TWITTER / X STICKY TOP TAB HEADER */}
+      <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0e1116]/90 backdrop-blur-md border-b border-slate-200 dark:border-[#262b36] transition-colors">
+        <div className="flex items-center justify-around">
+          {/* Tab 1: Following (Monitored Desks & Grassroots) */}
+          <button
+            type="button"
+            onClick={() => setFeedTab('following')}
+            className="flex-1 py-3.5 text-center relative font-bold text-sm transition-colors cursor-pointer"
+          >
+            <span className={feedTab === 'following' ? 'text-slate-950 dark:text-white font-black' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}>
+              Following {followed.length > 0 && `(${followed.length})`}
+            </span>
+            {feedTab === 'following' && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+            )}
+          </button>
+
+          {/* Tab 2: Trending (Ranked by Engagement & Corroborations) */}
+          <button
+            type="button"
+            onClick={() => setFeedTab('trending')}
+            className="flex-1 py-3.5 text-center relative font-bold text-sm transition-colors cursor-pointer"
+          >
+            <span className={feedTab === 'trending' ? 'text-slate-950 dark:text-white font-black' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}>
+              Trending
+            </span>
+            {feedTab === 'trending' && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+            )}
+          </button>
+
+          {/* Tab 3: Near Me (Grassroots Hierarchy: Parish · Ward · Grassroot Cell) */}
+          <button
+            type="button"
+            onClick={() => setFeedTab('near_me')}
+            className="flex-1 py-3.5 text-center relative font-bold text-sm transition-colors cursor-pointer"
+          >
+            <span className={`inline-flex items-center gap-1 ${feedTab === 'near_me' ? 'text-slate-950 dark:text-white font-black' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}>
+              <span>Near Me</span>
+            </span>
+            {feedTab === 'near_me' && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-1 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+            )}
+          </button>
+        </div>
+
+        {/* 2. MAINTAINING THE SIGNAL BULBS: Twitter-Style Clean Traffic Signal Filters */}
+        <div className="px-3.5 sm:px-4 py-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {/* Filter All */}
             <button
-              key={tabItem.id}
               type="button"
-              onClick={() => setFeedTab(tabItem.id as any)}
-              className={`feed-tab flex-1 flex items-center justify-center gap-1.5 py-2.5 transition-colors font-semibold text-[11.5px] sm:text-xs cursor-pointer ${
-                isOn
-                  ? 'on text-emerald-700 dark:text-emerald-400 border-b-2 border-emerald-600 bg-[#f8f9fa] dark:bg-[#1e232d]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-[#f8f9fa]/60 dark:hover:bg-[#1e232d]/50'
+              onClick={() => setTrafficSignalFilter('all')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                trafficSignalFilter === 'all'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold'
+                  : 'bg-slate-100 dark:bg-[#161a22] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
               }`}
             >
-              <Icon
-                size={13}
-                strokeWidth={1.75}
-                className={isOn ? 'text-emerald-600 dark:text-emerald-400 shrink-0' : 'text-slate-500 dark:text-slate-400 shrink-0'}
-              />
-              <span className="truncate">{tabItem.label}</span>
+              All Signals ({total})
             </button>
-          );
-        })}
-      </div>
 
-      {/* Role-Specific Grassroots / Ministerial Context Banner */}
-      {isGrassrootsChief && (
-        <div className="px-3.5 sm:px-4 py-2 bg-amber-500/10 border-b border-amber-500/25 flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-1.5 font-mono text-amber-900 dark:text-amber-300 min-w-0">
-            <Radio size={13} className="text-amber-600 animate-pulse shrink-0" />
-            <span className="font-bold shrink-0">Grassroots Feed</span>
-            <span>·</span>
-            <span className="truncate">{activeUser.organization_name || activeUser.scope_label || 'Local Parish Node'}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => go('gov_inbox')}
-            className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400 hover:underline shrink-0"
-          >
-            Grassroots Inbox →
-          </button>
-        </div>
-      )}
-      {isMinister && (
-        <div className="px-3.5 sm:px-4 py-2 bg-indigo-500/10 border-b border-indigo-500/25 flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-1.5 font-mono text-indigo-900 dark:text-indigo-300 min-w-0">
-            <Scale size={13} className="text-indigo-600 shrink-0" />
-            <span className="font-bold shrink-0">Portfolio Dispatches</span>
-            <span>·</span>
-            <span className="truncate">Cabinet Strategic Oversight (Read-Only · Arts 111 &amp; 117)</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => go('ps_executive_desk')}
-            className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0"
-          >
-            Ministerial Executive Desk →
-          </button>
-        </div>
-      )}
-
-      {/* 2. Search + Quick Filter Strip (Consolidated for Phone Viewports) */}
-      <div className="px-3.5 sm:px-4 pt-3 pb-2 bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 sw border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] rounded-xl px-3 py-2 flex items-center gap-2">
-            <Search size={14} className="text-slate-500 dark:text-slate-400 shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('searchReports') || 'Search dispatches, parishes, ministries...'}
-              className="text-xs text-slate-950 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 w-full bg-transparent focus:outline-none font-medium"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-
-          <button
-            onClick={() => setGisViewMode(gisViewMode === 'LIST' ? 'MAP' : 'LIST')}
-            className={`min-h-[36px] px-2.5 py-1.5 rounded-xl border text-[10.5px] font-mono font-bold transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer ${
-              gisViewMode === 'MAP'
-                ? 'bg-emerald-600 text-white border-emerald-700'
-                : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200'
-            }`}
-          >
-            <Layers size={12} strokeWidth={1.75} className={gisViewMode === 'MAP' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'} />
-            <span>{gisViewMode === 'MAP' ? 'List' : 'GIS Map'}</span>
-          </button>
-        </div>
-
-        {/* Category & Utility Filter Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold whitespace-nowrap transition-all border cursor-pointer ${
-              selectedCategory === 'all'
-                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
-                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
-            }`}
-          >
-            All ({total})
-          </button>
-
-          <button
-            onClick={() => setSelectedCategory(selectedCategory === 'praise' ? 'all' : 'praise')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold whitespace-nowrap transition-all border cursor-pointer ${
-              selectedCategory === 'praise'
-                ? 'bg-emerald-600 text-white border-emerald-700'
-                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300/70 dark:border-emerald-800'
-            }`}
-          >
-            <Award size={11} className={selectedCategory === 'praise' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'} />
-            <span>Praise ({praiseCt})</span>
-          </button>
-
-          {[
-            { id: 'health', label: 'Health' },
-            { id: 'water', label: 'Water' },
-            { id: 'power', label: 'Power' },
-            { id: 'pothole', label: 'Roads' },
-            { id: 'corruption', label: 'Anti-Graft' },
-          ].map((c) => {
-            const count = allC.filter((p) => p.category === c.id).length;
-            const isSel = selectedCategory === c.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => setSelectedCategory(isSel ? 'all' : (c.id as any))}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold whitespace-nowrap transition-all border cursor-pointer ${
-                  isSel
-                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
-                }`}
-              >
-                <CategoryIcon category={c.id} size={11} />
-                <span>{c.label}</span>
-                {count > 0 && <span className="opacity-60 text-[9px]">({count})</span>}
-              </button>
-            );
-          })}
-
-          <button
-            onClick={() => setShowBookmarksOnly(!showBookmarksOnly)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-mono font-bold whitespace-nowrap transition-colors shrink-0 cursor-pointer ${
-              showBookmarksOnly
-                ? 'bg-indigo-600 text-white border-indigo-700'
-                : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            <Bookmark size={11} className={showBookmarksOnly ? 'text-white' : 'text-amber-600 dark:text-amber-400'} />
-            <span>Saved ({(bookmarks || []).length})</span>
-          </button>
-
-          <button
-            onClick={() => setShowDemos(!showDemos)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[10px] font-mono font-bold whitespace-nowrap transition-colors shrink-0 cursor-pointer ${
-              showDemos
-                ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300'
-                : 'bg-emerald-600 text-white border-emerald-700'
-            }`}
-          >
-            <Eye size={11} />
-            <span>{showDemos ? `Demos: ON (${demoCount})` : `Live Only (${liveCount})`}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Traffic Light Sovereign Signal Filter HUD */}
-      <div className="px-3.5 sm:px-4 pt-3 pb-1">
-        <TrafficSignalHUD posts={allC} />
-      </div>
-
-      {/* 4. Followed Department Horizontal Strip */}
-      <div className="overflow-x-auto border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] scrollbar-none mt-2">
-        <div className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 w-max">
-          {followed.map((did, idx) => {
-            const d = getDept(activeUser.country, did);
-            const cnt = posts.filter((p) => p.dept === did && p.country === activeUser.country).length;
-            return (
-              <button
-                key={`${did}-${idx}`}
-                onClick={() => {
-                  setActiveDept(did);
-                  setActiveDeptCountry(activeUser.country);
-                  go('dept_wall');
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-600 transition-all whitespace-nowrap group cursor-pointer"
-              >
-                <DeptIcon dept={d} size={11} className="text-slate-500 dark:text-slate-400 group-hover:text-emerald-600" />
-                <span className="text-[10px] font-bold text-slate-900 dark:text-slate-100">{d.name}</span>
-                {cnt > 0 && (
-                  <span className="text-[8.5px] font-mono text-emerald-800 dark:text-emerald-300 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded-full">
-                    {cnt}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => go('depts')}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] border-dashed hover:border-slate-400 transition-all whitespace-nowrap text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
-          >
-            + All Desks
-          </button>
-        </div>
-      </div>
-
-      {/* 5. Multi-Room Live Digital Baraza Broadcast Deck — Google AI Studio Card */}
-      {townHalls && townHalls.length > 0 && (
-        <div className="mx-3.5 sm:mx-4 mt-2.5 p-3 sm:p-3.5 rounded-xl bg-white dark:bg-[#161a22] text-slate-900 dark:text-white border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
-          {/* Deck Top Header */}
-          <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#e3e6ea] dark:border-[#262b36] flex-wrap">
-            <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
-                <span>LIVE DIGITAL BARAZA BROADCAST DECK</span>
-              </span>
-              <span className="text-slate-300 dark:text-slate-700">·</span>
-              <span className="text-[10.5px] font-mono text-slate-600 dark:text-slate-300 font-medium">
-                {townHalls.length} Active Rooms ({townHalls.filter((th) => th.has_video).length} Live Video ·{' '}
-                {townHalls.reduce((acc, th) => acc + th.listeners_count, 0).toLocaleString()} Citizens Tuned In)
-              </span>
-            </div>
-
+            {/* Filter Red Bulb */}
             <button
               type="button"
-              onClick={() => setHostBarazaModalOpen(true)}
-              title="Start / Host a New Live Video or Audio Digital Baraza"
-              className="px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-[10px] font-mono font-semibold flex items-center gap-1 cursor-pointer shrink-0"
+              onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'red' ? 'all' : 'red')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                trafficSignalFilter === 'red'
+                  ? 'bg-rose-600 text-white shadow-xs font-bold'
+                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 border border-rose-200 dark:border-rose-900/60'
+              }`}
+              title="Signal 1: Red Bulb (Citizen Speaks / Urgent Issue / Open)"
             >
-              <Video size={11} className="text-emerald-600 dark:text-emerald-400" />
-              <Plus size={10} strokeWidth={2} />
-              <span>Host Video / Audio Baraza</span>
+              <SignalGlyphRed active={true} className="w-3.5 h-3.5" />
+              <span>Urgent ({redCount})</span>
+            </button>
+
+            {/* Filter Amber Bulb */}
+            <button
+              type="button"
+              onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'amber' ? 'all' : 'amber')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                trafficSignalFilter === 'amber'
+                  ? 'bg-amber-600 text-white shadow-xs font-bold'
+                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 border border-amber-200 dark:border-amber-900/60'
+              }`}
+              title="Signal 2: Amber Bulb (Government Serves / Investigating / Budgeted)"
+            >
+              <SignalGlyphAmber active={true} className="w-3.5 h-3.5" />
+              <span>Alert ({amberCount})</span>
+            </button>
+
+            {/* Filter Green Bulb */}
+            <button
+              type="button"
+              onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'green' ? 'all' : 'green')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                trafficSignalFilter === 'green'
+                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-900/60'
+              }`}
+              title="Signal 3: Green Bulb (Citizen Verified / Commended / Resolved)"
+            >
+              <SignalGlyphGreen active={true} className="w-3.5 h-3.5" />
+              <span>Resolved ({greenCount})</span>
+            </button>
+
+            {/* Saved Bookmarks */}
+            <button
+              type="button"
+              onClick={() => setShowBookmarksOnly(!showBookmarksOnly)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition cursor-pointer ${
+                showBookmarksOnly
+                  ? 'bg-indigo-600 text-white font-bold'
+                  : 'bg-slate-100 dark:bg-[#161a22] text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+              }`}
+            >
+              <Bookmark size={11} className={showBookmarksOnly ? 'text-white' : 'text-slate-500'} />
+              <span>Saved ({(bookmarks || []).length})</span>
             </button>
           </div>
 
-          {/* Horizontal Multi-Room Studio Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-            {townHalls.map((th, idx) => {
-              const isVideo = Boolean(th.has_video);
-              const isFieldCam = th.broadcast_mode === 'field_cam';
+          {/* Demos Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowDemos(!showDemos)}
+            className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md shrink-0 transition cursor-pointer ${
+              showDemos ? 'text-amber-600 bg-amber-50 dark:bg-amber-950/50' : 'text-slate-400 hover:text-slate-600'
+            }`}
+            title="Toggle showcase demonstration tickets"
+          >
+            {showDemos ? 'Demos: On' : 'Live Only'}
+          </button>
+        </div>
+      </header>
+
+      {/* 2b. CRITICAL: NEAR ME GRASSROOTS HIERARCHY CONTROLS (PARISH · WARD · GRASSROOT) */}
+      {feedTab === 'near_me' && (
+        <div className="bg-slate-50 dark:bg-[#161a22] border-b border-slate-200 dark:border-[#262b36] p-3 sm:p-3.5 space-y-2.5">
+          {/* Header Row: Current Grassroots Scope & View Mode Toggle */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs text-slate-800 dark:text-slate-200 flex-wrap">
+              <MapPin size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Grassroots:</span>
+              <span className="font-bold text-slate-950 dark:text-white">
+                {activeUser.district || 'Kampala'} › {activeWard} › {activeParish}
+              </span>
+              <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">({activeGrassroot})</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Change Location Button */}
+              <button
+                type="button"
+                onClick={() => setShowGrassrootsModal(true)}
+                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-[#0e1116] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                title="Change active grassroots parish or ward"
+              >
+                <span>Change Grassroot 📍</span>
+              </button>
+
+              {/* Map View Toggle */}
+              <button
+                type="button"
+                onClick={() => setGisViewMode(gisViewMode === 'MAP' ? 'LIST' : 'MAP')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs ${
+                  gisViewMode === 'MAP'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white dark:bg-[#0e1116] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500'
+                }`}
+                title="Toggle between List Feed and Geospatial Radar Map"
+              >
+                <span>{gisViewMode === 'MAP' ? '📄 Stream List' : '🗺️ Radar Map'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Granularity Filter Level Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-0.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold mr-1 shrink-0">
+              Filter By:
+            </span>
+
+            {/* Level: All Near Me */}
+            <button
+              type="button"
+              onClick={() => setNearMeLevel('all')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition cursor-pointer shrink-0 ${
+                nearMeLevel === 'all'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold'
+                  : 'bg-white dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+              }`}
+            >
+              All Grassroots ({nearMePosts.length})
+            </button>
+
+            {/* Level: Parish */}
+            <button
+              type="button"
+              onClick={() => setNearMeLevel('parish')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition cursor-pointer shrink-0 flex items-center gap-1 ${
+                nearMeLevel === 'parish'
+                  ? 'bg-emerald-600 text-white font-bold'
+                  : 'bg-white dark:bg-[#0e1116] text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60 hover:bg-emerald-50'
+              }`}
+            >
+              <span>Parish: {activeParish}</span>
+            </button>
+
+            {/* Level: Ward */}
+            <button
+              type="button"
+              onClick={() => setNearMeLevel('ward')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition cursor-pointer shrink-0 flex items-center gap-1 ${
+                nearMeLevel === 'ward'
+                  ? 'bg-sky-600 text-white font-bold'
+                  : 'bg-white dark:bg-[#0e1116] text-sky-800 dark:text-sky-400 border border-sky-200 dark:border-sky-900/60 hover:bg-sky-50'
+              }`}
+            >
+              <span>Ward: {activeWard}</span>
+            </button>
+
+            {/* Level: Grassroot Cell */}
+            <button
+              type="button"
+              onClick={() => setNearMeLevel('grassroot')}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition cursor-pointer shrink-0 flex items-center gap-1 ${
+                nearMeLevel === 'grassroot'
+                  ? 'bg-amber-600 text-white font-bold'
+                  : 'bg-white dark:bg-[#0e1116] text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-50'
+              }`}
+            >
+              <span>Cell: {activeGrassroot}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2c. TRENDING TOPICS & GRASSROOTS CORROBORATIONS */}
+      {feedTab === 'trending' && (
+        <div className="bg-slate-50 dark:bg-[#161a22] border-b border-slate-200 dark:border-[#262b36] px-3.5 sm:px-4 py-2">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+            <span className="text-[10.5px] font-mono uppercase tracking-wider text-slate-500 font-bold shrink-0 flex items-center gap-1">
+              <span>🔥 Trending Grassroots:</span>
+            </span>
+            {[
+              { tag: '#NakaseroWater', count: '142 dispatches' },
+              { tag: '#CentralWardRoads', count: '89 dispatches' },
+              { tag: '#KawempeDrainage', count: '64 dispatches' },
+              { tag: '#PotholeWatch', count: '51 dispatches' },
+              { tag: '#GrassrootsAction', count: '47 dispatches' },
+              { tag: '#MulagoEmergency', count: '39 dispatches' },
+            ].map((t) => (
+              <button
+                key={t.tag}
+                type="button"
+                onClick={() => {
+                  setActiveHashtagFilter(activeHashtagFilter === t.tag ? null : t.tag);
+                  toast(`Filtering by ${t.tag}`, 'emerald');
+                }}
+                className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+                  activeHashtagFilter === t.tag
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-emerald-500'
+                }`}
+              >
+                <span>{t.tag}</span>
+                <span className="text-[10px] opacity-70 ml-1">({t.count})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 2d. FOLLOWING DESKS & LEADERSHIP STRIP */}
+      {feedTab === 'following' && (
+        <div className="bg-slate-50 dark:bg-[#161a22] border-b border-slate-200 dark:border-[#262b36] px-3.5 sm:px-4 py-2.5">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              Grassroots Desks & Authorities You Follow ({followed.length})
+            </span>
+            <span className="text-[11px] text-slate-500">1-Tap Follow</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            {[
+              { id: 'kcca', name: 'City Authority', label: 'KCCA' },
+              { id: 'nwsc', name: 'Water & Sewerage', label: 'NWSC' },
+              { id: 'umeme', name: 'Power Grid', label: 'Umeme' },
+              { id: 'moh_ug', name: 'Health Ministry', label: 'MoH' },
+              { id: 'kla_cbd', name: 'Central Ward Desk', label: 'Central Ward' },
+              { id: 'nakasero_chief', name: 'Nakasero Chief', label: 'Nakasero Parish' },
+            ].map((d) => {
+              const isF = followed.includes(d.id);
               return (
-                <div
-                  key={th.id}
-                  onClick={() => setActiveTownHall(th)}
-                  className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/70 transition-colors flex flex-col justify-between gap-2 cursor-pointer group"
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => toggleFollowDept(d.id)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer flex items-center gap-1 ${
+                    isF
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      : 'bg-white dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-slate-400'
+                  }`}
                 >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold uppercase flex items-center gap-1 shrink-0 ${
-                          isFieldCam
-                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                            : isVideo
-                            ? 'bg-rose-600 text-white'
-                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                        }`}
-                      >
-                        {isFieldCam ? (
-                          <>
-                            <Camera size={9} strokeWidth={2} />
-                            <span>LIVE FIELD CAM</span>
-                          </>
-                        ) : isVideo ? (
-                          <>
-                            <Video size={9} strokeWidth={2} />
-                            <span>LIVE VIDEO HD</span>
-                          </>
-                        ) : (
-                          <>
-                            <Radio size={9} strokeWidth={2} />
-                            <span>2G/3G AUDIO</span>
-                          </>
-                        )}
-                      </span>
-                      <span className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 font-semibold">
-                        Room #{idx + 1} · {th.listeners_count} tuned in
-                      </span>
-                    </div>
-
-                    <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                      {th.title}
-                    </div>
-
-                    <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                      {th.dept_name} · <span className="text-emerald-600 dark:text-emerald-400">{th.topic_tag}</span>
-                    </div>
-                  </div>
-
-                  <div className="pt-1.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <span className="text-[9.5px] font-mono text-slate-600 dark:text-slate-300 truncate">
-                        Host: {th.host_name}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveTownHall(th);
-                      }}
-                      className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-mono font-semibold flex items-center gap-1 shrink-0 cursor-pointer"
-                    >
-                      {isVideo ? <Video size={10} /> : <Mic size={10} />}
-                      <span>{isVideo ? 'Watch & Join' : 'Tune In'}</span>
-                    </button>
-                  </div>
-                </div>
+                  <span>{d.label}</span>
+                  <span className={`text-[10px] ${isF ? 'text-emerald-400 dark:text-emerald-600' : 'text-slate-400'}`}>
+                    {isF ? '✓' : '+'}
+                  </span>
+                </button>
               );
             })}
           </div>
         </div>
       )}
 
-      {/* Active Hashtag Filter Indicator (Only shown when active) */}
-      {activeHashtagFilter && (
-        <div className="px-3.5 sm:px-4 pt-2 flex items-center justify-between">
-          <span className="text-[10px] font-mono text-slate-600 dark:text-slate-400">
-            Filtered by tag: <strong className="text-emerald-700 dark:text-emerald-400">{activeHashtagFilter}</strong>
-          </span>
-          <button
-            type="button"
-            onClick={() => setActiveHashtagFilter(null)}
-            className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300 text-[9.5px] font-mono font-bold flex items-center gap-1 cursor-pointer"
-          >
-            <X size={10} />
-            <span>Clear</span>
-          </button>
+      {/* 3. TWITTER SPACES-STYLE LIVE BARAZA STRIP */}
+      {townHalls && townHalls.length > 0 && (
+        <div className="bg-slate-50 dark:bg-[#161a22] border-b border-slate-200 dark:border-[#262b36] px-3.5 sm:px-4 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+              </span>
+
+              {activeTopBaraza ? (
+                <div
+                  onClick={() => setActiveTownHall(activeTopBaraza)}
+                  className="flex items-center gap-2 text-xs truncate cursor-pointer hover:underline"
+                >
+                  <span className="font-bold text-rose-600 dark:text-rose-400 uppercase text-[10px] tracking-wider">
+                    Live Baraza:
+                  </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    {activeTopBaraza.title}
+                  </span>
+                  <span className="text-slate-500 text-[11px] shrink-0">
+                    · {activeTopBaraza.listeners_count || 1} tuned in
+                  </span>
+                </div>
+              ) : (
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  {upcomingBarazaRooms.length} Civic Assemblies scheduled
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {activeTopBaraza && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTownHall(activeTopBaraza)}
+                  className="px-2.5 py-1 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Radio size={12} />
+                  <span>Tune In</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setHostBarazaModalOpen(true)}
+                className="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 text-[11px] font-medium transition cursor-pointer"
+              >
+                + Host
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowBarazaDeck(!showBarazaDeck)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600"
+                title="Expand schedule and rooms"
+              >
+                {showBarazaDeck ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Expandable Baraza Schedule & Carousel */}
+          {showBarazaDeck && (
+            <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in">
+              {townHalls.slice(0, 4).map((th) => (
+                <div
+                  key={th.id}
+                  onClick={() => setActiveTownHall(th)}
+                  className="p-2.5 rounded-xl bg-white dark:bg-[#0e1116] border border-slate-200 dark:border-slate-800 hover:border-emerald-500 transition cursor-pointer flex flex-col justify-between gap-1.5"
+                >
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-rose-600 font-bold uppercase">
+                      {th.has_video ? 'Video HD' : 'Audio Baraza'}
+                    </span>
+                    <span className="text-slate-500">{th.listeners_count} tuned in</span>
+                  </div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1">
+                    {th.title}
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">
+                    Host: {th.host_name} · {th.dept_name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* GIS Signal Density Map (Rendered when toggled or on near_me tab) */}
-      {(feedTab === 'near_me' || gisViewMode === 'MAP') && (
-        <div className="p-3.5 sm:p-4 space-y-3">
+      {/* 4. CIVIC PERFORMANCE & ACCOUNTABILITY DOCKET (Department Section Aesthetic) */}
+      <div className="p-3.5 sm:p-4.5 bg-gradient-to-b from-slate-50 to-white dark:from-[#0c0f16] dark:to-[#0e1116] border-b border-slate-200 dark:border-[#222736]">
+        <AccountabilityDocket
+          leftLabel={`${total} Civic Reports`}
+          leftSubLabel={`${COUNTRIES[activeUser.country]?.name || 'National'} Statutory SLA`}
+          centerVal={amberCount + redCount}
+          centerLabel="ACTIVE DISPATCHES"
+          rightLabel={`${greenCount > 0 ? Math.round((greenCount / Math.max(1, total)) * 100) : 88}% Resolved`}
+          rightSubLabel={`${greenCount} Confirmed Fixes`}
+          high={true}
+        />
+
+        <div className="mt-3.5">
+          <CivicFeedDispatcher />
+        </div>
+      </div>
+
+      {/* 5. Minimal Search & Active Hashtag Strip */}
+      <div className="px-3.5 sm:px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+        <div className="flex-1 flex items-center gap-2 bg-slate-100 dark:bg-[#161a22] rounded-full px-3 py-1.5">
+          <Search size={14} className="text-slate-400 shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search dispatches, parishes, keywords..."
+            className="w-full text-xs text-slate-900 dark:text-white placeholder:text-slate-400 bg-transparent focus:outline-none"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="text-slate-400 hover:text-slate-600"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {activeHashtagFilter && (
+          <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-1 rounded-full text-xs font-medium">
+            <span>{activeHashtagFilter}</span>
+            <button
+              type="button"
+              onClick={() => setActiveHashtagFilter(null)}
+              className="hover:text-emerald-950"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 6. GIS MAP MODE (When explicitly toggled) */}
+      {gisViewMode === 'MAP' && (
+        <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Geospatial Radar: {activeParish} & {activeWard}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setGisViewMode('LIST')}
+              className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-semibold cursor-pointer"
+            >
+              Switch to Feed Stream ✕
+            </button>
+          </div>
           <GeospatialSignalMap customPosts={display} />
         </div>
       )}
 
-      {/* Feed List Items */}
-      {gisViewMode === 'LIST' && (
-        <div id="feed-list" className="p-3 sm:p-4 space-y-4 bg-slate-100/70 dark:bg-[#090b10]">
-          {display.length === 0 ? (
-            <div className="space-y-4">
-              {activePromotionalAds.length > 0 && (
-                <div data-post-card-id="ad-transit-painting">
-                  <PromotionalAdFeedCard
-                    ad={activePromotionalAds[0]}
-                    campaignMode="transit_painting"
-                    isFocused={true}
-                  />
-                </div>
-              )}
-              <div className="text-center py-16 space-y-3 px-4">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 flex items-center justify-center mx-auto text-slate-500 dark:text-slate-400 shadow-inner">
-                  <Shield size={26} />
-                </div>
-                <p className="text-xs text-slate-700 dark:text-slate-300 font-bold">No reports matching your filter criteria.</p>
-                <button
-                  onClick={() => go('compose')}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-black mono mt-2 active:scale-95 transition-all shadow-md"
-                >
-                  <Plus size={14} /> File Sovereign Report
-                </button>
+      {/* 7. CIVIC DEPARTMENT-STYLE STANDALONE POSTS FEED */}
+      <div id="feed-list" className="p-3 sm:p-5 space-y-4 bg-slate-100/70 dark:bg-[#090b10] min-h-[60vh]">
+        {display.length === 0 ? (
+          <div className="py-20 text-center px-4 space-y-3 bg-white dark:bg-[#111520] rounded-2xl border border-slate-200 dark:border-[#222736] shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+              <Shield size={24} />
+            </div>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+              No civic dispatches found matching current filter.
+            </p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              All submissions are monitored under statutory 24h–48h SLA response guarantees.
+            </p>
+          </div>
+        ) : (
+          display.map((p, i) => {
+            const activeId = focusedCardId || display[0]?.id;
+            return (
+              <React.Fragment key={p.id}>
+                <PostCardComponent
+                  post={p}
+                  rankIndex={feedTab === 'trending' ? i : null}
+                  isFocused={activeId === p.id}
+                  onActivateFocus={(id) => {
+                    setFocusedCardId(id);
+                    setCurrentPostIndex(i);
+                  }}
+                  onNextPost={i < display.length - 1 ? goToNextPost : undefined}
+                  onPrevPost={i > 0 ? goToPrevPost : undefined}
+                  postIndex={i}
+                  totalPosts={display.length}
+                />
+
+                {/* Promotional Campaign Cards smoothly integrated */}
+                {i === 2 && activePromotionalAds[0] && (
+                  <div data-post-card-id="ad-transit-painting" className="mb-4">
+                    <PromotionalAdFeedCard
+                      ad={activePromotionalAds[0]}
+                      defaultIndex={0}
+                      campaignMode="transit_painting"
+                      isFocused={activeId === 'ad-transit-painting'}
+                      onActivateFocus={() => setFocusedCardId('ad-transit-painting')}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })
+        )}
+      </div>
+
+      {/* 8. FLOATING SWIPE NAVIGATOR HUD ("SWIPE TO NEXT POST EASILY") */}
+      {display.length > 1 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-[#161a24]/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full border border-slate-700/70 shadow-2xl flex items-center gap-3 text-xs font-mono select-none animate-fade-in ring-1 ring-white/10">
+          <button
+            type="button"
+            onClick={goToPrevPost}
+            disabled={currentPostIndex === 0}
+            className={`p-1 rounded-full transition flex items-center gap-1 ${
+              currentPostIndex === 0 ? 'opacity-30 cursor-not-allowed text-slate-500' : 'cursor-pointer text-emerald-400 hover:text-emerald-300 hover:bg-white/10'
+            }`}
+            title="Previous Dispatch (Keyboard: ↑ or K)"
+          >
+            <ChevronUp size={16} />
+            <span className="hidden sm:inline text-[11px] font-bold">Prev</span>
+          </button>
+
+          <span className="text-[11.5px] font-bold text-slate-300 px-1 border-x border-slate-700">
+            Dispatch <strong className="text-white text-xs">{currentPostIndex + 1}</strong> of {display.length}
+          </span>
+
+          <button
+            type="button"
+            onClick={goToNextPost}
+            disabled={currentPostIndex >= display.length - 1}
+            className={`p-1 rounded-full transition flex items-center gap-1 ${
+              currentPostIndex >= display.length - 1 ? 'opacity-30 cursor-not-allowed text-slate-500' : 'cursor-pointer text-emerald-400 hover:text-emerald-300 hover:bg-white/10'
+            }`}
+            title="Next Dispatch (Keyboard: ↓ or J)"
+          >
+            <span className="hidden sm:inline text-[11px] font-bold">Next</span>
+            <ChevronDown size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Grassroots Selection Modal */}
+      {showGrassrootsModal && (
+        <div
+          onClick={() => setShowGrassrootsModal(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin size={18} className="text-emerald-600 dark:text-emerald-400" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Change Grassroots Location
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGrassrootsModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Pinpoint any Parish, Ward, or Grassroot Cell across Uganda to explore local civic dispatches and response times.
+            </p>
+
+            {/* Quick Presets */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Popular Grassroots Hubs:
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                {[
+                  { p: 'Nakasero Parish', w: 'Central Ward', g: 'Lumumba Cell' },
+                  { p: 'Bukoto Parish', w: 'Nakawa Ward', g: 'Kalinabiri Zone' },
+                  { p: 'Naguru Parish', w: 'Nakawa Ward', g: 'Upper Naguru' },
+                  { p: 'Mulago Parish', w: 'Kawempe Ward', g: 'Mulago III Cell' },
+                  { p: 'Kisenyi Parish', w: 'Central Ward', g: 'Kisenyi I Cell' },
+                  { p: 'Kamwokya Parish', w: 'Central Ward', g: 'Church Zone' },
+                  { p: 'Ntinda Parish', w: 'Nakawa Ward', g: 'Semawata Zone' },
+                  { p: 'Kibuye Parish', w: 'Makindye Ward', g: 'Kibuye Market' },
+                  { p: 'Ggaba Parish', w: 'Makindye Ward', g: 'Landing Site' },
+                  { p: 'Mengo Parish', w: 'Rubaga Ward', g: 'Bakuli Cell' },
+                ].map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setActiveParish(item.p);
+                      setActiveWard(item.w);
+                      setActiveGrassroot(item.g);
+                      setShowGrassrootsModal(false);
+                      toast(`Near Me updated to ${item.p}`, 'emerald');
+                    }}
+                    className={`p-2 rounded-xl text-left border transition cursor-pointer text-xs ${
+                      activeParish === item.p
+                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 font-bold'
+                        : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0e1116] hover:border-slate-400'
+                    }`}
+                  >
+                    <div className="font-bold truncate text-slate-900 dark:text-white">{item.p}</div>
+                    <div className="text-[10px] text-slate-500 truncate">{item.w} · {item.g}</div>
+                  </button>
+                ))}
               </div>
             </div>
-          ) : (
-            display.map((p, i) => {
-              const activeId = focusedCardId || display[0]?.id;
-              return (
-                <React.Fragment key={p.id}>
-                  <PostCardComponent
-                    post={p}
-                    rankIndex={feedTab === 'trending' ? i : null}
-                    isFocused={activeId === p.id}
-                    onActivateFocus={(id) => setFocusedCardId(id)}
-                  />
-                  {/* Card 1: Minimal Transit Painting Proposal (Kayoola Bus & Train Only) */}
-                  {i === 1 && activePromotionalAds[0] && (
-                    <div data-post-card-id="ad-transit-painting">
-                      <PromotionalAdFeedCard
-                        ad={activePromotionalAds[0]}
-                        defaultIndex={0}
-                        campaignMode="transit_painting"
-                        isFocused={activeId === 'ad-transit-painting'}
-                        onActivateFocus={() => setFocusedCardId('ad-transit-painting')}
-                      />
-                    </div>
-                  )}
-                  {/* Card 2: Separate Minimal Frontline Scouts Campaign (Bodaboda Stages & Market Vendors) */}
-                  {i === 4 && (activePromotionalAds[2] || activePromotionalAds[0]) && (
-                    <div data-post-card-id="ad-frontline-scouts">
-                      <PromotionalAdFeedCard
-                        ad={activePromotionalAds[2] || activePromotionalAds[0]}
-                        defaultIndex={2}
-                        campaignMode="frontline_scouts"
-                        isFocused={activeId === 'ad-frontline-scouts'}
-                        onActivateFocus={() => setFocusedCardId('ad-frontline-scouts')}
-                      />
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })
-          )}
+
+            {/* Custom Inputs */}
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Or Custom Location:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={activeParish}
+                  onChange={(e) => setActiveParish(e.target.value)}
+                  placeholder="Parish (e.g. Nakasero)"
+                  className="bg-white dark:bg-[#0e1116] border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+                <input
+                  type="text"
+                  value={activeWard}
+                  onChange={(e) => setActiveWard(e.target.value)}
+                  placeholder="Ward (e.g. Central Ward)"
+                  className="bg-white dark:bg-[#0e1116] border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowGrassrootsModal(false);
+                toast(`Grassroots location set to ${activeParish}`, 'emerald');
+              }}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+            >
+              Apply Grassroots Filter
+            </button>
+          </div>
         </div>
       )}
     </div>

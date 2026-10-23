@@ -245,5 +245,71 @@ service cloud.firestore {
       allow update: if isValidId(adId);
       allow delete: if isValidId(adId);
     }
+
+    // --- LIVE DIGITAL BARAZA & TOWN HALL SESSIONS ---
+    function isValidTownHall(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.country is string && data.country.size() <= 8
+        && data.title is string && data.title.size() <= 256
+        && data.host_name is string && data.host_name.size() <= 128
+        && data.dept_name is string && data.dept_name.size() <= 128
+        && data.topic_tag is string && data.topic_tag.size() <= 64
+        && data.is_live is bool
+        && data.created_at is string && data.created_at.size() <= 64;
+    }
+
+    match /townhalls/{townHallId} {
+      allow get: if isValidId(townHallId);
+      allow list: if true;
+      allow create: if isValidId(townHallId) && isValidTownHall(incoming());
+      allow update: if isValidId(townHallId) && (
+        isAdmin() ||
+        isValidTownHall(incoming()) ||
+        (resource != null && incoming().diff(existing()).affectedKeys().hasOnly([
+          'listeners_count', 'is_live', 'has_video', 'broadcast_mode',
+          'pinned_evidence_title', 'pinned_evidence_badge', 'pinned_evidence_url', 'speakers'
+        ]))
+      );
+      allow delete: if isValidId(townHallId);
+
+      // Floor Chat Subcollection
+      function isValidTownHallMessage(data) {
+        return data.id is string && data.id.size() <= 128
+          && data.townHallId is string && data.townHallId.size() <= 128
+          && data.sender is string && data.sender.size() <= 128
+          && data.text is string && data.text.size() <= 2000
+          && data.created_at is string && data.created_at.size() <= 64;
+      }
+
+      match /messages/{messageId} {
+        allow get: if isValidId(messageId);
+        allow list: if true;
+        allow create: if isValidId(messageId) && isValidTownHallMessage(incoming());
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
+
+      // Hand-Raise Queue Subcollection
+      function isValidTownHallHand(data) {
+        return data.id is string && data.id.size() <= 128
+          && data.townHallId is string && data.townHallId.size() <= 128
+          && data.userId is string && data.userId.size() <= 128
+          && data.userName is string && data.userName.size() <= 128
+          && data.status is string && (data.status == 'raised' || data.status == 'speaking' || data.status == 'dismissed')
+          && data.raised_at is string && data.raised_at.size() <= 64;
+      }
+
+      match /hands/{handId} {
+        allow get: if isValidId(handId);
+        allow list: if true;
+        allow create: if isValidId(handId) && isValidTownHallHand(incoming());
+        allow update: if isValidId(handId) && (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'hasMic', 'hasVideo'])
+        );
+        allow delete: if isValidId(handId);
+      }
+    }
   }
 }
+
