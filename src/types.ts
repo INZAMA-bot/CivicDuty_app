@@ -1155,6 +1155,10 @@ export interface TownHallSession {
   listeners_count: number;
   is_live: boolean;
   topic_tag: string;
+  category?: 'following' | 'trending' | 'near_me';
+  parish?: string;
+  ward?: string;
+  dept_id?: string;
   has_video?: boolean;
   broadcast_mode?: 'video_stage' | 'field_cam' | 'audio_low_data';
   video_stream_label?: string;

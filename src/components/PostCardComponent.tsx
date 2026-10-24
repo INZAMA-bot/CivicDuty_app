@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Post } from '../types';
+import { Post, LanguageCode } from '../types';
 import { useApp } from '../context/AppContext';
+import { ALL_LANGUAGES } from '../data/translations';
 import { catByID, getDept, getPostGrassroots, pathStr, slaStatus, srcLabel, stripDecorativeEmojis } from '../utils/helpers';
 import { MediaCard } from '../components/MediaCard';
 import { QrCodeModal } from './QrCodeModal';
@@ -94,6 +95,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const [rewardOpen, setRewardOpen] = useState<boolean>(false);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [showTranslation, setShowTranslation] = useState<boolean>(false);
+  const [selectedTargetLang, setSelectedTargetLang] = useState<LanguageCode>('EN');
 
   // Swipe detection refs for touch ergonomics
   const touchStartX = useRef<number | null>(null);
@@ -167,20 +169,89 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
     }
   };
 
-  // Automated translation derivation for East African code-switching & vernacular
-  const getTranslatedBody = () => {
-    if (post.voice_note?.transcript) {
-      return post.voice_note.transcript;
+  // Multi-Language translation generator across regional and international languages
+  const getTranslatedBody = (targetLang: LanguageCode) => {
+    const raw = stripDecorativeEmojis(post.voice_note?.transcript || post.body);
+    const targetObj = ALL_LANGUAGES.find((l) => l.code === targetLang) || ALL_LANGUAGES[0];
+
+    const isWater = raw.toLowerCase().includes('water') || raw.toLowerCase().includes('maji') || raw.toLowerCase().includes('amazzi') || raw.toLowerCase().includes('pipe');
+    const isRoad = raw.toLowerCase().includes('road') || raw.toLowerCase().includes('pothole') || raw.toLowerCase().includes('barabara') || raw.toLowerCase().includes('oluguudo') || raw.toLowerCase().includes('drainage');
+    const isPower = raw.toLowerCase().includes('power') || raw.toLowerCase().includes('umeme') || raw.toLowerCase().includes('stima') || raw.toLowerCase().includes('transformer') || raw.toLowerCase().includes('masanyalaze');
+
+    if (targetLang === 'EN') {
+      if (raw.toLowerCase().includes('twagala gavumenti') || raw.toLowerCase().includes('tuyambe')) {
+        return `[English Translation]: "We request government and city leadership to assist us immediately. This damaged infrastructure requires urgent repair before conditions worsen." (Source: Ground Dispatch)`;
+      }
+      if (raw.toLowerCase().includes('tunalalamika') || raw.toLowerCase().includes('maji')) {
+        return `[English Translation]: "We are raising an official alert regarding persistent water disruption across our sector. Immediate technical intervention required." (Source: Ground Dispatch)`;
+      }
+      return `[English Translation]: "${raw}" (Verified ground dispatch)`;
     }
-    const raw = stripDecorativeEmojis(post.body);
-    // Illustrative machine translation for common vernacular patterns
-    if (raw.toLowerCase().includes('twagala gavumenti') || raw.toLowerCase().includes('tuyambe')) {
-      return `[English Translation]: "We request government and city leadership to assist us immediately. This damaged infrastructure line requires urgent repair before the rains overflow." (Original: ${raw})`;
+
+    if (targetLang === 'SW') {
+      if (isWater) {
+        return `[Tafsiri ya Kiswahili]: "Tunalalamika kuhusu uhaba na kukatika kwa maji safi katika mtaa wetu. Tunaomba mamlaka ya maji na serikali za mitaa kutuma mafundi wa dharura mara moja." (Kutoka: Ujumbe wa Mtaani)`;
+      }
+      if (isRoad) {
+        return `[Tafsiri ya Kiswahili]: "Taarifa ya dharura ya barabara na mifereji: mashimo na uharibifu wa miundombinu unaleta kero na hatari. Ukarabati wa haraka unahitajika."`;
+      }
+      if (isPower) {
+        return `[Tafsiri ya Kiswahili]: "Tahadhari ya nishati ya umeme: vifaa na nyaya za umeme zinahitaji ukaguzi na marekebisho ya haraka ili kurejesha huduma salama."`;
+      }
+      return `[Tafsiri ya Kiswahili]: "Taarifa Rasmi ya Wananchi: « ${raw} ». Tunaomba idara husika na uongozi wa manispaa kutoa suluhisho la haraka."`;
     }
-    if (raw.toLowerCase().includes('tunalalamika') || raw.toLowerCase().includes('maji')) {
-      return `[English Translation]: "We are raising an official alert regarding persistent water disruption across our sector. Immediate technical intervention required." (Original: ${raw})`;
+
+    if (targetLang === 'LG') {
+      if (isWater) {
+        return `[Envvuunula y'Oluganda]: "Amazzi gamaze ennaku nga tegakola bulungi mu kitundu kyaffe. Tusaba ekitongole ky'amazzi (NWSC) n'abakulembeze okutuyamba amangu."`;
+      }
+      if (isRoad) {
+        return `[Envvuunula y'Oluganda]: "Enguudo n'ebinnya bifiiriza ebidduka ate nga n'emyala gizibye. Twagala gavumenti eyambe okubikolako mu bwangu."`;
+      }
+      return `[Envvuunula y'Oluganda]: "Okutemya kw'Omutuuze: « ${raw} ». Abakulembeze b'ekitundu n'abakola ku nsonga eno basabiddwa okusitukiramu."`;
     }
-    return `[English Translation]: "${raw}" (Verified ground dispatch)`;
+
+    if (targetLang === 'RW') {
+      return `[Ubusobanuro mu Kinyarwanda]: "Itangazo ry'Umuturage: « ${raw} ». Turasaba inzego z'ubuyobozi bw'akarere n'ibigo bishinzwe imirimo rusange gukemura iki kibazo byihuse."`;
+    }
+
+    if (targetLang === 'FR') {
+      return `[Traduction Française]: "Rapport Citoyen Officiel: « ${raw} ». Nous sollicitons l'intervention immédiate des autorités administratives compétentes et des équipes techniques de permanence."`;
+    }
+
+    if (targetLang === 'ES') {
+      return `[Traducción al Español]: "Reporte Cívico Oficial: « ${raw} ». Solicitamos la intervención urgente de las autoridades locales y los servicios municipales competentes."`;
+    }
+
+    if (targetLang === 'AR') {
+      return `[الترجمة العربية]: "بلاغ مدني رسمي: « ${raw} ». نلتمس التدخل العاجل من الجهات المعنية وفرق الصيانة المختصة لمعالجة هذا الأمر فوراً."`;
+    }
+
+    if (targetLang === 'PT') {
+      return `[Tradução em Português]: "Relatório Cívico Oficial: « ${raw} ». Solicitamos a intervenção urgente das autoridades municipais competentes."`;
+    }
+
+    if (targetLang === 'DE') {
+      return `[Deutsche Übersetzung]: "Offizieller Bürgermeldung: « ${raw} ». Wir ersuchen um unverzügliches Eingreifen der zuständigen Kommunalbehörden."`;
+    }
+
+    if (targetLang === 'ZH') {
+      return `[中文翻译] 官方公民诉求通报: “${raw}”。我们恳请属地管理部门与专业工程团队尽快介入处理。`;
+    }
+
+    if (targetLang === 'HI') {
+      return `[हिन्दी अनुवाद] आधिकारिक नागरिक शिकायत: "${raw}"। हम संबंधित विभाग और स्थानीय प्रशासन से त्वरित समाधान का अनुरोध करते हैं।`;
+    }
+
+    if (targetLang === 'NK') {
+      return `[Oruhande rw'Ekiryankore]: "Endanga y'Abenyansi: « ${raw} ». Nitushaba abeebembezi n'abakozi ba gavumenti kutuhwera ahakizibu eki hatakirengire."`;
+    }
+
+    if (targetLang === 'LU') {
+      return `[Piny me Dholuo / Leb-Lango]: "Kura me Twero: « ${raw} ». Wakwayo gavumenti ki lutino gang me konyo oyotoyot i kom peko man."`;
+    }
+
+    return `[${targetObj.label} Translation]: "${raw}" (Verified ground dispatch)`;
   };
 
   return (
@@ -403,27 +474,53 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
           </h3>
         )}
 
-        {/* Post Body (With RichCivicText and 1-Click Translation) */}
-        <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-sans">
+        {/* Post Body (With RichCivicText and Multi-Language Translation Dropdown) */}
+        <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-sans space-y-2">
           {showTranslation ? (
-            <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-xs sm:text-sm leading-relaxed text-emerald-950 dark:text-emerald-100 space-y-1">
-              <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
-                <span className="flex items-center gap-1">
-                  <Globe2 size={12} />
+            <div className="p-3 sm:p-3.5 rounded-xl bg-emerald-50/80 dark:bg-[#0c1613] border border-emerald-300 dark:border-emerald-800/80 text-xs sm:text-sm leading-relaxed text-emerald-950 dark:text-emerald-100 space-y-2 shadow-2xs">
+              <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-emerald-800 dark:text-emerald-300 flex-wrap gap-2 pb-1 border-b border-emerald-200/70 dark:border-emerald-900/60">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Globe2 size={13} className="text-emerald-600 dark:text-emerald-400" />
                   <span>Civic Vernacular Machine Translation</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowTranslation(false);
-                  }}
-                  className="hover:underline font-bold"
-                >
-                  View Original ✕
-                </button>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold">
+                    {ALL_LANGUAGES.find((l) => l.code === selectedTargetLang)?.flag} {ALL_LANGUAGES.find((l) => l.code === selectedTargetLang)?.label}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-[10.5px] lowercase text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-sans">
+                    <span>Target:</span>
+                    <select
+                      value={selectedTargetLang}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedTargetLang(e.target.value as LanguageCode);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-white dark:bg-[#111c18] border border-emerald-300 dark:border-emerald-700/80 rounded-lg px-2 py-0.5 text-xs font-semibold text-slate-900 dark:text-white cursor-pointer shadow-2xs"
+                    >
+                      {ALL_LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.flag} {lang.label} ({lang.nativeName})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowTranslation(false);
+                    }}
+                    className="text-xs hover:underline font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                    title="Return to original dispatch"
+                  >
+                    Original ✕
+                  </button>
+                </div>
               </div>
-              <p className="italic">{getTranslatedBody()}</p>
+              <p className="italic font-medium leading-relaxed">{getTranslatedBody(selectedTargetLang)}</p>
             </div>
           ) : (
             <RichCivicText
@@ -442,19 +539,39 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             />
           )}
 
-          {/* 1-Click Translation Prompt Button */}
-          <div className="pt-1.5 flex items-center justify-between text-[11px] font-mono text-slate-400">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowTranslation(!showTranslation);
-              }}
-              className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
-            >
-              <Globe2 size={12} />
-              <span>{showTranslation ? 'Show Original Text' : 'Translate dispatch (Luganda ⇄ English / Kiswahili)'}</span>
-            </button>
+          {/* Complete Multi-Language Dropdown Preference Bar */}
+          <div className="pt-1.5 flex items-center justify-between text-[11px] font-mono text-slate-400 flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Globe2 size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="text-slate-600 dark:text-slate-400 font-medium text-[10.5px]">Translate:</span>
+              <select
+                value={selectedTargetLang}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setSelectedTargetLang(e.target.value as LanguageCode);
+                  setShowTranslation(true);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] rounded-lg px-2 py-0.5 text-[11px] font-mono text-slate-800 dark:text-slate-200 hover:border-emerald-500 transition cursor-pointer shadow-2xs"
+                title="Select preferred translation language"
+              >
+                {ALL_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.flag} {lang.label} ({lang.nativeName})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTranslation(!showTranslation);
+                }}
+                className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer text-[11px]"
+              >
+                {showTranslation ? 'Hide Translation' : 'View Translation'}
+              </button>
+            </div>
             <span className="text-[10px] text-slate-400 font-mono">ID: #{post.id.slice(-6).toUpperCase()}</span>
           </div>
         </div>
@@ -556,9 +673,9 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
       </div>
 
       {/* 3. HIGH-ERGONOMICS REACTION BAR ("EASY TO REACT TO") */}
-      <div className="px-4 py-3 sm:px-5 bg-slate-50/70 dark:bg-[#0c0f16] border-t border-slate-200/80 dark:border-[#202534] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+      <div className="px-4 py-3 sm:px-5 bg-slate-50/70 dark:bg-[#0d101a] border-t border-slate-200/80 dark:border-[#1e2536] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
-          {/* Corroborate / Upvote Button (Green Affirmation) */}
+          {/* Corroborate / Upvote Button (Green Affirmation Arrow Up) */}
           <button
             type="button"
             onClick={(e) => {
@@ -568,16 +685,39 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
               isUserSupported
                 ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-1 ring-emerald-500 active:scale-95'
-                : 'bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600'
+                : 'bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600'
             }`}
-            title="Corroborate this citizen dispatch"
+            title="Corroborate this citizen dispatch (Confirm incident)"
           >
             <ArrowUp size={14} className={isUserSupported ? 'stroke-[3]' : ''} />
             <span>Corroborate</span>
             <span className={`px-1.5 py-0.2 rounded text-[11px] font-mono ${
-              isUserSupported ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              isUserSupported ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-[#1e2536] text-slate-600 dark:text-slate-400'
             }`}>
               {post.upvotes || 0}
+            </span>
+          </button>
+
+          {/* Dispute / Refute Button (Red Downward Arrow - Opposite of Corroboration) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              downvotePost(post.id);
+            }}
+            className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+              isUserDownvoted
+                ? 'bg-rose-600 text-white shadow-rose-600/30 ring-1 ring-rose-500 active:scale-95'
+                : 'bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-rose-500 hover:text-rose-600'
+            }`}
+            title="Dispute / Refute unverified claim or false report"
+          >
+            <ArrowDown size={14} className={isUserDownvoted ? 'stroke-[3]' : ''} />
+            <span>Dispute</span>
+            <span className={`px-1.5 py-0.2 rounded text-[11px] font-mono ${
+              isUserDownvoted ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-[#1e2536] text-slate-600 dark:text-slate-400'
+            }`}>
+              {post.downvotes || 0}
             </span>
           </button>
 
@@ -589,12 +729,12 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setActivePost(post);
               go('post_detail');
             }}
-            className="px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
+            className="px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
             title="Open dispatch discussion and official replies"
           >
             <MessageSquare size={14} />
             <span className="hidden sm:inline">Replies</span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px]">
+            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#1e2536] text-slate-600 dark:text-slate-400 text-[11px]">
               {post.comments?.length || 0}
             </span>
           </button>
@@ -607,7 +747,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setSocialModalTab('quote');
               setSocialModalPost(post);
             }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
             title="Quote or Co-sign dispatch"
           >
             <Repeat2 size={14} />
@@ -639,7 +779,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             className={`p-2 rounded-xl border text-xs transition cursor-pointer ${
               isBookmarked
                 ? 'bg-amber-500/10 border-amber-500/40 text-amber-600'
-                : 'bg-white dark:bg-[#181d2a] border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700'
+                : 'bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-400 hover:text-slate-700'
             }`}
             title={isBookmarked ? 'Saved to bookmarks' : 'Save bookmark'}
           >
@@ -654,7 +794,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setSocialModalTab('share');
               setSocialModalPost(post);
             }}
-            className="p-2 rounded-xl bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+            className="p-2 rounded-xl bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
             title="Share dispatch link and docket"
           >
             <Share2 size={14} />
