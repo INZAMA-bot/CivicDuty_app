@@ -32,6 +32,10 @@ import {
   Search,
   X,
   Building2,
+  Camera,
+  ChevronDown,
+  ChevronUp,
+  Zap,
 } from 'lucide-react';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import {
@@ -65,7 +69,7 @@ export const ComposeView: React.FC = () => {
   const depts = allDepts(country);
   const territory = TERRITORY[country] || [];
 
-  const [dept, setDept] = useState(activeDept || '');
+  const [dept, setDept] = useState(() => activeDept || depts[0]?.id || 'kcca');
   const [wallSearchQuery, setWallSearchQuery] = useState('');
   const [isWallDropdownOpen, setIsWallDropdownOpen] = useState(false);
 
@@ -92,18 +96,21 @@ export const ComposeView: React.FC = () => {
   }, [depts, wallSearchQuery]);
   const [profession, setProfession] = useState('Bodaboda Rider / Cyclist');
   const [othersText, setOthersText] = useState('');
-  const [district, setDistrict] = useState('');
-  const [subcounty, setSubcounty] = useState('');
-  const [parish, setParish] = useState('');
-  const [category, setCategory] = useState<TicketCategory>('other');
+  const [district, setDistrict] = useState(() => user?.district || 'Kampala');
+  const [subcounty, setSubcounty] = useState(() => user?.subcounty || 'Central Division');
+  const [parish, setParish] = useState(() => user?.parish || user?.parish_ward || 'Nakasero Parish');
+  const [category, setCategory] = useState<TicketCategory>('roads');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [gps, setGps] = useState<{ lat: string; lng: string } | null>(null);
   const [gpsStatus, setGpsStatus] = useState('GPS optional — tap to acquire');
+  const [composeMode, setComposeMode] = useState<'quick' | 'full'>('quick');
+  const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   // Frontline Scout Workstation & Consensus State
-  const [isFrontlineScout, setIsFrontlineScout] = useState(true);
+  const [isFrontlineScout, setIsFrontlineScout] = useState(false);
   const [scoutCategory, setScoutCategory] = useState<FrontlineScoutCategory>('bodaboda');
   const [workstationName, setWorkstationName] = useState('Equatorial Boda Stage');
   const [showManualGpsInput, setShowManualGpsInput] = useState(false);
@@ -488,11 +495,924 @@ export const ComposeView: React.FC = () => {
     go('feed');
   };
 
+  // Helper renderers for unified re-use between Quick Signal and Full Dossier modes
+  const renderWallSelector = (compact = false) => {
+    if (selectedDeptObj) {
+      return (
+        <div className="p-3 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+              <Building2 size={20} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                  {selectedDeptObj.name}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
+                    selectedDeptObj.lane === 'civic' || selectedDeptObj.category === 'government'
+                      ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                      : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                  }`}
+                >
+                  {selectedDeptObj.lane === 'civic' || selectedDeptObj.category === 'government'
+                    ? 'Government Desk'
+                    : 'Service Provider'}
+                </span>
+                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                  ⏱️ {selectedDeptObj.sla || 48}h Target
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
+                {selectedDeptObj.ministry || selectedDeptObj.full || selectedDeptObj.sector}
+                {selectedDeptObj.location && ` · ${selectedDeptObj.location}`}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDept('');
+              setWallSearchQuery('');
+              setIsWallDropdownOpen(true);
+            }}
+            className="px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+          >
+            <Search size={13} />
+            <span>Change Wall</span>
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative">
+        <div className="relative flex items-center">
+          <Search size={16} className="absolute left-3 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={wallSearchQuery}
+            onChange={(e) => {
+              setWallSearchQuery(e.target.value);
+              setIsWallDropdownOpen(true);
+            }}
+            onFocus={() => setIsWallDropdownOpen(true)}
+            placeholder="Search ministry, agency, school, hospital, or business (e.g. KCCA, NWSC, UNRA, Mulago)..."
+            className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-9 pr-8 py-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
+          />
+          {wallSearchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setWallSearchQuery('');
+                setIsWallDropdownOpen(true);
+              }}
+              className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {isWallDropdownOpen && (
+          <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-xl divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
+            <div className="px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between text-[10px] font-mono text-slate-500 font-semibold">
+              <span>
+                {wallSearchQuery ? `Search Results (${filteredWalls.length})` : 'Popular Service Walls'}
+              </span>
+              <span>Tap to Select</span>
+            </div>
+
+            {filteredWalls.length === 0 ? (
+              <div className="p-4 text-center space-y-2">
+                <p className="text-xs text-slate-500 font-mono">
+                  No registered service wall matching &ldquo;{wallSearchQuery}&rdquo;
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDept(wallSearchQuery.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+                    setIsWallDropdownOpen(false);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-mono font-semibold cursor-pointer"
+                >
+                  Target Custom Wall: &ldquo;{wallSearchQuery}&rdquo;
+                </button>
+              </div>
+            ) : (
+              filteredWalls.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => {
+                    setDept(d.id);
+                    setWallSearchQuery('');
+                    setIsWallDropdownOpen(false);
+                  }}
+                  className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-500/10 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 text-xs font-bold group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                      {d.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {d.name}
+                        </span>
+                        {d.verified && (
+                          <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                        )}
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[8.5px] font-mono font-bold uppercase ${
+                            d.lane === 'civic' || d.category === 'government'
+                              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          }`}
+                        >
+                          {d.category || (d.lane === 'civic' ? 'Government' : 'Provider')}
+                        </span>
+                      </div>
+                      <div className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate">
+                        {d.ministry || d.full}
+                        {d.location && ` · ${d.location}`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="text-[10px] font-mono text-slate-500 group-hover:text-emerald-600 font-semibold">
+                      {d.sla || 48}h SLA
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderTerritoryDropdowns = () => (
+    <div className="space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <select
+          value={district}
+          onChange={(e) => {
+            setDistrict(e.target.value);
+            setSubcounty('');
+            setParish('');
+          }}
+          className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+        >
+          <option value="">Select {tiersFor(country)[1]?.unit || 'District'}...</option>
+          {territory.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={subcounty}
+          disabled={!district}
+          onChange={(e) => {
+            setSubcounty(e.target.value);
+            setParish('');
+          }}
+          className={`w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 ${
+            district ? '' : 'opacity-40'
+          }`}
+        >
+          <option value="">Select {tiersFor(country)[2]?.unit || 'Sub-county'}...</option>
+          {subcounties.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={parish}
+          disabled={!subcounty}
+          onChange={(e) => setParish(e.target.value)}
+          className={`w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 ${
+            subcounty ? '' : 'opacity-40'
+          }`}
+        >
+          <option value="">Select {primaryUnit(country, district)}...</option>
+          {parishes.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+        <Info size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <span>
+          Selecting your {primaryUnit(country, district)} routes directly to your grassroots Parish Chief &amp; Town Clerk desk.
+        </span>
+      </p>
+    </div>
+  );
+
+  const renderCategorySelector = () => (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setCategory('corruption')}
+        className={`w-full py-2 px-3 rounded-lg border text-xs font-mono font-semibold transition-colors flex items-center gap-2 cursor-pointer ${
+          category === 'corruption'
+            ? 'border-rose-500 text-rose-700 dark:text-rose-300 bg-rose-500/10'
+            : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-rose-500/50'
+        }`}
+      >
+        <Lock size={13} className="text-rose-600 dark:text-rose-400" />
+        <span>Report Corruption / Misuse of Public Funds (+100 pts · Encrypted IGG Route)</span>
+      </button>
+
+      <div className="grid grid-cols-4 gap-1.5">
+        {CATEGORIES.filter((c) => c.id !== 'corruption').map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => setCategory(c.id)}
+            className={`py-2 px-1 rounded-lg border text-[10px] font-mono transition-colors leading-tight text-center cursor-pointer ${
+              category === c.id
+                ? 'bg-emerald-600 border-emerald-600 text-white font-semibold shadow-2xs'
+                : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500 font-medium'
+            }`}
+          >
+            {c.label.split(' ')[0].replace('/', '')}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderHeadlineAndBody = () => (
+    <div className="space-y-2.5">
+      <div>
+        <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+          Headline Summary
+        </label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Brief summary of the issue (e.g. Deep pothole causing gridlock at Kitante road)..."
+          className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+            Incident Details (#Hashtags &amp; @Mentions)
+          </label>
+          <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400">
+            Tap tag to insert
+          </span>
+        </div>
+        <textarea
+          rows={3}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Who is affected? How long? Specific dates, locations, or asset references..."
+          className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs leading-relaxed text-slate-900 dark:text-white resize-none focus:outline-none focus:border-emerald-500"
+        />
+
+        {/* Quick Hashtag Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
+          {[
+            '#FixOurRoads',
+            '#WaterRestored',
+            '#ServiceExcellence',
+            '#BudgetTransparency',
+            '#ZeroBribery',
+            '#UrgentSLA',
+          ].map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => {
+                if (!body.includes(tag)) {
+                  setBody((prev) => (prev ? `${prev.trim()} ${tag} ` : `${tag} `));
+                }
+              }}
+              className="px-2 py-0.5 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-emerald-700 dark:text-emerald-400 text-[10px] font-mono font-semibold cursor-pointer"
+            >
+              + {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRadar = () => {
+    if (similarOpenPosts.length === 0) return null;
+    return (
+      <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/40 space-y-2.5 animate-fade-in">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <Layers size={14} />
+            </div>
+            <div>
+              <div className="text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
+                Master Dossier Clustering Radar · +20 Pts Bonus
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                Similar Active Issue Detected on This Desk
+              </h4>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {similarOpenPosts.map((sim) => {
+            const count =
+              sim.compiled_count || (sim.compiled_reports ? sim.compiled_reports.length + 1 : 1);
+            return (
+              <div
+                key={sim.id}
+                className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <Users size={10} /> {count} Witnesses
+                    </span>
+                    <span className="text-slate-400">·</span>
+                    <span className="text-slate-500">#{sim.id.slice(-6).toUpperCase()}</span>
+                  </div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {sim.title}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleCompileIntoExisting(sim)}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
+                >
+                  <Layers size={11} />
+                  <span>Compile Into Dossier</span>
+                  <ArrowRight size={11} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderEvidenceBar = (isMobileBar = false) => (
+    <div className="space-y-2.5">
+      <div className={`grid ${isMobileBar ? 'grid-cols-3 gap-2' : 'grid-cols-1 sm:grid-cols-3 gap-2'}`}>
+        {/* Photo Upload Button */}
+        <label className="py-2.5 px-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-xs font-mono font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer text-center">
+          <input
+            type="file"
+            accept="image/*,video/*,.pdf"
+            className="hidden"
+            multiple
+            onChange={handleFileSelect}
+          />
+          <Camera size={14} className="text-emerald-600 dark:text-emerald-400" />
+          <span className="truncate">{stagedMedia.length > 0 ? `Photo (${stagedMedia.length})` : 'Attach Photo'}</span>
+        </label>
+
+        {/* Voice Note Button */}
+        <button
+          type="button"
+          onClick={toggleRecording}
+          className={`py-2.5 px-2 rounded-lg border text-xs font-mono font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer text-center ${
+            isRecording
+              ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+              : voiceSaved
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-slate-400'
+          }`}
+        >
+          <Mic size={14} className={isRecording ? 'animate-pulse text-rose-600' : ''} />
+          <span className="truncate">
+            {isRecording ? 'Recording...' : voiceSaved ? 'Voice Locked' : 'Voice Note'}
+          </span>
+        </button>
+
+        {/* GPS Button */}
+        <button
+          type="button"
+          onClick={handleAcquireGps}
+          className={`py-2.5 px-2 rounded-lg border text-xs font-mono font-semibold flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer text-center ${
+            gps
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+              : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-slate-400'
+          }`}
+        >
+          <MapPin size={14} className={gps ? 'text-emerald-600' : 'text-slate-400'} />
+          <span className="truncate">{gps ? 'GPS Locked' : 'Lock GPS'}</span>
+        </button>
+      </div>
+
+      {/* GPS status feedback */}
+      <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 px-1">
+        <span className="truncate">{gps ? `📍 ${gps.lat}, ${gps.lng} (Verified)` : gpsStatus}</span>
+        <button
+          type="button"
+          onClick={() => setShowManualGpsInput(!showManualGpsInput)}
+          className="text-emerald-600 dark:text-emerald-400 hover:underline shrink-0 ml-2"
+        >
+          {showManualGpsInput ? 'Hide Manual' : 'Manual GPS'}
+        </button>
+      </div>
+
+      {showManualGpsInput && (
+        <div className="p-2.5 bg-white dark:bg-[#161a22] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+          <div className="text-[10px] font-semibold text-slate-700 dark:text-slate-300">
+            Manual GPS Coordinates:
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              value={manualLatInput}
+              onChange={(e) => setManualLatInput(e.target.value)}
+              placeholder="Latitude (e.g. 0.3162)"
+              className="px-2 py-1 text-xs font-mono bg-white dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded"
+            />
+            <input
+              type="text"
+              value={manualLngInput}
+              onChange={(e) => setManualLngInput(e.target.value)}
+              placeholder="Longitude (e.g. 32.5781)"
+              className="px-2 py-1 text-xs font-mono bg-white dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleApplyManualGps}
+            className="w-full py-1 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10.5px] font-mono font-bold cursor-pointer"
+          >
+            Save Coordinates
+          </button>
+        </div>
+      )}
+
+      {/* Staged Media Previews */}
+      {stagedMedia.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          {stagedMedia.map((m, idx) => (
+            <div
+              key={idx}
+              className="p-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0">
+                <p className="text-[10.5px] font-semibold text-slate-900 dark:text-white truncate">
+                  {m.name}
+                </p>
+                <p className="text-[9.5px] font-mono text-slate-500">
+                  {m.type} · {m.size}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeStagedMedia(idx)}
+                className="text-[10px] font-mono text-rose-600 hover:underline shrink-0 cursor-pointer"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderFrontlineScoutSuite = () => (
+    <div className="p-3.5 rounded-lg bg-emerald-500/5 border border-emerald-500/20 space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+          <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+          <span>Frontline Scout Workstation &amp; Consensus Stage</span>
+        </label>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setIsFrontlineScout(!isFrontlineScout)}
+            className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border transition cursor-pointer ${
+              isFrontlineScout
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            {isFrontlineScout ? '✓ Frontline Scout Active' : 'Enable Scout Reporting'}
+          </button>
+          <span className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+            Bounty Vault Eligible
+          </span>
+        </div>
+      </div>
+
+      {isFrontlineScout && (
+        <div className="space-y-3 pt-1">
+          {/* Category Selection */}
+          <div className="space-y-1.5">
+            <label className="text-[10.5px] font-mono text-slate-700 dark:text-slate-300 font-semibold block">
+              1. Select Frontline Scout Category (Mandatory)
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {FRONTLINE_CATEGORIES.map((cat) => {
+                const isCatSelected = scoutCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setScoutCategory(cat.id);
+                      if (!workstationName || workstationName === 'Equatorial Boda Stage') {
+                        setWorkstationName(cat.example);
+                      }
+                    }}
+                    className={`p-2 rounded-lg text-left border transition text-xs font-mono cursor-pointer ${
+                      isCatSelected
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500/50'
+                    }`}
+                  >
+                    <div className="font-bold flex items-center gap-1.5 truncate">
+                      <span>{cat.label.split('(')[0].trim()}</span>
+                    </div>
+                    <div
+                      className={`text-[9.5px] truncate pt-0.5 ${
+                        isCatSelected ? 'text-emerald-100' : 'text-slate-500'
+                      }`}
+                    >
+                      {cat.roleDescription}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mandatory Workstation CTA */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[10.5px] font-mono text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1">
+                <MapPin size={12} className="text-amber-600 dark:text-amber-400" />
+                <span>2. Name of Workstation / Stage</span>
+              </label>
+              <span className="text-[9.5px] font-mono text-amber-700 dark:text-amber-400 font-bold">
+                Exact Name Required
+              </span>
+            </div>
+
+            <input
+              type="text"
+              value={workstationName}
+              onChange={(e) => setWorkstationName(e.target.value)}
+              placeholder="e.g. Equatorial Boda Stage, Nakasero Market Stall 4B, Kitante Primary Gate"
+              className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+            />
+
+            {/* Quick Suggestions from Existing Certified Stages */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+              <span className="text-[9.5px] font-mono text-slate-500 shrink-0">Quick Pick:</span>
+              {getStoredStages()
+                .filter((s) => s.country === country && s.category === scoutCategory)
+                .slice(0, 4)
+                .map((stg) => (
+                  <button
+                    key={stg.id}
+                    type="button"
+                    onClick={() => {
+                      setWorkstationName(stg.name);
+                      setGps({
+                        lat: stg.centerGps.lat.toFixed(4),
+                        lng: stg.centerGps.lng.toFixed(4),
+                      });
+                      setGpsStatus(`GPS Matched to Stage · ${stg.centerGps.lat}, ${stg.centerGps.lng}`);
+                      toast(`Selected ${stg.name} (${stg.scoutCount}/15 scouts)`, 'emerald');
+                    }}
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 border transition ${
+                      workstationName.toLowerCase() === stg.name.toLowerCase()
+                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {stg.name} ({stg.scoutCount} scouts)
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          {/* Consensus Rule & Auto-Compilation Status */}
+          {workstationName.trim() && (
+            <div className="p-2.5 rounded-lg bg-white dark:bg-[#12161f] border border-emerald-500/30 space-y-1.5">
+              {(() => {
+                const matchingStage = getStoredStages().find(
+                  (s) =>
+                    s.country === country &&
+                    s.category === scoutCategory &&
+                    (s.normalizedName === workstationName.toLowerCase().replace(/[^\w\s]/g, '').trim() ||
+                      s.name.toLowerCase() === workstationName.toLowerCase().trim())
+                );
+
+                if (matchingStage) {
+                  const count = matchingStage.scoutCount;
+                  const isCert = count >= 15;
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          {isCert ? (
+                            <CheckCircle2 size={13} className="text-emerald-600" />
+                          ) : (
+                            <Users size={13} className="text-amber-600" />
+                          )}
+                          <span>{matchingStage.officialLabel}</span>
+                        </span>
+                        <span className="font-bold text-emerald-600">
+                          {count} / 15 Scouts ({Math.min(100, Math.round((count / 15) * 100))}%)
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-mono text-slate-500 pt-0.5">
+                        {isCert
+                          ? `Officially certified stage! Verified within 2km radius. Top 3 scouts receive monthly patron prize shares.`
+                          : `${15 - count} more scout reports with matching GPS needed to auto-compile and certify this stage.`}
+                      </p>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div>
+                      <div className="text-xs font-mono font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Sparkles size={13} className="text-emerald-600" />
+                        <span>New Stage Incubator: &ldquo;{workstationName}&rdquo;</span>
+                      </div>
+                      <p className="text-[10px] font-mono text-slate-500 pt-0.5">
+                        When &gt;15 self-identified scouts capture GPS within 2km and this exact name, CivicDuty will auto-compile &amp; certify it as an official Bodaboda/Workstation Stage.
+                      </p>
+                    </div>
+                  );
+                }
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPollSuite = () => (
+    <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+          <BarChart3 size={13} className="text-emerald-600 dark:text-emerald-400" />
+          <span>Attach Community Referendum Poll</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setIncludePoll(!includePoll);
+            if (!pollQuestion && title) {
+              setPollQuestion(
+                `How should ${dept ? dept.toUpperCase() : 'the authority'} prioritize "${title}"?`
+              );
+            }
+          }}
+          className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+        >
+          {includePoll ? 'Remove Poll' : '+ Add Poll'}
+        </button>
+      </div>
+
+      {includePoll && (
+        <div className="space-y-2 pt-1 animate-fade-in">
+          <input
+            type="text"
+            value={pollQuestion}
+            onChange={(e) => setPollQuestion(e.target.value)}
+            placeholder="Poll Question..."
+            className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+            <input
+              type="text"
+              value={pollOpt1}
+              onChange={(e) => setPollOpt1(e.target.value)}
+              placeholder="Option 1"
+              className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+            />
+            <input
+              type="text"
+              value={pollOpt2}
+              onChange={(e) => setPollOpt2(e.target.value)}
+              placeholder="Option 2"
+              className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+            />
+            <input
+              type="text"
+              value={pollOpt3}
+              onChange={(e) => setPollOpt3(e.target.value)}
+              placeholder="Option 3"
+              className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderBeforeAfterSuite = () => (
+    <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+          <SlidersHorizontal size={13} className="text-emerald-600 dark:text-emerald-400" />
+          <span>Attach Before &amp; After Transformation Proof</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => setIncludeBeforeAfter(!includeBeforeAfter)}
+          className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+        >
+          {includeBeforeAfter ? 'Remove Before/After' : '+ Add Before & After'}
+        </button>
+      </div>
+
+      {includeBeforeAfter && (
+        <div className="space-y-2.5 pt-1 animate-fade-in">
+          <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 leading-relaxed">
+            Upload &ldquo;Before&rdquo; and &ldquo;After&rdquo; photos to publish an interactive swipe-comparison card.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase">
+                  1. Before Photo
+                </span>
+                <label className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[9.5px] font-mono font-semibold cursor-pointer">
+                  <span>{beforePhotoUrl ? 'Change Photo' : 'Upload Before'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) setBeforePhotoUrl(URL.createObjectURL(f));
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <input
+                type="text"
+                value={beforePhotoLabel}
+                onChange={(e) => setBeforePhotoLabel(e.target.value)}
+                placeholder="Before label (e.g. Broken Culvert)"
+                className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2 py-1 text-[11px] text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
+                  2. After Photo
+                </span>
+                <label className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-mono font-semibold cursor-pointer">
+                  <span>{afterPhotoUrl ? 'Change Photo' : 'Upload After'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) setAfterPhotoUrl(URL.createObjectURL(f));
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <input
+                type="text"
+                value={afterPhotoLabel}
+                onChange={(e) => setAfterPhotoLabel(e.target.value)}
+                placeholder="After label (e.g. Rebuilt by Works)"
+                className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2 py-1 text-[11px] text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-[10px] font-mono text-slate-500 uppercase font-semibold">
+              Turnaround Time:
+            </label>
+            <input
+              type="text"
+              value={turnaroundInput}
+              onChange={(e) => setTurnaroundInput(e.target.value)}
+              placeholder="e.g. 3h 30m or 2 Days"
+              className="w-36 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2.5 py-1 text-[11px] font-mono text-slate-900 dark:text-white"
+            />
+          </div>
+
+          {beforePhotoUrl && afterPhotoUrl && (
+            <BeforeAfterSlider
+              beforeUrl={beforePhotoUrl}
+              afterUrl={afterPhotoUrl}
+              beforeLabel={beforePhotoLabel || 'Before'}
+              afterLabel={afterPhotoLabel || 'After'}
+              turnaroundTime={turnaroundInput || '3h 30m'}
+              gpsCoords={gps}
+              gpsVerified={Boolean(gps)}
+              verifiedBy={anonymous ? 'Verified Citizen Scout' : user?.name || 'Citizen Field Scout'}
+              compact={true}
+              defaultMode="slider"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderAnonymousToggle = () => (
+    <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3">
+      <div>
+        <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+          <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+          <span>Post Anonymously (Zero-Knowledge Shield)</span>
+        </p>
+        <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+          Displays publicly as &ldquo;Verified Citizen&rdquo; · NIN salted &amp; protected
+        </p>
+      </div>
+      <label className="tog-wrap shrink-0">
+        <input
+          type="checkbox"
+          checked={anonymous}
+          onChange={(e) => setAnonymous(e.target.checked)}
+        />
+        <div className="tog-track"></div>
+        <div className="tog-thumb"></div>
+      </label>
+    </div>
+  );
+
+  const renderSubmitButtons = (isQuick = false) => (
+    <div className="space-y-2">
+      {/* Offline 3G Queue Sync Indicator Strip */}
+      {(!isOnline || offlineQueue.length > 0) && (
+        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs">
+          <div className="text-amber-800 dark:text-amber-300 font-mono text-[11px]">
+            <strong>Offline 3G Field Queue:</strong> {offlineQueue.length} pending report(s) staged locally.
+          </div>
+          {offlineQueue.length > 0 && (
+            <button
+              type="button"
+              onClick={syncOfflineQueue}
+              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold shrink-0 cursor-pointer"
+            >
+              Sync {offlineQueue.length} Now
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={() => handleSubmit(true)}
+          className="bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 font-mono font-semibold rounded-lg py-3 px-3 text-[11px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          title="Save photo/GPS evidence locally for intermittent rural 3G networks and sync later"
+        >
+          <span>Stage in Offline Queue ({offlineQueue.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSubmit(false)}
+          className="sm:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-3.5 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-emerald-600/20"
+        >
+          <Send size={15} />
+          <span>Dispatch Sovereign Signal →</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="px-3.5 sm:px-5 pt-4 pb-16 max-w-2xl mx-auto space-y-4 animate-fade-in text-slate-900 dark:text-slate-100">
       {/* Main Studio Card */}
-      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
-        {/* Top Studio Header Bar — Uncongested Layout */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden shadow-2xs">
+        {/* Top Studio Header Bar */}
         <div className="px-4 py-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5">
           {/* Row 1: Signal Eyebrow & Guide Button */}
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#e3e6ea] dark:border-[#262b36]">
@@ -513,7 +1433,7 @@ export const ComposeView: React.FC = () => {
             </button>
           </div>
 
-          {/* Row 2: Full-Width Unobstructed Studio Title */}
+          {/* Row 2: Studio Title */}
           <div className="flex items-start gap-2.5 pt-0.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
               <FileText size={16} strokeWidth={1.75} />
@@ -523,7 +1443,7 @@ export const ComposeView: React.FC = () => {
                 Citizen Speak &amp; Statutory Dispatch Studio
               </h1>
               <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                Permanent SHA-256 public record · Service delivery is your right
+                Permanent SHA-256 public record · Service delivery is your constitutional right
               </p>
             </div>
           </div>
@@ -550,7 +1470,36 @@ export const ComposeView: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 sm:p-5 space-y-4">
+        {/* Content Body */}
+        <div className="p-3.5 sm:p-5 space-y-4">
+          {/* Mode Switcher: Mobile Quick Dispatch vs Full Master Dossier */}
+          <div className="grid grid-cols-2 p-1 bg-[#f0f2f5] dark:bg-[#0e1116] rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
+            <button
+              type="button"
+              onClick={() => setComposeMode('quick')}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                composeMode === 'quick'
+                  ? 'bg-white dark:bg-[#161a22] text-emerald-600 dark:text-emerald-400 shadow-2xs font-bold border border-[#e3e6ea] dark:border-[#262b36]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Zap size={14} className="text-amber-500 fill-amber-500" />
+              <span>⚡ Quick Signal (Mobile First)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setComposeMode('full')}
+              className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                composeMode === 'full'
+                  ? 'bg-white dark:bg-[#161a22] text-emerald-600 dark:text-emerald-400 shadow-2xs font-bold border border-[#e3e6ea] dark:border-[#262b36]'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <FileText size={14} />
+              <span>📋 Full Master Dossier</span>
+            </button>
+          </div>
+
           {!isOnline && (
             <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-mono flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
@@ -560,1007 +1509,252 @@ export const ComposeView: React.FC = () => {
             </div>
           )}
 
-          {/* Section 1: Target Wall & Reporter Profession */}
-          <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
-                  1. Target Statutory Desk or Service Wall
-                </label>
-                <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                  <Search size={10} />
-                  <span>Interactive Search &amp; Auto-Suggest</span>
-                </span>
-              </div>
-
-              {/* If a wall is selected: render the Selected Wall Card */}
-              {selectedDeptObj ? (
-                <div className="p-3 rounded-xl bg-white dark:bg-[#161a22] border-2 border-emerald-500/40 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
-                      <Building2 size={20} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">
-                          {selectedDeptObj.name}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase ${
-                            selectedDeptObj.lane === 'civic' || selectedDeptObj.category === 'government'
-                              ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
-                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                          }`}
-                        >
-                          {selectedDeptObj.lane === 'civic' || selectedDeptObj.category === 'government'
-                            ? 'Government Desk'
-                            : 'Service Provider'}
-                        </span>
-                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
-                          ⏱️ {selectedDeptObj.sla || 48}h Target
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                        {selectedDeptObj.ministry || selectedDeptObj.full || selectedDeptObj.sector}
-                        {selectedDeptObj.location && ` · ${selectedDeptObj.location}`}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDept('');
-                      setWallSearchQuery('');
-                      setIsWallDropdownOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-mono font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                  >
-                    <Search size={13} />
-                    <span>Change Wall</span>
-                  </button>
-                </div>
-              ) : (
-                /* Search Input with Auto-Suggestions Dropdown */
-                <div className="relative">
-                  <div className="relative flex items-center">
-                    <Search size={16} className="absolute left-3 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={wallSearchQuery}
-                      onChange={(e) => {
-                        setWallSearchQuery(e.target.value);
-                        setIsWallDropdownOpen(true);
-                      }}
-                      onFocus={() => setIsWallDropdownOpen(true)}
-                      placeholder="Type letters to search any ministry, agency, school, hospital, business or service wall (e.g. NWSC, Gayaza, Café Javas, UNRA, Mulago)..."
-                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg pl-9 pr-8 py-2.5 text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
-                    />
-                    {wallSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setWallSearchQuery('');
-                          setIsWallDropdownOpen(true);
-                        }}
-                        className="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Dropdown Menu */}
-                  {isWallDropdownOpen && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-xl divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
-                      <div className="px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between text-[10px] font-mono text-slate-500 font-semibold">
-                        <span>
-                          {wallSearchQuery ? `Search Results (${filteredWalls.length})` : 'Popular & Monitored Service Walls'}
-                        </span>
-                        <span>Click to Select</span>
-                      </div>
-
-                      {filteredWalls.length === 0 ? (
-                        <div className="p-4 text-center space-y-2">
-                          <p className="text-xs text-slate-500 font-mono">
-                            No registered service wall matching "{wallSearchQuery}"
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDept(wallSearchQuery.toLowerCase().replace(/[^a-z0-9]/g, '_'));
-                              setIsWallDropdownOpen(false);
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-mono font-semibold cursor-pointer"
-                          >
-                            Target Custom Wall: "{wallSearchQuery}"
-                          </button>
-                        </div>
-                      ) : (
-                        filteredWalls.map((d) => (
-                          <button
-                            key={d.id}
-                            type="button"
-                            onClick={() => {
-                              setDept(d.id);
-                              setWallSearchQuery('');
-                              setIsWallDropdownOpen(false);
-                            }}
-                            className="w-full px-3.5 py-2.5 text-left hover:bg-emerald-500/10 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 text-xs font-bold group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                                {d.name.slice(0, 2).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                                    {d.name}
-                                  </span>
-                                  {d.verified && (
-                                    <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
-                                  )}
-                                  <span
-                                    className={`px-1.5 py-0.2 rounded text-[8.5px] font-mono font-bold uppercase ${
-                                      d.lane === 'civic' || d.category === 'government'
-                                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                    }`}
-                                  >
-                                    {d.category || (d.lane === 'civic' ? 'Government' : 'Provider')}
-                                  </span>
-                                </div>
-                                <div className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate">
-                                  {d.ministry || d.full}
-                                  {d.location && ` · ${d.location}`}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="text-right shrink-0">
-                              <span className="text-[10px] font-mono text-slate-500 group-hover:text-emerald-600 font-semibold">
-                                {d.sla || 48}h SLA
-                              </span>
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-              {dept === 'others' && (
-                <div className="space-y-1 mt-2">
-                  <input
-                    type="text"
-                    value={othersText}
-                    onChange={(e) => setOthersText(e.target.value)}
-                    placeholder="e.g. Yaka token vendor, Private contractor"
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono"
-                  />
-                  <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <AlertTriangle size={11} /> Tagged [Unverified] · auto-CC&apos;d to relevant ministry
-                  </p>
-                </div>
-              )}
-
-            {/* Frontline Field Scout Self-Identification & Stage Consensus Suite */}
-            <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                  <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Frontline Scout Self-Identification &amp; Workstation Stage</span>
-                </label>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setIsFrontlineScout(!isFrontlineScout)}
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border transition cursor-pointer ${
-                      isFrontlineScout
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    {isFrontlineScout ? '✓ Frontline Scout Active' : 'Enable Scout Reporting'}
-                  </button>
-                  <span className="text-[9.5px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                    Bounty Vault Eligible
+          {composeMode === 'quick' ? (
+            /* =========================================================================
+               MOBILE-FIRST QUICK SIGNAL WORKFLOW
+               Streamlined, auto-filled, 1-tap evidence, expandable advanced tools drawer
+               ========================================================================= */
+            <div className="space-y-4 animate-fade-in">
+              {/* Card 1: Smart Triage Card (Pre-filled Entity & Territory) */}
+              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500">
+                    1. Target Statutory Desk &amp; Grassroots Routing
+                  </span>
+                  <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 size={11} /> Auto-Selected
                   </span>
                 </div>
-              </div>
 
-              {isFrontlineScout ? (
-                <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 space-y-3">
-                  {/* Category Selection */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10.5px] font-mono text-slate-700 dark:text-slate-300 font-semibold block">
-                      1. Select Frontline Scout Category (Mandatory)
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                      {FRONTLINE_CATEGORIES.map((cat) => {
-                        const isCatSelected = scoutCategory === cat.id;
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => {
-                              setScoutCategory(cat.id);
-                              if (!workstationName || workstationName === 'Equatorial Boda Stage') {
-                                setWorkstationName(cat.example);
-                              }
-                            }}
-                            className={`p-2 rounded-lg text-left border transition text-xs font-mono cursor-pointer ${
-                              isCatSelected
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                                : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500/50'
-                            }`}
-                          >
-                            <div className="font-bold flex items-center gap-1.5 truncate">
-                              <span>{cat.label.split('(')[0].trim()}</span>
-                            </div>
-                            <div
-                              className={`text-[9.5px] truncate pt-0.5 ${
-                                isCatSelected ? 'text-emerald-100' : 'text-slate-500'
-                              }`}
-                            >
-                              {cat.roleDescription}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                {renderWallSelector(true)}
 
-                  {/* Mandatory Workstation CTA */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10.5px] font-mono text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1">
-                        <MapPin size={12} className="text-amber-600 dark:text-amber-400" />
-                        <span>2. Name of Workstation / Stage (Mandatory CTA)</span>
-                      </label>
-                      <span className="text-[9.5px] font-mono text-amber-700 dark:text-amber-400 font-bold">
-                        Exact Name Required
-                      </span>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={workstationName}
-                      onChange={(e) => setWorkstationName(e.target.value)}
-                      placeholder="e.g. Equatorial Boda Stage, Nakasero Market Stall 4B, Kitante Primary Gate"
-                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                    />
-
-                    {/* Quick Suggestions from Existing Certified Stages */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-0.5">
-                      <span className="text-[9.5px] font-mono text-slate-500 shrink-0">Quick Pick:</span>
-                      {getStoredStages()
-                        .filter((s) => s.country === country && s.category === scoutCategory)
-                        .slice(0, 4)
-                        .map((stg) => (
-                          <button
-                            key={stg.id}
-                            type="button"
-                            onClick={() => {
-                              setWorkstationName(stg.name);
-                              setGps({
-                                lat: stg.centerGps.lat.toFixed(4),
-                                lng: stg.centerGps.lng.toFixed(4),
-                              });
-                              setGpsStatus(`GPS Matched to Stage · ${stg.centerGps.lat}, ${stg.centerGps.lng}`);
-                              toast(`Selected ${stg.name} (${stg.scoutCount}/15 scouts)`, 'emerald');
-                            }}
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 border transition ${
-                              workstationName.toLowerCase() === stg.name.toLowerCase()
-                                ? 'bg-emerald-600 text-white border-emerald-600'
-                                : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                            }`}
-                          >
-                            {stg.name} ({stg.scoutCount} scouts)
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-
-                  {/* Consensus Rule & Auto-Compilation Status */}
-                  {workstationName.trim() && (
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#12161f] border border-emerald-500/30 space-y-1.5">
-                      {(() => {
-                        const matchingStage = getStoredStages().find(
-                          (s) =>
-                            s.country === country &&
-                            s.category === scoutCategory &&
-                            (s.normalizedName === workstationName.toLowerCase().replace(/[^\w\s]/g, '').trim() ||
-                              s.name.toLowerCase() === workstationName.toLowerCase().trim())
-                        );
-
-                        if (matchingStage) {
-                          const count = matchingStage.scoutCount;
-                          const isCert = count >= 15;
-                          return (
-                            <div>
-                              <div className="flex items-center justify-between text-xs font-mono">
-                                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                  {isCert ? (
-                                    <CheckCircle2 size={13} className="text-emerald-600" />
-                                  ) : (
-                                    <Users size={13} className="text-amber-600" />
-                                  )}
-                                  <span>{matchingStage.officialLabel}</span>
-                                </span>
-                                <span className="font-bold text-emerald-600">
-                                  {count} / 15 Scouts ({Math.min(100, Math.round((count / 15) * 100))}%)
-                                </span>
-                              </div>
-                              <p className="text-[10px] font-mono text-slate-500 pt-0.5">
-                                {isCert
-                                  ? `Officially certified stage! Verified within 2km radius. Top 3 scouts receive monthly patron prize shares.`
-                                  : `${15 - count} more scout reports with matching GPS needed to auto-compile and certify this stage.`}
-                              </p>
-                              <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                                <span className="flex items-center gap-1">
-                                  <Lock size={10} />
-                                  <span>Home Parish Lock: {matchingStage.parish}</span>
-                                </span>
-                                <span>·</span>
-                                <span className="flex items-center gap-1">
-                                  <HeartHandshake size={10} />
-                                  <span>Patron Pool: {matchingStage.patronSponsorPoolUgx.toLocaleString()} UGX</span>
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        } else {
-                          return (
-                            <div>
-                              <div className="text-xs font-mono font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                <Sparkles size={13} className="text-emerald-600" />
-                                <span>New Stage Incubator: &ldquo;{workstationName}&rdquo;</span>
-                              </div>
-                              <p className="text-[10px] font-mono text-slate-500 pt-0.5">
-                                When &gt;15 self-identified scouts capture GPS within 2km and this exact name, CivicDuty will auto-compile &amp; certify it as an official Bodaboda/Workstation Stage.
-                              </p>
-                              <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
-                                <span className="flex items-center gap-1">
-                                  <Lock size={10} />
-                                  <span>Home Parish Lock Active ({parish || 'Selected Parish'})</span>
-                                </span>
-                                <span>·</span>
-                                <span className="flex items-center gap-1">
-                                  <HeartHandshake size={10} />
-                                  <span>Patron Sponsoring Enabled</span>
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        }
-                      })()}
-                    </div>
-                  )}
-
-                  {/* Mandatory GPS Notification */}
-                  <div
-                    className={`p-2.5 rounded-lg border text-xs font-mono space-y-1.5 ${
-                      gps
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-300'
-                        : 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <MapPin size={13} className={gps ? 'text-emerald-600' : 'text-amber-600'} />
-                        <span>
-                          {gps ? `✓ Workstation GPS Locked` : `⚠️ GPS Capture Mandatory for Stage Establishment`}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAcquireGps}
-                        className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-bold transition cursor-pointer shrink-0"
-                      >
-                        {gps ? 'Re-acquire GPS' : 'Acquire Workstation GPS'}
-                      </button>
-                    </div>
-
-                    <div className="text-[10px] text-slate-600 dark:text-slate-400 flex items-center justify-between gap-2">
-                      <span>{gps ? `${gps.lat}, ${gps.lng} (Accuracy: High · Stage Radius <2km Check Active)` : gpsStatus}</span>
-                      <button
-                        type="button"
-                        onClick={() => setShowManualGpsInput(!showManualGpsInput)}
-                        className="underline text-[9.5px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
-                      >
-                        {showManualGpsInput ? 'Hide Manual Input' : 'Enter GPS Manually'}
-                      </button>
-                    </div>
-
-                    {showManualGpsInput && (
-                      <div className="p-2 bg-white dark:bg-[#12161f] rounded-md border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5 pt-2">
-                        <div className="text-[10px] font-semibold text-slate-700 dark:text-slate-300">
-                          Manual Coordinates Override (for desktop testing or denied permission):
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={manualLatInput}
-                            onChange={(e) => setManualLatInput(e.target.value)}
-                            placeholder="Latitude (e.g. 0.3162)"
-                            className="px-2 py-1 text-xs font-mono bg-white dark:bg-[#161a22] border rounded"
-                          />
-                          <input
-                            type="text"
-                            value={manualLngInput}
-                            onChange={(e) => setManualLngInput(e.target.value)}
-                            placeholder="Longitude (e.g. 32.5781)"
-                            className="px-2 py-1 text-xs font-mono bg-white dark:bg-[#161a22] border rounded"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleApplyManualGps}
-                          className="w-full py-1 rounded bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10.5px] font-mono font-bold cursor-pointer"
-                        >
-                          Apply Manual Workstation Coordinates
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Regular Citizen Profession Selector */
-                <select
-                  value={profession}
-                  onChange={(e) => setProfession(e.target.value)}
-                  className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="General Resident / Commuter">General Resident / Commuter (Community Citizen)</option>
-                  <option value="Bodaboda Rider / Cyclist">Bodaboda Rider / Cyclist</option>
-                  <option value="Taxi / Matatu / Commercial Driver">Taxi / Matatu / Commercial Driver</option>
-                  <option value="Market Vendor / Local Trader">Market Vendor / Local Trader</option>
-                  <option value="Healthcare Worker / Nurse / Clinical Staff">Healthcare Worker / Nurse / Clinical Staff</option>
-                  <option value="Teacher / Student / Youth Leader">Teacher / Student / Youth Leader</option>
-                  <option value="Artisan / Builder / Field Technician">Artisan / Builder / Field Technician</option>
-                  <option value="Civil Servant / Public Officer">Civil Servant / Public Officer</option>
-                </select>
-              )}
-            </div>
-          </div>
-
-          {/* Section 2: Territory Cascading Selector */}
-          <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
-            <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
-              2. Territory Routing — District › Sub-County › Parish
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <select
-                value={district}
-                onChange={(e) => {
-                  setDistrict(e.target.value);
-                  setSubcounty('');
-                  setParish('');
-                }}
-                className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">Select {tiersFor(country)[1]?.unit || 'District'}...</option>
-                {territory.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={subcounty}
-                disabled={!district}
-                onChange={(e) => {
-                  setSubcounty(e.target.value);
-                  setParish('');
-                }}
-                className={`w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 ${
-                  district ? '' : 'opacity-40'
-                }`}
-              >
-                <option value="">Select {tiersFor(country)[2]?.unit || 'Sub-county'}...</option>
-                {subcounties.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={parish}
-                disabled={!subcounty}
-                onChange={(e) => setParish(e.target.value)}
-                className={`w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 ${
-                  subcounty ? '' : 'opacity-40'
-                }`}
-              >
-                <option value="">Select {primaryUnit(country, district)}...</option>
-                {parishes.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Info size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>
-                Selecting your {primaryUnit(country, district)} routes directly to your grassroots Parish Chief &amp; Town Clerk desk.
-              </span>
-            </p>
-          </div>
-
-          {/* Section 3: Category & Issue Report */}
-          <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-            <div>
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1.5">
-                3. Issue Category
-              </label>
-              <button
-                type="button"
-                onClick={() => setCategory('corruption')}
-                className={`w-full mb-2 py-2 px-3 rounded-lg border text-xs font-mono font-semibold transition-colors flex items-center gap-2 cursor-pointer ${
-                  category === 'corruption'
-                    ? 'border-rose-500 text-rose-700 dark:text-rose-300 bg-rose-500/10'
-                    : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-rose-500/50'
-                }`}
-              >
-                <Lock size={13} />
-                <span>Report Corruption / Misuse of Public Funds (+100 pts · Encrypted IGG Route)</span>
-              </button>
-
-              <div className="grid grid-cols-4 gap-1.5">
-                {CATEGORIES.filter((c) => c.id !== 'corruption').map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setCategory(c.id)}
-                    className={`py-2 px-1 rounded-lg border text-[10px] font-mono transition-colors leading-tight text-center cursor-pointer ${
-                      category === c.id
-                        ? 'bg-emerald-600 border-emerald-600 text-white font-semibold'
-                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500 font-medium'
-                    }`}
-                  >
-                    {c.label.split(' ')[0].replace('/', '')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
-                Headline Summary
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Brief summary of the issue..."
-                className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
-                  Incident Details (#Hashtags &amp; @Mentions)
-                </label>
-                <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400">
-                  Tap tag to insert
-                </span>
-              </div>
-              <textarea
-                rows={3}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Who is affected? How long? Specific dates, locations, or asset references..."
-                className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs leading-relaxed text-slate-900 dark:text-white resize-none focus:outline-none focus:border-emerald-500"
-              />
-
-              {/* Quick Hashtag Chips */}
-              <div className="flex items-center gap-1.5 flex-wrap pt-1.5">
-                {[
-                  '#FixOurRoads',
-                  '#WaterRestored',
-                  '#ServiceExcellence',
-                  '#BudgetTransparency',
-                  '#ZeroBribery',
-                  '#UrgentSLA',
-                ].map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      if (!body.includes(tag)) {
-                        setBody((prev) => (prev ? `${prev.trim()} ${tag} ` : `${tag} `));
-                      }
-                    }}
-                    className="px-2 py-0.5 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-emerald-700 dark:text-emerald-400 text-[10px] font-mono font-semibold cursor-pointer"
-                  >
-                    + {tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Live Pre-Submission Issue Clustering & Master Dossier Co-Signing Radar */}
-          {similarOpenPosts.length > 0 && (
-            <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/40 space-y-2.5 animate-fade-in">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                    <Layers size={14} />
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-mono font-bold uppercase text-emerald-700 dark:text-emerald-400">
-                      Master Dossier Clustering Radar · +20 Pts Bonus
-                    </div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                      Similar Active Issue Detected on This Desk
-                    </h4>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {similarOpenPosts.map((sim) => {
-                  const count =
-                    sim.compiled_count || (sim.compiled_reports ? sim.compiled_reports.length + 1 : 1);
-                  return (
-                    <div
-                      key={sim.id}
-                      className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 text-[10px] font-mono">
-                          <span className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                            <Users size={10} /> {count} Witnesses
-                          </span>
-                          <span className="text-slate-400">·</span>
-                          <span className="text-slate-500">#{sim.id.slice(-6).toUpperCase()}</span>
-                        </div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {sim.title}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleCompileIntoExisting(sim)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
-                      >
-                        <Layers size={11} />
-                        <span>Compile Into Dossier</span>
-                        <ArrowRight size={11} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Section 4: GPS Pin, Media Evidence, Voice Note & Civic Poll */}
-          <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-            {/* GPS Pin Row */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <MapPin
-                  size={14}
-                  className={gps ? 'text-emerald-600 dark:text-emerald-400 shrink-0' : 'text-slate-400 shrink-0'}
-                />
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                    Location Pin (Optional)
-                  </div>
-                  <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                    {gpsStatus}
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleAcquireGps}
-                className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-emerald-700 dark:text-emerald-400 text-[10.5px] font-mono font-semibold shrink-0 cursor-pointer"
-              >
-                {gps ? 'Re-acquire GPS' : 'Attach GPS Pin'}
-              </button>
-            </div>
-
-            {/* Evidence & Voice Note Controls */}
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
-              <label className="py-2 px-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-xs font-mono font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
-                <input
-                  type="file"
-                  accept="image/*,video/*,.pdf"
-                  className="hidden"
-                  multiple
-                  onChange={handleFileSelect}
-                />
-                <Upload size={13} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Photo / Proof ({stagedMedia.length})</span>
-              </label>
-
-              <button
-                type="button"
-                onClick={toggleRecording}
-                className={`py-2 px-3 rounded-lg border text-xs font-mono font-semibold flex items-center justify-center gap-1.5 cursor-pointer ${
-                  isRecording
-                    ? 'border-rose-500 bg-rose-500/10 text-rose-700 dark:text-rose-300'
-                    : voiceSaved
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-slate-400'
-                }`}
-              >
-                <Mic size={13} />
-                <span>
-                  {isRecording ? 'Stop Recording' : voiceSaved ? 'Voice Attached' : 'Record Voice'}
-                </span>
-              </button>
-            </div>
-
-            {/* Staged Media Preview */}
-            {stagedMedia.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {stagedMedia.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2"
-                  >
+                {/* Pre-filled Location Row with 1-Tap Territory Editor */}
+                <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapPin size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-[10.5px] font-semibold text-slate-900 dark:text-white truncate">
-                        {m.name}
-                      </p>
-                      <p className="text-[9.5px] font-mono text-slate-500">
-                        {m.type} · {m.size}
-                      </p>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {parish || 'Select Parish'} · {subcounty || 'Sub-county'}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 truncate">
+                        {district || 'District'} · Grassroots Dispatch
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeStagedMedia(idx)}
-                      className="text-[10px] font-mono text-rose-600 hover:underline shrink-0 cursor-pointer"
-                    >
-                      Remove
-                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Optional Interactive Civic Poll Toggle */}
-            <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <BarChart3 size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Attach Community Referendum Poll</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIncludePoll(!includePoll);
-                    if (!pollQuestion && title) {
-                      setPollQuestion(
-                        `How should ${dept ? dept.toUpperCase() : 'the authority'} prioritize "${title}"?`
-                      );
-                    }
-                  }}
-                  className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-                >
-                  {includePoll ? 'Remove Poll' : '+ Add Poll'}
-                </button>
-              </div>
-
-              {includePoll && (
-                <div className="space-y-2 pt-2 animate-fade-in">
-                  <input
-                    type="text"
-                    value={pollQuestion}
-                    onChange={(e) => setPollQuestion(e.target.value)}
-                    placeholder="Poll Question..."
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs"
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-                    <input
-                      type="text"
-                      value={pollOpt1}
-                      onChange={(e) => setPollOpt1(e.target.value)}
-                      placeholder="Option 1"
-                      className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={pollOpt2}
-                      onChange={(e) => setPollOpt2(e.target.value)}
-                      placeholder="Option 2"
-                      className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={pollOpt3}
-                      onChange={(e) => setPollOpt3(e.target.value)}
-                      placeholder="Option 3"
-                      className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs"
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationPicker(!showLocationPicker)}
+                    className="px-2.5 py-1 rounded-md border border-[#e3e6ea] dark:border-[#262b36] hover:bg-slate-100 dark:hover:bg-slate-800 text-[10.5px] font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0 cursor-pointer flex items-center gap-1"
+                  >
+                    <span>{showLocationPicker ? 'Done' : 'Change Location'}</span>
+                    {showLocationPicker ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
                 </div>
-              )}
-            </div>
 
-            {/* Citizen Direct Before & After Transformation Proof Builder */}
-            <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <SlidersHorizontal size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Attach Before &amp; After Transformation Proof</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIncludeBeforeAfter(!includeBeforeAfter)}
-                  className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
-                >
-                  {includeBeforeAfter ? 'Remove Before/After' : '+ Add Before & After'}
-                </button>
+                {showLocationPicker && (
+                  <div className="p-3 bg-white dark:bg-[#161a22] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] animate-fade-in space-y-2">
+                    <div className="text-[10px] font-mono text-slate-500 uppercase font-semibold">
+                      Modify Grassroots Parish Routing:
+                    </div>
+                    {renderTerritoryDropdowns()}
+                  </div>
+                )}
               </div>
 
-              {includeBeforeAfter && (
-                <div className="space-y-2.5 pt-2.5 animate-fade-in">
-                  <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Upload &ldquo;Before&rdquo; and &ldquo;After&rdquo; photos to publish an interactive swipe-comparison card (ideal for Praise &amp; Commendations or verified community repairs).
-                  </p>
+              {/* Card 2: Issue Category */}
+              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+                  2. Issue Category
+                </label>
+                {renderCategorySelector()}
+              </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase">
-                          1. Before Photo
-                        </span>
-                        <label className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[9.5px] font-mono font-semibold cursor-pointer">
-                          <span>{beforePhotoUrl ? 'Change Photo' : 'Upload Before'}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) setBeforePhotoUrl(URL.createObjectURL(f));
-                              e.target.value = '';
-                            }}
-                          />
-                        </label>
-                      </div>
-                      <input
-                        type="text"
-                        value={beforePhotoLabel}
-                        onChange={(e) => setBeforePhotoLabel(e.target.value)}
-                        placeholder="Before label (e.g. Broken Culvert)"
-                        className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2 py-1 text-[11px]"
-                      />
+              {/* Card 3: Headline & Incident Details */}
+              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+                  3. Field Testimony &amp; Summary
+                </label>
+                {renderHeadlineAndBody()}
+              </div>
+
+              {/* Card 4: Thumb-Friendly 1-Tap Mobile Evidence Bar */}
+              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+                  4. Fast Proof &amp; Location Lock (1-Tap Mobile Actions)
+                </label>
+                {renderEvidenceBar(true)}
+              </div>
+
+              {/* Live Master Dossier Duplicate Radar */}
+              {renderRadar()}
+
+              {/* Primary Dispatch Action */}
+              {renderSubmitButtons(true)}
+
+              {/* Card 5: Collapsible Advanced Dossier Tools Drawer */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAdvancedToolsOpen(!advancedToolsOpen)}
+                  className="w-full p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 dark:hover:border-slate-600 transition flex items-center justify-between text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                      <SlidersHorizontal size={15} />
                     </div>
-
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
-                          2. After Photo
-                        </span>
-                        <label className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[9.5px] font-mono font-semibold cursor-pointer">
-                          <span>{afterPhotoUrl ? 'Change Photo' : 'Upload After'}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) setAfterPhotoUrl(URL.createObjectURL(f));
-                              e.target.value = '';
-                            }}
-                          />
-                        </label>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Advanced Dossier Tools &amp; Governance Suite</span>
+                        {(isFrontlineScout || includePoll || includeBeforeAfter || anonymous) && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        )}
                       </div>
-                      <input
-                        type="text"
-                        value={afterPhotoLabel}
-                        onChange={(e) => setAfterPhotoLabel(e.target.value)}
-                        placeholder="After label (e.g. Rebuilt by District Works)"
-                        className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2 py-1 text-[11px]"
-                      />
+                      <div className="text-[10px] font-mono text-slate-500 truncate">
+                        Scout consensus stage, referendum polls, before/after proof &amp; privacy shield
+                      </div>
                     </div>
                   </div>
+                  <div className="p-1 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-300 shrink-0 ml-2">
+                    {advancedToolsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </div>
+                </button>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-[10px] font-mono text-slate-500 uppercase font-semibold">
-                      Observed Turnaround Time:
+                {advancedToolsOpen && (
+                  <div className="mt-3 space-y-3.5 animate-fade-in pl-1">
+                    {/* Profession Selector */}
+                    <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+                        Citizen Role / Trade
+                      </label>
+                      <select
+                        value={profession}
+                        onChange={(e) => setProfession(e.target.value)}
+                        className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value="General Resident / Commuter">General Resident / Commuter (Community Citizen)</option>
+                        <option value="Bodaboda Rider / Cyclist">Bodaboda Rider / Cyclist</option>
+                        <option value="Taxi / Matatu / Commercial Driver">Taxi / Matatu / Commercial Driver</option>
+                        <option value="Market Vendor / Local Trader">Market Vendor / Local Trader</option>
+                        <option value="Healthcare Worker / Nurse / Clinical Staff">Healthcare Worker / Nurse / Clinical Staff</option>
+                        <option value="Teacher / Student / Youth Leader">Teacher / Student / Youth Leader</option>
+                        <option value="Artisan / Builder / Field Technician">Artisan / Builder / Field Technician</option>
+                        <option value="Civil Servant / Public Officer">Civil Servant / Public Officer</option>
+                      </select>
+                    </div>
+
+                    {/* Frontline Scout Workstation Suite */}
+                    {renderFrontlineScoutSuite()}
+
+                    {/* Referendum Poll Suite */}
+                    {renderPollSuite()}
+
+                    {/* Before & After Transformation Proof */}
+                    {renderBeforeAfterSuite()}
+
+                    {/* Anonymous Zero-Knowledge Shield */}
+                    {renderAnonymousToggle()}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* =========================================================================
+               FULL MASTER DOSSIER WORKFLOW (ALL 4 SECTIONS EXPANDED)
+               ========================================================================= */
+            <div className="space-y-4 animate-fade-in">
+              {/* Section 1: Target Wall & Reporter Profession */}
+              <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
+                      1. Target Statutory Desk or Service Wall
                     </label>
+                    <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <Search size={10} />
+                      <span>Interactive Search &amp; Auto-Suggest</span>
+                    </span>
+                  </div>
+                  {renderWallSelector(false)}
+                </div>
+
+                {dept === 'others' && (
+                  <div className="space-y-1 mt-2">
                     <input
                       type="text"
-                      value={turnaroundInput}
-                      onChange={(e) => setTurnaroundInput(e.target.value)}
-                      placeholder="e.g. 3h 30m or 2 Days"
-                      className="w-36 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2.5 py-1 text-[11px] font-mono"
+                      value={othersText}
+                      onChange={(e) => setOthersText(e.target.value)}
+                      placeholder="e.g. Yaka token vendor, Private contractor"
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono"
                     />
+                    <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <AlertTriangle size={11} /> Tagged [Unverified] · auto-CC&apos;d to relevant ministry
+                    </p>
                   </div>
+                )}
 
-                  {beforePhotoUrl && afterPhotoUrl && (
-                    <BeforeAfterSlider
-                      beforeUrl={beforePhotoUrl}
-                      afterUrl={afterPhotoUrl}
-                      beforeLabel={beforePhotoLabel || 'Before'}
-                      afterLabel={afterPhotoLabel || 'After'}
-                      turnaroundTime={turnaroundInput || '3h 30m'}
-                      gpsCoords={gps}
-                      gpsVerified={Boolean(gps)}
-                      verifiedBy={anonymous ? 'Verified Citizen Scout' : user?.name || 'Citizen Field Scout'}
-                      compact={true}
-                      defaultMode="slider"
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+                {/* Frontline Field Scout Self-Identification & Stage Consensus Suite */}
+                {renderFrontlineScoutSuite()}
 
-          {/* Anonymous Toggle */}
-          <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Post Anonymously (Zero-Knowledge Shield)</span>
-              </p>
-              <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                Displays publicly as &ldquo;Verified Citizen&rdquo; · NIN salted &amp; protected
-              </p>
-            </div>
-            <label className="tog-wrap shrink-0">
-              <input
-                type="checkbox"
-                checked={anonymous}
-                onChange={(e) => setAnonymous(e.target.checked)}
-              />
-              <div className="tog-track"></div>
-              <div className="tog-thumb"></div>
-            </label>
-          </div>
-
-          {/* Offline 3G Queue Sync Indicator Strip (when items are queued or offline) */}
-          {(!isOnline || offlineQueue.length > 0) && (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2 text-xs">
-              <div className="text-amber-800 dark:text-amber-300 font-mono text-[11px]">
-                <strong>Offline 3G Field Queue:</strong> {offlineQueue.length} pending report(s) staged locally with SHA-256 integrity.
+                {!isFrontlineScout && (
+                  <div className="pt-2">
+                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                      Citizen Profession / Role
+                    </label>
+                    <select
+                      value={profession}
+                      onChange={(e) => setProfession(e.target.value)}
+                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="General Resident / Commuter">General Resident / Commuter (Community Citizen)</option>
+                      <option value="Bodaboda Rider / Cyclist">Bodaboda Rider / Cyclist</option>
+                      <option value="Taxi / Matatu / Commercial Driver">Taxi / Matatu / Commercial Driver</option>
+                      <option value="Market Vendor / Local Trader">Market Vendor / Local Trader</option>
+                      <option value="Healthcare Worker / Nurse / Clinical Staff">Healthcare Worker / Nurse / Clinical Staff</option>
+                      <option value="Teacher / Student / Youth Leader">Teacher / Student / Youth Leader</option>
+                      <option value="Artisan / Builder / Field Technician">Artisan / Builder / Field Technician</option>
+                      <option value="Civil Servant / Public Officer">Civil Servant / Public Officer</option>
+                    </select>
+                  </div>
+                )}
               </div>
-              {offlineQueue.length > 0 && (
-                <button
-                  type="button"
-                  onClick={syncOfflineQueue}
-                  className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold shrink-0 cursor-pointer"
-                >
-                  Sync {offlineQueue.length} Now
-                </button>
-              )}
+
+              {/* Section 2: Territory Cascading Selector */}
+              <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+                  2. Territory Routing — District › Sub-County › Parish
+                </label>
+                {renderTerritoryDropdowns()}
+              </div>
+
+              {/* Section 3: Category & Issue Report */}
+              <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+                  3. Issue Category &amp; Details
+                </label>
+                {renderCategorySelector()}
+                {renderHeadlineAndBody()}
+              </div>
+
+              {/* Live Pre-Submission Issue Clustering & Master Dossier Co-Signing Radar */}
+              {renderRadar()}
+
+              {/* Section 4: GPS Pin, Media Evidence, Voice Note & Civic Poll */}
+              <div className="p-3.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
+                  4. Evidence, Location &amp; Referendum Tools
+                </label>
+                {renderEvidenceBar(false)}
+                {renderPollSuite()}
+                {renderBeforeAfterSuite()}
+              </div>
+
+              {/* Anonymous Toggle */}
+              {renderAnonymousToggle()}
+
+              {/* Submit Buttons */}
+              {renderSubmitButtons(false)}
             </div>
           )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleSubmit(true)}
-              className="bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 font-mono font-semibold rounded-lg py-3 px-3 text-[11px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              title="Save photo/GPS evidence locally for intermittent rural 3G networks and sync later"
-            >
-              <span>Stage in Offline 3G Queue ({offlineQueue.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSubmit(false)}
-              className="sm:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-3 text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Send size={14} />
-              <span>Dispatch Report to Public Wall →</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -261,17 +261,17 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onFocus={() => onActivateFocus?.(post.id)}
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden mb-4 shadow-xs hover:shadow-md ${
+      className={`rounded-xl border transition-all duration-200 overflow-hidden mb-3.5 shadow-2xs hover:shadow-sm scroll-mt-16 ${
         isFocused
-          ? 'bg-white dark:bg-[#131722] border-emerald-500/70 dark:border-emerald-500/50 ring-2 ring-emerald-500/15'
-          : 'bg-white dark:bg-[#111520] border-slate-200/90 dark:border-[#222736] hover:border-slate-300 dark:hover:border-[#2e364a]'
+          ? 'bg-white dark:bg-[#161a22] border-emerald-500/70 dark:border-emerald-500/60 ring-2 ring-emerald-500/15'
+          : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-300 dark:hover:border-slate-600'
       }`}
     >
       {/* 1. TOP DEPARTMENT WALL BANNER (Department Page / Section Aesthetic) */}
-      <div className="px-4 py-2.5 sm:px-5 sm:py-3 bg-slate-50/90 dark:bg-[#0c0f16] border-b border-slate-200/80 dark:border-[#202534] flex items-center justify-between gap-2.5 flex-wrap">
+      <div className="px-4 py-2.5 sm:px-5 sm:py-3 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2.5 flex-wrap">
         {/* Left: Department Icon & Identity */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-white dark:bg-[#181d2a] border border-slate-200 dark:border-slate-700/80 flex items-center justify-center shrink-0 shadow-2xs">
+          <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center shrink-0 shadow-2xs">
             <DeptIcon dept={d} size={15} className="text-slate-800 dark:text-slate-200" />
           </div>
           <div className="min-w-0">
@@ -673,7 +673,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
       </div>
 
       {/* 3. HIGH-ERGONOMICS REACTION BAR ("EASY TO REACT TO") */}
-      <div className="px-4 py-3 sm:px-5 bg-slate-50/70 dark:bg-[#0d101a] border-t border-slate-200/80 dark:border-[#1e2536] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+      <div className="px-4 py-3 sm:px-5 bg-[#f8f9fa] dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
           {/* Corroborate / Upvote Button (Green Affirmation Arrow Up) */}
           <button
@@ -682,17 +682,17 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               e.stopPropagation();
               upvotePost(post.id);
             }}
-            className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+            className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg text-xs font-sans font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
               isUserSupported
                 ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-1 ring-emerald-500 active:scale-95'
-                : 'bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600'
+                : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600'
             }`}
             title="Corroborate this citizen dispatch (Confirm incident)"
           >
             <ArrowUp size={14} className={isUserSupported ? 'stroke-[3]' : ''} />
             <span>Corroborate</span>
             <span className={`px-1.5 py-0.2 rounded text-[11px] font-mono ${
-              isUserSupported ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-[#1e2536] text-slate-600 dark:text-slate-400'
+              isUserSupported ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36]'
             }`}>
               {post.upvotes || 0}
             </span>
@@ -705,17 +705,17 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               e.stopPropagation();
               downvotePost(post.id);
             }}
-            className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+            className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg text-xs font-sans font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
               isUserDownvoted
                 ? 'bg-rose-600 text-white shadow-rose-600/30 ring-1 ring-rose-500 active:scale-95'
-                : 'bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-rose-500 hover:text-rose-600'
+                : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-rose-500 hover:text-rose-600'
             }`}
             title="Dispute / Refute unverified claim or false report"
           >
             <ArrowDown size={14} className={isUserDownvoted ? 'stroke-[3]' : ''} />
             <span>Dispute</span>
             <span className={`px-1.5 py-0.2 rounded text-[11px] font-mono ${
-              isUserDownvoted ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-[#1e2536] text-slate-600 dark:text-slate-400'
+              isUserDownvoted ? 'bg-black/20 text-white' : 'bg-slate-100 dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36]'
             }`}>
               {post.downvotes || 0}
             </span>
@@ -729,12 +729,12 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setActivePost(post);
               go('post_detail');
             }}
-            className="px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
+            className="px-3 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
             title="Open dispatch discussion and official replies"
           >
             <MessageSquare size={14} />
             <span className="hidden sm:inline">Replies</span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#1e2536] text-slate-600 dark:text-slate-400 text-[11px]">
+            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono">
               {post.comments?.length || 0}
             </span>
           </button>
@@ -747,12 +747,12 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setSocialModalTab('quote');
               setSocialModalPost(post);
             }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
             title="Quote or Co-sign dispatch"
           >
             <Repeat2 size={14} />
             <span className="hidden md:inline">Co-sign</span>
-            <span className="text-[11px]">{post.reposts || compiledCount || 0}</span>
+            <span className="text-[11px] font-mono">{post.reposts || compiledCount || 0}</span>
           </button>
 
           {/* Peer Gratitude Reward Button */}
@@ -762,7 +762,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               e.stopPropagation();
               setRewardOpen(true);
             }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs font-mono font-medium bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition flex items-center gap-1 cursor-pointer"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition flex items-center gap-1 cursor-pointer"
             title="Send peer recognition reward / airtime voucher"
           >
             <Gift size={13} className="text-amber-600 dark:text-amber-400" />
@@ -776,10 +776,10 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               e.stopPropagation();
               toggleBookmark(post.id);
             }}
-            className={`p-2 rounded-xl border text-xs transition cursor-pointer ${
+            className={`p-2 rounded-lg border text-xs transition cursor-pointer ${
               isBookmarked
                 ? 'bg-amber-500/10 border-amber-500/40 text-amber-600'
-                : 'bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-400 hover:text-slate-700'
+                : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-400 hover:text-slate-700'
             }`}
             title={isBookmarked ? 'Saved to bookmarks' : 'Save bookmark'}
           >
@@ -794,7 +794,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setSocialModalTab('share');
               setSocialModalPost(post);
             }}
-            className="p-2 rounded-xl bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+            className="p-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
             title="Share dispatch link and docket"
           >
             <Share2 size={14} />

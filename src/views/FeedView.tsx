@@ -39,6 +39,7 @@ import {
   HelpCircle,
   CreditCard,
   Building2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { CivicFeedDispatcher } from '../components/CivicFeedDispatcher';
@@ -86,6 +87,7 @@ export const FeedView: React.FC = () => {
   const [gisViewMode, setGisViewMode] = useState<'LIST' | 'MAP'>('LIST');
   const [selectedCategory, setSelectedCategory] = useState<TicketCategory | 'all'>('all');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string | null>(null);
+  const [filtersExpanded, setFiltersExpanded] = useState<boolean>(true);
   const [showBookmarksOnly, setShowBookmarksOnly] = useState<boolean>(false);
   const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const [showBarazaDeck, setShowBarazaDeck] = useState<boolean>(false);
@@ -428,21 +430,21 @@ export const FeedView: React.FC = () => {
   }, [goToNextPost, goToPrevPost]);
 
   return (
-    <div className="min-h-screen text-slate-950 dark:text-slate-100 bg-[#f8f9fa] dark:bg-[#0a0d14] border-x border-slate-200/90 dark:border-[#1e2536] pb-24">
-      {/* 1. SOVEREIGN TOP TAB HEADER (FOLLOWING · TRENDING · NEAR ME) */}
-      <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0a0d14]/95 backdrop-blur-md border-b border-slate-200/90 dark:border-[#1e2536] transition-colors">
-        <div className="flex items-center justify-around border-b border-slate-200/80 dark:border-[#1e2536]">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100 bg-[#f8f9fa] dark:bg-[#0e1116] pb-24">
+      {/* 1. SOVEREIGN TOP TAB HEADER (FOLLOWING · TRENDING · NEAR ME) - SLIM & DOCKED */}
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#161a22]/95 backdrop-blur-md border-b border-[#e3e6ea] dark:border-[#262b36] transition-colors shadow-2xs">
+        <div className="flex items-center justify-around">
           {/* Tab 1: FOLLOWING */}
           <button
             type="button"
             onClick={() => setFeedTab('following')}
-            className={`flex-1 py-3.5 text-center relative font-mono font-bold text-xs sm:text-sm tracking-wider uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-3 sm:py-3.5 text-center relative font-sans font-bold text-xs sm:text-sm tracking-wide uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer ${
               feedTab === 'following'
-                ? 'text-emerald-400 font-black'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-emerald-500 font-black'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
-            <Users size={16} className={feedTab === 'following' ? 'text-emerald-400' : 'text-slate-500'} />
+            <Users size={16} className={feedTab === 'following' ? 'text-emerald-500' : 'text-slate-400'} />
             <span>FOLLOWING</span>
             {feedTab === 'following' && (
               <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-emerald-500 rounded-t-full" />
@@ -453,13 +455,13 @@ export const FeedView: React.FC = () => {
           <button
             type="button"
             onClick={() => setFeedTab('trending')}
-            className={`flex-1 py-3.5 text-center relative font-mono font-bold text-xs sm:text-sm tracking-wider uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-3 sm:py-3.5 text-center relative font-sans font-bold text-xs sm:text-sm tracking-wide uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer ${
               feedTab === 'trending'
-                ? 'text-emerald-400 font-black'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-emerald-500 font-black'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
-            <TrendingUp size={16} className={feedTab === 'trending' ? 'text-emerald-400' : 'text-slate-500'} />
+            <TrendingUp size={16} className={feedTab === 'trending' ? 'text-emerald-500' : 'text-slate-400'} />
             <span>TRENDING</span>
             {feedTab === 'trending' && (
               <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-emerald-500 rounded-t-full" />
@@ -470,23 +472,26 @@ export const FeedView: React.FC = () => {
           <button
             type="button"
             onClick={() => setFeedTab('near_me')}
-            className={`flex-1 py-3.5 text-center relative font-mono font-bold text-xs sm:text-sm tracking-wider uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 py-3 sm:py-3.5 text-center relative font-sans font-bold text-xs sm:text-sm tracking-wide uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer ${
               feedTab === 'near_me'
-                ? 'text-emerald-400 font-black'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-emerald-500 font-black'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
-            <Radio size={16} className={feedTab === 'near_me' ? 'text-emerald-400' : 'text-slate-500'} />
+            <Radio size={16} className={feedTab === 'near_me' ? 'text-emerald-500' : 'text-slate-400'} />
             <span>NEAR ME</span>
             {feedTab === 'near_me' && (
               <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-emerald-500 rounded-t-full" />
             )}
           </button>
         </div>
+      </div>
 
-        {/* 2. SEARCH & GIS MAP ROW (Matching Screenshot Aesthetic) */}
+      {/* 2. DISPATCH CONTROLS & SOVEREIGN SIGNAL FILTER (SCROLLS NATURALLY WITH FEED - NEVER BLOCKS POST VIEWING) */}
+      <div className="bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] relative z-10 transition-colors">
+        {/* Search, Filter Drawer Toggle & GIS Map Row */}
         <div className="p-3 sm:px-4 sm:py-2.5 flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-2.5 bg-slate-100 dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] rounded-xl sm:rounded-2xl px-3.5 py-2">
+          <div className="flex-1 flex items-center gap-2.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3.5 py-2">
             <Search size={15} className="text-slate-400 shrink-0" />
             <input
               type="text"
@@ -506,23 +511,41 @@ export const FeedView: React.FC = () => {
             )}
           </div>
 
+          {/* Toggle Sovereign Filter Card to give maximum viewport to posts */}
+          <button
+            type="button"
+            onClick={() => setFiltersExpanded(!filtersExpanded)}
+            className={`px-3 py-2 rounded-xl border font-sans text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-2xs ${
+              !filtersExpanded
+                ? 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
+                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+            }`}
+            title={filtersExpanded ? 'Collapse filters to maximize post viewing area' : 'Expand Sovereign Signal Filters'}
+          >
+            <SlidersHorizontal size={13} className={filtersExpanded ? 'text-emerald-500' : 'text-slate-400'} />
+            <span className="hidden sm:inline">Filters</span>
+            {(trafficSignalFilter !== 'all' || selectedDeptFilter) && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+          </button>
+
           {/* GIS Map Button */}
           <button
             type="button"
             onClick={() => setGisViewMode(gisViewMode === 'MAP' ? 'LIST' : 'MAP')}
-            className={`px-3.5 py-2 rounded-xl sm:rounded-2xl border font-mono text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-2xs ${
+            className={`px-3.5 py-2 rounded-xl border font-sans text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 shadow-2xs ${
               gisViewMode === 'MAP'
                 ? 'bg-emerald-600 text-white border-emerald-500'
-                : 'bg-white dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] text-slate-800 dark:text-slate-200 hover:border-emerald-500'
+                : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 hover:border-emerald-500'
             }`}
             title="Toggle Geospatial Signal Radar Map"
           >
-            <Layers size={14} className="text-emerald-400" />
+            <Layers size={14} className="text-emerald-500" />
             <span>GIS Map</span>
           </button>
         </div>
 
-        {/* 3. CATEGORY PILLS ROW (All · Praise · Health · Water · Roads · Power · Saved) */}
+        {/* Category Pills Row (All · Praise · Health · Water · Roads · Power · Saved) */}
         <div className="px-3 sm:px-4 pb-2.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {/* All */}
           <button
@@ -531,10 +554,10 @@ export const FeedView: React.FC = () => {
               setSelectedCategory('all');
               setShowBookmarksOnly(false);
             }}
-            className={`px-3.5 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+            className={`px-3.5 py-1 rounded-full text-xs font-sans shrink-0 transition cursor-pointer ${
               selectedCategory === 'all' && !showBookmarksOnly
-                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold'
-                : 'bg-slate-100 dark:bg-[#111520] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-[#1e2536] hover:border-slate-400'
+                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold shadow-2xs'
+                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] font-medium hover:border-slate-400'
             }`}
           >
             All ({total})
@@ -547,10 +570,10 @@ export const FeedView: React.FC = () => {
               setSelectedCategory(selectedCategory === 'praise' ? 'all' : 'praise');
               setShowBookmarksOnly(false);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-medium shrink-0 transition cursor-pointer ${
               selectedCategory === 'praise'
                 ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                : 'bg-white dark:bg-[#111520] text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
             }`}
           >
             <Bookmark size={12} className="text-emerald-500" />
@@ -564,10 +587,10 @@ export const FeedView: React.FC = () => {
               setSelectedCategory(selectedCategory === 'health' ? 'all' : 'health');
               setShowBookmarksOnly(false);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-medium shrink-0 transition cursor-pointer ${
               selectedCategory === 'health'
                 ? 'bg-sky-600 text-white shadow-xs font-bold'
-                : 'bg-white dark:bg-[#111520] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1e2536] hover:border-sky-500'
+                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] hover:border-sky-500'
             }`}
           >
             <Activity size={12} className="text-sky-500" />
@@ -581,10 +604,10 @@ export const FeedView: React.FC = () => {
               setSelectedCategory(selectedCategory === 'water' ? 'all' : 'water');
               setShowBookmarksOnly(false);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-medium shrink-0 transition cursor-pointer ${
               selectedCategory === 'water'
                 ? 'bg-blue-600 text-white shadow-xs font-bold'
-                : 'bg-white dark:bg-[#111520] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1e2536] hover:border-blue-500'
+                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] hover:border-blue-500'
             }`}
           >
             <Droplets size={12} className="text-blue-500" />
@@ -598,10 +621,10 @@ export const FeedView: React.FC = () => {
               setSelectedCategory(selectedCategory === 'roads' ? 'all' : 'roads');
               setShowBookmarksOnly(false);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-medium shrink-0 transition cursor-pointer ${
               selectedCategory === 'roads'
                 ? 'bg-amber-600 text-white shadow-xs font-bold'
-                : 'bg-white dark:bg-[#111520] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1e2536] hover:border-amber-500'
+                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500'
             }`}
           >
             <MapPin size={12} className="text-amber-500" />
@@ -615,10 +638,10 @@ export const FeedView: React.FC = () => {
               setSelectedCategory(selectedCategory === 'electricity' ? 'all' : 'electricity');
               setShowBookmarksOnly(false);
             }}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-medium shrink-0 transition cursor-pointer ${
               selectedCategory === 'electricity'
                 ? 'bg-yellow-600 text-white shadow-xs font-bold'
-                : 'bg-white dark:bg-[#111520] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1e2536] hover:border-yellow-500'
+                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] hover:border-yellow-500'
             }`}
           >
             <Zap size={12} className="text-yellow-500" />
@@ -629,10 +652,10 @@ export const FeedView: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowBookmarksOnly(!showBookmarksOnly)}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-medium shrink-0 transition cursor-pointer ${
               showBookmarksOnly
                 ? 'bg-indigo-600 text-white font-bold'
-                : 'bg-white dark:bg-[#111520] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-[#1e2536] hover:border-indigo-400'
+                : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36] hover:border-indigo-400'
             }`}
           >
             <Bookmark size={11} className={showBookmarksOnly ? 'text-white' : 'text-slate-400'} />
@@ -652,210 +675,215 @@ export const FeedView: React.FC = () => {
           </button>
         </div>
 
-        {/* 4. SOVEREIGN SIGNAL FILTER CARD (1. Speak · 2. Serve · 3. Be Heard - Exact Screenshot Aesthetic) */}
-        <div className="px-3 sm:px-4 pb-3">
-          <div className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] shadow-xs">
-            {/* Card Header: Title, Subtitle, and Guide Button */}
-            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#1e2536] pb-2 mb-2.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                    Sovereign Signal Filter
+        {/* Expandable Sovereign Signal Filter & Department Quick Pills */}
+        {filtersExpanded && (
+          <div className="border-t border-[#e3e6ea] dark:border-[#262b36] pt-2.5 animate-fade-in">
+            {/* Sovereign Signal Filter Card (1. Speak · 2. Serve · 3. Be Heard) */}
+            <div className="px-3 sm:px-4 pb-3">
+              <div className="p-3 sm:p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] shadow-2xs">
+                {/* Card Header: Title, Subtitle, and Guide Button */}
+                <div className="flex items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-2 mb-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                        Sovereign Signal Filter
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-sans truncate">
+                        Tap a signal stage to filter live dispatches...
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                    Tap a signal stage to filter live dispatches...
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
-                {trafficSignalFilter !== 'all' && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {trafficSignalFilter !== 'all' && (
+                      <button
+                        type="button"
+                        onClick={() => setTrafficSignalFilter('all')}
+                        className="text-[10px] font-sans font-semibold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 transition cursor-pointer"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openGuide('signals')}
+                      className="px-2.5 py-1 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 transition flex items-center gap-1 cursor-pointer"
+                      title="Field Manual: 3-Signal Protocol (Speak, Serve, Be Heard)"
+                    >
+                      <HelpCircle size={12} className="text-slate-400" />
+                      <span>Guide</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3 Interactive Signal Boxes (1. Speak · 2. Serve · 3. Be Heard) */}
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Card 1: 1. Speak (Red Beacon / Open / Graft) */}
                   <button
                     type="button"
-                    onClick={() => setTrafficSignalFilter('all')}
-                    className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 transition cursor-pointer"
+                    onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'red' ? 'all' : 'red')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      trafficSignalFilter === 'red'
+                        ? 'bg-rose-500/10 border-rose-500/60 ring-2 ring-rose-500/20'
+                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] hover:border-rose-400'
+                    }`}
                   >
-                    Reset
+                    <div className="flex items-center justify-between mb-1.5">
+                      <SignalGlyphRed active={trafficSignalFilter === 'red' || trafficSignalFilter === 'all'} className="w-4 h-4" />
+                      <span className="text-xs sm:text-sm font-bold font-mono text-rose-600 dark:text-rose-400">{redCount}</span>
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                        1. Speak
+                      </div>
+                      <div className="text-[9.5px] font-sans text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                        Open / Graft
+                      </div>
+                    </div>
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => openGuide('signals')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium bg-slate-100 dark:bg-[#161c2a] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#22293d] hover:border-emerald-500 transition flex items-center gap-1 cursor-pointer"
-                  title="Field Manual: 3-Signal Protocol (Speak, Serve, Be Heard)"
-                >
-                  <HelpCircle size={12} className="text-slate-400" />
-                  <span>Guide</span>
-                </button>
+
+                  {/* Card 2: 2. Serve (Amber Beacon / In Progress) */}
+                  <button
+                    type="button"
+                    onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'amber' ? 'all' : 'amber')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      trafficSignalFilter === 'amber'
+                        ? 'bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/20'
+                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <SignalGlyphAmber active={trafficSignalFilter === 'amber' || trafficSignalFilter === 'all'} className="w-4 h-4" />
+                      <span className="text-xs sm:text-sm font-bold font-mono text-amber-600 dark:text-amber-400">{amberCount}</span>
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                        2. Serve
+                      </div>
+                      <div className="text-[9.5px] font-sans text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                        In Progress
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Card 3: 3. Be Heard (Green Beacon / Proof Sealed) */}
+                  <button
+                    type="button"
+                    onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'green' ? 'all' : 'green')}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      trafficSignalFilter === 'green'
+                        ? 'bg-emerald-500/10 border-emerald-500/60 ring-2 ring-emerald-500/20'
+                        : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <SignalGlyphGreen active={trafficSignalFilter === 'green' || trafficSignalFilter === 'all'} className="w-4 h-4" />
+                      <span className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">{greenCount}</span>
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                        3. Be Heard
+                      </div>
+                      <div className="text-[9.5px] font-sans text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                        Proof Sealed
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* 3 Interactive Signal Boxes (1. Speak · 2. Serve · 3. Be Heard) */}
-            <div className="grid grid-cols-3 gap-2">
-              {/* Card 1: 1. Speak (Red Beacon / Open / Graft) */}
+            {/* Department Quick Pills Row (Finance · Local Gov · KCCA · NWSC · Umeme) */}
+            <div className="px-3 sm:px-4 pb-2.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-[#e3e6ea] dark:border-[#262b36] pt-2">
+              {/* Finance (MoFPED) */}
               <button
                 type="button"
-                onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'red' ? 'all' : 'red')}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                  trafficSignalFilter === 'red'
-                    ? 'bg-rose-500/10 border-rose-500/60 ring-2 ring-rose-500/20'
-                    : 'bg-[#f8f9fa] dark:bg-[#0a0d14] border-slate-200 dark:border-[#1e2536] hover:border-rose-400'
+                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'mofped' ? null : 'mofped')}
+                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+                  selectedDeptFilter === 'mofped'
+                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <SignalGlyphRed active={trafficSignalFilter === 'red' || trafficSignalFilter === 'all'} className="w-4 h-4" />
-                  <span className="text-xs sm:text-sm font-bold font-mono text-rose-600 dark:text-rose-400">{redCount}</span>
-                </div>
-                <div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                    1. Speak
-                  </div>
-                  <div className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                    Open / Graft
-                  </div>
-                </div>
+                <CreditCard size={12} className="text-slate-400" />
+                <span>Finance (MoFPED)</span>
+                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
+                  {mofpedCount}
+                </span>
               </button>
 
-              {/* Card 2: 2. Serve (Amber Beacon / In Progress) */}
+              {/* Local Gov (LG) */}
               <button
                 type="button"
-                onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'amber' ? 'all' : 'amber')}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                  trafficSignalFilter === 'amber'
-                    ? 'bg-amber-500/10 border-amber-500/60 ring-2 ring-amber-500/20'
-                    : 'bg-[#f8f9fa] dark:bg-[#0a0d14] border-slate-200 dark:border-[#1e2536] hover:border-amber-400'
+                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'molg' ? null : 'molg')}
+                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+                  selectedDeptFilter === 'molg'
+                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <SignalGlyphAmber active={trafficSignalFilter === 'amber' || trafficSignalFilter === 'all'} className="w-4 h-4" />
-                  <span className="text-xs sm:text-sm font-bold font-mono text-amber-600 dark:text-amber-400">{amberCount}</span>
-                </div>
-                <div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                    2. Serve
-                  </div>
-                  <div className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                    In Progress
-                  </div>
-                </div>
+                <Landmark size={12} className="text-slate-400" />
+                <span>Local Gov (LG)</span>
+                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
+                  {molgCount}
+                </span>
               </button>
 
-              {/* Card 3: 3. Be Heard (Green Beacon / Proof Sealed) */}
+              {/* KCCA */}
               <button
                 type="button"
-                onClick={() => setTrafficSignalFilter(trafficSignalFilter === 'green' ? 'all' : 'green')}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                  trafficSignalFilter === 'green'
-                    ? 'bg-emerald-500/10 border-emerald-500/60 ring-2 ring-emerald-500/20'
-                    : 'bg-[#f8f9fa] dark:bg-[#0a0d14] border-slate-200 dark:border-[#1e2536] hover:border-emerald-400'
+                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'kcca' ? null : 'kcca')}
+                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+                  selectedDeptFilter === 'kcca'
+                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
                 }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <SignalGlyphGreen active={trafficSignalFilter === 'green' || trafficSignalFilter === 'all'} className="w-4 h-4" />
-                  <span className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">{greenCount}</span>
-                </div>
-                <div>
-                  <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight">
-                    3. Be Heard
-                  </div>
-                  <div className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                    Proof Sealed
-                  </div>
-                </div>
+                <Building2 size={12} className="text-slate-400" />
+                <span>KCCA</span>
+                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
+                  {kccaCount}
+                </span>
+              </button>
+
+              {/* NWSC */}
+              <button
+                type="button"
+                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'nwsc' ? null : 'nwsc')}
+                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+                  selectedDeptFilter === 'nwsc'
+                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                }`}
+              >
+                <Droplets size={12} className="text-slate-400" />
+                <span>NWSC</span>
+                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
+                  {nwscCount}
+                </span>
+              </button>
+
+              {/* Umeme */}
+              <button
+                type="button"
+                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'umeme' ? null : 'umeme')}
+                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+                  selectedDeptFilter === 'umeme'
+                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                }`}
+              >
+                <Zap size={12} className="text-slate-400" />
+                <span>Umeme</span>
+                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
+                  {umemeCount}
+                </span>
               </button>
             </div>
           </div>
-        </div>
-
-        {/* 5. DEPARTMENT QUICK PILLS ROW (Finance · Local Gov · KCCA · NWSC · Umeme) */}
-        <div className="px-3 sm:px-4 pb-2.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-[#1e2536] pt-2">
-          {/* Finance (MoFPED) */}
-          <button
-            type="button"
-            onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'mofped' ? null : 'mofped')}
-            className={`px-3 py-1 rounded-xl text-xs font-mono font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-              selectedDeptFilter === 'mofped'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'bg-white dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-            }`}
-          >
-            <CreditCard size={12} className="text-slate-400" />
-            <span>Finance (MoFPED)</span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-emerald-950 text-slate-600 dark:text-emerald-300 text-[10px]">
-              {mofpedCount}
-            </span>
-          </button>
-
-          {/* Local Gov (LG) */}
-          <button
-            type="button"
-            onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'molg' ? null : 'molg')}
-            className={`px-3 py-1 rounded-xl text-xs font-mono font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-              selectedDeptFilter === 'molg'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'bg-white dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-            }`}
-          >
-            <Landmark size={12} className="text-slate-400" />
-            <span>Local Gov (LG)</span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-emerald-950 text-slate-600 dark:text-emerald-300 text-[10px]">
-              {molgCount}
-            </span>
-          </button>
-
-          {/* KCCA */}
-          <button
-            type="button"
-            onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'kcca' ? null : 'kcca')}
-            className={`px-3 py-1 rounded-xl text-xs font-mono font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-              selectedDeptFilter === 'kcca'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'bg-white dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-            }`}
-          >
-            <Building2 size={12} className="text-slate-400" />
-            <span>KCCA</span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-emerald-950 text-slate-600 dark:text-emerald-300 text-[10px]">
-              {kccaCount}
-            </span>
-          </button>
-
-          {/* NWSC */}
-          <button
-            type="button"
-            onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'nwsc' ? null : 'nwsc')}
-            className={`px-3 py-1 rounded-xl text-xs font-mono font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-              selectedDeptFilter === 'nwsc'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'bg-white dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-            }`}
-          >
-            <Droplets size={12} className="text-slate-400" />
-            <span>NWSC</span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-emerald-950 text-slate-600 dark:text-emerald-300 text-[10px]">
-              {nwscCount}
-            </span>
-          </button>
-
-          {/* Umeme */}
-          <button
-            type="button"
-            onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'umeme' ? null : 'umeme')}
-            className={`px-3 py-1 rounded-xl text-xs font-mono font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-              selectedDeptFilter === 'umeme'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'bg-white dark:bg-[#111520] border border-slate-200 dark:border-[#1e2536] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-            }`}
-          >
-            <Zap size={12} className="text-slate-400" />
-            <span>Umeme</span>
-            <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-emerald-950 text-slate-600 dark:text-emerald-300 text-[10px]">
-              {umemeCount}
-            </span>
-          </button>
-        </div>
-      </header>
+        )}
+      </div>
 
       {/* 2b. CRITICAL: NEAR ME GRASSROOTS HIERARCHY CONTROLS (PARISH · WARD · GRASSROOT) */}
       {feedTab === 'near_me' && (
@@ -1219,7 +1247,7 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* 4. CIVIC PERFORMANCE & ACCOUNTABILITY DOCKET (Department Section Aesthetic) */}
-      <div className="p-3.5 sm:p-4.5 bg-[#f8f9fa] dark:bg-[#0d101a] border-b border-slate-200/90 dark:border-[#1e2536]">
+      <div className="p-3.5 sm:p-4.5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36]">
         <AccountabilityDocket
           leftLabel={`${total} Civic Reports`}
           leftSubLabel={`${COUNTRIES[activeUser.country]?.name || 'National'} Statutory SLA`}
@@ -1237,11 +1265,11 @@ export const FeedView: React.FC = () => {
 
       {/* 5. Active Filter Indicator Strip (when hashtag or dept filter active) */}
       {(activeHashtagFilter || selectedDeptFilter) && (
-        <div className="px-3.5 sm:px-4 py-2 border-b border-slate-200/80 dark:border-[#1e2536] flex items-center justify-between gap-2 bg-white dark:bg-[#0a0d14]">
+        <div className="px-3.5 sm:px-4 py-2 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 bg-white dark:bg-[#161a22]">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-mono text-slate-500">Active Filter:</span>
+            <span className="text-[11px] font-sans text-slate-500 font-medium">Active Filter:</span>
             {activeHashtagFilter && (
-              <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full text-xs font-medium border border-emerald-200 dark:border-emerald-800/60">
+              <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2.5 py-0.5 rounded-full text-xs font-sans font-medium border border-emerald-200 dark:border-emerald-800/60">
                 <span>{activeHashtagFilter}</span>
                 <button
                   type="button"
@@ -1253,7 +1281,7 @@ export const FeedView: React.FC = () => {
               </div>
             )}
             {selectedDeptFilter && (
-              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-2.5 py-0.5 rounded-full text-xs font-medium border border-blue-200 dark:border-blue-800/60">
+              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-2.5 py-0.5 rounded-full text-xs font-sans font-medium border border-blue-200 dark:border-blue-800/60">
                 <span>Dept: @{selectedDeptFilter}</span>
                 <button
                   type="button"
@@ -1271,7 +1299,7 @@ export const FeedView: React.FC = () => {
               setActiveHashtagFilter(null);
               setSelectedDeptFilter(null);
             }}
-            className="text-[11px] font-mono text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline cursor-pointer"
+            className="text-[11px] font-sans font-medium text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline cursor-pointer"
           >
             Clear Filters
           </button>
@@ -1280,7 +1308,7 @@ export const FeedView: React.FC = () => {
 
       {/* 6. GIS MAP MODE (When explicitly toggled) */}
       {gisViewMode === 'MAP' && (
-        <div className="p-3.5 sm:p-4 border-b border-slate-200/90 dark:border-[#1e2536] bg-white dark:bg-[#0a0d14]">
+        <div className="p-3.5 sm:p-4 border-b border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22]">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
@@ -1299,9 +1327,9 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* 7. CIVIC DEPARTMENT-STYLE STANDALONE POSTS FEED */}
-      <div id="feed-list" className="p-3 sm:p-5 space-y-4 bg-[#f8f9fa] dark:bg-[#0a0d14] min-h-[60vh]">
+      <div id="feed-list" className="p-3 sm:p-5 space-y-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] min-h-[60vh]">
         {display.length === 0 ? (
-          <div className="py-20 text-center px-4 space-y-3 bg-white dark:bg-[#111520] rounded-2xl border border-slate-200 dark:border-[#222736] shadow-xs">
+          <div className="py-20 text-center px-4 space-y-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] shadow-xs">
             <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
               <Shield size={24} />
             </div>
