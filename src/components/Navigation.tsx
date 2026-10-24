@@ -106,6 +106,18 @@ export const Navigation: React.FC<NavigationProps> = () => {
     go('ps_executive_desk');
   };
 
+  const handleComposeDispatch = () => {
+    if (view === 'feed') {
+      const el = document.getElementById('civic-feed-dispatcher');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.dispatchEvent(new CustomEvent('open-civic-dispatcher'));
+        return;
+      }
+    }
+    go('compose');
+  };
+
   const citizenWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
     { id: 'feed', label: t('feed') || 'Public Feed', icon: Layers },
     { id: 'depts', label: t('depts') || 'Service Desks', icon: Building2 },
@@ -278,7 +290,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
             ) : (
               <button
                 type="button"
-                onClick={() => go('compose')}
+                onClick={handleComposeDispatch}
                 title="File New Civic Dispatch"
                 className={`w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center ${
                   collapsed ? 'justify-center px-0' : 'justify-start px-3 gap-2'
@@ -597,7 +609,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
                 <span className="text-[9.5px] font-mono">{t('depts')}</span>
               </button>
               <button
-                onClick={() => go('compose')}
+                onClick={handleComposeDispatch}
                 className="flex-1 min-h-[46px] max-w-[76px] flex flex-col items-center justify-center gap-0.5 rounded-xl bg-emerald-600 active:scale-95 text-white font-semibold shadow-2xs transition-transform cursor-pointer"
               >
                 <Plus size={18} strokeWidth={2.25} />
