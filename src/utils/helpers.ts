@@ -125,28 +125,51 @@ export function pathStr(country: CountryCode, t: { district?: string; subcounty?
   return parts.join(' › ');
 }
 
+function toTitleCase(str: string): string {
+  if (!str) return '';
+  return str
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 export function getPostGrassroots(country: CountryCode, p: Post) {
   const t = p.territory;
   const dist = TERRITORY[country]?.find((x) => x.id === t?.district || x.name === t?.district);
-  const districtName = dist?.name || t?.district || '';
+  const rawDistrict = dist?.name || t?.district || (country === 'UG' ? 'Kampala' : 'National');
+  const cleanDistrict = toTitleCase(rawDistrict.replace(/district$/i, '').trim());
+  const districtName = cleanDistrict ? `${cleanDistrict} District` : 'National District';
 
   const sc = dist?.children?.find((x) => x.id === (t?.ward || t?.subcounty) || x.name === (t?.ward || t?.subcounty));
   const rawWard = p.ward || t?.ward || sc?.name || t?.subcounty || '';
-  // Clean up ward label if needed
-  const wardName = rawWard ? rawWard.replace(/Division$/i, 'Ward').replace(/Sub-County$/i, 'Ward') : 'Local Ward';
+  const cleanSubcounty = toTitleCase(
+    rawWard
+      .replace(/Division$/i, 'Subcounty')
+      .replace(/Sub-County$/i, 'Subcounty')
+      .replace(/Ward$/i, 'Subcounty')
+      .trim()
+  );
+  const subcountyName = cleanSubcounty
+    ? (cleanSubcounty.toLowerCase().includes('subcounty') ? cleanSubcounty : `${cleanSubcounty} Subcounty`)
+    : 'Local Subcounty';
 
   const parishNode = sc?.children?.find((x) => x.id === t?.parish || x.name === t?.parish);
   const rawParish = p.parish || parishNode?.name || t?.parish || '';
-  const parishName = rawParish ? (rawParish.toLowerCase().includes('parish') ? rawParish : `${rawParish} Parish`) : 'Local Parish';
+  const cleanParish = toTitleCase(rawParish.replace(/parish$/i, '').trim());
+  const parishName = cleanParish ? `${cleanParish} Parish` : 'Local Parish';
 
   const rawGrassroot = p.grassroot || p.village || p.cell || t?.village || t?.cell || t?.grassroot || '';
-  const grassrootName = rawGrassroot || (parishName ? `${parishName.replace(/ Parish/i, '')} Cell` : 'Grassroot Node');
+  const grassrootName = toTitleCase(rawGrassroot || `${cleanParish || 'Local'} Cell`);
+
+  const dateline = `${parishName} · ${subcountyName} · ${districtName}`;
 
   return {
     district: districtName,
-    ward: wardName,
+    subcounty: subcountyName,
+    ward: subcountyName, // backward compat
     parish: parishName,
     grassroot: grassrootName,
+    dateline,
   };
 }
 

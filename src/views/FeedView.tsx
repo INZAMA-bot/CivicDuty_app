@@ -82,6 +82,8 @@ export const FeedView: React.FC = () => {
     setUser,
     toast,
     openGuide,
+    isCitizenSpeaking,
+    setIsCitizenSpeaking,
   } = useApp();
 
   const [gisViewMode, setGisViewMode] = useState<'LIST' | 'MAP'>('LIST');
@@ -1377,8 +1379,26 @@ export const FeedView: React.FC = () => {
         )}
       </div>
 
-      {/* 8. FLOATING SWIPE NAVIGATOR HUD ("SWIPE TO NEXT POST EASILY") */}
-      {display.length > 1 && (
+      {/* 8. FLOATING SWIPE NAVIGATOR HUD OR RED TRAFFIC LIGHT SIGNAL WHEN CITIZEN IS SPEAKING */}
+      {isCitizenSpeaking ? (
+        <div
+          role="status"
+          aria-live="assertive"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-[#1f070b]/95 dark:bg-[#1f070b]/95 text-white backdrop-blur-md px-5 py-2.5 rounded-full border-2 border-rose-500 shadow-[0_0_35px_rgba(244,63,94,0.6)] flex items-center gap-3 select-none animate-pulse ring-2 ring-rose-500/40"
+        >
+          {/* Red Traffic Light Signal Bulb with radar wave */}
+          <div className="relative flex items-center justify-center">
+            <span className="w-4 h-4 rounded-full bg-rose-500 animate-ping absolute opacity-75" />
+            <span className="w-3.5 h-3.5 rounded-full bg-rose-600 border border-white flex items-center justify-center shadow-[0_0_10px_#f43f5e]" />
+          </div>
+          <span className="text-sm font-black tracking-widest text-white uppercase drop-shadow font-mono">
+            SPEAK
+          </span>
+          <span className="text-[11px] text-rose-200 font-sans font-semibold pl-2 border-l border-rose-500/50 hidden xs:inline">
+            Recording Field Testimony
+          </span>
+        </div>
+      ) : display.length > 1 ? (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-[#161a24]/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full border border-slate-700/70 shadow-2xl flex items-center gap-3 text-xs font-mono select-none animate-fade-in ring-1 ring-white/10">
           <button
             type="button"
@@ -1410,7 +1430,7 @@ export const FeedView: React.FC = () => {
             <ChevronDown size={16} />
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* Grassroots Selection Modal */}
       {showGrassrootsModal && (

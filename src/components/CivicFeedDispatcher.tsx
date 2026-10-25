@@ -68,6 +68,8 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     compileWitnessIntoPost,
     setActivePost,
     selectedCountry,
+    isCitizenSpeaking,
+    setIsCitizenSpeaking,
   } = useApp();
 
   const activeUser = user || ensureCitizenSession();
@@ -108,8 +110,21 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
 
   // Media Staging
   const [stagedMedia, setStagedMedia] = useState<
-    { type: 'image' | 'video' | 'doc'; url: string; name: string; size: string; file?: File }[]
+    { type: 'image' | 'video' | 'doc'; url: string; name: string; size: string; caption?: string; file?: File }[]
   >([]);
+
+  // Citizen Speaking Mode: Activates whenever a citizen is making any report
+  // Deactivates ONLY when dispatch is submitted or discarded.
+  React.useEffect(() => {
+    if (expanded) {
+      setIsCitizenSpeaking(true);
+    } else {
+      setIsCitizenSpeaking(false);
+    }
+    return () => {
+      setIsCitizenSpeaking(false);
+    };
+  }, [expanded, setIsCitizenSpeaking]);
 
   // Voice Note Recording
   const [isRecording, setIsRecording] = useState(false);
@@ -274,16 +289,25 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   const toggleRecording = () => {
     if (isRecording) {
       setIsRecording(false);
+      setIsCitizenSpeaking(false);
       setVoiceSaved(true);
       toast('Voice testimony locked to dispatch', 'emerald');
     } else {
       setIsRecording(true);
+      setIsCitizenSpeaking(true);
       toast('Recording audio testimony (Luganda / English)...', 'emerald');
       setTimeout(() => {
         setIsRecording(false);
+        setIsCitizenSpeaking(false);
         setVoiceSaved(true);
-      }, 3500);
+      }, 4500);
     }
+  };
+
+  const updateStagedMediaCaption = (idx: number, caption: string) => {
+    setStagedMedia((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, caption } : item))
+    );
   };
 
   const handleCompileIntoExisting = (targetPost: Post) => {
@@ -292,8 +316,8 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
       title.trim() ||
       `Corroborating field report from ${parish || 'local resident'}: issue remains active and needs intervention.`;
 
-    const finalMedia: MediaItem[] = stagedMedia.map((m) => {
-      if (m.type === 'image') return { type: 'image', url: m.url, caption: '' };
+    const finalMedia: MediaItem[] = stagedMedia.map((m, idx) => {
+      if (m.type === 'image') return { type: 'image', url: m.url, caption: m.caption?.trim() || `Evidence #${idx + 1}` };
       if (m.type === 'video') return { type: 'video', url: m.url, thumb: m.url, duration: '0:30' };
       return { type: 'doc', name: m.name, size: m.size };
     });
@@ -346,8 +370,8 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
       const postCategory: TicketCategory = isPraise ? 'praise' : category;
       const initialStatus = isPraise ? 'resolved' : signalBulb === 'amber' ? 'investigating' : 'pending';
 
-      const finalMedia: MediaItem[] = stagedMedia.map((m) => {
-        if (m.type === 'image') return { type: 'image', url: m.url, caption: 'Ground Evidence' };
+      const finalMedia: MediaItem[] = stagedMedia.map((m, idx) => {
+        if (m.type === 'image') return { type: 'image', url: m.url, caption: m.caption?.trim() || `Field evidence photograph #${idx + 1}` };
         if (m.type === 'video') return { type: 'video', url: m.url, thumb: m.url, duration: '0:30' };
         return { type: 'doc', name: m.name, size: m.size };
       });
@@ -478,11 +502,12 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         toast(`🎉 Stage Certified! ${consensusResult.stage.name} crossed 15 scouts within 2km!`, 'emerald');
       }
 
-      // Reset form
+      // Reset form and turn off citizen speaking mode
       setTitle('');
       setBody('');
       setStagedMedia([]);
       setVoiceSaved(false);
+      setIsCitizenSpeaking(false);
       if (!standalonePage) {
         setExpanded(false);
       }
@@ -495,10 +520,27 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     }
   };
 
+  const handleDiscard = () => {
+    setTitle('');
+    setBody('');
+    setStagedMedia([]);
+    setVoiceSaved(false);
+    setIsCitizenSpeaking(false);
+    if (!standalonePage) {
+      setExpanded(false);
+    }
+    toast('Report discarded', 'amber');
+    if (standalonePage) {
+      onPostSuccess?.(null as any);
+    }
+  };
+
   return (
     <div
       id="civic-feed-dispatcher"
-      className={`rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] shadow-2xs overflow-hidden transition-all ${className}`}
+      className={`rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] shadow-2xs overflow-hidden transition-all ${
+        expanded ? 'max-h-[85vh] overflow-y-auto' : ''
+      } ${className}`}
     >
       {!expanded ? (
         /* =========================================================================
@@ -572,16 +614,15 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                   <HelpCircle size={10} />
                   <span>Guide</span>
                 </button>
-                {!standalonePage && (
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(false)}
-                    className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                    title="Collapse composer"
-                  >
-                    <X size={15} />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-900/40 transition"
+                  title="Discard report and exit speaking mode"
+                >
+                  <X size={11} />
+                  <span>Discard</span>
+                </button>
               </div>
             </div>
 
@@ -984,29 +1025,57 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
               </div>
             )}
 
-            {/* Staged Media Previews */}
+            {/* Staged Media Previews with Individual Captioning */}
             {stagedMedia.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {stagedMedia.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-[10.5px] font-semibold text-slate-900 dark:text-white truncate">{m.name}</p>
-                      <p className="text-[9.5px] font-mono text-slate-500">
-                        {m.type} · {m.size}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeStagedMedia(idx)}
-                      className="text-[10px] font-mono text-rose-600 hover:underline shrink-0 cursor-pointer"
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-500">
+                  <span>Attached Evidence ({stagedMedia.length} item{stagedMedia.length > 1 ? 's' : ''})</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400">Add individual captions below</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {stagedMedia.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2 shadow-2xs"
                     >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {m.type === 'image' && (
+                            <img
+                              src={m.url}
+                              alt={m.name}
+                              className="w-9 h-9 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-semibold text-slate-900 dark:text-white truncate">{m.name}</p>
+                            <p className="text-[9.5px] font-mono text-slate-500">
+                              {m.type === 'image' ? `Photo #${idx + 1}` : m.type} · {m.size}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeStagedMedia(idx)}
+                          className="text-[10px] font-mono text-rose-600 hover:text-rose-700 hover:underline shrink-0 cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* Individual Caption Input for Images */}
+                      {m.type === 'image' && (
+                        <input
+                          type="text"
+                          value={m.caption || ''}
+                          onChange={(e) => updateStagedMediaCaption(idx, e.target.value)}
+                          placeholder={`Caption for photo #${idx + 1} (e.g. View from main gate)...`}
+                          className="w-full px-2.5 py-1.5 rounded-lg text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1317,28 +1386,38 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  className="bg-white dark:bg-[#0e1116] hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-800 hover:border-rose-300 text-rose-600 dark:text-rose-400 font-mono font-bold rounded-lg py-2.5 px-2 text-[11px] transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+                  title="Discard draft and cancel report"
+                >
+                  <X size={13} />
+                  <span>Discard</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleSubmit(true)}
                   className="bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500 border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 font-mono font-semibold rounded-lg py-2.5 px-2 text-[11px] transition flex items-center justify-center gap-1.5 cursor-pointer"
                   title="Save locally for rural 3G networks and sync later"
                 >
-                  <span>Stage Offline ({offlineQueue.length})</span>
+                  <span>Offline ({offlineQueue.length})</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleSubmit(false)}
                   disabled={isSubmitting || (!body.trim() && !title.trim())}
-                  className={`sm:col-span-2 font-mono font-bold rounded-lg py-2.5 text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+                  className={`col-span-2 font-mono font-bold rounded-lg py-2.5 text-xs uppercase tracking-wider transition flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                     isSubmitting || (!body.trim() && !title.trim())
                       ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 active:scale-98'
                   }`}
                 >
                   <Send size={14} />
-                  <span>{isSubmitting ? 'Dispatching...' : 'Dispatch Sovereign Signal →'}</span>
+                  <span>{isSubmitting ? 'Dispatching...' : 'Dispatch Signal →'}</span>
                 </button>
               </div>
             </div>

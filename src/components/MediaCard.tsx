@@ -343,11 +343,18 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
               {/* Caption & Counter Bar */}
               {(currentStageImage.caption || images.length > 1) && (
                 <div className="px-3.5 py-2 bg-[#f8f9fa] dark:bg-[#161a22] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-[11px] text-slate-700 dark:text-slate-200">
-                  <span className="truncate font-medium">
-                    {currentStageImage.caption || `Evidence Photograph #${activeStageImgIdx + 1}`}
-                  </span>
+                  <div className="truncate font-medium flex items-center gap-1.5 min-w-0">
+                    {images.length > 1 && (
+                      <span className="font-mono text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0">
+                        Photo {activeStageImgIdx + 1} of {images.length}
+                      </span>
+                    )}
+                    <span className="truncate">
+                      {currentStageImage.caption || `Field evidence photograph #${activeStageImgIdx + 1}`}
+                    </span>
+                  </div>
                   <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
-                    Tap image to inspect
+                    Tap to expand
                   </span>
                 </div>
               )}
@@ -593,14 +600,14 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
             {effectiveVoice.transcript && (
               <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 border border-indigo-200/70 dark:border-indigo-900/50 overflow-hidden shadow-2xs">
                 {/* Translation Control Bar */}
-                <div className="px-3 py-2 bg-indigo-50/50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="px-3 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-x-auto scrollbar-none py-0.5">
                     <Globe2 size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span className="text-[10px] font-mono font-bold text-indigo-950 dark:text-indigo-200">
-                      Translate Testimony:
+                    <span className="text-[10px] font-mono font-bold text-indigo-950 dark:text-indigo-200 shrink-0">
+                      Translate:
                     </span>
                     {/* Quick Common East African Languages */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       {(['EN', 'SW', 'LG', 'RW', 'NK', 'LU'] as LanguageCode[]).map((code) => (
                         <button
                           key={code}
@@ -627,19 +634,19 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         setVoiceLang(e.target.value as LanguageCode);
                         setShowTranscript(true);
                       }}
-                      className="bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer"
+                      className="bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer max-w-[100px] truncate shrink-0"
                       title="Select any language translation"
                     >
                       {ALL_LANGUAGES.map((l) => (
                         <option key={l.code} value={l.code}>
-                          {l.label} ({l.nativeName})
+                          {l.code} · {l.label}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   {/* Actions: Copy & Expand */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       onClick={() => {

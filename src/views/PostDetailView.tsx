@@ -93,6 +93,8 @@ export const PostDetailView: React.FC = () => {
     toggleBookmark,
     setActiveHashtagFilter,
     setActivePost,
+    isCitizenSpeaking,
+    setIsCitizenSpeaking,
   } = useApp();
 
   const [replyToSender, setReplyToSender] = useState<string | null>(null);
@@ -112,6 +114,8 @@ export const PostDetailView: React.FC = () => {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [acquiredGps, setAcquiredGps] = useState<{ lat: string; lng: string } | null>(null);
   const [gpsStatus, setGpsStatus] = useState<string>('Not acquired');
+  const [commentFilter, setCommentFilter] = useState<'all' | 'official' | 'witnesses'>('all');
+  const [composerExpanded, setComposerExpanded] = useState<boolean>(false);
 
   // Touch Swipe Gesture Tracking for fluid next/previous post navigation
   const touchStartX = useRef<number>(0);
@@ -319,10 +323,19 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
     toast(`${newItems.length} evidence file(s) attached to reply`, 'emerald');
   };
 
+  // Clean up speaking state on unmount
+  useEffect(() => {
+    return () => {
+      setIsCitizenSpeaking(false);
+    };
+  }, [setIsCitizenSpeaking]);
+
   const handleSimulateVoiceNote = () => {
     setIsRecordingVoice(true);
+    setIsCitizenSpeaking(true);
     setTimeout(() => {
       setIsRecordingVoice(false);
+      setIsCitizenSpeaking(false);
       const voiceItem: MediaItem = {
         type: 'voice',
         url: 'https://actions.google.com/sounds/v1/ambiences/outdoor_park.ogg',
@@ -332,7 +345,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
       };
       setStagedMedia((prev) => [...prev, voiceItem]);
       toast('Voice note recorded and attached to reply', 'emerald');
-    }, 1500);
+    }, 2500);
   };
 
   const handleAcquireGps = () => {
@@ -396,6 +409,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
     setReplyAnon(false);
     setReplyToSender(null);
     setLocationMode('parish');
+    setComposerExpanded(false);
     toast('Rich reply posted to public wall', 'emerald');
   };
 
@@ -1736,364 +1750,538 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
       )}
 
       {/* Official Response Thread & Citizen Comments */}
-      <div className="px-4 py-4 space-y-3">
-        <p className="text-xs mono text-slate-700 dark:text-slate-300 uppercase tracking-widest font-black">
-          Official Response Thread · Public Record
-        </p>
+      <div className="px-4 py-4 space-y-3.5">
+        {/* Header & Role-Segmented Filter Tabs */}
+        {(() => {
+          const allComments = p.comments || [];
+          const govComments = allComments.filter((c) => c.role === 'gov');
+          const citizenComments = allComments.filter((c) => c.role === 'citizen');
+          const filteredComments =
+            commentFilter === 'official'
+              ? govComments
+              : commentFilter === 'witnesses'
+              ? citizenComments
+              : allComments;
 
-        {(p.comments || []).length === 0 ? (
-          <div className="p-7 rounded-2xl text-center border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1.5">
-            <p className="text-sm text-slate-800 dark:text-slate-200 font-bold">No official response yet.</p>
-            <p className="text-[10px] mono text-slate-600 dark:text-slate-400">
-              {d.name} has {hoursLeft > 0 ? `${hoursLeft.toFixed(1)}h remaining` : 'breached the 48h window.'} Every hour is permanently tracked on public ledger.
-            </p>
-          </div>
-        ) : (
-          (p.comments || []).map((c, i) =>
-            c.role === 'citizen' ? (
-              <div key={c.id ? `${c.id}-${i}` : `comment-cit-${i}`} className="p-4 rounded-2xl bg-white dark:bg-slate-900 space-y-2.5 border-l-4 border-l-emerald-600 border-y border-r border-slate-200 dark:border-slate-800 shadow-2xs">
-                <div className="flex items-center justify-between flex-wrap gap-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[9px] mono font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1">
-                      {c.anonymous ? <EyeOff size={10} className="text-emerald-700 dark:text-emerald-400" /> : null}
-                      {c.sender} · Citizen Observer
-                    </span>
-                    {c.location_badge && (
-                      <span className="text-[8.5px] mono bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold">
-                        <MapPin size={9} className="text-emerald-600 dark:text-emerald-400" />
-                        {c.location_badge}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
+          return (
+            <>
+              <div className="flex items-center justify-between gap-2 flex-wrap pb-1">
+                <div>
+                  <h4 className="text-xs font-mono text-slate-800 dark:text-slate-200 uppercase tracking-widest font-black flex items-center gap-1.5">
+                    <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Public Discussion &amp; Official Response</span>
+                  </h4>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    Sealed civic audit ledger · {allComments.length} record{allComments.length === 1 ? '' : 's'}
+                  </p>
+                </div>
+
+                {/* Role-Segmented Tabs */}
+                <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10.5px] font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setCommentFilter('all')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                      commentFilter === 'all'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    All ({allComments.length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCommentFilter('official')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+                      commentFilter === 'official'
+                        ? 'bg-amber-500 text-slate-950 shadow-2xs font-black'
+                        : 'text-amber-800 dark:text-amber-400 hover:text-amber-900'
+                    }`}
+                  >
+                    <Lock size={10} />
+                    <span>Official ({govComments.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCommentFilter('witnesses')}
+                    className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+                      commentFilter === 'witnesses'
+                        ? 'bg-emerald-600 text-white shadow-2xs font-black'
+                        : 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800'
+                    }`}
+                  >
+                    <Users size={10} />
+                    <span>Witnesses ({citizenComments.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Comments Stream or Empty State */}
+              {filteredComments.length === 0 ? (
+                <div className="p-6 rounded-2xl text-center border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1.5 shadow-2xs">
+                  <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-bold">
+                    {commentFilter === 'official'
+                      ? 'No official government response posted yet.'
+                      : commentFilter === 'witnesses'
+                      ? 'No citizen witness notes added yet.'
+                      : 'No responses or witness notes yet.'}
+                  </p>
+                  <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                    {commentFilter === 'official'
+                      ? `${d.name} has ${hoursLeft > 0 ? `${hoursLeft.toFixed(1)}h remaining` : 'breached the statutory window.'} Every hour is permanently tracked on public ledger.`
+                      : 'Be the first on-ground observer to corroborate conditions, verify progress, or submit field photos.'}
+                  </p>
+                  {commentFilter !== 'all' && (
                     <button
                       type="button"
-                      onClick={() => setReplyToSender(c.sender)}
-                      className="text-[9.5px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                      onClick={() => setCommentFilter('all')}
+                      className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline pt-1 cursor-pointer"
                     >
-                      Reply
+                      ← View all records ({allComments.length})
                     </button>
-                    <span className="text-[9px] mono text-slate-500 font-bold">{timeAgo(c.created_at)}</span>
-                  </div>
+                  )}
                 </div>
-
-                {c.reply_to_sender && (
-                  <div className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
-                    ↪ Replying to @{c.reply_to_sender}
-                  </div>
-                )}
-
-                <p className="text-sm text-slate-900 dark:text-slate-100 leading-relaxed font-medium">
-                  <RichCivicText text={c.body} />
-                </p>
-
-                {c.media && c.media.length > 0 && (
-                  <div className="pt-1">
-                    <p className="text-[9px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Attached Field Evidence</p>
-                    <MediaCard media={c.media} postId={p.id + '-cc' + i} onToast={(msg) => toast(msg)} />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div key={c.id ? `${c.id}-${i}` : `comment-gov-${i}`} className="p-4 rounded-2xl bg-amber-50/70 dark:bg-slate-900/90 space-y-2.5 border-l-4 border-l-amber-500 border-y border-r border-amber-200 dark:border-slate-800 shadow-2xs">
-                <div className="flex items-center justify-between flex-wrap gap-1">
-                  <span className="text-[9px] mono font-black text-amber-900 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1">
-                    <Lock size={10} /> {c.sender}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {c.status_tag && statusChip(c.status_tag)}
-                    <span className="text-[9px] mono text-slate-500 font-bold">{timeAgo(c.created_at)}</span>
-                  </div>
-                </div>
-
-                <p className="text-sm text-slate-950 dark:text-slate-100 leading-relaxed font-medium">{c.body}</p>
-
-                {c.media && c.media.length > 0 && (
-                  <div>
-                    <p className="text-[9px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Government Proof Uploaded</p>
-                    <MediaCard media={c.media} postId={p.id + '-c' + i} onToast={(msg) => toast(msg)} />
-                  </div>
-                )}
-
-                {/* Optional Courtesy Voucher / Resolution Token Card */}
-                {c.courtesy_voucher && (
-                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-emerald-500/5 border border-emerald-500/30 text-xs space-y-2 animate-fade-in shadow-xs">
-                    <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5 flex-wrap gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <Gift size={14} className="text-amber-500 shrink-0" />
-                        <span className="font-bold text-slate-900 dark:text-white font-mono text-[11px]">
-                          Official Courtesy Voucher / Resolution Token Attached
-                        </span>
+              ) : (
+                filteredComments.map((c, i) =>
+                  c.role === 'citizen' ? (
+                    <div
+                      key={c.id ? `${c.id}-${i}` : `comment-cit-${i}`}
+                      className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 space-y-2 border-l-4 border-l-emerald-600 border-y border-r border-slate-200 dark:border-slate-800 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[9.5px] font-mono font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                            {c.anonymous ? <EyeOff size={10} className="text-emerald-700 dark:text-emerald-400" /> : null}
+                            {c.sender} · Citizen Observer
+                          </span>
+                          {c.location_badge && (
+                            <span className="text-[8.5px] font-mono bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-200 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold">
+                              <MapPin size={9} className="text-emerald-600 dark:text-emerald-400" />
+                              {c.location_badge}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyToSender(c.sender);
+                              setComposerExpanded(true);
+                            }}
+                            className="text-[9.5px] font-mono font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                          >
+                            Reply
+                          </button>
+                          <span className="text-[9px] font-mono text-slate-500 font-bold">{timeAgo(c.created_at)}</span>
+                        </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded font-mono font-black text-[9.5px] bg-emerald-600 text-white shadow-2xs">
-                        {c.courtesy_voucher.currency} {Number(c.courtesy_voucher.faceValue).toLocaleString()} VALUE
-                      </span>
+
+                      {c.reply_to_sender && (
+                        <div className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 font-bold">
+                          ↪ Replying to @{c.reply_to_sender}
+                        </div>
+                      )}
+
+                      <p className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-relaxed font-medium">
+                        <RichCivicText text={c.body} />
+                      </p>
+
+                      {c.media && c.media.length > 0 && (
+                        <div className="pt-1">
+                          <p className="text-[9px] font-mono text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5 font-bold">
+                            Attached Field Evidence
+                          </p>
+                          <MediaCard media={c.media} postId={p.id + '-cc' + i} onToast={(msg) => toast(msg)} />
+                        </div>
+                      )}
                     </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <div className="font-bold text-slate-900 dark:text-white text-xs">
-                          {c.courtesy_voucher.title}
-                        </div>
-                        <div className="text-[10.5px] text-slate-600 dark:text-slate-300">
-                          {c.courtesy_voucher.note || 'Issued in appreciation for your verified civic feedback.'}
+                  ) : (
+                    <div
+                      key={c.id ? `${c.id}-${i}` : `comment-gov-${i}`}
+                      className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/70 dark:bg-slate-900/90 space-y-2 border-l-4 border-l-amber-500 border-y border-r border-amber-200 dark:border-slate-800 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between flex-wrap gap-1">
+                        <span className="text-[9.5px] font-mono font-black text-amber-900 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                          <Lock size={10} /> {c.sender}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {c.status_tag && statusChip(c.status_tag)}
+                          <span className="text-[9px] font-mono text-slate-500 font-bold">{timeAgo(c.created_at)}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="px-2 py-1 rounded-lg bg-white dark:bg-[#0e1116] border border-emerald-500/30 font-mono font-black text-[11px] text-emerald-700 dark:text-emerald-400 select-all">
-                          {c.courtesy_voucher.voucherCode}
+                      <p className="text-xs sm:text-sm text-slate-950 dark:text-slate-100 leading-relaxed font-medium">
+                        {c.body}
+                      </p>
+
+                      {c.media && c.media.length > 0 && (
+                        <div>
+                          <p className="text-[9px] font-mono text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5 font-bold">
+                            Government Proof Uploaded
+                          </p>
+                          <MediaCard media={c.media} postId={p.id + '-c' + i} onToast={(msg) => toast(msg)} />
                         </div>
+                      )}
+
+                      {/* Courtesy Voucher / Resolution Token Card */}
+                      {c.courtesy_voucher && (
+                        <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-emerald-500/5 border border-emerald-500/30 text-xs space-y-2 animate-fade-in shadow-xs">
+                          <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5 flex-wrap gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <Gift size={13} className="text-amber-500 shrink-0" />
+                              <span className="font-bold text-slate-900 dark:text-white font-mono text-[10.5px]">
+                                Official Resolution Voucher Attached
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded font-mono font-black text-[9px] bg-emerald-600 text-white shadow-2xs">
+                              {c.courtesy_voucher.currency} {Number(c.courtesy_voucher.faceValue).toLocaleString()} VALUE
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-slate-900 dark:text-white text-xs">
+                                {c.courtesy_voucher.title}
+                              </div>
+                              <div className="text-[10px] text-slate-600 dark:text-slate-300">
+                                {c.courtesy_voucher.note || 'Issued in appreciation for your verified civic feedback.'}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="px-2 py-1 rounded-lg bg-white dark:bg-[#0e1116] border border-emerald-500/30 font-mono font-black text-[11px] text-emerald-700 dark:text-emerald-400 select-all">
+                                {c.courtesy_voucher.voucherCode}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(c.courtesy_voucher?.voucherCode || '');
+                                  toast(`Voucher code ${c.courtesy_voucher?.voucherCode} copied!`, 'emerald');
+                                }}
+                                className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 cursor-pointer border border-emerald-500/25"
+                                title="Copy voucher code"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-4 pt-1.5 border-t border-slate-200 dark:border-slate-800 text-[10px] font-mono text-slate-700 dark:text-slate-300 font-bold">
+                        <span>Feedback Rating:</span>
                         <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(c.courtesy_voucher?.voucherCode || '');
-                            toast(`Voucher code ${c.courtesy_voucher?.voucherCode} copied!`, 'emerald');
-                          }}
-                          className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 cursor-pointer border border-emerald-500/25"
-                          title="Copy voucher code"
+                          onClick={() => rateReply(p.id, i, true)}
+                          className="hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors flex items-center gap-1 cursor-pointer"
                         >
-                          <Copy size={13} />
+                          <ThumbsUp size={11} /> Helpful ({c.helpful || 0})
+                        </button>
+                        <button
+                          onClick={() => rateReply(p.id, i, false)}
+                          className="hover:text-rose-700 dark:hover:text-rose-400 transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <ThumbsDown size={11} /> Unhelpful ({c.not_helpful || 0})
                         </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400 pt-1 border-t border-emerald-500/10">
-                      <span>Redeem via USSD: <strong className="text-emerald-600 dark:text-emerald-400">{c.courtesy_voucher.ussdCode || `*303*${c.courtesy_voucher.voucherCode}#`}</strong></span>
-                      <span className="text-amber-600 dark:text-amber-400 font-bold">100% Cashless Escrow Protected</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4 pt-1.5 border-t border-slate-200 dark:border-slate-800 text-[10px] mono text-slate-700 dark:text-slate-300 font-bold">
-                  <span>Feedback Rating:</span>
-                  <button
-                    onClick={() => rateReply(p.id, i, true)}
-                    className="hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors flex items-center gap-1"
-                  >
-                    <ThumbsUp size={12} /> Helpful ({c.helpful || 0})
-                  </button>
-                  <button
-                    onClick={() => rateReply(p.id, i, false)}
-                    className="hover:text-rose-700 dark:hover:text-rose-400 transition-colors flex items-center gap-1"
-                  >
-                    <ThumbsDown size={12} /> Unhelpful ({c.not_helpful || 0})
-                  </button>
-                </div>
-              </div>
-            )
-          )
-        )}
+                  )
+                )
+              )}
+            </>
+          );
+        })()}
 
         {/* Government Officer Response Trigger */}
         {isGov && user.dept === p.dept && p.status !== 'resolved' && !isReadOnly && (
           <button
             onClick={() => go('gov_reply')}
-            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-2xl py-3.5 text-xs uppercase tracking-widest mono transition-all active:scale-[.98] shadow-md"
+            className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-2xl py-3 text-xs uppercase tracking-widest font-mono transition-all active:scale-[.98] shadow-md cursor-pointer"
           >
             Post Official Response / Resolution Proof →
           </button>
         )}
 
-        {/* Simplified Citizen Comment & Ground Witness Composer (Speak Page Ergonomics) */}
+        {/* Simplified Citizen Comment & Ground Witness Composer */}
         {(!user || user.role === 'citizen') && (
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-            {/* Header & Quick Intent Tags */}
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Ground Witness Note &amp; Comments</span>
-              </span>
-              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
-                +10 Citizen XP
-              </span>
-            </div>
-
-            {/* Replying banner */}
-            {replyToSender && (
-              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs font-mono text-indigo-700 dark:text-indigo-300">
-                <span>↪ Replying directly to <strong>@{replyToSender}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => setReplyToSender(null)}
-                  className="text-slate-400 hover:text-rose-600 font-semibold cursor-pointer flex items-center gap-1"
-                >
-                  <X size={12} />
-                </button>
+          !composerExpanded ? (
+            /* =================================================================
+               1. COLLAPSED MICRO-COMPOSER BAR (Zero-Clutter Anchored Dock)
+               ================================================================= */
+            <div className="p-2 sm:p-2.5 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 font-bold text-xs border border-emerald-500/20">
+                {user?.name ? user.name.charAt(0) : 'C'}
               </div>
-            )}
-
-            {/* Quick Status / Stance Chips (Speak Page Pattern) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[10px] font-mono scrollbar-none">
-              <span className="text-slate-400 shrink-0 font-medium text-[9.5px]">Quick Tag:</span>
-              {[
-                { tag: '#GroundVerified', label: 'Ground Verified', color: 'emerald' },
-                { tag: '#WorkInProgress', label: 'Work In Progress', color: 'amber' },
-                { tag: '#StillBroken', label: 'Still Broken', color: 'rose' },
-                { tag: '#FixedOnSite', label: 'Fixed On Site', color: 'emerald' },
-                { tag: '#OfficerVisited', label: 'Officer Visited', color: 'sky' },
-              ].map(({ tag, label, color }) => {
-                const isActive = citizenReplyText.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => {
-                      if (isActive) {
-                        setCitizenReplyText((prev) => prev.replace(tag, '').trim());
-                      } else {
-                        setCitizenReplyText((prev) => (prev ? `${prev} ${tag}` : tag));
-                      }
-                    }}
-                    className={`px-2 py-0.5 rounded-lg shrink-0 font-semibold transition-all cursor-pointer border ${
-                      isActive
-                        ? color === 'rose'
-                          ? 'bg-rose-600 text-white border-rose-600'
-                          : color === 'amber'
-                          ? 'bg-amber-600 text-white border-amber-600'
-                          : 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Clean Input Box */}
-            <textarea
-              rows={3}
-              value={citizenReplyText}
-              onChange={(e) => setCitizenReplyText(e.target.value)}
-              placeholder="What is the ground reality? Add verified updates, work progress, or counter-evidence..."
-              className="w-full p-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-colors leading-relaxed resize-none"
-            />
-
-            {/* Thumb-Friendly Action Bar (Speak Page Inspiration) */}
-            <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {/* 1. Photo */}
-                <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors">
+              <button
+                type="button"
+                onClick={() => setComposerExpanded(true)}
+                className="flex-1 text-left px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:border-emerald-400 transition cursor-pointer truncate"
+              >
+                Add on-ground witness note or comment...
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <label
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-600 cursor-pointer transition"
+                  title="Attach Ground Photo"
+                >
                   <input
                     type="file"
                     accept="image/*"
                     className="hidden"
                     multiple
-                    onChange={handleFileSelect}
+                    onChange={(e) => {
+                      setComposerExpanded(true);
+                      handleFileSelect(e);
+                    }}
                   />
-                  <ImageIcon size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Photo</span>
+                  <ImageIcon size={14} className="text-emerald-600" />
                 </label>
-
-                {/* 2. Voice Note */}
                 <button
                   type="button"
-                  onClick={handleSimulateVoiceNote}
-                  disabled={isRecordingVoice}
-                  className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
-                    isRecordingVoice
-                      ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-300 animate-pulse'
-                      : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400'
-                  }`}
+                  onClick={() => {
+                    setComposerExpanded(true);
+                    handleSimulateVoiceNote();
+                  }}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-amber-500 hover:text-amber-600 cursor-pointer transition"
+                  title="Record Voice Note"
                 >
-                  <Mic size={13} className={isRecordingVoice ? 'text-rose-600' : 'text-amber-500'} />
-                  <span>{isRecordingVoice ? 'Recording...' : 'Voice'}</span>
+                  <Mic size={14} />
                 </button>
-
-                {/* 3. Live GPS Pin */}
                 <button
                   type="button"
-                  onClick={handleAcquireGps}
-                  className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
-                    acquiredGps
-                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400'
-                  }`}
+                  onClick={() => {
+                    setComposerExpanded(true);
+                    handleAcquireGps();
+                  }}
+                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-emerald-600 hover:text-emerald-700 cursor-pointer transition"
+                  title="Pin GPS Coordinates"
                 >
-                  <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>{acquiredGps ? 'GPS Locked' : 'GPS Pin'}</span>
+                  <MapPin size={14} />
                 </button>
-
-                {/* 4. Video / Doc (Optional popover/labels) */}
-                <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-2 py-1.5 rounded-xl text-[10px] font-mono font-bold flex items-center gap-1 transition-colors">
-                  <input
-                    type="file"
-                    accept="video/*,.pdf"
-                    className="hidden"
-                    multiple
-                    onChange={handleFileSelect}
-                  />
-                  <Video size={12} className="text-rose-500" />
-                  <span>Media</span>
-                </label>
               </div>
-
-              {/* Public vs Anonymous Toggle */}
-              <button
-                type="button"
-                onClick={() => setReplyAnon(!replyAnon)}
-                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
-                  replyAnon
-                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300'
-                    : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
-                }`}
-                title="Toggle between Public Citizen identity and Protected Whistleblower mask"
-              >
-                {replyAnon ? <EyeOff size={12} /> : <Eye size={12} />}
-                <span>{replyAnon ? 'Anonymous' : 'Public ID'}</span>
-              </button>
             </div>
-
-            {/* Staged Multimedia Chips */}
-            {(stagedMedia.length > 0 || acquiredGps) && (
-              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
-                {acquiredGps && (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono text-emerald-800 dark:text-emerald-300">
-                    <MapPin size={11} className="text-emerald-600" />
-                    <span>GPS: {acquiredGps.lat}, {acquiredGps.lng}</span>
-                    <button
-                      type="button"
-                      onClick={() => setAcquiredGps(null)}
-                      className="ml-1 text-slate-400 hover:text-rose-600 cursor-pointer"
-                    >
-                      <X size={11} />
-                    </button>
-                  </div>
-                )}
-
-                {stagedMedia.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono text-slate-800 dark:text-slate-200"
+          ) : (
+            /* =================================================================
+               2. EXPANDED GROUND WITNESS COMPOSER DRAWER
+               ================================================================= */
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-md space-y-3 animate-fade-in">
+              {/* Header with Title, XP, and Collapse Button */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Ground Witness Note &amp; Corroboration</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
+                    +10 Citizen XP
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setComposerExpanded(false)}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                    title="Collapse composer"
                   >
-                    {m.type === 'image' && <ImageIcon size={11} className="text-emerald-500" />}
-                    {m.type === 'voice' && <Mic size={11} className="text-amber-500" />}
-                    {m.type === 'video' && <Video size={11} className="text-rose-500" />}
-                    {m.type === 'doc' && <FileText size={11} className="text-indigo-500" />}
-                    <span className="truncate max-w-[100px]">{m.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setStagedMedia(stagedMedia.filter((_, i) => i !== idx))}
-                      className="ml-1 text-slate-400 hover:text-rose-600 cursor-pointer"
-                    >
-                      <X size={11} />
-                    </button>
-                  </div>
-                ))}
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
-            )}
 
-            {/* Submit Action Button */}
-            <button
-              type="button"
-              onClick={handlePostCitizenComment}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold rounded-xl py-2.5 text-xs uppercase tracking-wider font-mono transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
-            >
-              <span>Submit Ground Witness Note</span>
-              <span className="text-[10px] opacity-80">(+10 XP)</span>
-            </button>
-          </div>
+              {/* Replying banner */}
+              {replyToSender && (
+                <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs font-mono text-indigo-700 dark:text-indigo-300">
+                  <span>↪ Replying directly to <strong>@{replyToSender}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setReplyToSender(null)}
+                    className="text-slate-400 hover:text-rose-600 font-semibold cursor-pointer flex items-center gap-1"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
+              {/* Single-Tap Citizen Stance / Corroboration Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[10px] font-mono scrollbar-none">
+                <span className="text-slate-400 shrink-0 font-medium text-[9.5px]">Quick Stance:</span>
+                {[
+                  { tag: '#GroundVerified', label: 'Ground Verified', color: 'emerald' },
+                  { tag: '#WorkInProgress', label: 'Work In Progress', color: 'amber' },
+                  { tag: '#StillBroken', label: 'Still Broken', color: 'rose' },
+                  { tag: '#FixedOnSite', label: 'Fixed On Site', color: 'emerald' },
+                  { tag: '#OfficerVisited', label: 'Officer Visited', color: 'sky' },
+                ].map(({ tag, label, color }) => {
+                  const isActive = citizenReplyText.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        if (isActive) {
+                          setCitizenReplyText((prev) => prev.replace(tag, '').trim());
+                        } else {
+                          setCitizenReplyText((prev) => (prev ? `${prev} ${tag}` : tag));
+                        }
+                      }}
+                      className={`px-2 py-0.5 rounded-lg shrink-0 font-semibold transition-all cursor-pointer border ${
+                        isActive
+                          ? color === 'rose'
+                            ? 'bg-rose-600 text-white border-rose-600'
+                            : color === 'amber'
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Clean Input Box */}
+              <textarea
+                rows={3}
+                value={citizenReplyText}
+                onChange={(e) => setCitizenReplyText(e.target.value)}
+                placeholder="What is the ground reality? Add verified updates, work progress, or counter-evidence..."
+                className="w-full p-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-colors leading-relaxed resize-none"
+              />
+
+              {/* Thumb-Friendly Action Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Photo */}
+                  <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      multiple
+                      onChange={handleFileSelect}
+                    />
+                    <ImageIcon size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Photo</span>
+                  </label>
+
+                  {/* Voice Note */}
+                  <button
+                    type="button"
+                    onClick={handleSimulateVoiceNote}
+                    disabled={isRecordingVoice}
+                    className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
+                      isRecordingVoice
+                        ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-300 animate-pulse'
+                        : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400'
+                    }`}
+                  >
+                    <Mic size={13} className={isRecordingVoice ? 'text-rose-600' : 'text-amber-500'} />
+                    <span>{isRecordingVoice ? 'Recording...' : 'Voice'}</span>
+                  </button>
+
+                  {/* Live GPS Pin */}
+                  <button
+                    type="button"
+                    onClick={handleAcquireGps}
+                    className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
+                      acquiredGps
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400'
+                    }`}
+                  >
+                    <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>{acquiredGps ? 'GPS Locked' : 'GPS Pin'}</span>
+                  </button>
+
+                  {/* Video / Doc */}
+                  <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-2 py-1.5 rounded-xl text-[10px] font-mono font-bold flex items-center gap-1 transition-colors">
+                    <input
+                      type="file"
+                      accept="video/*,.pdf"
+                      className="hidden"
+                      multiple
+                      onChange={handleFileSelect}
+                    />
+                    <Video size={12} className="text-rose-500" />
+                    <span>Media</span>
+                  </label>
+                </div>
+
+                {/* Public vs Anonymous Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setReplyAnon(!replyAnon)}
+                  className={`px-2.5 py-1.5 rounded-xl text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
+                    replyAnon
+                      ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                      : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                  title="Toggle between Public Citizen identity and Protected Whistleblower mask"
+                >
+                  {replyAnon ? <EyeOff size={12} /> : <Eye size={12} />}
+                  <span>{replyAnon ? 'Anonymous' : 'Public ID'}</span>
+                </button>
+              </div>
+
+              {/* Staged Multimedia Chips */}
+              {(stagedMedia.length > 0 || acquiredGps) && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  {acquiredGps && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono text-emerald-800 dark:text-emerald-300">
+                      <MapPin size={11} className="text-emerald-600" />
+                      <span>GPS: {acquiredGps.lat}, {acquiredGps.lng}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAcquiredGps(null)}
+                        className="ml-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  )}
+
+                  {stagedMedia.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono text-slate-800 dark:text-slate-200"
+                    >
+                      {m.type === 'image' && <ImageIcon size={11} className="text-emerald-500" />}
+                      {m.type === 'voice' && <Mic size={11} className="text-amber-500" />}
+                      {m.type === 'video' && <Video size={11} className="text-rose-500" />}
+                      {m.type === 'doc' && <FileText size={11} className="text-indigo-500" />}
+                      <span className="truncate max-w-[100px]">{m.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setStagedMedia(stagedMedia.filter((_, i) => i !== idx))}
+                        className="ml-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons: Cancel and Submit */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setComposerExpanded(false)}
+                  className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-mono font-bold text-xs cursor-pointer hover:bg-slate-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePostCitizenComment}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold rounded-xl py-2.5 text-xs uppercase tracking-wider font-mono transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+                >
+                  <span>Submit Ground Witness Note</span>
+                  <span className="text-[10px] opacity-80">(+10 XP)</span>
+                </button>
+              </div>
+            </div>
+          )
         )}
       </div>
 

@@ -413,7 +413,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             </div>
           </div>
 
-          {/* Grassroots Location Dateline */}
+          {/* Grassroots Location Dateline: Parish · Subcounty · District */}
           <button
             type="button"
             onClick={(e) => {
@@ -422,19 +422,15 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setFeedTab('near_me');
               toast(`Filtering to Parish: ${grassroots.parish}`, 'emerald');
             }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium bg-slate-100 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 transition-colors cursor-pointer"
             title="Click to view all dispatches in this locality"
           >
             <MapPin size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="font-bold truncate max-w-[140px] sm:max-w-[200px]">{grassroots.parish}</span>
+            <span className="font-bold text-slate-900 dark:text-slate-100 truncate max-w-[130px] sm:max-w-none">{grassroots.parish}</span>
             <span className="text-slate-400">·</span>
-            <span className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate max-w-[110px]">{grassroots.ward}</span>
-            {grassroots.grassroot && (
-              <>
-                <span className="text-slate-400">·</span>
-                <span className="text-[10px] text-slate-400 truncate max-w-[90px]">{grassroots.grassroot}</span>
-              </>
-            )}
+            <span className="text-slate-600 dark:text-slate-300 truncate max-w-[120px] sm:max-w-none">{grassroots.subcounty}</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-slate-500 dark:text-slate-400 truncate max-w-[110px] sm:max-w-none">{grassroots.district}</span>
           </button>
         </div>
 
@@ -516,40 +512,44 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             />
           )}
 
-          {/* Complete Multi-Language Dropdown Preference Bar */}
-          <div className="pt-1.5 flex items-center justify-between text-[11px] font-mono text-slate-400 flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Sleek, Minimized Inline Translation Bar */}
+          <div className="pt-1 flex items-center justify-between text-[10.5px] font-mono text-slate-400 gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
               <Globe2 size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="text-slate-600 dark:text-slate-400 font-medium text-[10.5px]">Translate:</span>
-              <select
-                value={selectedTargetLang}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setSelectedTargetLang(e.target.value as LanguageCode);
-                  setShowTranslation(true);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-white dark:bg-[#161c2a] border border-slate-200 dark:border-[#22293d] rounded-lg px-2 py-0.5 text-[11px] font-mono text-slate-800 dark:text-slate-200 hover:border-emerald-500 transition cursor-pointer shadow-2xs"
-                title="Select preferred translation language"
-              >
-                {ALL_LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.flag} {lang.label} ({lang.nativeName})
-                  </option>
-                ))}
-              </select>
+              <label className="flex items-center gap-1 shrink-0 cursor-pointer">
+                <span className="text-slate-500 dark:text-slate-400 text-[10px]">Translate:</span>
+                <select
+                  value={selectedTargetLang}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSelectedTargetLang(e.target.value as LanguageCode);
+                    setShowTranslation(true);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-md px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-800 dark:text-slate-200 hover:border-emerald-500 transition cursor-pointer max-w-[125px] sm:max-w-[160px] truncate"
+                  title="Select translation language"
+                >
+                  {ALL_LANGUAGES.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.code} · {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowTranslation(!showTranslation);
                 }}
-                className="text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer text-[11px]"
+                className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer shrink-0 ml-1"
               >
-                {showTranslation ? 'Hide Translation' : 'View Translation'}
+                {showTranslation ? 'Hide' : 'Translate'}
               </button>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono">ID: #{post.id.slice(-6).toUpperCase()}</span>
+
+            <span className="text-[9.5px] text-slate-400 font-mono shrink-0">#{post.id.slice(-6).toUpperCase()}</span>
           </div>
         </div>
 

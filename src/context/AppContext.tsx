@@ -380,6 +380,8 @@ interface AppContextType {
   concludeTownHallSession: (townHallId: string) => void;
   activeHashtagFilter: string | null;
   setActiveHashtagFilter: (tag: string | null) => void;
+  isCitizenSpeaking: boolean;
+  setIsCitizenSpeaking: (speaking: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -885,6 +887,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return {};
     }
   });
+
+  const [isCitizenSpeaking, setIsCitizenSpeaking] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (isCitizenSpeaking) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+      }
+    };
+  }, [isCitizenSpeaking]);
 
   const [supportsMap, setSupportsMap] = useState<Record<string, Record<string, boolean>>>(() => {
     try {
@@ -4348,6 +4367,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         concludeTownHallSession,
         activeHashtagFilter,
         setActiveHashtagFilter,
+        isCitizenSpeaking,
+        setIsCitizenSpeaking,
       }}
     >
       {children}
