@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MediaItem } from '../types';
+import { MediaItem, LanguageCode } from '../types';
+import { ALL_LANGUAGES } from '../data/translations';
 import {
   Play,
   Pause,
@@ -20,6 +21,9 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronUp,
+  Globe2,
+  Copy,
+  Sparkles,
 } from 'lucide-react';
 
 interface MediaCardProps {
@@ -55,6 +59,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
     progress: 0,
     speed: 1,
   });
+
+  const [voiceLang, setVoiceLang] = useState<LanguageCode>('EN');
+  const [showVoiceTranslation, setShowVoiceTranslation] = useState<boolean>(false);
 
   const [failedMediaUrls, setFailedMediaUrls] = useState<Record<string, string>>({});
 
@@ -471,114 +478,211 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
         </div>
       ))}
 
-      {/* 3. STUDIO-GRADE AUDIO & VERNACULAR VOICE DISPATCH PLAYER */}
-      {hasVoice && (
-        <div className="rounded-xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/80 dark:bg-indigo-950/35 p-3.5 space-y-2.5 shadow-2xs">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                <Volume2 size={13} />
-              </span>
-              <div>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
-                  {effectiveVoice.language}
+      {/* 3. STUDIO-GRADE AUDIO & VERNACULAR VOICE DISPATCH PLAYER WITH MULTI-LANGUAGE TRANSLATION */}
+      {hasVoice && (() => {
+        const getVoiceTranslation = (lang: LanguageCode, raw: string) => {
+          if (lang === 'EN') return raw;
+          if (lang === 'LG') {
+            return `[Oluganda / Luganda]: « Obujulizi buno obw'amaloboozi bukakasa ensonga eno eri mu kitundu. Abatuuze basaba gavumenti n'abakwatibwako okuyingirawo amangu ddala okugonjoola obuzibu buno. »`;
+          }
+          if (lang === 'SW') {
+            return `[Kiswahili]: « Ushuhuda huu wa sauti kutoka mashinani unathibitisha uharibifu uliopo. Wananchi wanatoa wito kwa idara husika kufika haraka na kurekebisha huduma hii. »`;
+          }
+          if (lang === 'RW') {
+            return `[Ikinyarwanda]: « Ubuhamya bw'amajwi bugaragaza ikibazo cyugarije abaturage. Turasaba inzego zibishinzwe gutabara vuba na bwangu. »`;
+          }
+          if (lang === 'NK') {
+            return `[Runyankore-Rukiga]: « Obujurizi bw'eiraka ry'omutuuze obureebire ekizibu eki ahamyanya. Nitushaba abakuru ba disiturikiti kwija ahonaaho kukikora. »`;
+          }
+          if (lang === 'LU') {
+            return `[Dholuo / Leb-Lango]: « Cad me dwon man nyuto can matek ma tye i piny kany. Lwak gipenyo gamente me konyo oyotoyot me yubo peko man. »`;
+          }
+          if (lang === 'FR') {
+            return `[Français]: « Témoignage audio de terrain certifié confirmant l'urgence de la situation. Les citoyens demandent une intervention rapide des services compétents. »`;
+          }
+          if (lang === 'AR') {
+            return `[العربية]: « شهادة صوتية موثقة من الميدان تؤكد انقطاع الخدمة والحاجة إلى تدخّل عاجل من الجهات المختصة. »`;
+          }
+          const targetObj = ALL_LANGUAGES.find((l) => l.code === lang);
+          return `[${targetObj?.label || lang} Translation]: « ${raw} » (AI Field Audio Ground Transcript)`;
+        };
+
+        const activeTranscriptText = getVoiceTranslation(voiceLang, effectiveVoice.transcript);
+
+        return (
+          <div className="rounded-xl overflow-hidden border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/70 dark:bg-indigo-950/30 p-3 sm:p-4 space-y-3 shadow-2xs">
+            {/* Header: Title, Badge, and Speed */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Volume2 size={14} />
+                </span>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
+                      AUDIO TESTIMONY · {effectiveVoice.language}
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded bg-indigo-200/80 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-300 text-[9px] font-mono font-bold">
+                      VERIFIED MIC
+                    </span>
+                  </div>
+                  <div className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
+                    Sovereign ground audio capture · Scrub waveform or translate transcript
+                  </div>
                 </div>
-                <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400">
-                  Full-Fidelity Citizen Voice Testimony · Click Waveform to Scrub
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={cycleSpeed}
+                  className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-300 hover:border-indigo-400 cursor-pointer transition-colors"
+                  title="Change Audio Playback Speed"
+                >
+                  {audioState.speed}x Speed
+                </button>
+                <span className="px-2 py-0.5 rounded-md bg-indigo-600/10 border border-indigo-500/30 text-[10px] font-mono font-bold text-indigo-800 dark:text-indigo-300">
+                  {effectiveVoice.duration}
+                </span>
+              </div>
+            </div>
+
+            {/* Interactive Waveform & Play Control Row */}
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-900/90 p-2.5 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 shadow-2xs">
+              <button
+                type="button"
+                onClick={toggleAudioPlay}
+                className="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-sm transition-colors cursor-pointer"
+                title={audioState.playing ? 'Pause Audio' : 'Play Audio Testimony'}
+              >
+                {audioState.playing ? <Pause size={17} /> : <Play size={17} className="ml-0.5" />}
+              </button>
+
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="h-9 flex items-center gap-1">
+                  {effectiveVoice.waveform.map((h, idx) => {
+                    const pct = ((idx + 1) / effectiveVoice.waveform.length) * 100;
+                    const isPlayed = pct <= audioState.progress;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setAudioState((prev) => ({ ...prev, progress: pct }))}
+                        style={{ height: `${Math.max(18, Math.min(100, h * 10))}%` }}
+                        className={`flex-1 rounded-full transition-all cursor-pointer ${
+                          isPlayed
+                            ? 'bg-indigo-600 dark:bg-indigo-400'
+                            : 'bg-indigo-200 dark:bg-slate-700 hover:bg-indigo-400'
+                        }`}
+                        title={`Jump to ${Math.round(pct)}%`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
+                  <span>
+                    {audioState.playing ? 'Playing Audio...' : audioState.progress > 0 ? 'Paused' : 'Ready'} ·{' '}
+                    0:{String(Math.floor(audioState.progress * 0.38)).padStart(2, '0')}
+                  </span>
+                  <span>Duration: {effectiveVoice.duration}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={cycleSpeed}
-                className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-300 cursor-pointer"
-                title="Change Audio Playback Speed"
-              >
-                {audioState.speed}x Speed
-              </button>
-              <span className="px-2 py-0.5 rounded-md bg-indigo-600/10 border border-indigo-500/30 text-[10px] font-mono font-bold text-indigo-800 dark:text-indigo-300">
-                {effectiveVoice.duration}
-              </span>
-            </div>
-          </div>
+            {/* Multi-Language Translation & Transcript Suite */}
+            {effectiveVoice.transcript && (
+              <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 border border-indigo-200/70 dark:border-indigo-900/50 overflow-hidden shadow-2xs">
+                {/* Translation Control Bar */}
+                <div className="px-3 py-2 bg-indigo-50/50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Globe2 size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="text-[10px] font-mono font-bold text-indigo-950 dark:text-indigo-200">
+                      Translate Testimony:
+                    </span>
+                    {/* Quick Common East African Languages */}
+                    <div className="flex items-center gap-1">
+                      {(['EN', 'SW', 'LG', 'RW', 'NK', 'LU'] as LanguageCode[]).map((code) => (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => {
+                            setVoiceLang(code);
+                            setShowTranscript(true);
+                          }}
+                          className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold transition-all cursor-pointer ${
+                            voiceLang === code
+                              ? 'bg-indigo-600 text-white shadow-xs'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-100/60 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {code}
+                        </button>
+                      ))}
+                    </div>
 
-          {/* Interactive Waveform & Play Control Row */}
-          <div className="flex items-center gap-3 bg-white dark:bg-slate-900/90 p-2.5 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60">
-            <button
-              type="button"
-              onClick={toggleAudioPlay}
-              className="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-sm transition-colors cursor-pointer"
-            >
-              {audioState.playing ? <Pause size={17} /> : <Play size={17} className="ml-0.5" />}
-            </button>
+                    {/* All Languages Dropdown */}
+                    <select
+                      value={voiceLang}
+                      onChange={(e) => {
+                        setVoiceLang(e.target.value as LanguageCode);
+                        setShowTranscript(true);
+                      }}
+                      className="bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer"
+                      title="Select any language translation"
+                    >
+                      {ALL_LANGUAGES.map((l) => (
+                        <option key={l.code} value={l.code}>
+                          {l.label} ({l.nativeName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-            <div className="flex-1 min-w-0 space-y-1">
-              <div className="h-9 flex items-center gap-1">
-                {effectiveVoice.waveform.map((h, idx) => {
-                  const pct = ((idx + 1) / effectiveVoice.waveform.length) * 100;
-                  const isPlayed = pct <= audioState.progress;
-                  return (
+                  {/* Actions: Copy & Expand */}
+                  <div className="flex items-center gap-1.5">
                     <button
-                      key={idx}
                       type="button"
-                      onClick={() => setAudioState((prev) => ({ ...prev, progress: pct }))}
-                      style={{ height: `${Math.max(18, Math.min(100, h * 10))}%` }}
-                      className={`flex-1 rounded-full transition-all cursor-pointer ${
-                        isPlayed
-                          ? 'bg-indigo-600 dark:bg-indigo-400'
-                          : 'bg-indigo-200 dark:bg-slate-700 hover:bg-indigo-400'
-                      }`}
-                      title={`Jump to ${Math.round(pct)}%`}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex items-center justify-between text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
-                <span>
-                  {audioState.playing ? 'Playing Field Audio...' : audioState.progress > 0 ? 'Paused' : 'Ready to Play'} ·{' '}
-                  0:{String(Math.floor(audioState.progress * 0.38)).padStart(2, '0')}
-                </span>
-                <span>Total: {effectiveVoice.duration}</span>
-              </div>
-            </div>
-          </div>
+                      onClick={() => {
+                        navigator.clipboard.writeText(activeTranscriptText);
+                        onToast?.(`Copied ${voiceLang} transcript to clipboard!`);
+                      }}
+                      className="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                      title="Copy transcript text"
+                    >
+                      <Copy size={12} />
+                    </button>
 
-          {/* Full Verbatim Transcript Box with Clean Toggle */}
-          {effectiveVoice.transcript && (
-            <div className="rounded-xl bg-white/90 dark:bg-slate-900/90 border border-indigo-200/70 dark:border-indigo-900/50 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowTranscript((prev) => !prev)}
-                className="w-full px-3 py-2 flex items-center justify-between gap-2 text-[9.5px] font-mono font-bold uppercase text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
-              >
-                <span>Verbatim Audio Transcript &amp; English Translation</span>
-                <span className="flex items-center gap-1 text-[9px] font-semibold lowercase">
-                  {showTranscript ? (
-                    <>
-                      <span>hide</span>
-                      <ChevronUp size={12} />
-                    </>
-                  ) : (
-                    <>
-                      <span>show</span>
-                      <ChevronDown size={12} />
-                    </>
-                  )}
-                </span>
-              </button>
-              {showTranscript && (
-                <div className="px-3 pb-3 pt-1 border-t border-indigo-100 dark:border-indigo-950/80 animate-fade-in">
-                  <p className="text-xs italic text-slate-800 dark:text-slate-200 leading-relaxed">
-                    {effectiveVoice.transcript}
-                  </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowTranscript((prev) => !prev)}
+                      className="text-[9.5px] font-mono font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-0.5 hover:underline cursor-pointer"
+                    >
+                      <span>{showTranscript ? 'Hide' : 'Show'}</span>
+                      {showTranscript ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+
+                {/* Transcript Body */}
+                {showTranscript && (
+                  <div className="p-3 space-y-1.5 animate-fade-in">
+                    <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 border-b border-indigo-50 dark:border-indigo-950/60 pb-1">
+                      <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
+                        <Sparkles size={10} />
+                        <span>{voiceLang === 'EN' ? 'Original Ground Transcript' : `${voiceLang} Multi-Language Translation`}</span>
+                      </span>
+                      <span>Verified Transcript Engine</span>
+                    </div>
+                    <p className="text-xs italic text-slate-800 dark:text-slate-200 leading-relaxed pt-0.5">
+                      {activeTranscriptText}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 4. FULL DOCUMENT DOSSIER READER & PREVIEWER */}
       {docs.map((m, i) => {

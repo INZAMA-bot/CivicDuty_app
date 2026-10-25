@@ -413,52 +413,29 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             </div>
           </div>
 
-          {/* Grassroots Hierarchy Pills: Parish, Ward, Cell */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSearchQuery(grassroots.parish);
-                setFeedTab('near_me');
-                toast(`Filtering to Parish: ${grassroots.parish}`, 'emerald');
-              }}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 transition cursor-pointer"
-            >
-              <MapPin size={10} className="text-emerald-600" />
-              <span className="font-bold uppercase text-[9px]">Parish:</span>
-              <span className="truncate max-w-[120px] font-semibold">{grassroots.parish}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSearchQuery(grassroots.ward);
-                setFeedTab('near_me');
-                toast(`Filtering to Ward: ${grassroots.ward}`, 'emerald');
-              }}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 hover:bg-sky-100 transition cursor-pointer"
-            >
-              <span className="font-bold uppercase text-[9px]">Ward:</span>
-              <span className="truncate max-w-[110px] font-semibold">{grassroots.ward}</span>
-            </button>
-
+          {/* Grassroots Location Dateline */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSearchQuery(grassroots.parish);
+              setFeedTab('near_me');
+              toast(`Filtering to Parish: ${grassroots.parish}`, 'emerald');
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 transition-colors cursor-pointer"
+            title="Click to view all dispatches in this locality"
+          >
+            <MapPin size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="font-bold truncate max-w-[140px] sm:max-w-[200px]">{grassroots.parish}</span>
+            <span className="text-slate-400">·</span>
+            <span className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate max-w-[110px]">{grassroots.ward}</span>
             {grassroots.grassroot && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSearchQuery(grassroots.grassroot);
-                  setFeedTab('near_me');
-                  toast(`Filtering to Grassroot: ${grassroots.grassroot}`, 'emerald');
-                }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 transition cursor-pointer font-mono text-[10px]"
-              >
-                <span>{grassroots.grassroot}</span>
-              </button>
+              <>
+                <span className="text-slate-400">·</span>
+                <span className="text-[10px] text-slate-400 truncate max-w-[90px]">{grassroots.grassroot}</span>
+              </>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Title */}
@@ -608,22 +585,37 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               verifiedBy={post.before_after.verified_by || d.name}
               cryptoSeal={post.crypto_seal_hash}
               compact={true}
-              defaultMode="slider"
+              defaultMode="toggle"
             />
           </div>
         )}
 
-        {/* Media Attachments & Voice Note Player */}
-        {((post.media && post.media.length > 0) || post.voice_note) && (
-          <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
-            <MediaCard
-              media={post.media}
-              postId={post.id}
-              voiceNote={post.voice_note}
-              onToast={(msg) => toast(msg)}
-            />
-          </div>
-        )}
+        {/* Media Attachments & Voice Note Player (Deduplicated so Before/After photos are not repeated) */}
+        {(() => {
+          const filteredMedia = (post.media || []).filter((m) => {
+            if (!post.before_after) return true;
+            const bUrl = post.before_after.before_url;
+            const aUrl = post.before_after.after_url;
+            if (bUrl && (m.url === bUrl || (m.url && bUrl.endsWith(m.url)))) return false;
+            if (aUrl && (m.url === aUrl || (m.url && aUrl.endsWith(m.url)))) return false;
+            if (aUrl?.includes('pipe_repaired') && m.url?.includes('pipe_repaired')) return false;
+            if (bUrl?.includes('water_main') && m.url?.includes('water_main')) return false;
+            return true;
+          });
+
+          if (filteredMedia.length === 0 && !post.voice_note) return null;
+
+          return (
+            <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+              <MediaCard
+                media={filteredMedia}
+                postId={post.id}
+                voiceNote={post.voice_note}
+                onToast={(msg) => toast(msg)}
+              />
+            </div>
+          );
+        })()}
 
         {/* Civic Poll */}
         {post.poll && (

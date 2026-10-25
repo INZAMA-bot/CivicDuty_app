@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import {
-  MoveHorizontal,
   CheckCircle2,
   Columns,
-  SlidersHorizontal,
   MapPin,
   Clock,
   ShieldCheck,
   Maximize2,
-  Minimize2,
   X,
+  Layers,
+  Sparkles,
+  ArrowRight,
+  Split,
+  Eye,
 } from 'lucide-react';
 
 interface BeforeAfterSliderProps {
@@ -23,24 +25,27 @@ interface BeforeAfterSliderProps {
   verifiedBy?: string;
   cryptoSeal?: string;
   compact?: boolean;
-  defaultMode?: 'slider' | 'split';
+  defaultMode?: 'toggle' | 'split' | 'slider';
 }
 
 export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   beforeUrl,
   afterUrl,
-  beforeLabel = 'BEFORE · Citizen Report',
-  afterLabel = 'AFTER · Verified Fix',
+  beforeLabel = 'Reported Breakdown',
+  afterLabel = 'Verified Restoration',
   turnaroundTime = '3h 40m',
   gpsCoords,
   gpsVerified = true,
   verifiedBy,
   cryptoSeal,
   compact = false,
-  defaultMode = 'slider',
+  defaultMode = 'toggle',
 }) => {
-  const [sliderPos, setSliderPos] = useState<number>(50);
-  const [viewMode, setViewMode] = useState<'slider' | 'split'>(defaultMode);
+  // activeView can be 'after' | 'before' in 1-tap toggle mode, or 'split' for side-by-side
+  const [activeTab, setActiveTab] = useState<'after' | 'before'>('after');
+  const [viewMode, setViewMode] = useState<'toggle' | 'split'>(
+    defaultMode === 'split' ? 'split' : 'toggle'
+  );
   const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover');
   const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [failedBefore, setFailedBefore] = useState<boolean>(false);
@@ -59,153 +64,139 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   const objFitClass = fitMode === 'contain' ? 'object-contain bg-slate-100 dark:bg-slate-900' : 'object-cover';
 
   const renderCanvas = (isFull: boolean) => {
-    const sliderHeight = isFull
+    const frameHeight = isFull
       ? 'h-[68vh] sm:h-[74vh]'
       : compact
-      ? 'h-64 sm:h-80'
-      : 'h-72 sm:h-96';
-    const splitHeight = isFull
-      ? 'h-[62vh] sm:h-[70vh]'
-      : compact
-      ? 'h-56 sm:h-72'
-      : 'h-64 sm:h-80';
+      ? 'h-64 sm:h-76'
+      : 'h-72 sm:h-88';
 
-    if (viewMode === 'slider') {
+    if (viewMode === 'split') {
       return (
-        <div className={`relative w-full ${sliderHeight} overflow-hidden bg-slate-100 dark:bg-slate-900`}>
-          {/* After Image (Full width background) */}
-          <img
-            src={effectiveAfterUrl}
-            alt={afterLabel}
-            className={`absolute inset-0 w-full h-full ${objFitClass}`}
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              setFailedAfter(true);
-              (e.currentTarget as HTMLImageElement).src = '/evidence/pipe_repaired_nwsc.jpg';
-            }}
-          />
-
-          {/* Before Image (Clipped by sliderPos) */}
-          <div
-            className="absolute inset-y-0 left-0 overflow-hidden bg-slate-100 dark:bg-slate-900"
-            style={{ width: `${sliderPos}%` }}
-          >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-100 dark:bg-[#0e1116]">
+          {/* Before Column */}
+          <div className={`relative rounded-xl overflow-hidden ${frameHeight} border border-rose-500/40 bg-slate-900 group`}>
             <img
               src={effectiveBeforeUrl}
               alt={beforeLabel}
-              className={`w-full h-full ${objFitClass} max-w-none`}
-              style={{ width: '100%', minWidth: '320px' }}
+              className={`w-full h-full ${objFitClass} transition-transform duration-300 group-hover:scale-[1.02]`}
               referrerPolicy="no-referrer"
               onError={(e) => {
                 setFailedBefore(true);
                 (e.currentTarget as HTMLImageElement).src = '/evidence/water_main_burst.jpg';
               }}
             />
-          </div>
-
-          {/* Vertical Divider Line & Handle */}
-          <div
-            className="absolute inset-y-0 w-0.5 bg-white shadow-[0_0_12px_rgba(0,0,0,0.9)] pointer-events-none"
-            style={{ left: `${sliderPos}%` }}
-          >
-            <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-emerald-600 border-2 border-white text-white flex items-center justify-center shadow-lg">
-              <MoveHorizontal size={14} />
+            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-rose-950/90 border border-rose-500/60 text-rose-100 text-[10px] font-mono font-bold shadow-md flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+              <span>BEFORE: {beforeLabel}</span>
             </div>
           </div>
 
-          {/* Labels */}
-          <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-rose-950/90 border border-rose-500/60 text-rose-100 text-[9.5px] font-mono font-bold pointer-events-none shadow-md">
-            BEFORE: {beforeLabel}
-          </div>
-          <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-emerald-950/90 border border-emerald-500/60 text-emerald-100 text-[9.5px] font-mono font-bold pointer-events-none shadow-md">
-            AFTER: {afterLabel}
-          </div>
-
-          {/* Interactive Range Input Overlay */}
-          <input
-            type="range"
-            min={4}
-            max={96}
-            value={sliderPos}
-            onChange={(e) => setSliderPos(Number(e.target.value))}
-            aria-label="Before and after image comparison slider"
-            className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-10"
-          />
-
-          {/* Quick Jump Footer Bar */}
-          <div className="absolute bottom-2.5 right-2.5 z-20 flex items-center gap-1 bg-slate-950/90 border border-slate-700 rounded-lg px-2 py-1 text-[9.5px] font-mono shadow-lg">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSliderPos(92);
+          {/* After Column */}
+          <div className={`relative rounded-xl overflow-hidden ${frameHeight} border border-emerald-500/50 bg-slate-900 group`}>
+            <img
+              src={effectiveAfterUrl}
+              alt={afterLabel}
+              className={`w-full h-full ${objFitClass} transition-transform duration-300 group-hover:scale-[1.02]`}
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                setFailedAfter(true);
+                (e.currentTarget as HTMLImageElement).src = '/evidence/pipe_repaired_nwsc.jpg';
               }}
-              className={`px-2 py-0.5 rounded cursor-pointer ${
-                sliderPos > 75 ? 'bg-rose-600 text-white font-bold' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Before
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSliderPos(50);
-              }}
-              className={`px-2 py-0.5 rounded cursor-pointer ${
-                sliderPos >= 40 && sliderPos <= 60 ? 'bg-slate-700 text-white font-bold' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              50/50
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSliderPos(8);
-              }}
-              className={`px-2 py-0.5 rounded cursor-pointer ${
-                sliderPos < 25 ? 'bg-emerald-600 text-white font-bold' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              After
-            </button>
+            />
+            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md bg-emerald-950/90 border border-emerald-500/60 text-emerald-100 text-[10px] font-mono font-bold shadow-md flex items-center gap-1.5">
+              <CheckCircle2 size={12} className="text-emerald-400" />
+              <span>AFTER: {afterLabel}</span>
+            </div>
+            <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-emerald-900/90 border border-emerald-500/40 text-emerald-200 text-[9px] font-mono font-bold">
+              Turnaround: {turnaroundTime}
+            </div>
           </div>
         </div>
       );
     }
 
+    // Modern 1-Tap Toggle View: Fluid, smooth crossfade, zero touch-scroll interception!
+    const showingAfter = activeTab === 'after';
+
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-100 dark:bg-[#0e1116]">
-        <div className={`relative rounded-xl overflow-hidden ${splitHeight} border border-rose-500/50 bg-white dark:bg-slate-900`}>
-          <img
-            src={effectiveBeforeUrl}
-            alt={beforeLabel}
-            className={`w-full h-full ${objFitClass}`}
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              setFailedBefore(true);
-              (e.currentTarget as HTMLImageElement).src = '/evidence/water_main_burst.jpg';
-            }}
-          />
-          <span className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-md bg-rose-950/90 border border-rose-500/50 text-rose-100 text-[9px] font-mono font-bold shadow">
-            BEFORE: {beforeLabel}
-          </span>
-        </div>
-        <div className={`relative rounded-xl overflow-hidden ${splitHeight} border border-emerald-500/50 bg-slate-900`}>
-          <img
-            src={effectiveAfterUrl}
-            alt={afterLabel}
-            className={`w-full h-full ${objFitClass}`}
-            referrerPolicy="no-referrer"
-            onError={(e) => {
+      <div className={`relative w-full ${frameHeight} overflow-hidden bg-slate-950 select-none group`}>
+        {/* Active Image with smooth fade */}
+        <img
+          key={showingAfter ? 'after-img' : 'before-img'}
+          src={showingAfter ? effectiveAfterUrl : effectiveBeforeUrl}
+          alt={showingAfter ? afterLabel : beforeLabel}
+          className={`w-full h-full ${objFitClass} transition-all duration-300 animate-fade-in`}
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            if (showingAfter) {
               setFailedAfter(true);
               (e.currentTarget as HTMLImageElement).src = '/evidence/pipe_repaired_nwsc.jpg';
+            } else {
+              setFailedBefore(true);
+              (e.currentTarget as HTMLImageElement).src = '/evidence/water_main_burst.jpg';
+            }
+          }}
+        />
+
+        {/* Floating 1-Tap Switch Pill in Card (Non-blocking touch) */}
+        <div className="absolute top-3 left-3 z-20 flex items-center bg-slate-950/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1 shadow-xl">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveTab('before');
             }}
-          />
-          <span className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-md bg-emerald-950/90 border border-emerald-500/50 text-emerald-100 text-[9px] font-mono font-bold shadow">
-            AFTER: {afterLabel}
-          </span>
+            className={`px-3 py-1.5 rounded-lg text-[10.5px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              !showingAfter
+                ? 'bg-rose-600 text-white shadow-sm ring-1 ring-rose-400/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${!showingAfter ? 'bg-white' : 'bg-rose-500'}`} />
+            <span>Before: {beforeLabel}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveTab('after');
+            }}
+            className={`px-3 py-1.5 rounded-lg text-[10.5px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              showingAfter
+                ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400/50'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <CheckCircle2 size={12} className={showingAfter ? 'text-white' : 'text-emerald-400'} />
+            <span>After: {afterLabel}</span>
+          </button>
+        </div>
+
+        {/* Turnaround Badge & 1-Tap Toggle Pill on Bottom Right */}
+        <div className="absolute bottom-3 right-3 z-20 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveTab((prev) => (prev === 'after' ? 'before' : 'after'));
+            }}
+            className="px-2.5 py-1 rounded-lg bg-slate-950/85 hover:bg-slate-900 border border-slate-700/80 text-white text-[10px] font-mono font-semibold flex items-center gap-1.5 backdrop-blur-sm cursor-pointer shadow-md transition-colors"
+            title="Click to alternate Before and After photos"
+          >
+            <Layers size={11} className="text-emerald-400" />
+            <span>Tap to Flip ({showingAfter ? 'Show Before' : 'Show After'})</span>
+          </button>
+
+          <div className="px-2.5 py-1 rounded-lg bg-emerald-950/90 border border-emerald-500/50 text-emerald-200 text-[10px] font-mono font-bold shadow-md flex items-center gap-1">
+            <Clock size={11} className="text-amber-400" />
+            <span>{turnaroundTime}</span>
+          </div>
+        </div>
+
+        {/* Subtle Watermark Tag */}
+        <div className="absolute bottom-3 left-3 z-10 px-2 py-0.5 rounded bg-black/60 text-slate-300 text-[9px] font-mono backdrop-blur-xs pointer-events-none">
+          {showingAfter ? '🟢 Verified Resolution Photo' : '🔴 Initial Breakdown Report'}
         </div>
       </div>
     );
@@ -215,13 +206,18 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
     <>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="my-3 rounded-xl overflow-hidden border-2 border-emerald-500/50 bg-slate-950 shadow-md select-none"
+        className="my-2.5 rounded-xl overflow-hidden border border-emerald-500/50 bg-slate-950 shadow-sm select-none"
       >
-        {/* Top Verification & Mode Control Bar */}
+        {/* Top Proof Header Bar */}
         <div className="px-3 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2 flex-wrap text-[10px] font-mono">
           <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
             <CheckCircle2 size={13} className="shrink-0" />
-            <span>BEFORE / AFTER PROOF RECORD</span>
+            <span>BEFORE / AFTER VERIFIED PROOF</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-amber-300 font-semibold flex items-center gap-1">
+              <Clock size={10} />
+              <span>{turnaroundTime}</span>
+            </span>
           </div>
 
           {/* Mode & Fit Controls */}
@@ -231,16 +227,17 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setViewMode('slider');
+                  setViewMode('toggle');
                 }}
                 className={`px-2 py-0.5 rounded-md text-[9.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
-                  viewMode === 'slider'
+                  viewMode === 'toggle'
                     ? 'bg-emerald-600 text-white'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
+                title="Single photo with 1-tap flip button"
               >
-                <SlidersHorizontal size={10} />
-                <span>Swipe</span>
+                <Eye size={10} />
+                <span>Toggle</span>
               </button>
               <button
                 type="button"
@@ -253,6 +250,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
                     ? 'bg-emerald-600 text-white'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
+                title="Show both Before & After side-by-side"
               >
                 <Columns size={10} />
                 <span>Side-by-Side</span>
@@ -268,7 +266,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
               className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:text-white text-[9.5px] font-mono font-semibold cursor-pointer"
               title="Toggle between Full Uncropped Fit and Edge-to-Edge Fill"
             >
-              {fitMode === 'contain' ? 'Fill Frame' : 'Full Uncropped'}
+              {fitMode === 'contain' ? 'Fill' : 'Uncrop'}
             </button>
 
             <button
@@ -285,14 +283,9 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           </div>
         </div>
 
-        {/* Turnaround & GPS Match Stamp Strip */}
+        {/* Turnaround & GPS Match Strip */}
         <div className="px-3 py-1.5 bg-slate-900/80 border-b border-slate-800/80 flex items-center justify-between gap-2 flex-wrap text-[9.5px] font-mono text-slate-300">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 text-amber-300 font-semibold">
-              <Clock size={10} />
-              <span>TURNAROUND: {turnaroundTime}</span>
-            </span>
-            <span className="text-slate-600">·</span>
             <span className="inline-flex items-center gap-1 text-emerald-300 font-semibold">
               <MapPin size={10} />
               <span>
@@ -335,22 +328,22 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
             <div className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-400">
                 <CheckCircle2 size={15} />
-                <span>FULLSCREEN BEFORE &amp; AFTER PROOF VIEWER · TURNAROUND: {turnaroundTime}</span>
+                <span>FULLSCREEN BEFORE &amp; AFTER PROOF VIEWER · {turnaroundTime} TURNAROUND</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setViewMode(viewMode === 'slider' ? 'split' : 'slider')}
+                  onClick={() => setViewMode(viewMode === 'toggle' ? 'split' : 'toggle')}
                   className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-mono font-semibold cursor-pointer"
                 >
-                  {viewMode === 'slider' ? 'Switch to Side-by-Side' : 'Switch to Swipe Slider'}
+                  {viewMode === 'toggle' ? 'Switch to Side-by-Side' : 'Switch to 1-Tap Toggle'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setFitMode(fitMode === 'cover' ? 'contain' : 'cover')}
                   className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-mono font-semibold cursor-pointer"
                 >
-                  {fitMode === 'contain' ? 'Fill Frame' : 'Full Uncropped Fit'}
+                  {fitMode === 'contain' ? 'Fill Frame' : 'Full Uncropped'}
                 </button>
                 <button
                   type="button"

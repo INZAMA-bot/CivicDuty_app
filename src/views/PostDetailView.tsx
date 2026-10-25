@@ -823,13 +823,27 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
               verifiedBy={ba.verified_by || d.name}
               cryptoSeal={cryptoSeal}
               compact={false}
-              defaultMode="slider"
+              defaultMode="toggle"
             />
           );
         })()}
 
-        {/* Media Player Grid / Video / Audio / Docs */}
-        <MediaCard media={p.media} postId={p.id} onToast={(msg) => toast(msg)} />
+        {/* Media Player Grid / Video / Audio / Docs (Deduplicated against Before/After Proof) */}
+        {(() => {
+          const baUrls = [p.before_after?.before_url, p.before_after?.after_url].filter(Boolean);
+          const filteredMedia = (p.media || []).filter(
+            (m) => !baUrls.some((u) => u === m.url || (m.url && u?.endsWith(m.url)))
+          );
+          if (filteredMedia.length === 0 && !p.voice_note) return null;
+          return (
+            <MediaCard
+              media={filteredMedia}
+              postId={p.id}
+              voiceNote={p.voice_note}
+              onToast={(msg) => toast(msg)}
+            />
+          );
+        })()}
 
         {/* Metadata Grid */}
         <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 grid grid-cols-2 gap-3 text-[10px] mono">
@@ -1881,201 +1895,203 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
           </button>
         )}
 
-        {/* Upgraded Rich Multi-Media Citizen Reply Studio (aistudio.google Pattern) */}
+        {/* Simplified Citizen Comment & Ground Witness Composer (Speak Page Ergonomics) */}
         {(!user || user.role === 'citizen') && (
-          <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
-              <label className="text-xs font-mono text-slate-900 dark:text-slate-100 uppercase tracking-wider block font-bold">
-                Add Multimedia Field Note / Citizen Reply
-              </label>
-              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                5-Channel Multimedia Enabled
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+            {/* Header & Quick Intent Tags */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Ground Witness Note &amp; Comments</span>
+              </span>
+              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/60">
+                +10 Citizen XP
               </span>
             </div>
 
+            {/* Replying banner */}
             {replyToSender && (
-              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-indigo-600 dark:text-indigo-400">
-                <span>↪ Replying to <strong>@{replyToSender}</strong></span>
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs font-mono text-indigo-700 dark:text-indigo-300">
+                <span>↪ Replying directly to <strong>@{replyToSender}</strong></span>
                 <button
                   type="button"
                   onClick={() => setReplyToSender(null)}
-                  className="text-slate-500 hover:text-rose-600 font-semibold cursor-pointer flex items-center gap-1"
+                  className="text-slate-400 hover:text-rose-600 font-semibold cursor-pointer flex items-center gap-1"
                 >
-                  <span>Cancel</span>
-                  <X size={11} />
+                  <X size={12} />
                 </button>
               </div>
             )}
 
+            {/* Quick Status / Stance Chips (Speak Page Pattern) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-[10px] font-mono scrollbar-none">
+              <span className="text-slate-400 shrink-0 font-medium text-[9.5px]">Quick Tag:</span>
+              {[
+                { tag: '#GroundVerified', label: 'Ground Verified', color: 'emerald' },
+                { tag: '#WorkInProgress', label: 'Work In Progress', color: 'amber' },
+                { tag: '#StillBroken', label: 'Still Broken', color: 'rose' },
+                { tag: '#FixedOnSite', label: 'Fixed On Site', color: 'emerald' },
+                { tag: '#OfficerVisited', label: 'Officer Visited', color: 'sky' },
+              ].map(({ tag, label, color }) => {
+                const isActive = citizenReplyText.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      if (isActive) {
+                        setCitizenReplyText((prev) => prev.replace(tag, '').trim());
+                      } else {
+                        setCitizenReplyText((prev) => (prev ? `${prev} ${tag}` : tag));
+                      }
+                    }}
+                    className={`px-2 py-0.5 rounded-lg shrink-0 font-semibold transition-all cursor-pointer border ${
+                      isActive
+                        ? color === 'rose'
+                          ? 'bg-rose-600 text-white border-rose-600'
+                          : color === 'amber'
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-emerald-600 text-white border-emerald-600'
+                        : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Clean Input Box */}
             <textarea
               rows={3}
               value={citizenReplyText}
               onChange={(e) => setCitizenReplyText(e.target.value)}
-              placeholder="What has changed on the ground? Attach photos, video, voice note, PDF documents, or GPS coordinates..."
-              className="w-full p-3 text-xs rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500 leading-relaxed resize-none"
+              placeholder="What is the ground reality? Add verified updates, work progress, or counter-evidence..."
+              className="w-full p-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-colors leading-relaxed resize-none"
             />
 
-            {/* Full 5-Channel Multimedia Toolbar (Photo · Video · Voice Note · Document · GPS Pin) */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#e3e6ea] dark:border-[#262b36]">
-              {/* 1. Photo */}
-              <label className="cursor-pointer bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  multiple
-                  onChange={handleFileSelect}
-                />
-                <ImageIcon size={12} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Photo</span>
-              </label>
+            {/* Thumb-Friendly Action Bar (Speak Page Inspiration) */}
+            <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {/* 1. Photo */}
+                <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    multiple
+                    onChange={handleFileSelect}
+                  />
+                  <ImageIcon size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Photo</span>
+                </label>
 
-              {/* 2. Video */}
-              <label className="cursor-pointer bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors">
-                <input
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  multiple
-                  onChange={handleFileSelect}
-                />
-                <Video size={12} className="text-rose-600 dark:text-rose-400" />
-                <span>Video</span>
-              </label>
+                {/* 2. Voice Note */}
+                <button
+                  type="button"
+                  onClick={handleSimulateVoiceNote}
+                  disabled={isRecordingVoice}
+                  className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
+                    isRecordingVoice
+                      ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-300 animate-pulse'
+                      : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400'
+                  }`}
+                >
+                  <Mic size={13} className={isRecordingVoice ? 'text-rose-600' : 'text-amber-500'} />
+                  <span>{isRecordingVoice ? 'Recording...' : 'Voice'}</span>
+                </button>
 
-              {/* 3. Voice Note */}
-              <button
-                type="button"
-                onClick={handleSimulateVoiceNote}
-                disabled={isRecordingVoice}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors border cursor-pointer ${
-                  isRecordingVoice
-                    ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-300 animate-pulse'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500'
-                }`}
-              >
-                <Mic size={12} className={isRecordingVoice ? 'text-rose-600' : 'text-amber-600 dark:text-amber-400'} />
-                <span>{isRecordingVoice ? 'Recording (0:03)...' : 'Voice Note'}</span>
-              </button>
+                {/* 3. Live GPS Pin */}
+                <button
+                  type="button"
+                  onClick={handleAcquireGps}
+                  className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
+                    acquiredGps
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400'
+                  }`}
+                >
+                  <MapPin size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>{acquiredGps ? 'GPS Locked' : 'GPS Pin'}</span>
+                </button>
 
-              {/* 4. Document / PDF */}
-              <label className="cursor-pointer bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors">
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx,application/pdf"
-                  className="hidden"
-                  multiple
-                  onChange={handleFileSelect}
-                />
-                <FileText size={12} className="text-indigo-600 dark:text-indigo-400" />
-                <span>Doc / PDF</span>
-              </label>
-
-              {/* 5. Live GPS Pin */}
-              <button
-                type="button"
-                onClick={handleAcquireGps}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors border cursor-pointer ${
-                  acquiredGps
-                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500'
-                }`}
-              >
-                <MapPin size={12} className="text-emerald-600 dark:text-emerald-400" />
-                <span>{acquiredGps ? `${acquiredGps.lat}, ${acquiredGps.lng}` : 'GPS Pin'}</span>
-              </button>
+                {/* 4. Video / Doc (Optional popover/labels) */}
+                <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-2 py-1.5 rounded-xl text-[10px] font-mono font-bold flex items-center gap-1 transition-colors">
+                  <input
+                    type="file"
+                    accept="video/*,.pdf"
+                    className="hidden"
+                    multiple
+                    onChange={handleFileSelect}
+                  />
+                  <Video size={12} className="text-rose-500" />
+                  <span>Media</span>
+                </label>
+              </div>
 
               {/* Public vs Anonymous Toggle */}
               <button
                 type="button"
                 onClick={() => setReplyAnon(!replyAnon)}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-semibold flex items-center gap-1.5 transition-colors border ml-auto cursor-pointer ${
+                className={`px-2.5 py-1.5 rounded-xl text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
                   replyAnon
                     ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                    : 'bg-slate-100 dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
                 }`}
+                title="Toggle between Public Citizen identity and Protected Whistleblower mask"
               >
                 {replyAnon ? <EyeOff size={12} /> : <Eye size={12} />}
-                <span>{replyAnon ? 'Anonymous' : 'Public Name'}</span>
+                <span>{replyAnon ? 'Anonymous' : 'Public ID'}</span>
               </button>
             </div>
 
-            {/* Staged Media & GPS Preview */}
+            {/* Staged Multimedia Chips */}
             {(stagedMedia.length > 0 || acquiredGps) && (
-              <div className="space-y-1.5 pt-1">
-                <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-                  Staged Reply Multimedia ({stagedMedia.length + (acquiredGps ? 1 : 0)})
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {acquiredGps && (
-                    <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] p-2 rounded-lg flex items-center gap-2">
-                      <div className="p-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded shrink-0">
-                        <MapPin size={13} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10.5px] font-bold text-slate-900 dark:text-slate-100 truncate">
-                          Verified GPS Pin
-                        </p>
-                        <p className="text-[9px] font-mono text-slate-500">
-                          {acquiredGps.lat}, {acquiredGps.lng}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAcquiredGps(null);
-                          setLocationMode('parish');
-                        }}
-                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  )}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                {acquiredGps && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono text-emerald-800 dark:text-emerald-300">
+                    <MapPin size={11} className="text-emerald-600" />
+                    <span>GPS: {acquiredGps.lat}, {acquiredGps.lng}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAcquiredGps(null)}
+                      className="ml-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                )}
 
-                  {stagedMedia.map((m, idx) => (
-                    <div key={idx} className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] p-2 rounded-lg flex items-center gap-2 overflow-hidden">
-                      {m.type === 'image' && (
-                        <img src={m.url} alt="" className="w-8 h-8 object-cover rounded shrink-0" />
-                      )}
-                      {m.type === 'video' && (
-                        <div className="p-1.5 bg-rose-500/15 text-rose-600 dark:text-rose-400 rounded shrink-0">
-                          <Video size={13} />
-                        </div>
-                      )}
-                      {m.type === 'voice' && (
-                        <div className="p-1.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded shrink-0">
-                          <Mic size={13} />
-                        </div>
-                      )}
-                      {m.type === 'doc' && (
-                        <div className="p-1.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded shrink-0">
-                          <FileText size={13} />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10.5px] font-bold text-slate-900 dark:text-slate-100 truncate">{m.name}</p>
-                        <p className="text-[9px] font-mono text-slate-500">{m.type} · {m.size || m.duration}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setStagedMedia(stagedMedia.filter((_, i) => i !== idx))}
-                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                {stagedMedia.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono text-slate-800 dark:text-slate-200"
+                  >
+                    {m.type === 'image' && <ImageIcon size={11} className="text-emerald-500" />}
+                    {m.type === 'voice' && <Mic size={11} className="text-amber-500" />}
+                    {m.type === 'video' && <Video size={11} className="text-rose-500" />}
+                    {m.type === 'doc' && <FileText size={11} className="text-indigo-500" />}
+                    <span className="truncate max-w-[100px]">{m.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setStagedMedia(stagedMedia.filter((_, i) => i !== idx))}
+                      className="ml-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
+            {/* Submit Action Button */}
             <button
               type="button"
               onClick={handlePostCitizenComment}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg py-2.5 text-xs uppercase tracking-wider font-mono transition-colors cursor-pointer"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold rounded-xl py-2.5 text-xs uppercase tracking-wider font-mono transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
             >
-              Post Multimedia Field Contribution
+              <span>Submit Ground Witness Note</span>
+              <span className="text-[10px] opacity-80">(+10 XP)</span>
             </button>
           </div>
         )}
