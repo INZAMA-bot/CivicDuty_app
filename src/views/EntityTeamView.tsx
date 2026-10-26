@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept, copyToClipboard } from '../utils/helpers';
-import { COUNTRIES } from '../data/countries';
-import { EntityCustomRole, EntityRolePermissions, RoleType, TeamMember } from '../types';
+import { COUNTRIES, TERRITORY } from '../data/countries';
+import { EnterpriseBranch, BranchTeam, EntityCustomRole, EntityRolePermissions, RoleType, TeamMember } from '../types';
+import {
+  loadAllBranches,
+  saveAllBranches,
+  generateBranchAccessCode,
+} from '../data/enterpriseBranches';
 import {
   ROLE_COLORS,
   PERMISSION_DESCRIPTIONS,
@@ -79,10 +84,30 @@ export const EntityTeamView: React.FC = () => {
     reinstateTeamMember,
     logAudit,
     toast,
+    execGovLoginByData,
   } = useApp();
 
   // Active section tab in Entity Team view
-  const [activeTab, setActiveTab] = useState<'staff' | 'invite' | 'roles' | 'pending' | 'audit'>('staff');
+  const [activeTab, setActiveTab] = useState<'staff' | 'branches' | 'invite' | 'roles' | 'pending' | 'audit'>('branches');
+
+  // Enterprise Branch Network State
+  const [branchesList, setBranchesList] = useState<EnterpriseBranch[]>(() => loadAllBranches());
+  const [showCreateBranchModal, setShowCreateBranchModal] = useState(false);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [selectedDistrictId, setSelectedDistrictId] = useState('kampala_c');
+  const [selectedSubcountyId, setSelectedSubcountyId] = useState('nakawa');
+  const [selectedParishName, setSelectedParishName] = useState('Bugolobi');
+  const [newBranchLandmark, setNewBranchLandmark] = useState('');
+  const [newBranchManagerName, setNewBranchManagerName] = useState('');
+  const [newBranchManagerPhone, setNewBranchManagerPhone] = useState('');
+  const [newBranchSlaHours, setNewBranchSlaHours] = useState(12);
+
+  // Sub-team creation state inside branch
+  const [activeBranchForTeam, setActiveBranchForTeam] = useState<string | null>(null);
+  const [newSubTeamName, setNewSubTeamName] = useState('');
+  const [newSubTeamLead, setNewSubTeamLead] = useState('');
+  const [newSubTeamCategory, setNewSubTeamCategory] = useState<'operations' | 'service' | 'technical' | 'logistics' | 'management'>('operations');
+  const [newSubTeamMembers, setNewSubTeamMembers] = useState(5);
 
   // Staff Invitation form state
   const [inviteStaffName, setInviteStaffName] = useState('');
@@ -159,6 +184,146 @@ export const EntityTeamView: React.FC = () => {
   const availableSeats = isPaidTier ? 9999 : Math.max(0, seatLimit - totalOccupiedSeats);
 
   const SectorIcon = SECTOR_ICONS[user.entity_category || 'other'] || Building2;
+
+  const normDept = (user.dept || 'kfc_ug').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const myBranches = branchesList.filter((b) => {
+    const bNorm = b.deptId.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    return (
+      bNorm === normDept ||
+      bNorm.includes(normDept) ||
+      normDept.includes(bNorm) ||
+      user.is_superadmin ||
+      user.role === 'platform_admin' ||
+      !user.dept
+    );
+  });
+
+  const countryTerritories = (TERRITORY as any)[user.country || 'UG'] || [];
+  const selectedDistrictNode = countryTerritories.find((d: any) => d.id === selectedDistrictId) || countryTerritories[0];
+  const subcountyNodes = selectedDistrictNode?.children || [];
+  const selectedSubcountyNode = subcountyNodes.find((s: any) => s.id === selectedSubcountyId) || subcountyNodes[0];
+  const parishNodes = selectedSubcountyNode?.children || [];
+
+  const handleCreateBranch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBranchName.trim()) {
+      toast('Please enter a branch name', 'amber');
+      return;
+    }
+    const districtName = selectedDistrictNode?.name || 'Central District';
+    const subcountyName = selectedSubcountyNode?.name || 'Urban Division';
+    const parishName = selectedParishName || parishNodes[0]?.name || 'Central Parish';
+
+    const cleanBrand = orgName.split('·')[0].split('(')[0].trim() || 'Enterprise';
+    const accessCode = generateBranchAccessCode(cleanBrand, newBranchName);
+    const branchId = `br-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const defaultTeams: BranchTeam[] = [
+      { id: `t-${Date.now()}-1`, name: 'Front Desk & Guest Care', lead: newBranchManagerName || 'Branch Team Lead', category: 'service', memberCount: 6 },
+      { id: `t-${Date.now()}-2`, name: 'Operations & Production Crew', lead: 'Operations Lead', category: 'operations', memberCount: 8 },
+      { id: `t-${Date.now()}-3`, name: 'Logistics & Dispatch Fleet', lead: 'Fleet Dispatcher', category: 'logistics', memberCount: 5 },
+    ];
+
+    const newBranch: EnterpriseBranch = {
+      id: branchId,
+      deptId: user.dept || 'kfc_ug',
+      brandName: cleanBrand,
+      name: newBranchName.trim(),
+      country: user.country || 'UG',
+      district: districtName,
+      subcounty: subcountyName,
+      parish: parishName,
+      landmark: newBranchLandmark.trim() || undefined,
+      accessCode,
+      managerName: newBranchManagerName.trim() || undefined,
+      managerPhone: newBranchManagerPhone.trim() || undefined,
+      slaHours: newBranchSlaHours,
+      status: 'active',
+      teams: defaultTeams,
+      openTicketsCount: 0,
+      resolvedTicketsCount: 0,
+      ratingScore: 98,
+      created_at: new Date().toISOString(),
+    };
+
+    const updated = [newBranch, ...branchesList];
+    setBranchesList(updated);
+    saveAllBranches(updated);
+
+    logAudit(
+      'provision_branch',
+      '—',
+      `Central Superadmin provisioned branch [${newBranchName.trim()}] in ${parishName}, ${subcountyName}, ${districtName} — Master Access Code [${accessCode}]`
+    );
+
+    toast(`Provisioned branch: ${newBranchName} (${parishName}) — Code: ${accessCode}`, 'emerald');
+    setShowCreateBranchModal(false);
+    setNewBranchName('');
+    setNewBranchLandmark('');
+    setNewBranchManagerName('');
+    setNewBranchManagerPhone('');
+  };
+
+  const handleAddSubTeam = (branchId: string) => {
+    if (!newSubTeamName.trim()) {
+      toast('Enter a sub-team name', 'amber');
+      return;
+    }
+    const updated = branchesList.map((b) => {
+      if (b.id !== branchId) return b;
+      const newTeam: BranchTeam = {
+        id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: newSubTeamName.trim(),
+        lead: newSubTeamLead.trim() || 'Team Lead',
+        category: newSubTeamCategory,
+        memberCount: newSubTeamMembers || 4,
+      };
+      return { ...b, teams: [...(b.teams || []), newTeam] };
+    });
+    setBranchesList(updated);
+    saveAllBranches(updated);
+    logAudit('add_branch_team', '—', `Added team [${newSubTeamName}] to branch ${branchId}`);
+    toast(`Sub-team added: ${newSubTeamName}`, 'emerald');
+    setActiveBranchForTeam(null);
+    setNewSubTeamName('');
+    setNewSubTeamLead('');
+  };
+
+  const handleRemoveSubTeam = (branchId: string, teamId: string) => {
+    const updated = branchesList.map((b) => {
+      if (b.id !== branchId) return b;
+      return { ...b, teams: (b.teams || []).filter((t) => t.id !== teamId) };
+    });
+    setBranchesList(updated);
+    saveAllBranches(updated);
+    toast('Sub-team removed from branch', 'amber');
+  };
+
+  const handleMountBranch = (branch: EnterpriseBranch) => {
+    const branchSession = {
+      country: branch.country,
+      dept: branch.deptId,
+      scope: branch.accessCode.toLowerCase(),
+      role: 'node_admin' as const,
+      is_admin: true,
+      is_superadmin: false,
+      role_label: `Branch Manager · ${branch.name}`,
+      organization_name: `${branch.brandName} (${branch.name})`,
+      officer_name: branch.managerName || 'Branch Manager',
+      branch_id: branch.id,
+      branch_name: branch.name,
+      branch_district: branch.district,
+      branch_subcounty: branch.subcounty,
+      branch_parish: branch.parish,
+      entity_type: 'non_government_entity' as const,
+      is_utility: true,
+      duty_station: `${branch.parish}, ${branch.district}`,
+      contact_phone: branch.managerPhone,
+    };
+    execGovLoginByData(branchSession);
+    toast(`Mounted Branch Desk: ${branch.name} (${branch.parish})`, 'emerald');
+    go('gov_inbox');
+  };
 
   // Handle Save / Update Custom Role
   const handleSaveRole = (e: React.FormEvent) => {
@@ -448,6 +613,18 @@ export const EntityTeamView: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('branches')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
+            activeTab === 'branches'
+              ? 'bg-purple-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+        >
+          <Store size={15} />
+          Nationwide Branches ({myBranches.length})
+        </button>
+
+        <button
           onClick={() => setActiveTab('invite')}
           className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
             activeTab === 'invite'
@@ -495,6 +672,485 @@ export const EntityTeamView: React.FC = () => {
           Duty Activity Log
         </button>
       </div>
+
+      {/* 2.5 TAB CONTENT: NATIONWIDE BRANCHES & SUPERADMIN PROVISIONER */}
+      {activeTab === 'branches' && (
+        <div className="space-y-5">
+          {/* Header & Metrics */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase mono text-purple-600 dark:text-purple-400">
+                    Enterprise Hierarchy &amp; Grassroots Mapping
+                  </span>
+                  <span className="text-[9px] mono uppercase bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full font-bold">
+                    Superadmin Hub
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                  Nationwide Branch Network ({myBranches.length} Branches)
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Central Superadmin creates branches mapped to LC2 parishes, issues Branch Manager Access Codes, and empowers branch managers to lead internal teams.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCreateBranchModal(true)}
+                className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs mono uppercase flex items-center gap-2 transition-all shadow-md shrink-0 cursor-pointer self-start sm:self-auto"
+              >
+                <Plus size={15} />
+                <span>Provision New Branch</span>
+              </button>
+            </div>
+
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40">
+                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 block uppercase">
+                  Active Branches
+                </span>
+                <span className="text-lg font-black text-purple-900 dark:text-purple-200 font-mono">
+                  {myBranches.length} Nodes
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
+                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 block uppercase">
+                  Parishes Covered
+                </span>
+                <span className="text-lg font-black text-emerald-900 dark:text-emerald-200 font-mono">
+                  {new Set(myBranches.map((b) => b.parish)).size} LC2 Nodes
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40">
+                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 block uppercase">
+                  Internal Service Teams
+                </span>
+                <span className="text-lg font-black text-blue-900 dark:text-blue-200 font-mono">
+                  {myBranches.reduce((acc, b) => acc + (b.teams?.length || 0), 0)} Teams
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
+                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 block uppercase">
+                  Avg SLA Performance
+                </span>
+                <span className="text-lg font-black text-amber-900 dark:text-amber-200 font-mono">
+                  95.4% Ontime
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Provision Modal / Drawer */}
+          {showCreateBranchModal && (
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-purple-500 shadow-xl space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                  <span className="text-[10px] font-black uppercase mono text-purple-600 dark:text-purple-400">
+                    Central Admin Action
+                  </span>
+                  <h4 className="text-base font-black text-slate-900 dark:text-white">
+                    Provision Nationwide Branch to LC2 Parish
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateBranchModal(false)}
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateBranch} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Branch Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newBranchName}
+                      onChange={(e) => setNewBranchName(e.target.value)}
+                      placeholder="e.g. Acacia Mall Branch, Jinja Central Center..."
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Physical Landmark / Building
+                    </label>
+                    <input
+                      type="text"
+                      value={newBranchLandmark}
+                      onChange={(e) => setNewBranchLandmark(e.target.value)}
+                      placeholder="e.g. Food Court Level 1, Main Street opposite Post Office"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Grassroots Hierarchy Cascading Dropdowns */}
+                <div className="p-3.5 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/30 space-y-2.5">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+                    <MapPin size={12} className="text-purple-600 dark:text-purple-400" />
+                    <span>Grassroots Territory Mapping (Parish · Subcounty · District)</span>
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                        1. District / City
+                      </label>
+                      <select
+                        value={selectedDistrictId}
+                        onChange={(e) => {
+                          setSelectedDistrictId(e.target.value);
+                          const dist = countryTerritories.find((d: any) => d.id === e.target.value);
+                          if (dist && dist.children && dist.children[0]) {
+                            setSelectedSubcountyId(dist.children[0].id);
+                            if (dist.children[0].children && dist.children[0].children[0]) {
+                              setSelectedParishName(dist.children[0].children[0].name);
+                            }
+                          }
+                        }}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white"
+                      >
+                        {countryTerritories.map((d: any) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                        2. Subcounty / Division
+                      </label>
+                      <select
+                        value={selectedSubcountyId}
+                        onChange={(e) => {
+                          setSelectedSubcountyId(e.target.value);
+                          const sub = subcountyNodes.find((s: any) => s.id === e.target.value);
+                          if (sub && sub.children && sub.children[0]) {
+                            setSelectedParishName(sub.children[0].name);
+                          }
+                        }}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white"
+                      >
+                        {subcountyNodes.map((s: any) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                        3. LC2 Parish (Local Desk)
+                      </label>
+                      <select
+                        value={selectedParishName}
+                        onChange={(e) => setSelectedParishName(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white"
+                      >
+                        {parishNodes.map((p: any) => (
+                          <option key={p.id} value={p.name}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Branch Manager Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newBranchManagerName}
+                      onChange={(e) => setNewBranchManagerName(e.target.value)}
+                      placeholder="e.g. Brian Mugabe"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Manager Phone / WhatsApp
+                    </label>
+                    <input
+                      type="text"
+                      value={newBranchManagerPhone}
+                      onChange={(e) => setNewBranchManagerPhone(e.target.value)}
+                      placeholder="e.g. +256 772 123 456"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      SLA Response Target (Hours)
+                    </label>
+                    <select
+                      value={newBranchSlaHours}
+                      onChange={(e) => setNewBranchSlaHours(Number(e.target.value))}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    >
+                      <option value={4}>4 Hours (Emergency / High Priority)</option>
+                      <option value={6}>6 Hours (Hospital / Clinical Care)</option>
+                      <option value={12}>12 Hours (Dining / Retail)</option>
+                      <option value={24}>24 Hours (Standard Utility / School)</option>
+                      <option value={48}>48 Hours (General Institutional)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="text-[10.5px] font-mono text-purple-700 dark:text-purple-300 font-semibold">
+                    Auto-generated Code: <strong className="font-mono">{generateBranchAccessCode(orgName, newBranchName || 'BRANCH')}</strong>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateBranchModal(false)}
+                      className="px-3.5 py-2 rounded-xl text-xs font-mono font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-black text-xs uppercase transition-all shadow-md cursor-pointer"
+                    >
+                      Provision &amp; Issue Master Code
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Branch Cards List */}
+          <div className="space-y-4">
+            {myBranches.map((branch) => {
+              const isSelectedForTeam = activeBranchForTeam === branch.id;
+
+              return (
+                <div
+                  key={branch.id}
+                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4"
+                >
+                  {/* Top Branch Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-base font-black text-slate-900 dark:text-white">
+                          {branch.name}
+                        </span>
+                        <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-800">
+                          Active Branch Node
+                        </span>
+                        <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold">
+                          {branch.brandName}
+                        </span>
+                      </div>
+
+                      {/* Grassroots Location Dateline */}
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8.5px] font-mono bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                        <MapPin size={9} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <strong className="text-[9.5px] font-bold text-slate-900 dark:text-white">
+                          {branch.parish}
+                        </strong>
+                        <span className="text-[7px] text-slate-400">·</span>
+                        <span>{branch.subcounty}</span>
+                        <span className="text-[7px] text-slate-400">·</span>
+                        <span className="text-slate-500">{branch.district}</span>
+                        {branch.landmark && (
+                          <>
+                            <span className="text-[7px] text-slate-400">·</span>
+                            <span className="text-slate-400 italic truncate max-w-[150px]">
+                              {branch.landmark}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Master Branch Access Code Pill & Mount Button */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 flex items-center gap-2">
+                        <div>
+                          <span className="text-[8.5px] font-mono font-bold text-purple-700 dark:text-purple-300 block uppercase">
+                            Branch Manager Code
+                          </span>
+                          <span className="text-xs font-mono font-black text-purple-950 dark:text-purple-100 tracking-wider">
+                            {branch.accessCode}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(branch.accessCode)}
+                          className="p-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 transition-colors cursor-pointer"
+                          title="Copy Master Branch Code"
+                        >
+                          {copiedCode === branch.accessCode ? <Check size={13} /> : <Copy size={13} />}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleMountBranch(branch)}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-black uppercase flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                      >
+                        <span>Mount Desk</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Manager & SLA Status Ribbon */}
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-purple-600 text-white font-bold text-xs flex items-center justify-center">
+                        {(branch.managerName || 'BM').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900 dark:text-white block text-xs">
+                          {branch.managerName || 'Assigned Branch Lead'}
+                        </span>
+                        <span className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
+                          {branch.managerPhone || 'Direct Dispatch Hotline'} · {branch.slaHours}h SLA
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 font-mono text-[11px]">
+                      <span className="text-slate-600 dark:text-slate-300">
+                        Open Tickets: <strong className="text-amber-600 dark:text-amber-400">{branch.openTicketsCount || 0}</strong>
+                      </span>
+                      <span className="text-slate-600 dark:text-slate-300">
+                        Resolved: <strong className="text-emerald-600 dark:text-emerald-400">{branch.resolvedTicketsCount || 0}</strong>
+                      </span>
+                      <span className="text-slate-600 dark:text-slate-300">
+                        CSAT: <strong className="text-purple-600 dark:text-purple-400">{branch.ratingScore || 96}%</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Internal Teams within Branch (Sub-Units) */}
+                  <div className="space-y-2.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Users size={12} className="text-purple-600 dark:text-purple-400" />
+                        <span>Internal Teams within Branch ({branch.teams?.length || 0})</span>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isSelectedForTeam) {
+                            setActiveBranchForTeam(null);
+                          } else {
+                            setActiveBranchForTeam(branch.id);
+                          }
+                        }}
+                        className="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus size={11} />
+                        <span>{isSelectedForTeam ? 'Close Team Form' : 'Add Team to Branch'}</span>
+                      </button>
+                    </div>
+
+                    {/* Inline Sub-Team Form */}
+                    {isSelectedForTeam && (
+                      <div className="p-3.5 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 space-y-3 animate-fade-in">
+                        <span className="text-[10px] font-mono font-black uppercase text-purple-900 dark:text-purple-200 block">
+                          Add Internal Team to {branch.name}
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                          <input
+                            type="text"
+                            value={newSubTeamName}
+                            onChange={(e) => setNewSubTeamName(e.target.value)}
+                            placeholder="Team Name (e.g. Kitchen, Delivery Fleet, Front Desk)..."
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                          />
+                          <input
+                            type="text"
+                            value={newSubTeamLead}
+                            onChange={(e) => setNewSubTeamLead(e.target.value)}
+                            placeholder="Team Lead Name..."
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white"
+                          />
+                          <select
+                            value={newSubTeamCategory}
+                            onChange={(e) => setNewSubTeamCategory(e.target.value as any)}
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                          >
+                            <option value="operations">Operations Crew</option>
+                            <option value="service">Customer Care</option>
+                            <option value="technical">Technical / Fleet</option>
+                            <option value="logistics">Logistics &amp; Delivery</option>
+                            <option value="management">Discipline / Management</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleAddSubTeam(branch.id)}
+                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs uppercase cursor-pointer"
+                          >
+                            Save Team
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Team Badges List */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {(branch.teams || []).map((team) => (
+                        <div
+                          key={team.id}
+                          className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2"
+                        >
+                          <div className="min-w-0">
+                            <span className="font-bold text-xs text-slate-900 dark:text-white block truncate">
+                              {team.name}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate block">
+                              Lead: {team.lead} · {team.memberCount} members
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSubTeam(branch.id, team.id)}
+                            className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer shrink-0"
+                            title="Remove Team"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 3. TAB CONTENT: INVITE STAFF MEMBER */}
       {activeTab === 'invite' && (

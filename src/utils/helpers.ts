@@ -478,4 +478,3 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
     mandateSummary: `Chief Accounting Officer & Administrative Head of ${derivedMinistryName}. Strictly scoped to this ministry's sector mandate, directorates, and ministerial cabinet.`,
   };
 }
-

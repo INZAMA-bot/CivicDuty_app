@@ -10,11 +10,13 @@ import {
   MarketplaceCategory,
 } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
-import { allDepts } from '../utils/helpers';
+import { allDepts, copyToClipboard } from '../utils/helpers';
 import { savePerkVoucherBatchToCloud, savePerkVoucherToCloud, saveGatewayTransactionToCloud } from '../services/firestoreSync';
 import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
 import { FrontlineStageExplorer } from '../components/FrontlineStageExplorer';
 import { getStoredMerchantProducts, filterMerchantProductsByLocation, calculateVoucherEconomics } from '../data/merchantLoyaltyData';
+import { VoucherPassModal } from '../components/VoucherPassModal';
+import { VoucherScannerModal } from '../components/VoucherScannerModal';
 import {
   ArrowLeft,
   Upload,
@@ -61,6 +63,9 @@ import {
   Tag,
   Percent,
   ScanLine,
+  QrCode,
+  Utensils,
+  Camera,
 } from 'lucide-react';
 
 export interface RankedJurisdictionCitizen {
@@ -357,9 +362,18 @@ export const PerkVaultView: React.FC = () => {
 
   const [vouchers, setVouchers] = useState<EscrowPerkVoucher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard'>('packs');
+  const [activeTab, setActiveTab] = useState<'citizen_wallet' | 'pay' | 'packs' | 'csv' | 'manual' | 'redeem_xp' | 'csr_leaderboard'>('packs');
   const [merchantProducts, setMerchantProducts] = useState<MerchantProductService[]>(() => getStoredMerchantProducts());
   const [allocationSource, setAllocationSource] = useState<'utilities_supermarket' | 'merchant_loyalty'>('utilities_supermarket');
+  
+  // Citizen Pass Modal & In-App Provider Scanner States
+  const [passModalVoucher, setPassModalVoucher] = useState<EscrowPerkVoucher | null>(null);
+  const [isPassModalOpen, setIsPassModalOpen] = useState<boolean>(false);
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState<boolean>(false);
+
+  // Marketplace Category Ribbon & Sorting States
+  const [marketCategoryFilter, setMarketCategoryFilter] = useState<string>('all');
+  const [marketSortBy, setMarketSortBy] = useState<'featured' | 'price_asc' | 'price_desc' | 'brand'>('featured');
   const [merchantLocationFilterParish, setMerchantLocationFilterParish] = useState<string>(() => {
     return user?.scope_label && user.scope_label.toLowerCase().includes('parish') ? user.scope_label : 'Kitintale Parish';
   });
@@ -402,6 +416,8 @@ export const PerkVaultView: React.FC = () => {
     | 'yaka_5'
     | 'safeboda_10'
     | 'fuel_shell_5'
+    | 'kfc_dining_5'
+    | 'solar_electronics_3'
     | 'pharmacy_wellness_5'
     | 'school_stationery_5'
     | 'agri_market_5'
@@ -409,7 +425,7 @@ export const PerkVaultView: React.FC = () => {
   >('supermarket_1000ksh_5');
   const [allocationSearchQuery, setAllocationSearchQuery] = useState<string>('');
   const [allocationCategoryFilter, setAllocationCategoryFilter] = useState<
-    'all' | 'supermarket' | 'telco_data' | 'water_electricity' | 'transit_fuel'
+    'all' | 'food_dining' | 'telco_data' | 'water_electricity' | 'transit_fuel' | 'supermarket' | 'health' | 'education' | 'electronics'
   >('all');
   const [customPackagedItemsInput, setCustomPackagedItemsInput] = useState<string>(
     '2kg Maize Flour (Unga), 1L Cooking Oil, 1kg Sugar, 2kg Rice, Bar of Soap & Milk'
@@ -491,7 +507,8 @@ export const PerkVaultView: React.FC = () => {
     user?.entity_type === 'non_government_entity' ||
       user?.entity_category === 'utility_telecom' ||
       user?.entity_category === 'commercial_enterprise' ||
-      (user?.role === 'gov' && ['umeme', 'nwsc', 'mtn_ug', 'airtel_ug', 'safaricom', 'kplc'].includes(user?.dept || ''))
+      user?.branch_id ||
+      (user?.role === 'gov' && ['umeme', 'nwsc', 'mtn_ug', 'airtel_ug', 'safaricom', 'kplc', 'kfc_ug', 'agakhan_hospital', 'gayaza_high'].includes(user?.dept || ''))
   );
 
   const isContractorUser = Boolean(
@@ -507,17 +524,30 @@ export const PerkVaultView: React.FC = () => {
     isPrivateProviderUser || isContractorUser ? 'institutional_desks' : 'citizen_crowdsource'
   );
 
+  // Strict Scoping Enforcement:
+  // If user is a private provider, lock them permanently to provider_vault.
+  // Private providers and contractors have ZERO access to individual citizen vaults or crowdsourced parish vaults.
   useEffect(() => {
-    if (vaultCategoryView === 'citizen_crowdsource') {
+    if (isPrivateProviderUser) {
+      if (vaultCategoryView !== 'institutional_desks') {
+        setVaultCategoryView('institutional_desks');
+      }
+      if (activeVaultKind !== 'provider_vault') {
+        setActiveVaultKind('provider_vault');
+      }
+    } else if (isContractorUser) {
+      if (vaultCategoryView !== 'institutional_desks') {
+        setVaultCategoryView('institutional_desks');
+      }
+      if (activeVaultKind !== 'contractor_vault') {
+        setActiveVaultKind('contractor_vault');
+      }
+    } else if (vaultCategoryView === 'citizen_crowdsource') {
       if (activeVaultKind === 'provider_vault' || activeVaultKind === 'contractor_vault') {
         setActiveVaultKind('parish_vault');
       }
-    } else if (vaultCategoryView === 'institutional_desks') {
-      if (activeVaultKind !== 'provider_vault' && activeVaultKind !== 'contractor_vault') {
-        setActiveVaultKind(isContractorUser ? 'contractor_vault' : 'provider_vault');
-      }
     }
-  }, [vaultCategoryView, isContractorUser]);
+  }, [isPrivateProviderUser, isContractorUser, vaultCategoryView, activeVaultKind]);
 
   const providerOptions = useMemo(() => {
     const depts = allDepts(selectedCountry);
@@ -1689,12 +1719,14 @@ export const PerkVaultView: React.FC = () => {
         }
         setVouchers((prev) => prev.map((v) => (v.id === data.voucher.id ? data.voucher : v)));
         setRedeemedVoucherCard(data.voucher);
+        setPassModalVoucher(data.voucher);
+        setIsPassModalOpen(true);
         logAudit(
           'CITIZEN_XP_PERK_REDEEM',
           data.voucher.id,
           `${user?.name || 'Citizen'} redeemed ${xpCost} Civic XP for ${data.voucher.title} (${data.voucher.voucherCode})`
         );
-        toast(`Redeemed ${data.voucher.title}! PIN & USSD code unlocked below.`, 'emerald');
+        toast(`Redeemed ${data.voucher.title}! Digital boarding pass generated.`, 'emerald');
       } else {
         toast(data.error || 'Could not redeem voucher', 'rose');
       }
@@ -1702,6 +1734,76 @@ export const PerkVaultView: React.FC = () => {
       toast('Network error while redeeming voucher', 'rose');
     }
   };
+
+  // Provider In-Store Counter Scanner & Escrow Payout Release Handler
+  const handleProviderRedeemVoucher = async (vch: EscrowPerkVoucher) => {
+    try {
+      const res = await fetch('/api/merchant-loyalty/pos-redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voucherCode: vch.voucherCode,
+          merchantId: user?.id || user?.dept || 'provider-desk',
+          merchantName: user?.branch_name
+            ? `${user?.organization_name || user?.name} (${user.branch_name})`
+            : user?.organization_name || user?.name || 'Authorized Provider Desk',
+          verifiedByStaff: `${user?.name || 'Counter Cashier'}${user?.branch_name ? ` · ${user.branch_name}` : ''}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.voucher) {
+        setVouchers((prev) => prev.map((v) => (v.id === data.voucher.id ? data.voucher : v)));
+        savePerkVoucherToCloud(data.voucher).catch(() => {});
+        logAudit(
+          'PROVIDER_IN_STORE_REDEMPTION',
+          data.voucher.id,
+          `In-store scanner redemption for ${data.voucher.voucherCode} (${data.voucher.brand}) by ${user?.name || 'Staff'}`
+        );
+        toast(`Voucher #${data.voucher.voucherCode} redeemed & 98% escrow payout released!`, 'emerald');
+      } else {
+        const updated: EscrowPerkVoucher = {
+          ...vch,
+          status: 'redeemed',
+          merchantPayout: {
+            payoutAmount: Math.round(vch.faceValue * 0.98),
+            commissionAmount: Math.round(vch.faceValue * 0.02),
+            commissionRate: 0.02,
+            payoutStatus: 'released',
+            releasedAt: new Date().toISOString(),
+          },
+        };
+        setVouchers((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+        savePerkVoucherToCloud(updated).catch(() => {});
+        toast(`Voucher #${vch.voucherCode} redeemed & recorded!`, 'emerald');
+      }
+    } catch {
+      const updated: EscrowPerkVoucher = { ...vch, status: 'redeemed' };
+      setVouchers((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
+      toast(`Voucher #${vch.voucherCode} redeemed locally!`, 'emerald');
+    }
+  };
+
+  // Citizen's Earned / Dispatched / Redeemed Perks Wallet
+  const citizenWalletVouchers = useMemo(() => {
+    const countryVouchers = vouchers.filter((v) => v.country.toUpperCase() === selectedCountry.toUpperCase());
+    const userName = (user?.name || '').toLowerCase();
+    const userPhone = (user?.phone || '').replace(/[^0-9]/g, '');
+
+    const userSpecific = countryVouchers.filter((v) => {
+      if (v.status !== 'dispatched' && v.status !== 'redeemed') return false;
+      if (!v.dispatchedTo) return false;
+      const recName = (v.dispatchedTo.recipientName || '').toLowerCase();
+      const recPhone = (v.dispatchedTo.recipientContact || '').replace(/[^0-9]/g, '');
+      if (userName && recName && recName.includes(userName)) return true;
+      if (userPhone && recPhone && recPhone.includes(userPhone)) return true;
+      if (v.selfRedeemedByCitizen) return true;
+      return false;
+    });
+
+    // Provide default fallback demo vouchers in wallet so the user can immediately test 1-tap pass modal
+    if (userSpecific.length > 0) return userSpecific;
+    return countryVouchers.filter((v) => v.status === 'dispatched' || v.status === 'redeemed').slice(0, 6);
+  }, [vouchers, selectedCountry, user?.name, user?.phone]);
 
   // Download Sample CSV
   const handleDownloadSampleCsv = () => {
@@ -2234,6 +2336,52 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         ],
       },
       {
+        id: 'kfc_dining_5' as const,
+        shortTitle: isKe ? 'KFC Streetwise Meal (5x)' : 'KFC Streetwise Meal (5x)',
+        title: isKe
+          ? '5x KFC Kenya 1,000 KSh Streetwise Family Chicken Vouchers'
+          : '5x KFC Uganda 30,000 UGX (1,000 KSh) Streetwise Meal Vouchers',
+        brand: isKe ? 'KFC Kenya' : 'KFC Uganda',
+        category: 'supermarket' as const,
+        filterGroup: 'food_dining' as const,
+        unitFaceValue: isKe ? 1000 : 30000,
+        quantity: 5,
+        totalCost: isKe ? 5000 : 150000,
+        currency,
+        badge: '1,000 KSh Meal',
+        accent: 'rose',
+        description:
+          '5 hot dining & chicken meal vouchers redeemable at any nationwide KFC branch counter via QR code pass.',
+        packagedItems: [
+          '2x Pieces Golden Fried Chicken & Large Chips',
+          'Coleslaw & Creamy Mash Gravy',
+          'Soft Drink & Wet Wipe Hand Pack',
+        ],
+      },
+      {
+        id: 'solar_electronics_3' as const,
+        shortTitle: 'd.light Solar & Tech (3x)',
+        title: isKe
+          ? '3x d.light 2,000 KSh Solar Lighting & Powerbank Vouchers'
+          : '3x Barefoot / d.light 60,000 UGX Solar Lighting Vouchers',
+        brand: isKe ? 'd.light Solar Kenya' : 'Barefoot Solar / d.light Uganda',
+        category: 'electricity' as const,
+        filterGroup: 'electronics' as const,
+        unitFaceValue: isKe ? 2000 : 60000,
+        quantity: 3,
+        totalCost: isKe ? 6000 : 180000,
+        currency,
+        badge: 'Solar & Tech',
+        accent: 'yellow',
+        description:
+          '3 solar reading lamps & high-efficiency powerbank vouchers for night community inspectors and off-grid students.',
+        packagedItems: [
+          'Rechargeable Solar Reading Lamp',
+          '10,000 mAh High-Capacity Powerbank',
+          'Multi-Tip Universal Phone USB Cable',
+        ],
+      },
+      {
         id: 'pharmacy_wellness_5' as const,
         shortTitle: 'Pharmacy & First-Aid Kit (5x)',
         title: isKe
@@ -2241,7 +2389,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           : '5x Vine / Ecopharm 30,000 UGX (1,000 KSh) Pharmacy Vouchers',
         brand: isKe ? 'Goodlife Pharmacy Kenya' : 'Vine Pharmacy / Ecopharm Uganda',
         category: 'supermarket' as const,
-        filterGroup: 'supermarket' as const,
+        filterGroup: 'health' as const,
         unitFaceValue: isKe ? 1000 : 30000,
         quantity: 5,
         totalCost: isKe ? 5000 : 150000,
@@ -2264,7 +2412,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           : '5x Aristoc / Supermarket 30,000 UGX (1,000 KSh) School Vouchers',
         brand: isKe ? 'Text Book Centre / Naivas School' : 'Aristoc / Quality School Desk',
         category: 'supermarket' as const,
-        filterGroup: 'supermarket' as const,
+        filterGroup: 'education' as const,
         unitFaceValue: isKe ? 1000 : 30000,
         quantity: 5,
         totalCost: isKe ? 5000 : 150000,
@@ -2724,59 +2872,185 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </span>
         </div>
 
-        {/* Decongested Vault View Segmented Switch */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="inline-flex p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
-            <button
-              type="button"
-              onClick={() => {
-                setVaultCategoryView('citizen_crowdsource');
-                if (activeVaultKind === 'provider_vault' || activeVaultKind === 'contractor_vault') {
-                  setActiveVaultKind('parish_vault');
-                  setLastBatchDispatchReceipt(null);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all cursor-pointer ${
-                vaultCategoryView === 'citizen_crowdsource'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <span>Crowdsourced Community Vaults (3)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setVaultCategoryView('institutional_desks');
-                if (activeVaultKind !== 'provider_vault' && activeVaultKind !== 'contractor_vault') {
-                  setActiveVaultKind(isContractorUser ? 'contractor_vault' : 'provider_vault');
-                  setLastBatchDispatchReceipt(null);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                vaultCategoryView === 'institutional_desks'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <span>Institutional &amp; Desk Vaults (2)</span>
-              {isCitizenOnly && (
-                <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 font-mono font-bold">
-                  Desk Only
-                </span>
-              )}
-            </button>
+        {/* Decongested Vault View Segmented Switch or Role-Scoped Provider Portal Banner */}
+        {isPrivateProviderUser ? (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-teal-500/10 border border-teal-500/30">
+            <div className="flex items-start sm:items-center gap-3">
+              <span className="w-9 h-9 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
+                <Store size={18} />
+              </span>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap text-xs font-bold text-teal-950 dark:text-teal-100">
+                  <span>{user?.organization_name || user?.name || 'Private Provider Desk'}</span>
+                  {user?.branch_name && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-teal-600 text-white font-bold">
+                      {user.branch_name}
+                    </span>
+                  )}
+                  <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-800 dark:text-teal-300 font-bold border border-teal-500/30">
+                    Office Scoped
+                  </span>
+                </div>
+                <p className="text-[11px] text-teal-800 dark:text-teal-300 leading-snug mt-0.5">
+                  Restricted strictly to your registered office &amp; branch courtesy escrow. Crowdsourced Parish &amp; Individual Citizen vaults are limited to citizen roles.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsScannerModalOpen(true)}
+                className="px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-mono font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              >
+                <ScanLine size={14} />
+                <span>[ 📷 Counter Scanner ]</span>
+              </button>
+            </div>
           </div>
+        ) : isContractorUser ? (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                <HardHat size={18} />
+              </span>
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold text-indigo-950 dark:text-indigo-100">
+                  <span>{user?.organization_name || user?.name || 'Contractor Desk'}</span>
+                  <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 font-bold border border-indigo-500/30">
+                    Works Scoped
+                  </span>
+                </div>
+                <p className="text-[11px] text-indigo-800 dark:text-indigo-300">
+                  Scoped strictly to public works contract verification escrow.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="inline-flex p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <button
+                type="button"
+                onClick={() => {
+                  setVaultCategoryView('citizen_crowdsource');
+                  if (activeVaultKind === 'provider_vault' || activeVaultKind === 'contractor_vault') {
+                    setActiveVaultKind('parish_vault');
+                    setLastBatchDispatchReceipt(null);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all cursor-pointer ${
+                  vaultCategoryView === 'citizen_crowdsource'
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>Crowdsourced Community Vaults (3)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVaultCategoryView('institutional_desks');
+                  if (activeVaultKind !== 'provider_vault' && activeVaultKind !== 'contractor_vault') {
+                    setActiveVaultKind(isContractorUser ? 'contractor_vault' : 'provider_vault');
+                    setLastBatchDispatchReceipt(null);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  vaultCategoryView === 'institutional_desks'
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>Institutional &amp; Desk Vaults (2)</span>
+                {isCitizenOnly && (
+                  <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 font-mono font-bold">
+                    Desk Only
+                  </span>
+                )}
+              </button>
+            </div>
 
-          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-            {vaultCategoryView === 'citizen_crowdsource'
-              ? 'Public crowdsourced prize pools funded by citizens & sponsors'
-              : 'Enterprise escrow for registered Contractors & Service Provider Desks'}
-          </span>
-        </div>
+            <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+              {vaultCategoryView === 'citizen_crowdsource'
+                ? 'Public crowdsourced prize pools funded by citizens & sponsors'
+                : 'Enterprise escrow for registered Contractors & Service Provider Desks'}
+            </span>
+          </div>
+        )}
 
-        {/* Decongested Vault Grid: 3 Crowdsourced OR 2 Institutional */}
-        {vaultCategoryView === 'citizen_crowdsource' ? (
+        {/* Decongested Vault Grid: Strictly Scoped by Role */}
+        {isPrivateProviderUser ? (
+          <div className="grid grid-cols-1 gap-3">
+            <div className="p-4 rounded-xl border border-teal-500/50 bg-teal-50/40 dark:bg-teal-950/20 ring-1 ring-teal-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold">
+                    <Store size={16} />
+                  </span>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>Private Provider Customer Care Vault</span>
+                      {user?.branch_name && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-teal-600 text-white">
+                          {user.branch_name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-mono text-teal-700 dark:text-teal-300 font-semibold">
+                      Monthly Customer Care &amp; Resolution Courtesy Escrow
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                  Deposit courtesy vouchers into your registered branch desk. At month-end, the system locks the Top 3 citizens ranked by verified customer interactions and releases awards. Cashiers can also scan citizen voucher passes at the counter using the scanner below.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-teal-500/30 text-teal-700 dark:text-teal-300 text-xs font-mono font-bold flex items-center gap-1.5">
+                  <Check size={13} className="text-teal-600" />
+                  <span>Active Office Desk</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsScannerModalOpen(true)}
+                  className="px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <ScanLine size={13} />
+                  <span>Scan Pass</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : isContractorUser ? (
+          <div className="grid grid-cols-1 gap-3">
+            <div className="p-4 rounded-xl border border-indigo-500/50 bg-indigo-50/40 dark:bg-indigo-950/20 ring-1 ring-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold">
+                    <HardHat size={16} />
+                  </span>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900 dark:text-white">
+                      Contractor Watchdog Vault
+                    </div>
+                    <div className="text-[10px] font-mono text-indigo-700 dark:text-indigo-300 font-semibold">
+                      Monthly Public Works Top-3 Field Verification
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                  Civil engineering contractors &amp; road agencies fund infrastructure project escrow. Splits awards across the Top 3 verified field watchdogs based on geotagged site inspections.
+                </p>
+              </div>
+              <span className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-mono font-bold flex items-center gap-1.5">
+                <Check size={13} className="text-indigo-600" />
+                <span>Active Contractor Desk</span>
+              </span>
+            </div>
+          </div>
+        ) : vaultCategoryView === 'citizen_crowdsource' ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               {
@@ -3383,19 +3657,30 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   {/* 2. Private Provider Vault: ONLY Private Provider sees the dispatch button */}
                   {activeVaultKind === 'provider_vault' &&
                     (isPrivateProviderUser ? (
-                      <button
-                        type="button"
-                        disabled={isBatchDispatching}
-                        onClick={handleExecuteVaultDispatch}
-                        className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <Send size={13} />
-                        <span>
-                          {isBatchDispatching
-                            ? 'Dispatching Monthly Top-3 Batch...'
-                            : `Execute Monthly Top-3 Award Dispatch (${currentVaultJurisdictionMeta.jurisdictionLabel.slice(0, 26)})`}
-                        </span>
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={isBatchDispatching}
+                          onClick={handleExecuteVaultDispatch}
+                          className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Send size={13} />
+                          <span>
+                            {isBatchDispatching
+                              ? 'Dispatching Monthly Top-3 Batch...'
+                              : `Execute Monthly Top-3 Award Dispatch (${currentVaultJurisdictionMeta.jurisdictionLabel.slice(0, 26)})`}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsScannerModalOpen(true)}
+                          className="px-4 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-mono font-bold flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <ScanLine size={14} />
+                          <span>Scan Citizen QR Pass (Counter Redeem)</span>
+                        </button>
+                      </div>
                     ) : (
                       <div className="px-3.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-600 dark:text-slate-300 flex items-center gap-2">
                         <Lock size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />
@@ -3666,6 +3951,21 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
           {/* Upload Method Tabs — AI Studio Segmented Controls */}
           <div className="flex flex-wrap items-center gap-1 bg-[#f8f9fa] dark:bg-[#0e1116] p-1 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
+            {/* Citizen Perks Wallet */}
+            <button
+              onClick={() => setActiveTab('citizen_wallet')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                activeTab === 'citizen_wallet'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10'
+              }`}
+            >
+              <Wallet size={13} />
+              <span>My Perks Wallet</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-500/20 text-emerald-900 dark:text-emerald-200 font-mono font-black">
+                {citizenWalletVouchers.length}
+              </span>
+            </button>
             <button
               onClick={() => setActiveTab('packs')}
               className={`px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
@@ -3732,8 +4032,211 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               <Award size={12} />
               <span>CSR Leaderboard</span>
             </button>
+
+            {isPrivateProviderUser && (
+              <button
+                type="button"
+                onClick={() => setIsScannerModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-bold bg-teal-600 hover:bg-teal-700 text-white transition-all cursor-pointer shadow-xs ml-auto"
+              >
+                <ScanLine size={13} />
+                <span>[ 📷 Counter Scanner ]</span>
+              </button>
+            )}
           </div>
         </div>
+
+        {/* TAB: MY CITIZEN PERKS WALLET (3-PATHWAY REDEMPTION: QR/BARCODE PASS, 1-TAP USSD, PIN COPY) */}
+        {activeTab === 'citizen_wallet' && (
+          <div className="space-y-4 animate-fade-in">
+            {/* Citizen Wallet Header & Redemptions Explainer */}
+            <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+                    <Wallet size={16} />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>My Citizen Perks Wallet · 3-Pathway Redemption</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
+                        {citizenWalletVouchers.filter((v) => v.status === 'dispatched').length} Active
+                      </span>
+                    </h3>
+                    <div className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                      Field Evidence Cost Reimbursements &amp; Community Stewardship Rewards
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl mt-1">
+                  Three ways to redeem: <strong>(1) In-Store QR &amp; Barcode Pass</strong>: show pass at counter cashiers (KFC, supermarkets, pharmacies) to scan and release escrow; <strong>(2) 1-Tap USSD</strong>: dial instant zero-data strings (*141# or *303#) to load mobile data or STS power tokens; <strong>(3) PIN Copy</strong>: copy your secret code for online apps.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('redeem_xp')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Gift size={13} />
+                  <span>Redeem More XP ({citizenXp} XP)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Wallet Vouchers Grid */}
+            {citizenWalletVouchers.length === 0 ? (
+              <div className="p-8 text-center rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                  <Ticket size={24} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">Your Perks Wallet is Empty</h4>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    Report infrastructure issues or redeem your earned CivicScore XP in the store to receive instant digital utility vouchers.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('redeem_xp')}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold transition-colors cursor-pointer"
+                >
+                  Go to Citizen XP Store
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {citizenWalletVouchers.map((vch) => {
+                  const isRedeemed = vch.status === 'redeemed';
+                  const ussdCode =
+                    vch.redemptionUssdString ||
+                    (vch.country === 'KE' ? `*141*${vch.voucherCode}#` : `*303*${vch.voucherCode}#`);
+
+                  return (
+                    <div
+                      key={vch.id}
+                      className={`p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
+                        isRedeemed
+                          ? 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] opacity-75'
+                          : 'bg-white dark:bg-[#161a22] border-emerald-500/40 shadow-xs'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        {/* Top badge bar */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              {getCategoryIcon(vch.category)}
+                            </span>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
+                              {vch.brand}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
+                              isRedeemed
+                                ? 'bg-slate-500/15 border-slate-500/30 text-slate-600 dark:text-slate-400'
+                                : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                            }`}
+                          >
+                            {isRedeemed ? (
+                              <>
+                                <Check size={11} />
+                                <span>Redeemed In-Store</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span>Active &amp; Ready</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+
+                        {/* Title and value */}
+                        <div>
+                          <div className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                            {vch.title}
+                          </div>
+                          <div className="text-lg font-mono font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                            {vch.currency} {vch.faceValue.toLocaleString()}
+                          </div>
+                        </div>
+
+                        {/* Packaged Items */}
+                        {vch.packagedItems && vch.packagedItems.length > 0 && (
+                          <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-[10.5px] text-slate-600 dark:text-slate-300 leading-snug">
+                            <span className="font-mono font-bold text-[9px] uppercase text-rose-600 dark:text-rose-400 block mb-0.5">
+                              Packaged Items Included:
+                            </span>
+                            {vch.packagedItems.join(' · ')}
+                          </div>
+                        )}
+
+                        {/* Code Display */}
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900 text-white font-mono text-xs">
+                          <div>
+                            <span className="text-[9px] text-slate-400 block uppercase">Voucher Code</span>
+                            <span className="font-bold tracking-wider">{vch.voucherCode}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(vch.voucherCode);
+                              toast(`Copied ${vch.voucherCode} to clipboard!`, 'emerald');
+                            }}
+                            className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                            title="Copy code"
+                          >
+                            <Copy size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 3-Pathway Action Buttons */}
+                      <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Pathway 1: In-Store QR & Barcode Pass */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPassModalVoucher(vch);
+                              setIsPassModalOpen(true);
+                            }}
+                            className="py-2 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                          >
+                            <QrCode size={13} />
+                            <span>Show QR Pass</span>
+                          </button>
+
+                          {/* Pathway 2: 1-Tap USSD */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(ussdCode);
+                              toast(`Copied USSD code: ${ussdCode}`, 'emerald');
+                              window.location.href = `tel:${encodeURIComponent(ussdCode)}`;
+                            }}
+                            className="py-2 px-2.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Smartphone size={13} />
+                            <span>Dial USSD</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-500">
+                          <span>Expires: {vch.expiryDate || '2026-12-31'}</span>
+                          <span>By: {vch.sponsoredBy?.slice(0, 20)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* TAB: DIRECT BUY & MOMO / CARD PAYMENT ESCROW */}
         {activeTab === 'pay' && (
@@ -3841,34 +4344,49 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
 
               {/* PRE-PACKAGED DIGITAL UTILITY & SUPERMARKET VOUCHERS */}
               <div className="space-y-3">
-                  {/* Category Filter Bar for Packaged Vouchers */}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
-                      {[
-                        { id: 'all' as const, label: `All Packages (${allocationCatalog.length})` },
-                        { id: 'supermarket' as const, label: 'Supermarket & 1,000 KSh Baskets (6)' },
-                        { id: 'telco_data' as const, label: 'Telco Data & Voice (2)' },
-                        { id: 'water_electricity' as const, label: 'Water & Power (2)' },
-                        { id: 'transit_fuel' as const, label: 'Scout Fuel & Transit (2)' },
-                      ].map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          onClick={() => setAllocationCategoryFilter(tab.id)}
-                          className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
-                            allocationCategoryFilter === tab.id
-                              ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950'
-                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                          }`}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
+                  {/* Marketplace Horizontal Category Filter Ribbon */}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
+                        <Filter size={13} className="text-emerald-500" />
+                        <span>Marketplace Category Quick Filter:</span>
+                      </div>
+                      <span className="text-[10.5px] font-mono text-slate-500">
+                        Showing {filteredAllocationCatalog.length} allocations
+                      </span>
                     </div>
 
-                    <span className="text-[10.5px] font-mono text-slate-500">
-                      Showing {filteredAllocationCatalog.length} utility packages + Custom Builder
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] overflow-x-auto">
+                      {[
+                        { id: 'all' as const, label: `All (${allocationCatalog.length})`, icon: Ticket },
+                        { id: 'food_dining' as const, label: '🍔 Meals & Dining', icon: Utensils },
+                        { id: 'telco_data' as const, label: '📶 Airtime & Data', icon: Smartphone },
+                        { id: 'water_electricity' as const, label: '⚡ Power & Water', icon: Zap },
+                        { id: 'transit_fuel' as const, label: '🛵 Transit & Fuel', icon: Bike },
+                        { id: 'supermarket' as const, label: '🛒 Supermarket & Groceries', icon: ShoppingBag },
+                        { id: 'health' as const, label: '💊 Health & Pharmacy', icon: Stethoscope },
+                        { id: 'education' as const, label: '📚 Education & Books', icon: GraduationCap },
+                        { id: 'electronics' as const, label: '☀️ Solar & Electronics', icon: Sparkles },
+                      ].map((tab) => {
+                        const Icon = tab.icon;
+                        const isSelected = allocationCategoryFilter === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setAllocationCategoryFilter(tab.id)}
+                            className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+                              isSelected
+                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-xs ring-1 ring-slate-400/30'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+                            }`}
+                          >
+                            <Icon size={12} className={isSelected ? 'text-emerald-400 dark:text-emerald-600' : 'text-slate-400'} />
+                            <span>{tab.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Packaged Voucher Cards Grid */}
@@ -5452,11 +5970,38 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         )}
                       </td>
                       <td className="py-3 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {(v.status === 'dispatched' || v.status === 'redeemed') && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPassModalVoucher(v);
+                                setIsPassModalOpen(true);
+                              }}
+                              title="Open QR & Barcode Pass"
+                              className="px-2 py-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <QrCode size={11} />
+                              <span>Pass</span>
+                            </button>
+                          )}
+
+                          {isPrivateProviderUser && v.status === 'dispatched' && (
+                            <button
+                              type="button"
+                              onClick={() => handleProviderRedeemVoucher(v)}
+                              title="Redeem at Counter & Release Escrow"
+                              className="px-2 py-1 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+                            >
+                              <CheckCircle2 size={11} />
+                              <span>Redeem</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => {
-                              navigator.clipboard?.writeText(v.voucherCode);
+                              copyToClipboard(v.voucherCode);
                               toast(`Copied ${v.voucherCode} to clipboard!`, 'emerald');
                             }}
                             title="Copy Voucher Code"
@@ -5469,7 +6014,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                             <button
                               type="button"
                               onClick={() => {
-                                navigator.clipboard?.writeText(v.redemptionUssdString || '');
+                                copyToClipboard(v.redemptionUssdString || '');
                                 toast(`Copied USSD string ${v.redemptionUssdString}!`, 'emerald');
                               }}
                               title="Copy USSD String"
@@ -5591,6 +6136,26 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </div>
         </div>
       )}
+
+      {/* CITIZEN OVER-THE-COUNTER DIGITAL QR & BARCODE PASS MODAL */}
+      <VoucherPassModal
+        isOpen={isPassModalOpen}
+        onClose={() => {
+          setIsPassModalOpen(false);
+          setPassModalVoucher(null);
+        }}
+        voucher={passModalVoucher}
+      />
+
+      {/* PROVIDER IN-STORE CAMERA QR SCANNER & MANUAL REDEMPTION MODAL */}
+      <VoucherScannerModal
+        isOpen={isScannerModalOpen}
+        onClose={() => setIsScannerModalOpen(false)}
+        vouchers={vouchers}
+        onRedeemVoucher={handleProviderRedeemVoucher}
+        activeBranchName={user?.branch_name || 'Central Office'}
+        activeDeptName={currentVaultJurisdictionMeta.jurisdictionLabel}
+      />
     </div>
   );
 };

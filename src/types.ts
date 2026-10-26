@@ -125,6 +125,37 @@ export interface TerritoryNode {
   children?: TerritoryNode[];
 }
 
+export interface BranchTeam {
+  id: string;
+  name: string;
+  lead: string;
+  category: 'operations' | 'service' | 'technical' | 'logistics' | 'management' | string;
+  memberCount: number;
+}
+
+export interface EnterpriseBranch {
+  id: string;
+  deptId: string;
+  brandName: string;
+  name: string;
+  country: CountryCode;
+  district: string;
+  subcounty: string;
+  parish: string;
+  landmark?: string;
+  accessCode: string;
+  managerName?: string;
+  managerPhone?: string;
+  managerEmail?: string;
+  slaHours: number;
+  status: 'active' | 'standby' | 'flagged';
+  teams: BranchTeam[];
+  openTicketsCount: number;
+  resolvedTicketsCount: number;
+  ratingScore: number;
+  created_at: string;
+}
+
 export interface ClaimedEntityRecord {
   deptId: string;
   country: CountryCode;
@@ -151,6 +182,7 @@ export interface ClaimedEntityRecord {
   customIcon?: string;
   customHotline?: string;
   customWebsite?: string;
+  branches?: EnterpriseBranch[];
   updatedAt?: string;
 }
 
@@ -163,6 +195,7 @@ export interface Department {
   country?: CountryCode;
   sla: number; // in hours
   lane?: LaneType;
+  branches?: EnterpriseBranch[];
   category?: EntityCategory;
   sector?: string;
   trustScore?: number; // 0-100%
@@ -518,6 +551,12 @@ export interface GovCodeData {
   duty_station?: string;
   contact_phone?: string;
   permissions?: EntityRolePermissions;
+  branch_id?: string;
+  branch_name?: string;
+  branch_district?: string;
+  branch_subcounty?: string;
+  branch_parish?: string;
+  is_superadmin?: boolean;
 }
 
 export interface Invite {
@@ -543,6 +582,8 @@ export interface Invite {
   escalation_rank?: number;
   invited_by?: string;
   invited_at?: string;
+  branch_id?: string;
+  branch_name?: string;
 }
 
 export interface TeamMember {
@@ -577,6 +618,11 @@ export interface TeamMember {
   joinedAt?: string;
   hierarchy_level?: 'tier1_parish' | 'tier2_subcounty' | 'tier3_district_cao' | 'tier4_agency' | 'tier5_perm_sec';
   escalation_rank?: number;
+  branch_id?: string;
+  branch_name?: string;
+  branch_district?: string;
+  branch_subcounty?: string;
+  branch_parish?: string;
 }
 
 export interface AuditEntry {

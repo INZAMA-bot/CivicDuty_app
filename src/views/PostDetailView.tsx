@@ -1577,16 +1577,16 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                 <CheckCheck size={16} />
               </div>
               <div>
-                <h4 className="text-xs sm:text-sm font-black text-emerald-950 dark:text-emerald-300">
-                  72-Hour Community Ratification Window
+                <h4 className="text-xs sm:text-sm font-black text-emerald-950 dark:text-emerald-300 flex items-center gap-1.5">
+                  <span>BE HEARD · 72-Hour Citizen Ratification Loop</span>
                 </h4>
                 <p className="text-[10px] text-slate-700 dark:text-slate-300 font-medium">
-                  Official marked this issue as resolved. Ground ratification is required to close.
+                  Frontline service desk marked this issue as resolved. Citizen ratification is required to close the statutory SLA docket and release civic perks.
                 </p>
               </div>
             </div>
             <span className="text-[8.5px] mono font-black px-2 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-950 text-emerald-950 dark:text-emerald-300 border border-emerald-400">
-              DUAL-VERIFY
+              BE HEARD
             </span>
           </div>
 

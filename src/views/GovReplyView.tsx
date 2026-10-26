@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept, pathStr, timeAgo } from '../utils/helpers';
-import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon, Gift, Sparkles, Ticket, Copy, Check } from 'lucide-react';
+import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon, Gift, Sparkles, Ticket, Copy, Check, MapPin, Store, CheckCircle2 } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { NoteBox } from '../components/NoteBox';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
@@ -28,6 +28,8 @@ export const GovReplyView: React.FC = () => {
   );
   const isDining = Boolean(
     user?.dept?.includes('javas') ||
+    user?.dept?.includes('kfc') ||
+    user?.organization_name?.toLowerCase().includes('kfc') ||
     user?.organization_name?.toLowerCase().includes('cafe') ||
     user?.organization_name?.toLowerCase().includes('restaurant') ||
     user?.entity_category === 'food_dining' ||
@@ -42,10 +44,10 @@ export const GovReplyView: React.FC = () => {
     isSchool
       ? '10,000 UGX School Scholastic & Stationery Voucher'
       : isDining
-      ? '5,000 UGX Café Javas Coffee / Snack Voucher'
+      ? '15,000 UGX Meal & Refreshment Courtesy Voucher'
       : 'MTN 1.5GB Civic Data Bundle'
   );
-  const [courtesyValue, setCourtesyValue] = useState<number>(isSchool ? 10000 : 5000);
+  const [courtesyValue, setCourtesyValue] = useState<number>(isSchool ? 10000 : isDining ? 15000 : 5000);
   const [courtesyNote, setCourtesyNote] = useState<string>(
     'Thank you for bringing this to our attention. Please accept this courtesy token from our team in appreciation for your constructive feedback.'
   );
@@ -235,14 +237,26 @@ export const GovReplyView: React.FC = () => {
         >
           <ChevronLeft size={14} /> Official Inbox
         </button>
-        <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">
-          Official Response Desk
+        <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold flex items-center justify-between">
+          <span>Official Response Desk</span>
+          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+            SERVE Active Mode
+          </span>
         </div>
-        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
-          {user.real_title_short || d.name}
-        </h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
+            {user.organization_name || user.real_title_short || d.name}
+          </h2>
+          {user.branch_name && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 text-[10px] font-mono font-bold border border-purple-200 dark:border-purple-800">
+              <Store size={10} className="text-purple-600 dark:text-purple-400" />
+              Branch: {user.branch_name}
+              {user.branch_parish ? ` · ${user.branch_parish}` : ''}
+            </span>
+          )}
+        </div>
         <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
-          {user.role_label || ''} · {user.scope_label || ''}
+          {user.role_label || ''} · {user.duty_station || user.scope_label || ''}
         </p>
       </div>
 
@@ -274,6 +288,53 @@ export const GovReplyView: React.FC = () => {
 
       {/* Response & Evidence Studio Card */}
       <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+        {/* SERVE Mobile Rapid Responder Action Bar */}
+        <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-300/70 dark:border-emerald-800/60 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+              <span>SERVE · Rapid Responder Action Bar</span>
+            </span>
+            <span className="text-[9px] font-mono text-emerald-700 dark:text-emerald-300">1-Tap Field Presets</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('investigating');
+                setReplyText('Crew dispatched to site. Rapid field inspection and rectification are actively underway.');
+                toast('SERVE: Dispatched crew preset applied', 'emerald');
+              }}
+              className="px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-slate-800 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 font-mono font-bold text-[10px] flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <span>🛵 Dispatch Crew</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('received');
+                setReplyText('Logged with duty lead. Initial assessment underway within statutory SLA.');
+                toast('SERVE: Acknowledged preset applied', 'emerald');
+              }}
+              className="px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 text-slate-800 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 font-mono font-bold text-[10px] flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <span>🔍 Field Review</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setAttachCourtesyVoucher(true);
+                toast('SERVE: Courtesy compensation token enabled', 'emerald');
+              }}
+              className="px-2.5 py-2 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-slate-800 font-mono font-bold text-[10px] flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <span>🎁 Issue Token</span>
+            </button>
+          </div>
+        </div>
+
         {/* Status Picker */}
         <div className="space-y-2">
           <label className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">Update Status</label>
