@@ -546,25 +546,29 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         /* =========================================================================
            1. COLLAPSED LAUNCHER BAR (Zero-Clutter Feed Entry Point)
            ========================================================================= */
-        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-[#f8f9fa] via-white to-emerald-50/25 dark:from-[#0e1116] dark:via-[#161a22] dark:to-emerald-950/20">
-          <div className="flex items-center justify-between gap-3">
+        <div className="p-3 sm:p-4 bg-white dark:bg-[#161a22] transition-colors">
+          <div className="flex items-center justify-between gap-2.5">
             <button
               type="button"
               onClick={() => {
                 setExpanded(true);
                 setTimeout(() => textareaRef.current?.focus(), 60);
               }}
-              className="flex-1 flex items-center gap-3 text-left group cursor-pointer min-w-0"
+              className="flex-1 flex items-center gap-2.5 text-left group cursor-pointer min-w-0"
             >
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-xs transition group-hover:scale-105 shrink-0">
-                <Plus size={20} strokeWidth={2.4} />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-xs transition group-hover:scale-105 shrink-0">
+                <Plus size={18} strokeWidth={2.5} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate">
-                  + Submit an on-ground civic report or commendation...
+                  Report an on-ground issue or commendation...
                 </div>
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                  To {selectedDeptObj.name} · {parish} / {subcounty} · Guaranteed {selectedDeptObj.sla || 48}h SLA
+                <div className="text-[10px] sm:text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1.5">
+                  <span className="truncate">To {selectedDeptObj.name}</span>
+                  <span className="text-slate-400">·</span>
+                  <span className="truncate">📍 {parish || 'Local Parish'}</span>
+                  <span className="hidden sm:inline text-slate-400">·</span>
+                  <span className="hidden sm:inline font-semibold text-emerald-600 dark:text-emerald-400">{selectedDeptObj.sla || 48}h SLA</span>
                 </div>
               </div>
             </button>
@@ -575,10 +579,10 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                 setExpanded(true);
                 setTimeout(() => textareaRef.current?.focus(), 60);
               }}
-              className="px-3.5 py-2 rounded-lg text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
+              className="px-3.5 py-2 rounded-xl text-xs font-mono font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-2xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
             >
+              <Send size={12} className="hidden sm:inline" />
               <span>DISPATCH</span>
-              <span className="hidden sm:inline">REPORT</span>
             </button>
           </div>
         </div>

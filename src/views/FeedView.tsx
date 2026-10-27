@@ -887,7 +887,55 @@ export const FeedView: React.FC = () => {
         )}
       </div>
 
-      {/* 2b. CRITICAL: NEAR ME GRASSROOTS HIERARCHY CONTROLS (PARISH · WARD · GRASSROOT) */}
+      {/* 1. MOBILE-FIRST ON-GROUND DISPATCH COMPOSER */}
+      <div className="p-3 sm:px-4 sm:py-3.5 bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36]">
+        <CivicFeedDispatcher />
+      </div>
+
+      {/* 2. CONTEXTUAL GRASSROOTS STRIPS */}
+      {/* 2a. FOLLOWING DESKS & LEADERSHIP STRIP */}
+      {feedTab === 'following' && (
+        <div className="bg-[#f8f9fa] dark:bg-[#0d101a] border-b border-slate-200/90 dark:border-[#1e2536] px-3.5 sm:px-4 py-2.5">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              Grassroots Desks &amp; Authorities You Follow ({followed.length})
+            </span>
+            <span className="text-[11px] text-slate-500 font-mono">1-Tap Follow</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            {[
+              { id: 'kcca', name: 'City Authority', label: 'KCCA' },
+              { id: 'nwsc', name: 'Water & Sewerage', label: 'NWSC' },
+              { id: 'umeme', name: 'Power Grid', label: 'Umeme' },
+              { id: 'moh_ug', name: 'Health Ministry', label: 'MoH' },
+              { id: 'kla_cbd', name: 'Central Ward Desk', label: 'Central Ward' },
+              { id: 'nakasero_chief', name: 'Nakasero Chief', label: 'Nakasero Parish' },
+            ].map((d) => {
+              const isF = followed.includes(d.id);
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => toggleFollowDept(d.id)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer flex items-center gap-1 ${
+                    isF
+                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      : 'bg-white dark:bg-[#111520] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1e2536] hover:border-slate-400'
+                  }`}
+                >
+                  <span>{d.label}</span>
+                  <span className={`text-[10px] ${isF ? 'text-emerald-400 dark:text-emerald-600' : 'text-slate-400'}`}>
+                    {isF ? '✓' : '+'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 2b. NEAR ME GRASSROOTS HIERARCHY CONTROLS (PARISH · WARD · GRASSROOT) */}
       {feedTab === 'near_me' && (
         <div className="bg-[#f8f9fa] dark:bg-[#0d101a] border-b border-slate-200/90 dark:border-[#1e2536] p-3 sm:p-3.5 space-y-2.5">
           {/* Header Row: Current Grassroots Scope & View Mode Toggle */}
@@ -1025,146 +1073,43 @@ export const FeedView: React.FC = () => {
         </div>
       )}
 
-      {/* 2d. FOLLOWING DESKS & LEADERSHIP STRIP */}
-      {feedTab === 'following' && (
-        <div className="bg-[#f8f9fa] dark:bg-[#0d101a] border-b border-slate-200/90 dark:border-[#1e2536] px-3.5 sm:px-4 py-2.5">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Grassroots Desks & Authorities You Follow ({followed.length})
-            </span>
-            <span className="text-[11px] text-slate-500">1-Tap Follow</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-            {[
-              { id: 'kcca', name: 'City Authority', label: 'KCCA' },
-              { id: 'nwsc', name: 'Water & Sewerage', label: 'NWSC' },
-              { id: 'umeme', name: 'Power Grid', label: 'Umeme' },
-              { id: 'moh_ug', name: 'Health Ministry', label: 'MoH' },
-              { id: 'kla_cbd', name: 'Central Ward Desk', label: 'Central Ward' },
-              { id: 'nakasero_chief', name: 'Nakasero Chief', label: 'Nakasero Parish' },
-            ].map((d) => {
-              const isF = followed.includes(d.id);
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => toggleFollowDept(d.id)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer flex items-center gap-1 ${
-                    isF
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                      : 'bg-white dark:bg-[#111520] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1e2536] hover:border-slate-400'
-                  }`}
-                >
-                  <span>{d.label}</span>
-                  <span className={`text-[10px] ${isF ? 'text-emerald-400 dark:text-emerald-600' : 'text-slate-400'}`}>
-                    {isF ? '✓' : '+'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 3. SOVEREIGN 3-WAY LIVE BARAZA STRIP (Following: Indigo · Trending: Amber · Near Me: Emerald) */}
+      {/* 3. SOVEREIGN 3-WAY LIVE BARAZA STRIP (Directly Below Grassroots You Follow) */}
       {townHalls && townHalls.length > 0 && (
-        <div className="bg-[#f8f9fa] dark:bg-[#0d101a] border-b border-slate-200/90 dark:border-[#1e2536] px-3.5 sm:px-4 py-2.5">
-          {/* Channel Filters & Active Room Row */}
-          <div className="flex items-center justify-between gap-2.5 flex-wrap">
-            {/* Left: 3-Way Category Channel Pills & Active Status */}
-            <div className="flex items-center gap-2 min-w-0 flex-wrap">
-              {/* Category Filter Pills */}
-              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-200/70 dark:bg-[#161c2a] border border-slate-300/80 dark:border-[#22293d]">
-                <button
-                  type="button"
-                  onClick={() => setBarazaCategoryFilter('all')}
-                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer ${
-                    barazaCategoryFilter === 'all'
-                      ? 'bg-white dark:bg-[#0a0d14] text-slate-900 dark:text-white shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  All ({liveBarazaRooms.length})
-                </button>
+        <div className="bg-[#f8f9fa] dark:bg-[#0d101a] border-b border-slate-200/90 dark:border-[#1e2536] px-3 sm:px-4 py-2.5 transition-colors">
+          {/* Live Baraza Broadcast Row (Single clean mobile-first flex bar) */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Left: Live Beacon + Category Badge + Title & Listeners */}
+            <div
+              onClick={() => activeTopBaraza && setActiveTownHall(activeTopBaraza)}
+              className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer group"
+            >
+              {/* Live Radar Pulse Indicator */}
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${activeMeta.pingBg}`} />
+                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${activeMeta.dotBg}`} />
+              </span>
 
-                {/* Following Channel: Indigo */}
-                <button
-                  type="button"
-                  onClick={() => setBarazaCategoryFilter('following')}
-                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer flex items-center gap-1 ${
-                    barazaCategoryFilter === 'following'
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-950/40'
-                  }`}
-                  title="Following Barazas: Monitored desks and subscribed departments"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                  <span>Following</span>
-                </button>
+              {/* Channel Badge (Trending / Following / Near Me) */}
+              {activeTopBaraza && (
+                <span className={`px-2 py-0.5 rounded text-[9.5px] font-mono font-bold uppercase shrink-0 shadow-2xs ${activeMeta.badgeBg}`}>
+                  {activeMeta.shortLabel}
+                </span>
+              )}
 
-                {/* Trending Channel: Amber */}
-                <button
-                  type="button"
-                  onClick={() => setBarazaCategoryFilter('trending')}
-                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer flex items-center gap-1 ${
-                    barazaCategoryFilter === 'trending'
-                      ? 'bg-amber-600 text-white shadow-2xs'
-                      : 'text-amber-700 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-950/40'
-                  }`}
-                  title="Trending Barazas: High citizen attendance and national audit"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  <span>Trending</span>
-                </button>
-
-                {/* Near Me Channel: Emerald */}
-                <button
-                  type="button"
-                  onClick={() => setBarazaCategoryFilter('near_me')}
-                  className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer flex items-center gap-1 ${
-                    barazaCategoryFilter === 'near_me'
-                      ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/40'
-                  }`}
-                  title="Near Me Barazas: Grassroots parish and ward community assemblies"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Near Me</span>
-                </button>
-              </div>
-
-              {/* Active Room Title & Live Pulse with Category Visual Colors */}
-              {activeTopBaraza ? (
-                <div
-                  onClick={() => setActiveTownHall(activeTopBaraza)}
-                  className="flex items-center gap-2 text-xs truncate cursor-pointer group"
-                >
-                  {/* Distinct Pulsing Radar Dot */}
-                  <span className="relative flex h-2.5 w-2.5 shrink-0">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${activeMeta.pingBg}`} />
-                    <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${activeMeta.dotBg}`} />
-                  </span>
-
-                  <span className={`px-2 py-0.5 rounded text-[9.5px] font-mono font-bold uppercase shadow-2xs ${activeMeta.badgeBg}`}>
-                    {activeMeta.shortLabel}
-                  </span>
-
-                  <span className="font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:underline max-w-[220px] sm:max-w-md">
-                    {activeTopBaraza.title}
-                  </span>
-                  <span className="text-slate-500 font-mono text-[10.5px] shrink-0">
+              {/* Room Title */}
+              <div className="min-w-0 flex-1 flex items-baseline gap-1.5 truncate">
+                <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate group-hover:underline">
+                  {activeTopBaraza ? activeTopBaraza.title : `${upcomingBarazaRooms.length} Scheduled Assemblies`}
+                </span>
+                {activeTopBaraza && (
+                  <span className="text-slate-500 dark:text-slate-400 font-mono text-[10.5px] shrink-0 hidden xs:inline">
                     · {activeTopBaraza.listeners_count || 1} tuned in
                   </span>
-                </div>
-              ) : (
-                <div className="text-xs text-slate-500 font-mono">
-                  {upcomingBarazaRooms.length} Scheduled Assemblies
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Right: Tune In, + Host & Expand buttons */}
+            {/* Right: Actions (Tune In, + Host, Expand toggle) */}
             <div className="flex items-center gap-1.5 shrink-0">
               {activeTopBaraza && (
                 <button
@@ -1188,25 +1133,73 @@ export const FeedView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowBarazaDeck(!showBarazaDeck)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
-                title="Expand 3-channel schedule and rooms"
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+                title="Expand all community assemblies and channel filters"
               >
                 {showBarazaDeck ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
               </button>
             </div>
           </div>
 
-          {/* Expandable 3-Way Categorized Baraza Grid */}
+          {/* Expandable Assemblies Drawer with Channel Filters */}
           {showBarazaDeck && (
             <div className="mt-3 pt-3 border-t border-slate-200/90 dark:border-[#1e2536] space-y-2.5 animate-fade-in">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                <span className="flex items-center gap-1.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Radio size={13} className="text-emerald-500" />
-                  <span>Live &amp; Scheduled Baraza Assemblies by Channel</span>
+                  <span>Assemblies by Channel:</span>
                 </span>
-                <span className="text-[11px] font-mono text-slate-400 font-normal">
-                  Showing {filteredLiveBarazaRooms.length} of {townHalls.length} rooms
-                </span>
+
+                {/* Channel Filter Pills inside Drawer */}
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-200/70 dark:bg-[#161c2a] border border-slate-300/80 dark:border-[#22293d]">
+                  <button
+                    type="button"
+                    onClick={() => setBarazaCategoryFilter('all')}
+                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer ${
+                      barazaCategoryFilter === 'all'
+                        ? 'bg-white dark:bg-[#0a0d14] text-slate-900 dark:text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    All ({liveBarazaRooms.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBarazaCategoryFilter('following')}
+                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer flex items-center gap-1 ${
+                      barazaCategoryFilter === 'following'
+                        ? 'bg-indigo-600 text-white shadow-2xs'
+                        : 'text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-950/40'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                    <span>Following</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBarazaCategoryFilter('trending')}
+                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer flex items-center gap-1 ${
+                      barazaCategoryFilter === 'trending'
+                        ? 'bg-amber-600 text-white shadow-2xs'
+                        : 'text-amber-700 dark:text-amber-400 hover:bg-amber-100/50 dark:hover:bg-amber-950/40'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    <span>Trending</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBarazaCategoryFilter('near_me')}
+                    className={`px-2 py-0.5 rounded-md text-[10.5px] font-mono font-bold transition cursor-pointer flex items-center gap-1 ${
+                      barazaCategoryFilter === 'near_me'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/40'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Near Me</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -1248,8 +1241,8 @@ export const FeedView: React.FC = () => {
         </div>
       )}
 
-      {/* 4. CIVIC PERFORMANCE & ACCOUNTABILITY DOCKET (Department Section Aesthetic) */}
-      <div className="p-3.5 sm:p-4.5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36]">
+      {/* 4. CIVIC PERFORMANCE & ACCOUNTABILITY DOCKET */}
+      <div className="p-3 sm:px-4 sm:py-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36]">
         <AccountabilityDocket
           leftLabel={`${total} Civic Reports`}
           leftSubLabel={`${COUNTRIES[activeUser.country]?.name || 'National'} Statutory SLA`}
@@ -1259,10 +1252,6 @@ export const FeedView: React.FC = () => {
           rightSubLabel={`${greenCount} Confirmed Fixes`}
           high={true}
         />
-
-        <div className="mt-3.5">
-          <CivicFeedDispatcher />
-        </div>
       </div>
 
       {/* 5. Active Filter Indicator Strip (when hashtag or dept filter active) */}

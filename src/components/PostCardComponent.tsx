@@ -456,50 +456,41 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
         {/* Post Body (With RichCivicText and Multi-Language Translation Dropdown) */}
         <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-sans space-y-2">
           {showTranslation ? (
-            <div className="p-3 sm:p-3.5 rounded-xl bg-emerald-50/80 dark:bg-[#0c1613] border border-emerald-300 dark:border-emerald-800/80 text-xs sm:text-sm leading-relaxed text-emerald-950 dark:text-emerald-100 space-y-2 shadow-2xs">
-              <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-emerald-800 dark:text-emerald-300 flex-wrap gap-2 pb-1 border-b border-emerald-200/70 dark:border-emerald-900/60">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Globe2 size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Civic Vernacular Machine Translation</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold">
-                    {ALL_LANGUAGES.find((l) => l.code === selectedTargetLang)?.flag} {ALL_LANGUAGES.find((l) => l.code === selectedTargetLang)?.label}
-                  </span>
+            <div className="p-2.5 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/40 text-xs text-slate-800 dark:text-slate-200 space-y-1.5 animate-fade-in">
+              <div className="flex items-center justify-between text-[9px] font-mono text-emerald-800 dark:text-emerald-300">
+                <div className="flex items-center gap-1">
+                  <Globe2 size={10} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Translated to {ALL_LANGUAGES.find((l) => l.code === selectedTargetLang)?.label}</span>
                 </div>
-
                 <div className="flex items-center gap-2">
-                  <label className="text-[10.5px] lowercase text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-sans">
-                    <span>Target:</span>
-                    <select
-                      value={selectedTargetLang}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedTargetLang(e.target.value as LanguageCode);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="bg-white dark:bg-[#111c18] border border-emerald-300 dark:border-emerald-700/80 rounded-lg px-2 py-0.5 text-xs font-semibold text-slate-900 dark:text-white cursor-pointer shadow-2xs"
-                    >
-                      {ALL_LANGUAGES.map((lang) => (
-                        <option key={lang.code} value={lang.code}>
-                          {lang.flag} {lang.label} ({lang.nativeName})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
+                  <select
+                    value={selectedTargetLang}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setSelectedTargetLang(e.target.value as LanguageCode);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white/80 dark:bg-[#111c18] border border-emerald-300/80 dark:border-emerald-800 rounded px-1.5 py-0.5 text-[8.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    {ALL_LANGUAGES.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.code} · {lang.label}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowTranslation(false);
                     }}
-                    className="text-xs hover:underline font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
-                    title="Return to original dispatch"
+                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:underline cursor-pointer"
                   >
-                    Original ✕
+                    Original
                   </button>
                 </div>
               </div>
-              <p className="italic font-medium leading-relaxed">{getTranslatedBody(selectedTargetLang)}</p>
+              <p className="italic leading-relaxed">{getTranslatedBody(selectedTargetLang)}</p>
             </div>
           ) : (
             <RichCivicText
@@ -518,45 +509,22 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             />
           )}
 
-          {/* Sleek, Minimized Inline Translation Bar */}
-          <div className="pt-1 flex items-center justify-between text-[10.5px] font-mono text-slate-400 gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <Globe2 size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <label className="flex items-center gap-1 shrink-0 cursor-pointer">
-                <span className="text-slate-500 dark:text-slate-400 text-[10px]">Translate:</span>
-                <select
-                  value={selectedTargetLang}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setSelectedTargetLang(e.target.value as LanguageCode);
-                    setShowTranslation(true);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-md px-1.5 py-0.5 text-[10px] font-mono font-medium text-slate-800 dark:text-slate-200 hover:border-emerald-500 transition cursor-pointer max-w-[125px] sm:max-w-[160px] truncate"
-                  title="Select translation language"
-                >
-                  {ALL_LANGUAGES.map((lang) => (
-                    <option key={lang.code} value={lang.code}>
-                      {lang.code} · {lang.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
+          {/* Ultra-Minimal Inline Translation Trigger */}
+          {!showTranslation && (
+            <div className="pt-0.5 flex items-center">
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowTranslation(!showTranslation);
+                  setShowTranslation(true);
                 }}
-                className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer shrink-0 ml-1"
+                className="inline-flex items-center gap-1 text-[9px] font-mono text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer select-none"
               >
-                {showTranslation ? 'Hide' : 'Translate'}
+                <Globe2 size={10} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Translate</span>
               </button>
             </div>
-
-            <span className="text-[9.5px] text-slate-400 font-mono shrink-0">#{post.id.slice(-6).toUpperCase()}</span>
-          </div>
+          )}
         </div>
 
         {/* Quoted Dispatch */}
