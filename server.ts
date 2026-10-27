@@ -1314,7 +1314,7 @@ Session ended.`;
 
   // POST /api/merchant-loyalty/pos-redeem - Merchant Point-of-Sale scans/redeems voucher & triggers 98% escrow payout release
   app.post('/api/merchant-loyalty/pos-redeem', (req, res) => {
-    const { voucherCode, merchantId, merchantName, verifiedByStaff } = req.body || {};
+    const { voucherCode, merchantId, merchantName, verifiedByStaff, branchId, branchName, branchParish } = req.body || {};
 
     if (!voucherCode) {
       return res.status(400).json({ error: 'voucherCode is required' });
@@ -1359,17 +1359,21 @@ Session ended.`;
       releasedAt: nowIso,
       payoutReference: payoutRef,
       payoutMethod: 'Instant Mobile Money Escrow Settlement (98%)',
+      branchId: branchId || undefined,
+      branchName: branchName || undefined,
     };
 
     target.pointOfSaleVerification = {
       redeemedAt: nowIso,
       verifiedBy: verifiedByStaff || merchantName || 'Store Manager',
-      location: target.merchantLocation?.parish || target.jurisdictionLabel || 'Merchant Store',
+      location: branchParish || target.merchantLocation?.parish || target.jurisdictionLabel || 'Merchant Store',
+      branchId: branchId || undefined,
+      branchName: branchName || undefined,
     };
 
     res.json({
       success: true,
-      message: `Voucher validated! 98% payout (${target.currency} ${payout.toLocaleString()}) instantly released from Escrow to ${merchantName || target.brand}.`,
+      message: `Voucher validated! 98% payout (${target.currency} ${payout.toLocaleString()}) instantly released from Escrow to ${branchName ? `${merchantName || target.brand} (${branchName})` : merchantName || target.brand}.`,
       payoutReference: payoutRef,
       voucher: target,
     });
@@ -1456,11 +1460,12 @@ Session ended.`;
 
   // GET /api/merchant-loyalty/z-report - Generates live End-of-Day Z-Report reconciliation
   app.get('/api/merchant-loyalty/z-report', (req, res) => {
-    const { merchantId, merchantName, country = 'UG', cashierId } = req.query as Record<string, string>;
+    const { merchantId, merchantName, country = 'UG', cashierId, branchId } = req.query as Record<string, string>;
 
     const matchingRedeemed = inMemoryPerkVouchers.filter((v) => {
       if (v.status !== 'redeemed') return false;
       if (country && v.country?.toUpperCase() !== country.toUpperCase()) return false;
+      if (branchId && v.merchantPayout?.branchId && v.merchantPayout.branchId !== branchId) return false;
       if (merchantId && v.merchantId && v.merchantId !== merchantId) return false;
       if (merchantName && v.brand && !v.brand.toLowerCase().includes(merchantName.toLowerCase())) return false;
       return true;
@@ -1481,6 +1486,7 @@ Session ended.`;
       merchantName: merchantName || 'Verified Provider Desk',
       country,
       currency,
+      branchId: branchId || undefined,
       metrics: {
         totalVouchersRedeemed: totalRedeemedCount,
         grossSalesValue: grossRedeemedValue,
@@ -1496,6 +1502,7 @@ Session ended.`;
         amount: v.faceValue,
         redeemedAt: v.merchantPayout?.releasedAt || v.updatedAt || new Date().toISOString(),
         verifiedBy: v.pointOfSaleVerification?.verifiedBy || 'Cashier Desk',
+        branchName: v.merchantPayout?.branchName || v.pointOfSaleVerification?.branchName || 'Counter Desk',
       })),
     });
   });

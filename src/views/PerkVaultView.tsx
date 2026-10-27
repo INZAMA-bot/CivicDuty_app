@@ -1748,6 +1748,9 @@ export const PerkVaultView: React.FC = () => {
             ? `${user?.organization_name || user?.name} (${user.branch_name})`
             : user?.organization_name || user?.name || 'Authorized Provider Desk',
           verifiedByStaff: `${user?.name || 'Counter Cashier'}${user?.branch_name ? ` · ${user.branch_name}` : ''}`,
+          branchId: user?.branch_id,
+          branchName: user?.branch_name,
+          branchParish: user?.branch_parish,
         }),
       });
       const data = await res.json();
@@ -1757,7 +1760,7 @@ export const PerkVaultView: React.FC = () => {
         logAudit(
           'PROVIDER_IN_STORE_REDEMPTION',
           data.voucher.id,
-          `In-store scanner redemption for ${data.voucher.voucherCode} (${data.voucher.brand}) by ${user?.name || 'Staff'}`
+          `In-store scanner redemption for ${data.voucher.voucherCode} (${data.voucher.brand}) at ${user?.branch_name || 'Counter Desk'} by ${user?.name || 'Staff'}`
         );
         toast(`Voucher #${data.voucher.voucherCode} redeemed & 98% escrow payout released!`, 'emerald');
       } else {
@@ -1770,6 +1773,15 @@ export const PerkVaultView: React.FC = () => {
             commissionRate: 0.02,
             payoutStatus: 'released',
             releasedAt: new Date().toISOString(),
+            branchId: user?.branch_id,
+            branchName: user?.branch_name,
+          },
+          pointOfSaleVerification: {
+            redeemedAt: new Date().toISOString(),
+            verifiedBy: `${user?.name || 'Staff'}${user?.branch_name ? ` (${user.branch_name})` : ''}`,
+            location: user?.branch_parish || 'Counter POS Terminal',
+            branchId: user?.branch_id,
+            branchName: user?.branch_name,
           },
         };
         setVouchers((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
@@ -1777,7 +1789,19 @@ export const PerkVaultView: React.FC = () => {
         toast(`Voucher #${vch.voucherCode} redeemed & recorded!`, 'emerald');
       }
     } catch {
-      const updated: EscrowPerkVoucher = { ...vch, status: 'redeemed' };
+      const updated: EscrowPerkVoucher = {
+        ...vch,
+        status: 'redeemed',
+        merchantPayout: {
+          payoutAmount: Math.round(vch.faceValue * 0.98),
+          commissionAmount: Math.round(vch.faceValue * 0.02),
+          commissionRate: 0.02,
+          payoutStatus: 'released',
+          releasedAt: new Date().toISOString(),
+          branchId: user?.branch_id,
+          branchName: user?.branch_name,
+        },
+      };
       setVouchers((prev) => prev.map((v) => (v.id === updated.id ? updated : v)));
       toast(`Voucher #${vch.voucherCode} redeemed locally!`, 'emerald');
     }
@@ -6154,6 +6178,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         vouchers={vouchers}
         onRedeemVoucher={handleProviderRedeemVoucher}
         activeBranchName={user?.branch_name || 'Central Office'}
+        activeBranchId={user?.branch_id}
+        activeBranchParish={user?.branch_parish}
         activeDeptName={currentVaultJurisdictionMeta.jurisdictionLabel}
       />
     </div>

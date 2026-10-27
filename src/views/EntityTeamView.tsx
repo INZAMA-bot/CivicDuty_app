@@ -87,8 +87,14 @@ export const EntityTeamView: React.FC = () => {
     execGovLoginByData,
   } = useApp();
 
-  // Active section tab in Entity Team view
-  const [activeTab, setActiveTab] = useState<'staff' | 'branches' | 'invite' | 'roles' | 'pending' | 'audit'>('branches');
+  // Strict Role Division: Corporate Superadmin (HQ) vs Branch Manager
+  const isBranchManager = Boolean(user?.is_branch_manager || (user?.branch_id && !user?.is_superadmin));
+  const isSuperadmin = Boolean(user?.is_superadmin || (!user?.is_branch_manager && !user?.branch_id) || user?.role === 'platform_admin');
+
+  // Active section tab in Entity Team view (Branch Managers default to their branch and squads)
+  const [activeTab, setActiveTab] = useState<'staff' | 'branches' | 'my_branch' | 'invite' | 'roles' | 'pending' | 'audit'>(() => {
+    return isBranchManager ? 'my_branch' : 'branches';
+  });
 
   // Enterprise Branch Network State
   const [branchesList, setBranchesList] = useState<EnterpriseBranch[]>(() => loadAllBranches());
@@ -198,6 +204,34 @@ export const EntityTeamView: React.FC = () => {
     );
   });
 
+  // For Branch Manager: pinpoint their specific branch unit
+  const currentBranch: EnterpriseBranch = branchesList.find(
+    (b) => b.id === user.branch_id || (user.branch_name && b.name.toLowerCase() === user.branch_name.toLowerCase())
+  ) || {
+    id: user.branch_id || 'br-current',
+    deptId: user.dept || 'kfc_ug',
+    brandName: (user.organization_name || 'Brand').split('(')[0]?.trim(),
+    name: user.branch_name || 'My Local Branch',
+    country: user.country || 'UG',
+    district: user.branch_district || 'Kampala District',
+    subcounty: user.branch_subcounty || 'Central Division',
+    parish: user.branch_parish || 'Kamwokya II Parish',
+    accessCode: user.scope?.toUpperCase() || 'BRANCH-MGR-01',
+    managerName: user.officer_name || user.name || 'Branch Manager',
+    managerPhone: user.contact_phone || '+256 772 443 112',
+    slaHours: 12,
+    status: 'active' as const,
+    teams: [
+      { id: 't-default-1', name: 'Front Desk & Guest Care', lead: user.officer_name || 'Branch Manager', category: 'service', memberCount: 5 },
+      { id: 't-default-2', name: 'Operations & Production Crew', lead: 'Operations Lead', category: 'operations', memberCount: 7 },
+      { id: 't-default-3', name: 'Delivery Fleet & Takeaway', lead: 'Dispatcher', category: 'logistics', memberCount: 4 },
+    ],
+    openTicketsCount: 2,
+    resolvedTicketsCount: 48,
+    ratingScore: 94,
+    created_at: new Date().toISOString(),
+  };
+
   const countryTerritories = (TERRITORY as any)[user.country || 'UG'] || [];
   const selectedDistrictNode = countryTerritories.find((d: any) => d.id === selectedDistrictId) || countryTerritories[0];
   const subcountyNodes = selectedDistrictNode?.children || [];
@@ -206,6 +240,10 @@ export const EntityTeamView: React.FC = () => {
 
   const handleCreateBranch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSuperadmin) {
+      toast('Branch provisioning is restricted to Corporate HQ Superadmin.', 'amber');
+      return;
+    }
     if (!newBranchName.trim()) {
       toast('Please enter a branch name', 'amber');
       return;
@@ -523,18 +561,35 @@ export const EntityTeamView: React.FC = () => {
                 {user.entity_category ? user.entity_category.replace(/_/g, ' ') : 'Service Provider Desk'}
               </span>
               <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1">
-                <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" /> Master Entity Desk
+                <ShieldCheck size={12} className="text-emerald-600 dark:text-emerald-400" />
+                {isBranchManager
+                  ? `Branch Manager Desk · ${currentBranch.parish}`
+                  : 'Master Corporate HQ Superadmin Desk'}
               </span>
               <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                ID: {user.dept} · Tier: {user.scope === 'national' ? 'National ($20/mo)' : user.scope === 'subcounty' ? 'Sub-County ($5/mo)' : user.scope === 'parish' ? 'Parish (Free)' : 'District ($10/mo)'}
+                {isBranchManager
+                  ? `Node: ${currentBranch.id} · ${currentBranch.district}`
+                  : `ID: ${user.dept} · Tier: ${user.scope === 'national' ? 'National ($20/mo)' : user.scope === 'subcounty' ? 'Sub-County ($5/mo)' : user.scope === 'parish' ? 'Parish (Free)' : 'District ($10/mo)'}`}
               </span>
             </div>
 
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-              {orgName} · Team &amp; Staff Roster
+              {isBranchManager
+                ? `${currentBranch.brandName} · ${currentBranch.name}`
+                : `${orgName} · Team & Staff Roster`}
             </h1>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              Registered Administrator: <strong>{profTitle}</strong> ({user.name || user.real_title_short || 'Primary Owner'}). Define custom roles, configure permission limits, invite duty staff, and manage Monthly Top-3 Perk Vault dispatches.
+              {isBranchManager ? (
+                <>
+                  Assigned Branch Manager: <strong>{currentBranch.managerName || profTitle}</strong>. 
+                  Manage frontline service squads (Kitchen, Delivery, Service), shift staff, and local parish ticket resolutions.
+                </>
+              ) : (
+                <>
+                  Corporate Superadmin: <strong>{profTitle}</strong> ({user.name || user.real_title_short || 'Primary Owner'}). 
+                  Provision nationwide branches, manage master access codes, define custom roles, and monitor enterprise performance.
+                </>
+              )}
             </p>
           </div>
 
@@ -577,7 +632,9 @@ export const EntityTeamView: React.FC = () => {
         {/* Quick Desk Navigation Bar */}
         <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-wrap items-center justify-between gap-2">
           <span className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
-            Pricing Tiers: Parish Free ($0) · Sub-County $5/mo · District $10/mo · National $20/mo
+            {isBranchManager
+              ? `Local SLA: ${currentBranch.slaHours}h · Jurisdiction: ${currentBranch.parish}, ${currentBranch.district}`
+              : 'Pricing Tiers: Parish Free ($0) · Sub-County $5/mo · District $10/mo · National $20/mo'}
           </span>
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -600,28 +657,66 @@ export const EntityTeamView: React.FC = () => {
 
       {/* 2. Top Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto pb-1">
+        {isBranchManager ? (
+          <button
+            onClick={() => setActiveTab('my_branch')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === 'my_branch'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <Store size={15} />
+            My Branch &amp; Squads ({currentBranch.teams?.length || 0})
+          </button>
+        ) : (
+          <button
+            onClick={() => setActiveTab('branches')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === 'branches'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <Store size={15} />
+            Nationwide Branches ({myBranches.length})
+          </button>
+        )}
+
         <button
           onClick={() => setActiveTab('staff')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'staff'
               ? 'bg-purple-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
           <UserCheck size={15} />
-          Active Team ({myTeam.length})
+          {isBranchManager ? 'Branch Shift Roster' : 'Active Team'} ({myTeam.length})
         </button>
 
         <button
-          onClick={() => setActiveTab('branches')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
-            activeTab === 'branches'
+          onClick={() => setActiveTab('invite')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+            activeTab === 'invite'
               ? 'bg-purple-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
-          <Store size={15} />
-          Nationwide Branches ({myBranches.length})
+          <UserPlus size={15} />
+          {isBranchManager ? 'Issue Branch Pass' : 'Invite Staff Member'}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('roles')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+            activeTab === 'roles'
+              ? 'bg-purple-600 text-white shadow-md'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`}
+        >
+          <Sliders size={15} />
+          Role Definitions &amp; Perms ({entityRoles.length})
         </button>
 
         <button
@@ -650,7 +745,7 @@ export const EntityTeamView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('pending')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'pending'
               ? 'bg-purple-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -662,7 +757,7 @@ export const EntityTeamView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('audit')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'audit'
               ? 'bg-purple-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
@@ -673,8 +768,283 @@ export const EntityTeamView: React.FC = () => {
         </button>
       </div>
 
+      {/* 2.4 TAB CONTENT: MY BRANCH & INTERNAL SQUADS (FOR BRANCH MANAGERS ONLY) */}
+      {activeTab === 'my_branch' && isBranchManager && (
+        <div className="space-y-5">
+          {/* Branch Manager Operational Header */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3.5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold uppercase font-mono text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                    <Store size={13} />
+                    Local Branch Operational Desk
+                  </span>
+                  <span className="text-[9.5px] font-mono uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-bold">
+                    Active Parish Node
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                    ID: {currentBranch.id}
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  {currentBranch.brandName} · {currentBranch.name}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Duty Manager: <strong className="text-slate-900 dark:text-white">{currentBranch.managerName || user.name || 'Branch Manager'}</strong>
+                  {currentBranch.managerPhone && ` · ${currentBranch.managerPhone}`}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => go('perk_vault')}
+                  className="py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Open Counter QR Scanner to redeem citizen perks"
+                >
+                  <Store size={14} />
+                  <span>Open POS Counter Scanner</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveBranchForTeam(currentBranch.id)}
+                  className="py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Deploy New Squad</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar for Branch */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block font-semibold">Parish Jurisdiction</span>
+                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white font-mono block truncate">
+                  {currentBranch.parish}
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400 block truncate">
+                  {currentBranch.subcounty}, {currentBranch.district}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block font-semibold">Branch SLA Target</span>
+                <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono block">
+                  {currentBranch.slaHours} Hours
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400 block">Guaranteed review</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block font-semibold">Internal Service Squads</span>
+                <span className="text-xs sm:text-sm font-bold text-purple-600 dark:text-purple-400 font-mono block">
+                  {currentBranch.teams?.length || 0} Squads
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400 block">
+                  {(currentBranch.teams || []).reduce((acc, t) => acc + (t.memberCount || 0), 0)} Frontline Staff
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <span className="text-[10px] font-mono text-slate-500 uppercase block font-semibold">Branch Rating Score</span>
+                <span className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 font-mono block">
+                  {currentBranch.ratingScore}% CSAT
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400 block">
+                  {currentBranch.resolvedTicketsCount} Verified Fixes
+                </span>
+              </div>
+            </div>
+
+            {/* Strict Notice banner reminding of role boundary */}
+            <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-purple-600 dark:text-purple-400 shrink-0" />
+                <span className="text-[11px] text-slate-700 dark:text-slate-300">
+                  <strong>Branch Manager Boundary:</strong> Your administrative authority is locked to this branch&apos;s local parish jurisdiction. Creation and deletion of nationwide branches is exclusively managed by the Central Superadmin at corporate headquarters.
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-mono text-[9px] font-bold uppercase shrink-0">
+                Superadmin Restricted
+              </span>
+            </div>
+          </div>
+
+          {/* Add Squad Form / Modal inside Branch */}
+          {activeBranchForTeam === currentBranch.id && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border-2 border-purple-500 shadow-lg space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+                <div>
+                  <span className="text-[10px] font-bold uppercase font-mono text-purple-600 dark:text-purple-400">
+                    Internal Branch Administration
+                  </span>
+                  <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    Deploy New Internal Squad in {currentBranch.name}
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveBranchForTeam(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddSubTeam(currentBranch.id);
+                }}
+                className="space-y-3"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Squad Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newSubTeamName}
+                      onChange={(e) => setNewSubTeamName(e.target.value)}
+                      placeholder="e.g. Kitchen Crew, Dispatch Fleet, Field Repair Squad"
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Squad Lead / Supervisor *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newSubTeamLead}
+                      onChange={(e) => setNewSubTeamLead(e.target.value)}
+                      placeholder="e.g. Sarah Namagembe"
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Squad Operational Category
+                    </label>
+                    <select
+                      value={newSubTeamCategory}
+                      onChange={(e) => setNewSubTeamCategory(e.target.value as any)}
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    >
+                      <option value="operations">Operations &amp; Production Crew</option>
+                      <option value="service">Customer Service &amp; Guest Care</option>
+                      <option value="logistics">Delivery Fleet, Dispatch &amp; Logistics</option>
+                      <option value="technical">Technical Repair &amp; Maintenance Squad</option>
+                      <option value="management">Shift Supervisors &amp; Inventory Triage</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Initial Member Headcount
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={newSubTeamMembers}
+                      onChange={(e) => setNewSubTeamMembers(Number(e.target.value))}
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
+                  <button
+                    type="button"
+                    onClick={() => setActiveBranchForTeam(null)}
+                    className="px-3 py-1.5 text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-mono text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                  >
+                    Deploy Squad
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* List of Internal Squads in this Branch */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Active Frontline Squads in this Branch
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Teams handling daily ticket resolutions, food safety prep, customer inquiries, and counter deliveries.
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400">
+                {currentBranch.teams?.length || 0} Deployed
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {(currentBranch.teams || []).map((team) => (
+                <div
+                  key={team.id}
+                  className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col justify-between space-y-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300">
+                        {team.category}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSubTeam(currentBranch.id, team.id)}
+                        className="text-slate-400 hover:text-rose-500 p-0.5 cursor-pointer"
+                        title="Remove Squad"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    <h5 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                      {team.name}
+                    </h5>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Lead: <strong className="text-slate-700 dark:text-slate-300">{team.lead}</strong>
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[10.5px] font-mono">
+                    <span className="text-slate-500 flex items-center gap-1">
+                      <Users size={12} />
+                      {team.memberCount} Staff Assigned
+                    </span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                      Active Shift
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 2.5 TAB CONTENT: NATIONWIDE BRANCHES & SUPERADMIN PROVISIONER */}
-      {activeTab === 'branches' && (
+      {activeTab === 'branches' && isSuperadmin && (
         <div className="space-y-5">
           {/* Header & Metrics */}
           <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">

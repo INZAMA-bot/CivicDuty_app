@@ -69,6 +69,7 @@ export const EntityGatewayView: React.FC = () => {
         role: 'node_admin' as const,
         is_admin: true,
         is_superadmin: false,
+        is_branch_manager: true,
         role_label: `Branch Manager · ${branchMatch.name}`,
         organization_name: `${branchMatch.brandName} (${branchMatch.name})`,
         officer_name: branchMatch.managerName || 'Branch Manager',
@@ -102,6 +103,7 @@ export const EntityGatewayView: React.FC = () => {
             role: 'node_admin' as const,
             is_admin: true,
             is_superadmin: true, // Central Superadmin with nationwide branch provisioning permissions
+            is_branch_manager: false,
             role_label: providerMatch.roleLabel,
             organization_name: providerMatch.orgName,
             officer_name: providerMatch.officerName,
@@ -116,7 +118,7 @@ export const EntityGatewayView: React.FC = () => {
       return;
     }
 
-    execGovLoginByData({ ...data, is_superadmin: true });
+    execGovLoginByData({ ...data, is_superadmin: true, is_branch_manager: false });
     toast(`Provider Desk mounted: ${data.organization_name || targetCode}`, 'emerald');
     go('gov_inbox');
   };

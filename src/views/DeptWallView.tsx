@@ -37,6 +37,7 @@ import {
   Upload,
   Store,
 } from 'lucide-react';
+import { getBranchesForDept } from '../data/enterpriseBranches';
 import { DeptIcon } from '../components/DeptIcon';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
 import { PostCardComponent } from '../components/PostCardComponent';
@@ -83,10 +84,25 @@ export const DeptWallView: React.FC = () => {
   const [nudgeXHandle, setNudgeXHandle] = useState('');
   const [focusedWallPostId, setFocusedWallPostId] = useState<string | null>(null);
   const [wallVouchers, setWallVouchers] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
 
   const country = activeDeptCountry || user?.country || 'UG';
   const did = activeDept || 'kcca';
   const d = getDept(country, did);
+  const deptBranches = getBranchesForDept(did);
+  const userParish = user?.parish || 'Kamwokya II';
+  const nearestBranch = React.useMemo(() => {
+    if (deptBranches.length === 0) return null;
+    const match = deptBranches.find(
+      (b) =>
+        b.parish.toLowerCase().includes(userParish.toLowerCase()) ||
+        userParish.toLowerCase().includes(b.parish.toLowerCase())
+    );
+    return match || deptBranches[0];
+  }, [deptBranches, userParish]);
+  const activeBranch = selectedBranchId
+    ? deptBranches.find((b) => b.id === selectedBranchId) || nearestBranch
+    : nearestBranch;
 
   React.useEffect(() => {
     fetch(`/api/perks/vault?country=${country}`)
@@ -690,6 +706,134 @@ export const DeptWallView: React.FC = () => {
                   <Building2 size={13} />
                   <span>Subscribe Government Desk</span>
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Nationwide Branches & Nearest Outlet Locator (When Entity has Nationwide Branches) */}
+        {deptBranches.length > 0 && activeBranch && (
+          <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] mb-3.5 space-y-3.5 shadow-2xs">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <Store size={14} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>Nationwide Branches &amp; Nearest Outlets</span>
+                    <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                      {deptBranches.length} Outlets
+                    </span>
+                  </h3>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    Direct local manager hotlines &amp; guaranteed local resolution SLAs
+                  </span>
+                </div>
+              </div>
+
+              {nearestBranch && (
+                <div className="flex items-center gap-1.5 text-[10px] font-mono px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <MapPin size={11} className="text-emerald-600 shrink-0" />
+                  <span>Nearest to your parish: <strong>{nearestBranch.name}</strong></span>
+                </div>
+              )}
+            </div>
+
+            {/* Horizontal Branch Selector Ribbon */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {deptBranches.map((b) => {
+                const isSelected = activeBranch.id === b.id;
+                const isNearest = nearestBranch?.id === b.id;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setSelectedBranchId(b.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                        : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500'
+                    }`}
+                  >
+                    <Store size={12} className={isSelected ? 'text-white' : 'text-emerald-600'} />
+                    <span>{b.name}</span>
+                    {isNearest && (
+                      <span
+                        className={`px-1.5 py-0.2 rounded text-[8.5px] font-bold uppercase ${
+                          isSelected ? 'bg-white/25 text-white' : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300'
+                        }`}
+                      >
+                        Nearest
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected Branch Spotlight Card */}
+            <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-bold text-slate-950 dark:text-white">
+                      {activeBranch.name}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                      {activeBranch.status.toUpperCase()}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-mono text-slate-600 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800">
+                      {activeBranch.slaHours}h SLA Guaranteed
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 flex-wrap">
+                    <MapPin size={12} className="text-emerald-600 shrink-0" />
+                    <span>{activeBranch.landmark} · {activeBranch.parish}, {activeBranch.subcounty}, {activeBranch.district}</span>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 text-right">
+                  <div>
+                    <span className="text-[10px] font-mono text-slate-400 block uppercase">Customer CSAT</span>
+                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                      {activeBranch.ratingScore}%
+                    </span>
+                  </div>
+                  <div className="border-l border-[#e3e6ea] dark:border-[#262b36] pl-3">
+                    <span className="text-[10px] font-mono text-slate-400 block uppercase">Resolved</span>
+                    <span className="text-sm font-black text-slate-800 dark:text-slate-200 font-mono">
+                      {activeBranch.resolvedTicketsCount} Tickets
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Branch Manager Direct Contact & Shift Squads */}
+              <div className="pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-slate-500 text-[11px] font-mono">Branch Manager:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">{activeBranch.managerName}</span>
+                  <a
+                    href={`tel:${activeBranch.managerPhone}`}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-bold flex items-center gap-1 transition-colors"
+                  >
+                    <PhoneCall size={11} />
+                    <span>{activeBranch.managerPhone}</span>
+                  </a>
+                </div>
+
+                {activeBranch.teams && activeBranch.teams.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-slate-600 dark:text-slate-400">
+                    <span className="text-slate-400">Shift Squads:</span>
+                    {activeBranch.teams.slice(0, 3).map((tm) => (
+                      <span key={tm.id} className="px-2 py-0.5 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+                        {tm.name} ({tm.memberCount})
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

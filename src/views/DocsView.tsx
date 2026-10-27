@@ -49,25 +49,26 @@ import {
   Bus,
 } from 'lucide-react';
 import { InteractiveRoleSandboxGrid } from '../components/InteractiveRoleSandboxGrid';
+import { MoICTReadinessPanel } from '../components/MoICTReadinessPanel';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
-  const [activeTab, setActiveTab] = useState<'pitch' | 'overview' | 'partner' | 'journeys' | 'architecture'>(() => {
+  const [activeTab, setActiveTab] = useState<'moict_readiness' | 'overview' | 'pitch' | 'partner' | 'journeys' | 'architecture'>(() => {
     try {
       const saved = localStorage.getItem('cd_docs_initial_tab');
-      if (saved === 'journeys' || saved === 'pitch' || saved === 'overview' || saved === 'partner' || saved === 'architecture') {
+      if (saved === 'journeys' || saved === 'pitch' || saved === 'overview' || saved === 'partner' || saved === 'architecture' || saved === 'moict_readiness') {
         localStorage.removeItem('cd_docs_initial_tab');
-        return saved;
+        return saved as any;
       }
     } catch {}
-    return 'overview';
+    return 'moict_readiness';
   });
   const [journeyRole, setJourneyRole] = useState<'citizen' | 'government' | 'entity'>('citizen');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [pitchCountry, setPitchCountry] = useState<string>(user?.country || 'UG');
   
-  // Document Reader State
-  const [selectedDocId, setSelectedDocId] = useState<string>('concept-note');
+  // Document Reader State (defaults to official response to Permanent Secretary)
+  const [selectedDocId, setSelectedDocId] = useState<string>('moict-compliance-dossier');
   const [docSearch, setDocSearch] = useState<string>('');
   const [copiedDoc, setCopiedDoc] = useState<boolean>(false);
 
@@ -360,6 +361,33 @@ export const DocsView: React.FC = () => {
           </div>
         </div>
 
+        {/* Permanent Secretary Letter Response Alert Banner */}
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <FileCheck size={14} />
+            </div>
+            <div className="min-w-0 text-left">
+              <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                <span>Letter Ref: ADM 209/261/01 Response Dossier Active</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-mono">
+                  ACTIONABLE
+                </span>
+              </div>
+              <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                Dr. Aminah Zawedde, Permanent Secretary, MoICT&amp;NG · NDP IV, PDM, NITA-U GIDC Hosting &amp; Bizlink
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('moict_readiness')}
+            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+          >
+            <span>Launch Suite</span>
+            <ArrowRight size={12} />
+          </button>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-0.5 font-semibold">
@@ -439,7 +467,18 @@ export const DocsView: React.FC = () => {
       </div>
 
       {/* Primary Section Switcher Tabs (Studio Segmented Control) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 bg-white dark:bg-[#161a22] p-1.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 bg-white dark:bg-[#161a22] p-1.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold">
+        <button
+          onClick={() => setActiveTab('moict_readiness')}
+          className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'moict_readiness'
+              ? 'bg-emerald-600 text-white font-bold'
+              : 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+          }`}
+        >
+          <FileCheck size={14} />
+          <span>🏛️ MoICT &amp; Launch</span>
+        </button>
         <button
           onClick={() => setActiveTab('overview')}
           className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
@@ -482,7 +521,7 @@ export const DocsView: React.FC = () => {
           }`}
         >
           <Layers size={14} />
-          <span>Journeys &amp; 6 Demos</span>
+          <span>6 Demos</span>
         </button>
         <button
           onClick={() => setActiveTab('architecture')}
@@ -493,12 +532,25 @@ export const DocsView: React.FC = () => {
           }`}
         >
           <Building2 size={14} />
-          <span>{countryData.code} Structure</span>
+          <span>{countryData.code} Tiers</span>
         </button>
       </div>
 
       {/* ========================================================= */}
-      {/* TAB 0: OFFICIAL IN-SCREEN DOCUMENTATION & SLIDE CAROUSEL  */}
+      {/* TAB 0: MoICT STATUTORY COMPLIANCE & PUBLIC LAUNCH SUITE   */}
+      {/* ========================================================= */}
+      {activeTab === 'moict_readiness' && (
+        <MoICTReadinessPanel
+          onOpenDoc={(docId) => {
+            setSelectedDocId(docId);
+            setActiveTab('overview');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      )}
+
+      {/* ========================================================= */}
+      {/* TAB 1: OFFICIAL IN-SCREEN DOCUMENTATION & SLIDE CAROUSEL  */}
       {/* ========================================================= */}
       {activeTab === 'overview' && (() => {
         const activeDoc = OFFICIAL_DOCUMENTS.find((d) => d.id === selectedDocId) || OFFICIAL_DOCUMENTS[0];

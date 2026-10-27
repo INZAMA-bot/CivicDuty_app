@@ -23,6 +23,8 @@ interface VoucherScannerModalProps {
   vouchers: EscrowPerkVoucher[];
   onRedeemVoucher: (voucher: EscrowPerkVoucher) => void;
   activeBranchName?: string;
+  activeBranchId?: string;
+  activeBranchParish?: string;
   activeDeptName?: string;
 }
 
@@ -32,6 +34,8 @@ export const VoucherScannerModal: React.FC<VoucherScannerModalProps> = ({
   vouchers,
   onRedeemVoucher,
   activeBranchName,
+  activeBranchId,
+  activeBranchParish,
   activeDeptName,
 }) => {
   const [cameraActive, setCameraActive] = useState<boolean>(false);
@@ -142,6 +146,22 @@ export const VoucherScannerModal: React.FC<VoucherScannerModalProps> = ({
       const redeemed: EscrowPerkVoucher = {
         ...scannedResult,
         status: 'redeemed',
+        merchantPayout: {
+          payoutAmount: Math.round(scannedResult.faceValue * 0.98),
+          commissionAmount: Math.round(scannedResult.faceValue * 0.02),
+          commissionRate: 0.02,
+          payoutStatus: 'released',
+          releasedAt: new Date().toISOString(),
+          branchId: activeBranchId,
+          branchName: activeBranchName,
+        },
+        pointOfSaleVerification: {
+          redeemedAt: new Date().toISOString(),
+          verifiedBy: `Staff POS · ${activeBranchName || 'Counter'}`,
+          location: activeBranchParish || 'Counter POS Terminal',
+          branchId: activeBranchId,
+          branchName: activeBranchName,
+        },
       };
       onRedeemVoucher(redeemed);
       setScannedResult(redeemed);
@@ -184,13 +204,18 @@ export const VoucherScannerModal: React.FC<VoucherScannerModalProps> = ({
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
           {/* Active Branch Context Pill */}
           {(activeBranchName || activeDeptName) && (
-            <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 flex items-center justify-between text-xs font-mono">
-              <div className="flex items-center gap-1.5 text-purple-900 dark:text-purple-200 font-bold truncate">
-                <Store size={13} className="text-purple-600 dark:text-purple-400 shrink-0" />
+            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 flex items-center justify-between text-xs font-mono">
+              <div className="flex items-center gap-1.5 text-emerald-950 dark:text-emerald-200 font-bold truncate">
+                <Store size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="truncate">{activeBranchName || activeDeptName}</span>
+                {activeBranchParish && (
+                  <span className="text-[10px] font-normal text-emerald-700 dark:text-emerald-400">
+                    ({activeBranchParish})
+                  </span>
+                )}
               </div>
-              <span className="text-[10px] text-purple-700 dark:text-purple-300 font-semibold shrink-0">
-                Authorized Till
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold shrink-0">
+                POS ACTIVE
               </span>
             </div>
           )}

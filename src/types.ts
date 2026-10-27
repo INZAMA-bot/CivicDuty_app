@@ -522,6 +522,13 @@ export interface UserSession {
   subcounty?: string;
   rank?: string;
   profession?: string;
+  is_superadmin?: boolean;
+  is_branch_manager?: boolean;
+  branch_id?: string;
+  branch_name?: string;
+  branch_district?: string;
+  branch_subcounty?: string;
+  branch_parish?: string;
 }
 
 export interface GovCodeData {
@@ -1035,6 +1042,15 @@ export interface EscrowPerkVoucher {
     releasedAt?: string;
     payoutReference?: string;
     payoutMethod?: string;
+    branchId?: string;
+    branchName?: string;
+  };
+  pointOfSaleVerification?: {
+    redeemedAt?: string;
+    verifiedBy?: string;
+    location?: string;
+    branchId?: string;
+    branchName?: string;
   };
   qrCodeData?: string;
   barcode?: string;

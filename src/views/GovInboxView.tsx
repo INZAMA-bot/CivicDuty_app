@@ -56,6 +56,8 @@ import { getCountryPerks } from '../data/countryPerks';
 import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
 import { DeptIcon } from '../components/DeptIcon';
 import { COUNTRIES } from '../data/countries';
+import { getBranchesForDept, loadAllBranches } from '../data/enterpriseBranches';
+import { EnterpriseBranch } from '../types';
 
 export const GovInboxView: React.FC = () => {
   const {
@@ -98,6 +100,7 @@ export const GovInboxView: React.FC = () => {
     'tickets' | 'merchant_pos' | 'bulletins' | 'projects' | 'team' | 'perks' | 'profile'
   >('tickets');
   const [providerTicketSearch, setProviderTicketSearch] = useState('');
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
   const [replyTicket, setReplyTicket] = useState<any | null>(null);
   const [replyText, setReplyText] = useState('');
   const [replyStatus, setReplyStatus] = useState<'investigating' | 'resolved'>('resolved');
@@ -454,16 +457,81 @@ export const GovInboxView: React.FC = () => {
       (p) => p.dept === user.dept || p.contractor?.toLowerCase().includes((user.organization_name || '').toLowerCase())
     );
 
+    const isBranchManager = Boolean(user.is_branch_manager || user.branch_id);
+    const isCorporateSuperadmin = Boolean(!isBranchManager);
+    const deptBranches = getBranchesForDept(user.dept || 'kfc_ug');
+    const myBranch = deptBranches.find((b) => b.id === user.branch_id) || (isBranchManager ? {
+      id: user.branch_id || 'br-local',
+      deptId: user.dept || 'kfc_ug',
+      brandName: user.organization_name || d.name,
+      name: user.branch_name || 'Local Outlet Desk',
+      country: user.country || 'UG',
+      district: user.branch_district || 'Kampala',
+      subcounty: user.branch_subcounty || 'Central Division',
+      parish: user.branch_parish || 'Kamwokya II',
+      landmark: 'Local Branch Desk',
+      accessCode: 'LOCAL-MGR',
+      managerName: user.name || 'Branch Manager',
+      managerPhone: user.contact_phone || '+256 700 000 000',
+      managerEmail: 'branch@provider.com',
+      slaHours: 12,
+      status: 'active' as const,
+      openTicketsCount: 3,
+      resolvedTicketsCount: 20,
+      ratingScore: 95,
+      created_at: new Date().toISOString(),
+      teams: [],
+    } : null);
+
     const filteredProviderQueue = queue.filter((p) => {
       if (providerTicketSearch.trim()) {
         const q = providerTicketSearch.toLowerCase();
-        return (
+        const matchesQuery = (
           p.title?.toLowerCase().includes(q) ||
           p.body?.toLowerCase().includes(q) ||
           p.author?.toLowerCase().includes(q) ||
           p.location?.toLowerCase().includes(q)
         );
+        if (!matchesQuery) return false;
       }
+
+      // Branch Manager Hyperlocal Scoping
+      if (isBranchManager && myBranch) {
+        const pLoc = (p.location || '').toLowerCase();
+        const pParish = (p.territory?.parish || '').toLowerCase();
+        const pSub = (p.territory?.subcounty || '').toLowerCase();
+        const bParish = (myBranch.parish || '').toLowerCase();
+        const bSub = (myBranch.subcounty || '').toLowerCase();
+        const bName = myBranch.name.toLowerCase().replace(/branch|outlet|restaurant|mall/gi, '').trim();
+
+        const matchesBranch =
+          (bParish && (pParish.includes(bParish) || bParish.includes(pParish) || pLoc.includes(bParish))) ||
+          (bName && pLoc.includes(bName)) ||
+          (bSub && pSub.includes(bSub));
+
+        return matchesBranch;
+      }
+
+      // Corporate Superadmin Branch Filter Ribbon
+      if (isCorporateSuperadmin && selectedBranchFilter !== 'ALL') {
+        const targetBranch = deptBranches.find((b) => b.id === selectedBranchFilter);
+        if (targetBranch) {
+          const pLoc = (p.location || '').toLowerCase();
+          const pParish = (p.territory?.parish || '').toLowerCase();
+          const pSub = (p.territory?.subcounty || '').toLowerCase();
+          const bParish = targetBranch.parish.toLowerCase();
+          const bSub = targetBranch.subcounty.toLowerCase();
+          const bName = targetBranch.name.toLowerCase().replace(/branch|outlet|restaurant|mall/gi, '').trim();
+          return (
+            pParish.includes(bParish) ||
+            bParish.includes(pParish) ||
+            pLoc.includes(bParish) ||
+            (bName && pLoc.includes(bName)) ||
+            pSub.includes(bSub)
+          );
+        }
+      }
+
       return true;
     });
 
@@ -744,6 +812,96 @@ export const GovInboxView: React.FC = () => {
               </div>
             </div>
 
+            {/* Branch Manager Hyperlocal Banner */}
+            {isBranchManager && (
+              <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/30 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    <Store size={16} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                        Hyperlocal Branch Queue
+                      </span>
+                      <span className="px-2 py-0.2 rounded-full text-[9px] font-mono bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-500/30">
+                        {myBranch?.name || user.branch_name || 'Assigned Branch'}
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
+                      📍 {myBranch?.parish || user.branch_parish || 'Local Parish'}, {myBranch?.subcounty || user.branch_subcounty || 'Sub-County'}, {myBranch?.district || user.branch_district || 'District'} · Local SLA: {myBranch?.slaHours || 12}h Target
+                    </p>
+                  </div>
+                </div>
+                <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <ShieldCheck size={13} className="text-emerald-600" />
+                  <span>Supervised by {user.name || 'Branch Manager'}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Corporate Superadmin Nationwide Branch Filter Ribbon */}
+            {isCorporateSuperadmin && deptBranches.length > 0 && (
+              <div className="p-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-mono font-bold uppercase text-[10px] text-slate-500 flex items-center gap-1.5">
+                    <Building2 size={12} className="text-emerald-600" />
+                    <span>HQ Corporate Dispatch · Filter by Nationwide Branch</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    {deptBranches.length} Active Nationwide Outlets
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBranchFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                      selectedBranchFilter === 'ALL'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500'
+                    }`}
+                  >
+                    <Building2 size={12} />
+                    <span>All Nationwide Branches ({queue.length})</span>
+                  </button>
+                  {deptBranches.map((b) => {
+                    const branchCount = queue.filter((p) => {
+                      const pLoc = (p.location || '').toLowerCase();
+                      const pParish = (p.territory?.parish || '').toLowerCase();
+                      const bParish = b.parish.toLowerCase();
+                      const bName = b.name.toLowerCase().replace(/branch|outlet|restaurant|mall/gi, '').trim();
+                      return pParish.includes(bParish) || bParish.includes(pParish) || pLoc.includes(bParish) || (bName && pLoc.includes(bName));
+                    }).length;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setSelectedBranchFilter(b.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                          selectedBranchFilter === b.id
+                            ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                            : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-emerald-500'
+                        }`}
+                      >
+                        <MapPin size={11} className={selectedBranchFilter === b.id ? 'text-white' : 'text-emerald-600'} />
+                        <span>{b.name}</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                            selectedBranchFilter === b.id
+                              ? 'bg-white/25 text-white'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                          }`}
+                        >
+                          {branchCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Ticket Cards List */}
             {filteredProviderQueue.length === 0 ? (
               <div className="p-12 text-center rounded-2xl bg-white dark:bg-[#161a22] border border-dashed border-[#e3e6ea] dark:border-[#262b36] space-y-2">
@@ -759,6 +917,19 @@ export const GovInboxView: React.FC = () => {
                   const cat = catByID(t.category);
                   const isResolved = t.status === 'resolved' || t.gov_status === 'resolved';
                   const isInvestigating = t.gov_status === 'investigating';
+                  const branchSla = isBranchManager ? (myBranch?.slaHours || 12) : (d.sla || 24);
+                  const createdTime = t.created_at ? new Date(t.created_at).getTime() : 0;
+                  const elapsedHours = createdTime ? (Date.now() - createdTime) / 3600000 : 0;
+                  const isSlaBreached = !isResolved && elapsedHours > branchSla;
+
+                  const matchedBranch = deptBranches.find((b) => {
+                    const pLoc = (t.location || '').toLowerCase();
+                    const pParish = (t.territory?.parish || '').toLowerCase();
+                    const bParish = b.parish.toLowerCase();
+                    const bName = b.name.toLowerCase().replace(/branch|outlet|restaurant|mall/gi, '').trim();
+                    return pParish.includes(bParish) || bParish.includes(pParish) || pLoc.includes(bParish) || (bName && pLoc.includes(bName));
+                  });
+
                   return (
                     <div
                       key={t.id}
@@ -787,6 +958,18 @@ export const GovInboxView: React.FC = () => {
                             >
                               {isResolved ? 'Resolved' : isInvestigating ? 'In Progress' : 'Pending Review'}
                             </span>
+                            {isSlaBreached && (
+                              <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30 flex items-center gap-1 animate-pulse">
+                                <AlertTriangle size={10} />
+                                <span>SLA Breach ({Math.round(elapsedHours)}h / {branchSla}h)</span>
+                              </span>
+                            )}
+                            {matchedBranch && (
+                              <span className="px-2 py-0.5 rounded text-[9px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+                                <Store size={9} />
+                                <span>{matchedBranch.name}</span>
+                              </span>
+                            )}
                           </div>
 
                           <h3 className="text-sm font-bold text-slate-950 dark:text-white">
@@ -1280,7 +1463,7 @@ export const GovInboxView: React.FC = () => {
                           desc,
                           amount: valNum,
                           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                          cashier: posCashierRole === 'cashier_1' ? 'Cashier #1 (Main Counter)' : posCashierRole === 'cashier_2' ? 'Cashier #2 (Fast-Track)' : 'Bursar / Manager Desk',
+                          cashier: `${posCashierRole === 'cashier_1' ? 'Cashier #1 (Main Counter)' : posCashierRole === 'cashier_2' ? 'Cashier #2 (Fast-Track)' : 'Bursar / Manager Desk'}${user.branch_name ? ` · ${user.branch_name}` : ''}`,
                         },
                         ...prev,
                       ]);
@@ -1293,7 +1476,7 @@ export const GovInboxView: React.FC = () => {
                         awardedPoints: 50,
                         timestamp: new Date().toLocaleTimeString(),
                       });
-                      logAudit('cashier_voucher_redeemed', code, `Cashier validated voucher ${code} for ${desc}`);
+                      logAudit('cashier_voucher_redeemed', code, `Cashier validated voucher ${code} for ${desc} at ${user.branch_name || 'Counter Desk'}`);
                       toast(`Voucher ${code} successfully verified and redeemed at cashier!`, 'emerald');
                       setPosCodeInput('');
                     }}
