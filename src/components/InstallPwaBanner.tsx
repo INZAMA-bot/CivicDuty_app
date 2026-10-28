@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Copy,
   Check,
-  Sparkles,
   ShieldCheck,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';

@@ -59,7 +59,6 @@ import {
   X,
   Users,
   Send,
-  Sparkles,
   Tag,
   Percent,
   ScanLine,
@@ -2882,7 +2881,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
           <div>
             <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider flex-wrap">
-              <Sparkles size={12} />
+              <Award size={12} />
               <span>Five-Vault Jurisdictional &amp; Peer Escrow Architecture</span>
               <span>·</span>
               <span>Monthly Top-3 Final Award (Vaults 1–4) + Instant Peer Tipping (Vault 5)</span>
@@ -4390,7 +4389,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         { id: 'supermarket' as const, label: '🛒 Supermarket & Groceries', icon: ShoppingBag },
                         { id: 'health' as const, label: '💊 Health & Pharmacy', icon: Stethoscope },
                         { id: 'education' as const, label: '📚 Education & Books', icon: GraduationCap },
-                        { id: 'electronics' as const, label: '☀️ Solar & Electronics', icon: Sparkles },
+                        { id: 'electronics' as const, label: '☀️ Solar & Electronics', icon: Zap },
                       ].map((tab) => {
                         const Icon = tab.icon;
                         const isSelected = allocationCategoryFilter === tab.id;

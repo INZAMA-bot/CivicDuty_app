@@ -18,7 +18,7 @@ import {
   UserCheck,
   CheckCircle2,
   Clock,
-  Sparkles,
+  Award,
   Search,
   RefreshCw,
   Eye,
@@ -931,7 +931,7 @@ Dossier Prepared for Bizlink Submission & NIISP Innovation Call 2026/2027
             {/* Direct Audience Demonstration Banner */}
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 space-y-1.5 text-xs">
               <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                <Sparkles size={14} /> Ministry TWG 30-Minute Live Demo
+                <Award size={14} /> Ministry TWG 30-Minute Live Demo
               </span>
               <p className="text-[10.5px] text-slate-600 dark:text-slate-300 leading-relaxed">
                 The technical team is prepared to present a live 30-minute demonstration of the Parish Chief desks, 

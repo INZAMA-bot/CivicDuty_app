@@ -16,7 +16,6 @@ import {
   Unlock,
   CheckCircle2,
   Clock,
-  Sparkles,
   Award,
   Zap,
   Radio,

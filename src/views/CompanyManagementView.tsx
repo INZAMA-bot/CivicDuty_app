@@ -13,7 +13,7 @@ import {
   Handshake,
   MessageSquare,
   ArrowRight,
-  Globe2,
+  Globe,
   Activity,
   Search,
   Users,
@@ -987,7 +987,7 @@ export const CompanyManagementView: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <Globe2 size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <Globe size={15} className="text-emerald-600 dark:text-emerald-400" />
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white font-mono">
                     Primary Production Domain: CivicDuty.site
                   </h4>

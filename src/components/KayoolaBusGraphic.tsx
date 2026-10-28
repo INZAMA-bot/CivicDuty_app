@@ -13,7 +13,7 @@ import {
   GraduationCap,
   HardHat,
   Share2,
-  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { getCountryTransitSpecs } from '../data/promotionalAds';
 
@@ -1245,7 +1245,7 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
       {/* Social Media Share & Caption Studio Bar */}
       <div className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex items-center gap-2">
-          <Sparkles size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
           <div className="text-[11px] font-mono text-slate-700 dark:text-slate-300">
             <strong className="text-slate-900 dark:text-white">Social Media Marketing Pack: </strong>
             1200×600 Banner + 1-Click Caption for Social Promotion

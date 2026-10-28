@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   Search,
-  Sparkles,
+  Award,
   ArrowRight,
   ExternalLink,
   Smartphone,
@@ -619,7 +619,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
               <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border-2 border-emerald-500/40 shadow-xs space-y-3 relative overflow-hidden">
                 <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
                   <span className="text-[10.5px] font-mono uppercase tracking-wider font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                    <Sparkles size={13} />
+                    <Award size={13} />
                     <span>Live Voucher Card Preview</span>
                   </span>
                   <span className="text-[9.5px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">

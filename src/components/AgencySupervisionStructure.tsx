@@ -18,7 +18,6 @@ import {
   ChevronRight,
   MapPin,
   Clock,
-  Sparkles,
   Phone,
   Mail,
   Key,

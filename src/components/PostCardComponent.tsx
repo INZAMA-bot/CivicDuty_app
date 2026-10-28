@@ -35,7 +35,7 @@ import {
   Gift,
   Trash2,
   MoreHorizontal,
-  Globe2,
+  Globe,
   ChevronDown,
   ChevronUp,
   ChevronRight,
@@ -459,7 +459,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             <div className="p-2.5 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/40 text-xs text-slate-800 dark:text-slate-200 space-y-1.5 animate-fade-in">
               <div className="flex items-center justify-between text-[9px] font-mono text-emerald-800 dark:text-emerald-300">
                 <div className="flex items-center gap-1">
-                  <Globe2 size={10} className="text-emerald-600 dark:text-emerald-400" />
+                  <Globe size={11} className="text-emerald-600 dark:text-emerald-400" />
                   <span>Translated to {ALL_LANGUAGES.find((l) => l.code === selectedTargetLang)?.label}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -520,7 +520,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
                 }}
                 className="inline-flex items-center gap-1 text-[9px] font-mono text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer select-none"
               >
-                <Globe2 size={10} className="text-emerald-600 dark:text-emerald-400" />
+                <Globe size={11} className="text-emerald-600 dark:text-emerald-400" />
                 <span>Translate</span>
               </button>
             </div>

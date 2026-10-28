@@ -21,7 +21,6 @@ import {
   Send,
   FileText,
   SlidersHorizontal,
-  Sparkles,
   Search,
   X,
   Building2,
@@ -1221,6 +1220,25 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                           placeholder="e.g. Equatorial Boda Stage, Stall 4B"
                           className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2.5 py-1.5 text-xs font-mono"
                         />
+
+                        {/* Frontline Scout Workstation Guidance */}
+                        <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 space-y-1.5 text-[10.5px]">
+                          <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300">
+                            <Info size={12} className="shrink-0" />
+                            <span>How a Frontline Stage Gets Certified on CivicDuty</span>
+                          </div>
+                          <ul className="space-y-1 text-slate-700 dark:text-slate-300 font-sans leading-relaxed list-disc pl-4">
+                            <li>
+                              <strong>Geotagged Workstation Name:</strong> Enter your stage or workshop name (e.g. <em>Equatorial Boda Stage</em>, <em>Nakasero Market Stall 12</em>). It anchors to your calibrated parish GPS.
+                            </li>
+                            <li>
+                              <strong>15-Scout Peer Consensus:</strong> When 15 frontline riders, drivers, or workers tag this workstation within a 2km radius, the stage is certified on the public ledger.
+                            </li>
+                            <li>
+                              <strong>Frontline Safety Bounties:</strong> Certified stages unlock monthly fuel e-vouchers, emergency airtime packs, and accelerated KCCA/police response SLAs.
+                            </li>
+                          </ul>
+                        </div>
                       </div>
                     )}
                   </div>

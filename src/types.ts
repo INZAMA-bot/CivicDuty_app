@@ -154,6 +154,7 @@ export interface EnterpriseBranch {
   resolvedTicketsCount: number;
   ratingScore: number;
   created_at: string;
+  is_main_branch?: boolean;
 }
 
 export interface ClaimedEntityRecord {
@@ -564,6 +565,7 @@ export interface GovCodeData {
   branch_subcounty?: string;
   branch_parish?: string;
   is_superadmin?: boolean;
+  is_branch_manager?: boolean;
 }
 
 export interface Invite {
@@ -946,7 +948,7 @@ export const MARKETPLACE_CATEGORIES: MarketplaceCategoryDef[] = [
   { id: 'electronics', label: 'Electronics', iconName: 'Tv', description: 'Smartphones, solar kits, radios, batteries & accessories' },
   { id: 'fashion_apparel', label: 'Fashion & Apparel', iconName: 'Shirt', description: 'Clothing, footwear, tailoring & traditional fabrics' },
   { id: 'home_living', label: 'Home & Living', iconName: 'Home', description: 'Furniture, kitchenware, bedding & decor' },
-  { id: 'beauty_personal_care', label: 'Beauty & Personal Care', iconName: 'Sparkles', description: 'Salons, barbers, skincare, cosmetics & toiletries' },
+  { id: 'beauty_personal_care', label: 'Beauty & Personal Care', iconName: 'Award', description: 'Salons, barbers, skincare, cosmetics & toiletries' },
   { id: 'groceries_consumables', label: 'Groceries & Consumables', iconName: 'ShoppingCart', description: 'Supermarkets, bakeries, fresh food & household essentials' },
   { id: 'health_wellness', label: 'Health & Wellness', iconName: 'HeartPulse', description: 'Pharmacies, clinics, wellness centers & diagnostics' },
   { id: 'sports_outdoors', label: 'Sports & Outdoors', iconName: 'Activity', description: 'Sports gear, bicycles, fitness & outdoor equipment' },

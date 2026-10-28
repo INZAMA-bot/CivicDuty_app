@@ -15,11 +15,11 @@ import {
   Layers,
   Compass,
   ArrowRight,
-  Sparkles,
-  Globe2,
+  Globe,
   ScanLine,
   AlertTriangle,
   FileCheck2,
+  CheckCircle2,
 } from 'lucide-react';
 import { DeptIcon } from '../components/DeptIcon';
 
@@ -820,7 +820,7 @@ export const OnboardingCitizenView: React.FC = () => {
                     >
                       <div className="flex items-center justify-between gap-1.5">
                         <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                          <Globe2 size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                          <Globe size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
                           <span>Foreigner Extension</span>
                         </span>
                         <span className="text-[9.5px] font-mono text-amber-700 dark:text-amber-300 font-semibold">
@@ -1343,7 +1343,7 @@ export const OnboardingCitizenView: React.FC = () => {
             }}
             className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
           >
-            <Sparkles size={11} />
+            <CheckCircle2 size={11} />
             <span>Auto-Pick 4</span>
           </button>
         </div>

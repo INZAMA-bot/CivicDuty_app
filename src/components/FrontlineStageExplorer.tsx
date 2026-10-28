@@ -17,7 +17,6 @@ import {
   MapPin,
   ShieldCheck,
   Award,
-  Sparkles,
   HeartHandshake,
   CheckCircle2,
   Users,

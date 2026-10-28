@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronRight, Search, Check, Globe2, X, Compass, Lock, ShieldCheck, FileCheck2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, Check, Globe, X, Compass, Lock, ShieldCheck, FileCheck2 } from 'lucide-react';
 import { CountryCode, IdentityDocumentType } from '../types';
 import { COUNTRIES } from '../data/countries';
 import { useApp } from '../context/AppContext';
@@ -297,7 +297,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
             </div>
             <div className="min-w-0">
               <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Globe2 size={11} strokeWidth={1.75} />
+                <Globe size={11} strokeWidth={1.75} />
                 <span>{label}</span>
               </div>
               <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 mt-0.5 truncate">
@@ -334,7 +334,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
             onClick={() => setIsOpen(true)}
             className="self-start sm:self-auto px-3 py-1.5 rounded-md bg-[#f1f3f4] hover:bg-[#e3e6ea] dark:bg-[#1e232d] dark:hover:bg-[#262b36] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 text-[11px] font-mono font-medium flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
           >
-            <Globe2 size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
+            <Globe size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
             <span>Switch Country</span>
             <ChevronDown size={13} strokeWidth={1.75} />
           </button>
@@ -345,7 +345,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
           onClick={() => setIsOpen(true)}
           className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-medium flex items-center gap-2 transition-all cursor-pointer"
         >
-          <Globe2 size={13} strokeWidth={1.75} />
+          <Globe size={13} strokeWidth={1.75} />
           <span>{currentCountryInfo.name}</span>
           <span className="px-1.5 py-0.5 rounded bg-black/20 text-[10px] font-mono">{currentCode}</span>
           <ChevronDown size={14} strokeWidth={1.75} />
@@ -377,7 +377,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
           onClick={() => setIsOpen(true)}
           className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 dark:hover:border-slate-600 text-slate-800 dark:text-slate-200 transition-all text-xs font-medium cursor-pointer group"
         >
-          <Globe2 size={13} strokeWidth={1.75} className="text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0" />
+          <Globe size={13} strokeWidth={1.75} className="text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0" />
           <span className="truncate max-w-[110px] sm:max-w-[150px] text-[11.5px] font-medium">{currentCountryInfo.name}</span>
           <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-semibold">
             {currentCode}
@@ -401,7 +401,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
             <div className="p-4 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-200 flex items-center justify-center border border-[#e3e6ea] dark:border-[#262b36]">
-                  <Globe2 size={18} strokeWidth={1.75} />
+                  <Globe size={18} strokeWidth={1.75} />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">

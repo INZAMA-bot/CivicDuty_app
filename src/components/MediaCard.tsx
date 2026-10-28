@@ -21,9 +21,8 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronUp,
-  Globe2,
+  Globe,
   Copy,
-  Sparkles,
 } from 'lucide-react';
 
 interface MediaCardProps {
@@ -602,7 +601,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                 {/* Translation Control Bar */}
                 <div className="px-3 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between gap-1.5">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-x-auto scrollbar-none py-0.5">
-                    <Globe2 size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <Globe size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
                     <span className="text-[10px] font-mono font-bold text-indigo-950 dark:text-indigo-200 shrink-0">
                       Translate:
                     </span>
@@ -675,7 +674,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                   <div className="p-3 space-y-1.5 animate-fade-in">
                     <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 border-b border-indigo-50 dark:border-indigo-950/60 pb-1">
                       <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
-                        <Sparkles size={10} />
+                        <CheckCircle2 size={10} />
                         <span>{voiceLang === 'EN' ? 'Original Ground Transcript' : `${voiceLang} Multi-Language Translation`}</span>
                       </span>
                       <span>Verified Transcript Engine</span>

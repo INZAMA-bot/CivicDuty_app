@@ -3,7 +3,7 @@ import {
   X,
   Send,
   Building2,
-  Globe2,
+  Globe,
   AlertTriangle,
   Radio,
   FileSignature,

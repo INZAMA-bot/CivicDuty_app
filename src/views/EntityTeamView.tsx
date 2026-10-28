@@ -88,13 +88,19 @@ export const EntityTeamView: React.FC = () => {
   } = useApp();
 
   // Strict Role Division: Corporate Superadmin (HQ) vs Branch Manager
-  const isBranchManager = Boolean(user?.is_branch_manager || (user?.branch_id && !user?.is_superadmin));
-  const isSuperadmin = Boolean(user?.is_superadmin || (!user?.is_branch_manager && !user?.branch_id) || user?.role === 'platform_admin');
+  const isBranchManager = Boolean(user?.is_branch_manager || (user?.branch_id && !user?.is_superadmin && !user?.is_main_branch));
+  const isSuperadmin = !isBranchManager && Boolean(user?.is_superadmin || user?.is_main_branch || user?.role === 'platform_admin');
 
   // Active section tab in Entity Team view (Branch Managers default to their branch and squads)
   const [activeTab, setActiveTab] = useState<'staff' | 'branches' | 'my_branch' | 'invite' | 'roles' | 'pending' | 'audit'>(() => {
     return isBranchManager ? 'my_branch' : 'branches';
   });
+
+  useEffect(() => {
+    if (isBranchManager && (activeTab === 'branches' || activeTab === 'roles')) {
+      setActiveTab('my_branch');
+    }
+  }, [isBranchManager, activeTab]);
 
   // Enterprise Branch Network State
   const [branchesList, setBranchesList] = useState<EnterpriseBranch[]>(() => loadAllBranches());
@@ -707,41 +713,19 @@ export const EntityTeamView: React.FC = () => {
           {isBranchManager ? 'Issue Branch Pass' : 'Invite Staff Member'}
         </button>
 
-        <button
-          onClick={() => setActiveTab('roles')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
-            activeTab === 'roles'
-              ? 'bg-purple-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-          }`}
-        >
-          <Sliders size={15} />
-          Role Definitions &amp; Perms ({entityRoles.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab('invite')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
-            activeTab === 'invite'
-              ? 'bg-purple-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-          }`}
-        >
-          <UserPlus size={15} />
-          Invite Staff Member
-        </button>
-
-        <button
-          onClick={() => setActiveTab('roles')}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all ${
-            activeTab === 'roles'
-              ? 'bg-purple-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-          }`}
-        >
-          <Sliders size={15} />
-          Role Definitions & Perms ({entityRoles.length})
-        </button>
+        {isSuperadmin && (
+          <button
+            onClick={() => setActiveTab('roles')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === 'roles'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+          >
+            <Sliders size={15} />
+            Role Definitions &amp; Perms ({entityRoles.length})
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab('pending')}

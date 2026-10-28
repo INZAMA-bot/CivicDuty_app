@@ -10,7 +10,7 @@ import {
   Moon,
   BookOpen,
   HelpCircle,
-  Globe2,
+  Globe,
   Terminal,
   FileCheck2,
   Shield,
@@ -140,7 +140,7 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
               htmlFor="hp-lang-select"
               className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1"
             >
-              <Globe2 size={11} strokeWidth={1.75} />
+              <Globe size={11} strokeWidth={1.75} />
               <span>2. Interface Language</span>
             </label>
             <div className="relative">

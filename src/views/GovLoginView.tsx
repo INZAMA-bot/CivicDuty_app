@@ -2,11 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { GOV_CODES } from '../data/tiers';
 import { COUNTRIES } from '../data/countries';
-import {
-  getCountryDesksProfile,
-  EscalationTierItem,
-  AccountingDeskPreset,
-} from '../data/countryDesks';
+import { getCountryDesksProfile, EscalationTierItem, AccountingDeskPreset } from '../data/countryDesks';
+import { findBranchByCode } from '../data/enterpriseBranches';
 import { getPsMinistryInfo } from '../utils/helpers';
 import {
   KeyRound,
@@ -139,8 +136,32 @@ export const GovLoginView: React.FC = () => {
       return;
     }
 
-    // 2. Check GOV_CODES, customGovCodes, or profile.verifiedProviders
-    let match: any = GOV_CODES[clean] || (customGovCodes ? customGovCodes[clean] : undefined);
+    // 1b. Check if clean is a Branch Access Code (Nationwide Superadmin Branch Network)
+    const branchMatch = findBranchByCode(clean);
+    let match: any = branchMatch
+      ? {
+          country: branchMatch.country,
+          dept: branchMatch.deptId,
+          scope: branchMatch.accessCode.toLowerCase(),
+          role: 'node_admin',
+          is_admin: true,
+          is_superadmin: false,
+          is_branch_manager: true,
+          role_label: `Branch Manager · ${branchMatch.name}`,
+          organization_name: `${branchMatch.brandName} (${branchMatch.name})`,
+          officer_name: branchMatch.managerName || 'Branch Manager',
+          branch_id: branchMatch.id,
+          branch_name: branchMatch.name,
+          branch_district: branchMatch.district,
+          branch_subcounty: branchMatch.subcounty,
+          branch_parish: branchMatch.parish,
+          entity_type: 'non_government_entity',
+          entity_category: 'food_dining',
+          is_utility: true,
+          duty_station: `${branchMatch.parish}, ${branchMatch.district}`,
+          contact_phone: branchMatch.managerPhone,
+        }
+      : GOV_CODES[clean] || (customGovCodes ? customGovCodes[clean] : undefined);
     if (!match) {
       for (const c of countryList) {
         const pProf = getCountryDesksProfile(c.code);

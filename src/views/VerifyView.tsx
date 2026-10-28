@@ -11,7 +11,6 @@ import {
   QrCode,
   Camera,
   X,
-  Sparkles,
   ScanLine,
 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
@@ -279,7 +278,7 @@ export const VerifyView: React.FC = () => {
 
             <div className="space-y-1.5">
               <div className="text-[9.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
-                <Sparkles size={11} className="text-emerald-600 dark:text-emerald-400" />
+                <ScanLine size={11} className="text-emerald-600 dark:text-emerald-400" />
                 <span>Instant Optical QR Scan Presets (Field Verification):</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">

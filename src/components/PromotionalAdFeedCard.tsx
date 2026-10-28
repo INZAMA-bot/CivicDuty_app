@@ -24,7 +24,6 @@ import {
   Info,
   Download,
   Image as ImageIcon,
-  Sparkles,
   Copy,
   Maximize2,
   ShieldCheck,
@@ -206,17 +205,17 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
         }`}
       >
         {/* Minimal Compact Header + Multi-Category Switcher Strictly Scoped to Card Objective */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
             <TrafficLightLogo size={16} />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 truncate">
+            <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
               {resolvedMode === 'transit_painting'
                 ? '1. Transit Fleet Painting Proposal'
                 : '2. Frontline Scouts Campaign'}
             </span>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#0e1116] p-0.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
+          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#0e1116] p-0.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] self-start sm:self-auto overflow-x-auto max-w-full">
             {resolvedMode === 'transit_painting' ? (
               <>
                 <button
@@ -298,7 +297,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
               className="w-full h-full object-cover group-hover:scale-[1.015] transition-transform duration-500 select-none"
               loading="lazy"
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
+                (e.currentTarget as HTMLImageElement).src = '/campaign/kayoola_bus_partnership.jpg';
               }}
             />
             {/* Minimal Unobtrusive Zoom Hint on Hover */}
@@ -328,30 +327,30 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
         </div>
 
         {/* Third-Party Platform Transparency Notice */}
-        <div className="px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-[10px] font-mono">
-          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 min-w-0">
-            <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
-            <span className="truncate">
+        <div className="px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[10.5px] font-mono">
+          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+            <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
+            <span>
               <strong>Third-Party Civic Platform:</strong> Enabling frontline scouts to verify public service standards.
             </span>
           </div>
-          <span className="px-2 py-0.5 rounded bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 font-bold shrink-0 border border-emerald-500/20">
+          <span className="px-2 py-0.5 rounded bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 font-bold shrink-0 border border-emerald-500/20 self-start sm:self-auto">
             DIAL {transitSpec.ussdCode}
           </span>
         </div>
 
         {/* Title, Tagline & Action Row */}
-        <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
-          <div className="min-w-0 flex-1">
-            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-0.5">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
               {activeAd.title}
             </h4>
-            <p className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold truncate">
+            <p className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold line-clamp-1">
               {activeAd.tagline}
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center">
             <button
               type="button"
               onClick={handleDownloadPoster}
@@ -376,7 +375,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                 e.stopPropagation();
                 setDetailsModalOpen(true);
               }}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
               <Info size={12} />
               <span>

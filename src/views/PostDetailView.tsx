@@ -51,7 +51,6 @@ import {
   Video,
   Copy,
   Ticket,
-  Sparkles,
 } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { RichCivicText } from '../components/RichCivicText';

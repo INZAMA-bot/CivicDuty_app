@@ -6,7 +6,7 @@ import {
   Lock,
   FileText,
   CheckCircle2,
-  Globe2,
+  Globe,
   Award,
   Printer,
   Copy,
@@ -44,7 +44,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
   if (!isOpen) return null;
 
   const tabs: { id: LegalTabType; label: string; shortLabel: string; icon: React.FC<any> }[] = [
-    { id: 'about', label: 'About CivicDuty', shortLabel: 'About', icon: Globe2 },
+    { id: 'about', label: 'About CivicDuty', shortLabel: 'About', icon: Globe },
     { id: 'privacy', label: 'Privacy Charter', shortLabel: 'Privacy', icon: Lock },
     { id: 'terms', label: 'Terms of Use', shortLabel: 'Terms', icon: FileText },
     { id: 'ethics', label: 'Ethics Covenant', shortLabel: 'Ethics', icon: Scale },
@@ -244,7 +244,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
 
                 <div className="p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-1.5">
                   <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-xs">
-                    <Globe2 size={14} strokeWidth={1.75} className="text-amber-500" />
+                    <Globe size={14} strokeWidth={1.75} className="text-amber-500" />
                     <span>2. Strict Country Access &amp; Foreign Resident Permit Protocol</span>
                   </h4>
                   <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">

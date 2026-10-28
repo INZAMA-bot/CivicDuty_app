@@ -8,7 +8,7 @@ import {
   ArrowUpRight,
   Clock,
   ShieldCheck,
-  Sparkles,
+  Award,
   Server,
   Layers,
   Lock,
@@ -333,7 +333,7 @@ const CATEGORY_META: Record<
   design_aistudio: {
     label: '1. AI Studio Design & Mobile-First UI Audit',
     badge: 'aistudio.google',
-    icon: Sparkles,
+    icon: Award,
   },
   sovereign_hierarchy: {
     label: '2. Sovereign Hierarchy & Bilateral Governance',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept, pathStr, timeAgo } from '../utils/helpers';
-import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon, Gift, Sparkles, Ticket, Copy, Check, MapPin, Store, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon, Gift, Ticket, Copy, Check, MapPin, Store, CheckCircle2 } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { NoteBox } from '../components/NoteBox';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';

@@ -3,6 +3,58 @@ import { EnterpriseBranch, BranchTeam } from '../types';
 export const SEED_ENTERPRISE_BRANCHES: EnterpriseBranch[] = [
   // --- KFC Uganda Nationwide Branches ---
   {
+    id: 'kfc-main-hq',
+    deptId: 'kfc_ug',
+    brandName: 'KFC Uganda',
+    name: 'Main Branch (Kampala National HQ)',
+    country: 'UG',
+    district: 'Kampala',
+    subcounty: 'Central Division',
+    parish: 'Nakasero Parish',
+    landmark: 'Plot 12 Kampala Road, Corporate HQ Tower',
+    accessCode: 'KFC-UG-MAIN',
+    managerName: 'KFC Country Operations Superadmin',
+    managerPhone: '+256 700 100 200',
+    managerEmail: 'superadmin@kfcuganda.com',
+    slaHours: 12,
+    status: 'active',
+    openTicketsCount: 4,
+    resolvedTicketsCount: 180,
+    ratingScore: 98,
+    created_at: '2026-01-01T08:00:00Z',
+    is_main_branch: true,
+    teams: [
+      { id: 't-kfc-hq-1', name: 'National Operations & Audit', lead: 'Arthur Sempebwa', category: 'management', memberCount: 12 },
+      { id: 't-kfc-hq-2', name: 'Franchise Quality Assurance', lead: 'Dr. Grace Mukisa', category: 'technical', memberCount: 8 },
+    ],
+  },
+  {
+    id: 'kfc-mbarara',
+    deptId: 'kfc_ug',
+    brandName: 'KFC Uganda',
+    name: 'KFC Mbarara Branch',
+    country: 'UG',
+    district: 'Mbarara',
+    subcounty: 'Mbarara City South',
+    parish: 'Kakoba Parish',
+    landmark: 'Mbarara High Street, Opposite Stanbic Bank',
+    accessCode: 'KFC-MBARARA-MGR',
+    managerName: 'Duncan Mugume',
+    managerPhone: '+256 779 812 400',
+    managerEmail: 'duncan.m@kfcuganda.com',
+    slaHours: 12,
+    status: 'active',
+    openTicketsCount: 2,
+    resolvedTicketsCount: 24,
+    ratingScore: 95,
+    created_at: '2026-02-15T09:00:00Z',
+    teams: [
+      { id: 't-kfc-mb-1', name: 'Western Region Fryers Crew', lead: 'Evelyn Ainembabazi', category: 'operations', memberCount: 7 },
+      { id: 't-kfc-mb-2', name: 'High Street Guest Service', lead: 'Moses Tumusiime', category: 'service', memberCount: 6 },
+      { id: 't-kfc-mb-3', name: 'Mbarara Express Delivery Fleet', lead: 'Gerald Katushabe', category: 'logistics', memberCount: 5 },
+    ],
+  },
+  {
     id: 'kfc-acacia',
     deptId: 'kfc_ug',
     brandName: 'KFC Uganda',
@@ -266,7 +318,7 @@ export const SEED_ENTERPRISE_BRANCHES: EnterpriseBranch[] = [
   },
 ];
 
-const STORAGE_KEY = 'civicduty_enterprise_branches_v1';
+const STORAGE_KEY = 'civicduty_enterprise_branches_v2';
 
 export function loadAllBranches(): EnterpriseBranch[] {
   try {
@@ -279,6 +331,14 @@ export function loadAllBranches(): EnterpriseBranch[] {
     if (!Array.isArray(parsed) || parsed.length === 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_ENTERPRISE_BRANCHES));
       return SEED_ENTERPRISE_BRANCHES;
+    }
+    // Always merge in any seed branches not present in stored data
+    const existingIds = new Set(parsed.map((b: any) => b.id));
+    const missingSeeds = SEED_ENTERPRISE_BRANCHES.filter((sb) => !existingIds.has(sb.id));
+    if (missingSeeds.length > 0) {
+      const merged = [...parsed, ...missingSeeds];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      return merged;
     }
     return parsed;
   } catch (err) {

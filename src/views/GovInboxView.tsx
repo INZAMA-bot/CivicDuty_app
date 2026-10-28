@@ -30,7 +30,6 @@ import {
   ShieldCheck,
   ChevronRight,
   FileText,
-  Sparkles,
   SlidersHorizontal,
   MessageSquare,
   Search,

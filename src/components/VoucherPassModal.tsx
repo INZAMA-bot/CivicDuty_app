@@ -10,7 +10,6 @@ import {
   Store,
   Clock,
   Printer,
-  Sparkles,
   Award,
   MapPin,
   CheckCircle2,
@@ -75,7 +74,7 @@ export const VoucherPassModal: React.FC<VoucherPassModalProps> = ({
         <div className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs">
-              <Sparkles size={16} />
+              <Award size={16} />
             </div>
             <div>
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block">

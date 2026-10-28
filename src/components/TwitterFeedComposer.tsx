@@ -11,7 +11,6 @@ import {
   Award, 
   Building2, 
   ShieldAlert,
-  Sparkles,
   Camera
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
