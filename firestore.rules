@@ -37,6 +37,13 @@ service cloud.firestore {
       allow list: if true;
     }
 
+    // --- VISITOR ANALYTICS & INTERACTION TELEMETRY ---
+    match /visitor_analytics/{docId} {
+      allow get, list: if true;
+      allow create, update: if isValidId(docId);
+      allow delete: if isAdmin();
+    }
+
     // --- POSTS (Citizen Tickets & Dispatches) ---
     function isValidPost(data) {
       return data.id is string && data.id.size() <= 128

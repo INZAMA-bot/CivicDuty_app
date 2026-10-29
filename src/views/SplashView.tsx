@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   ArrowRight,
@@ -17,6 +17,7 @@ import { TrafficLightLogo } from '../components/TrafficLightLogo';
 import { HeaderSettingsMenu } from '../components/HeaderSettingsMenu';
 import { InstallPwaBanner } from '../components/InstallPwaBanner';
 import { Footer } from '../components/Footer';
+import { trackVisitorInteraction } from '../services/analyticsService';
 
 // Official master code & private visitor demo codes (demo codes are shared in chat/direct outreach, never displayed on-screen)
 const VALID_MASTER_CODES = [
@@ -47,6 +48,10 @@ export const SplashView: React.FC = () => {
   const corrupt = posts.filter((p) => p.category === 'corruption').length;
   const countriesCount = Object.keys(COUNTRIES).length;
 
+  useEffect(() => {
+    trackVisitorInteraction('page_view', 'Homepage Loaded');
+  }, []);
+
   const isPlatformUnlocked = () => {
     try {
       return sessionStorage.getItem('civicduty_platform_unlocked') === 'true';
@@ -56,6 +61,9 @@ export const SplashView: React.FC = () => {
   };
 
   const handlePortalEntry = (target: 'ob1' | 'ob2' | 'entity') => {
+    const targetLabel = target === 'ob1' ? 'citizen_portal' : target === 'ob2' ? 'gov_desk' : 'provider_desk';
+    trackVisitorInteraction('cta_click', `Clicked ${targetLabel}`, targetLabel);
+
     if (isPlatformUnlocked()) {
       if (target === 'ob1') ensureCitizenSession();
       go(target);
@@ -71,6 +79,7 @@ export const SplashView: React.FC = () => {
     if (e) e.preventDefault();
     const clean = accessCodeInput.trim().toUpperCase();
     if (VALID_MASTER_CODES.includes(clean)) {
+      trackVisitorInteraction('access_code_attempt', 'Master Code Authorized', undefined, { success: true });
       try {
         sessionStorage.setItem('civicduty_platform_unlocked', 'true');
       } catch (err) {
@@ -81,6 +90,7 @@ export const SplashView: React.FC = () => {
       if (dest === 'ob1') ensureCitizenSession();
       go(dest);
     } else {
+      trackVisitorInteraction('access_code_attempt', 'Invalid Code Entered', undefined, { success: false });
       setAccessError('Invalid Master Access Code. Please verify your credentials or contact administrator.');
     }
   };

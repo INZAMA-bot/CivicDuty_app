@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES } from '../data/countries';
 import { getCountryPitch } from '../data/countryPitches';
@@ -51,6 +51,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { InteractiveRoleSandboxGrid } from '../components/InteractiveRoleSandboxGrid';
+import { trackVisitorInteraction } from '../services/analyticsService';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
@@ -64,6 +65,10 @@ export const DocsView: React.FC = () => {
     } catch {}
     return 'architecture';
   });
+
+  useEffect(() => {
+    trackVisitorInteraction('docs_view', `Docs Tab: ${activeTab}`);
+  }, [activeTab]);
   const [journeyRole, setJourneyRole] = useState<'citizen' | 'government' | 'entity'>('citizen');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [pitchCountry, setPitchCountry] = useState<string>(user?.country || 'UG');
