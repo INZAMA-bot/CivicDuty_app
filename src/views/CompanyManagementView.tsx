@@ -40,6 +40,9 @@ import { CdOpsDispatchMatrix } from '../components/cdops/CdOpsDispatchMatrix';
 import { CdOpsAccessCodesVault } from '../components/cdops/CdOpsAccessCodesVault';
 import { CdOpsCampaignStudio } from '../components/cdops/CdOpsCampaignStudio';
 import { CdOpsLaunchCountdown } from '../components/cdops/CdOpsLaunchCountdown';
+import { CdOpsOfficialDossiersPanel } from '../components/cdops/CdOpsOfficialDossiersPanel';
+import { OFFICIAL_DOCUMENTS } from '../data/officialDocs';
+import { FileCheck } from 'lucide-react';
 
 export const CompanyManagementView: React.FC = () => {
   const {
@@ -67,6 +70,7 @@ export const CompanyManagementView: React.FC = () => {
   // Active navigation tab — includes launch_countdown & bilateral_desk
   const [activeTab, setActiveTab] = useState<
     | 'launch_countdown'
+    | 'official_dossiers'
     | 'bilateral_desk'
     | 'campaigns_studio'
     | 'staff'
@@ -355,6 +359,18 @@ export const CompanyManagementView: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('official_dossiers')}
+          className={`px-3 py-2 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer border ${
+            activeTab === 'official_dossiers'
+              ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
+              : 'bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
+          }`}
+        >
+          <FileCheck size={13} className="text-emerald-500" />
+          <span>MoICT &amp; Official Dossiers ({OFFICIAL_DOCUMENTS.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('bilateral_desk')}
           className={`px-3 py-2 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer border ${
             activeTab === 'bilateral_desk'
@@ -472,6 +488,11 @@ export const CompanyManagementView: React.FC = () => {
       {/* TAB 0: GLOBAL LAUNCH COUNTDOWN & READINESS CHECKLIST */}
       {/* ============================================================ */}
       {activeTab === 'launch_countdown' && <CdOpsLaunchCountdown />}
+
+      {/* ============================================================ */}
+      {/* TAB: STRICTLY PRIVATE FOUNDER DOSSIERS & MoICT ROADMAP */}
+      {/* ============================================================ */}
+      {activeTab === 'official_dossiers' && <CdOpsOfficialDossiersPanel />}
 
       {/* ============================================================ */}
       {/* TAB 1: NATIONAL SUPERADMIN BILATERAL DESK */}

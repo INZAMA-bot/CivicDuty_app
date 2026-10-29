@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES } from '../data/countries';
 import { getCountryPitch } from '../data/countryPitches';
-import { OFFICIAL_DOCUMENTS, OfficialDocument } from '../data/officialDocs';
 import {
   ChevronLeft,
   ChevronRight,
@@ -41,36 +40,33 @@ import {
   ExternalLink,
   Copy,
   Search,
-  CheckCheck,
   Eye,
   ScrollText,
-  Bookmark,
-  Printer,
   Bus,
+  Tag,
+  Percent,
+  QrCode,
+  Ticket,
+  HelpCircle,
+  Radio,
 } from 'lucide-react';
 import { InteractiveRoleSandboxGrid } from '../components/InteractiveRoleSandboxGrid';
-import { MoICTReadinessPanel } from '../components/MoICTReadinessPanel';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
-  const [activeTab, setActiveTab] = useState<'moict_readiness' | 'overview' | 'pitch' | 'partner' | 'journeys' | 'architecture'>(() => {
+  const [activeTab, setActiveTab] = useState<'architecture' | 'journeys' | 'perks_guide' | 'pitch' | 'partner' | 'handbook'>(() => {
     try {
       const saved = localStorage.getItem('cd_docs_initial_tab');
-      if (saved === 'journeys' || saved === 'pitch' || saved === 'overview' || saved === 'partner' || saved === 'architecture' || saved === 'moict_readiness') {
+      if (saved === 'journeys' || saved === 'pitch' || saved === 'partner' || saved === 'architecture' || saved === 'perks_guide' || saved === 'handbook') {
         localStorage.removeItem('cd_docs_initial_tab');
         return saved as any;
       }
     } catch {}
-    return 'moict_readiness';
+    return 'architecture';
   });
   const [journeyRole, setJourneyRole] = useState<'citizen' | 'government' | 'entity'>('citizen');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [pitchCountry, setPitchCountry] = useState<string>(user?.country || 'UG');
-  
-  // Document Reader State (defaults to official response to Permanent Secretary)
-  const [selectedDocId, setSelectedDocId] = useState<string>('moict-compliance-dossier');
-  const [docSearch, setDocSearch] = useState<string>('');
-  const [copiedDoc, setCopiedDoc] = useState<boolean>(false);
 
   // Government Partnership Form State
   const [partnerMinistry, setPartnerMinistry] = useState('');
@@ -361,33 +357,6 @@ export const DocsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Permanent Secretary Letter Response Alert Banner */}
-        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-              <FileCheck size={14} />
-            </div>
-            <div className="min-w-0 text-left">
-              <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                <span>Letter Ref: ADM 209/261/01 Response Dossier Active</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-mono">
-                  ACTIONABLE
-                </span>
-              </div>
-              <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                Dr. Aminah Zawedde, Permanent Secretary, MoICT&amp;NG · NDP IV, PDM, NITA-U GIDC Hosting &amp; Bizlink
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setActiveTab('moict_readiness')}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer"
-          >
-            <span>Launch Suite</span>
-            <ArrowRight size={12} />
-          </button>
-        </div>
-
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-0.5 font-semibold">
@@ -466,51 +435,18 @@ export const DocsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Primary Section Switcher Tabs (Studio Segmented Control) */}
+      {/* Primary Section Switcher Tabs (Public Resourceful Segmented Control) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 bg-white dark:bg-[#161a22] p-1.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold">
         <button
-          onClick={() => setActiveTab('moict_readiness')}
+          onClick={() => setActiveTab('architecture')}
           className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-            activeTab === 'moict_readiness'
-              ? 'bg-emerald-600 text-white font-bold'
-              : 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
-          }`}
-        >
-          <FileCheck size={14} />
-          <span>🏛️ MoICT &amp; Launch</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-            activeTab === 'overview'
+            activeTab === 'architecture'
               ? 'bg-emerald-600 text-white'
               : 'text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <ScrollText size={14} />
-          <span>Official Docs ({OFFICIAL_DOCUMENTS.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('pitch')}
-          className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-            activeTab === 'pitch'
-              ? 'bg-emerald-600 text-white'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Award size={14} />
-          <span>Pitch Deck</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('partner')}
-          className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-            activeTab === 'partner'
-              ? 'bg-emerald-600 text-white'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Handshake size={14} />
-          <span>Partnership Hub</span>
+          <Layers size={13} />
+          <span>Architecture &amp; SLAs</span>
         </button>
         <button
           onClick={() => setActiveTab('journeys')}
@@ -520,471 +456,303 @@ export const DocsView: React.FC = () => {
               : 'text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Layers size={14} />
-          <span>6 Demos</span>
+          <UserCheck size={13} />
+          <span>Role Simulator</span>
         </button>
         <button
-          onClick={() => setActiveTab('architecture')}
+          onClick={() => setActiveTab('perks_guide')}
           className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-            activeTab === 'architecture'
+            activeTab === 'perks_guide'
+              ? 'bg-emerald-600 text-white font-bold'
+              : 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+          }`}
+        >
+          <Award size={13} />
+          <span>XP Store &amp; Vaults</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('pitch')}
+          className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'pitch'
               ? 'bg-emerald-600 text-white'
               : 'text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-white'
           }`}
         >
-          <Building2 size={14} />
-          <span>{countryData.code} Tiers</span>
+          <TrendingUp size={13} />
+          <span>National Deck</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('partner')}
+          className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'partner'
+              ? 'bg-emerald-600 text-white'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Handshake size={13} />
+          <span>Partnership Hub</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('handbook')}
+          className={`py-2 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'handbook'
+              ? 'bg-emerald-600 text-white'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-[#f8f9fa] dark:hover:bg-[#0e1116] hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <BookOpen size={13} />
+          <span>Handbook (*3030#)</span>
         </button>
       </div>
 
       {/* ========================================================= */}
-      {/* TAB 0: MoICT STATUTORY COMPLIANCE & PUBLIC LAUNCH SUITE   */}
+      {/* PUBLIC TAB: CITIZEN XP STORE & 5-VAULT PERKS ECONOMY      */}
       {/* ========================================================= */}
-      {activeTab === 'moict_readiness' && (
-        <MoICTReadinessPanel
-          onOpenDoc={(docId) => {
-            setSelectedDocId(docId);
-            setActiveTab('overview');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        />
-      )}
-
-      {/* ========================================================= */}
-      {/* TAB 1: OFFICIAL IN-SCREEN DOCUMENTATION & SLIDE CAROUSEL  */}
-      {/* ========================================================= */}
-      {activeTab === 'overview' && (() => {
-        const activeDoc = OFFICIAL_DOCUMENTS.find((d) => d.id === selectedDocId) || OFFICIAL_DOCUMENTS[0];
-        const activeDocIndex = OFFICIAL_DOCUMENTS.findIndex((d) => d.id === activeDoc.id);
-
-        const handleCopyDocText = (doc: OfficialDocument) => {
-          const fullText = [
-            `=================================================================`,
-            `${doc.title.toUpperCase()}`,
-            `${doc.subtitle}`,
-            `Category: ${doc.category} | Version: ${doc.version} | Date: ${doc.date}`,
-            `Author: ${doc.author} (${doc.authorTitle}) - ${doc.authorContact}`,
-            `=================================================================\n`,
-            `SUMMARY:\n${doc.summary}\n`,
-            ...doc.sections.map((s) => {
-              let sectionText = `-----------------------------------------------------------------\n`;
-              if (s.num) sectionText += `[${s.num}] `;
-              sectionText += `${s.title.toUpperCase()}\n-----------------------------------------------------------------\n`;
-              sectionText += `${s.content}\n`;
-              if (s.highlights && s.highlights.length > 0) {
-                sectionText += `\nKEY HIGHLIGHTS:\n` + s.highlights.map((h) => `• ${h}`).join('\n') + `\n`;
-              }
-              if (s.callout) {
-                sectionText += `\n[NOTE: ${s.callout.title}]\n${s.callout.text}\n`;
-              }
-              if (s.table) {
-                sectionText += `\n${s.table.headers.join(' | ')}\n`;
-                sectionText += s.table.headers.map(() => '---').join(' | ') + '\n';
-                sectionText += s.table.rows.map((row) => row.join(' | ')).join('\n') + '\n';
-              }
-              return sectionText;
-            }),
-            `\n=================================================================`,
-            `CivicDuty Sovereign Service Delivery & Nation Management Infrastructure`,
-            `Lead System Architect: Inzama Robin • 0778277900 / 0748338796 • inzamarobin279@gmail.com`,
-            `=================================================================`,
-          ].join('\n\n');
-
-          if (navigator?.clipboard?.writeText) {
-            navigator.clipboard.writeText(fullText);
-          }
-          setCopiedDoc(true);
-          toast(`"${doc.title}" copied to clipboard!`, 'success');
-          setTimeout(() => setCopiedDoc(false), 3000);
-        };
-
-        const filteredSections = activeDoc.sections.filter((s) => {
-          if (!docSearch.trim()) return true;
-          const q = docSearch.toLowerCase();
-          return (
-            s.title.toLowerCase().includes(q) ||
-            s.content.toLowerCase().includes(q) ||
-            (s.num && s.num.toLowerCase().includes(q)) ||
-            (s.highlights && s.highlights.some((h) => h.toLowerCase().includes(q))) ||
-            (s.callout && (s.callout.title.toLowerCase().includes(q) || s.callout.text.toLowerCase().includes(q)))
-          );
-        });
-
-        return (
-          <div className="space-y-4">
-            {/* Document Slide Carousel Header & Controller */}
-            <div className="p-4 sm:p-5 space-y-3.5 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
-                <div>
-                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                    <FileCheck size={13} /> Sovereign Documentation Suite · Direct In-App Reader
-                  </span>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white uppercase tracking-tight mt-0.5">
-                    Official Document Slide Carousel
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Tap any document slide below to display its full text and diagrams directly on your screen without external downloads.
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 self-start sm:self-center">
-                  <button
-                    onClick={() => {
-                      const prevIdx = activeDocIndex > 0 ? activeDocIndex - 1 : OFFICIAL_DOCUMENTS.length - 1;
-                      setSelectedDocId(OFFICIAL_DOCUMENTS[prevIdx].id);
-                    }}
-                    className="px-2.5 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] rounded-lg text-slate-700 dark:text-slate-300 text-xs font-mono font-semibold flex items-center gap-1 cursor-pointer"
-                    title="Previous Document"
-                  >
-                    <ChevronLeft size={14} />
-                    <span className="hidden sm:inline">Prev Doc</span>
-                  </button>
-                  <span className="text-[10px] font-mono bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 font-semibold px-2.5 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
-                    Doc {activeDocIndex + 1} / {OFFICIAL_DOCUMENTS.length}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const nextIdx = activeDocIndex < OFFICIAL_DOCUMENTS.length - 1 ? activeDocIndex + 1 : 0;
-                      setSelectedDocId(OFFICIAL_DOCUMENTS[nextIdx].id);
-                    }}
-                    className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs font-mono flex items-center gap-1 cursor-pointer"
-                    title="Next Document"
-                  >
-                    <span className="hidden sm:inline">Next Doc</span>
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
+      {activeTab === 'perks_guide' && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Header Banner */}
+          <div className="p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Award size={13} /> Citizen Incentives &amp; Sovereign Reward Standard
+                </span>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5">
+                  How the Citizen XP Store &amp; 5-Vault Architecture Operates
+                </h3>
               </div>
+              <button
+                onClick={() => go('vault')}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-semibold flex items-center gap-1.5 self-start sm:self-auto transition-colors cursor-pointer"
+              >
+                <span>Open Live Perk Vault</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
+              CivicDuty monetizes civic diligence without government subsidies or inflationary tokens. Citizens earn verified XP for legitimate community interventions, which redeem directly for merchant discounts, electric transit passes, airtime, and utility offsets.
+            </p>
+          </div>
 
-              {/* Responsive Slide Deck of All 7 Documents */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 pt-1">
-                {OFFICIAL_DOCUMENTS.map((doc) => {
-                  const isSelected = doc.id === activeDoc.id;
-                  return (
-                    <button
-                      key={doc.id}
-                      onClick={() => {
-                        setSelectedDocId(doc.id);
-                        setDocSearch('');
-                      }}
-                      className={`text-left p-3 rounded-xl border transition-colors flex flex-col justify-between space-y-2 relative cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-500/10 border-emerald-500/50 text-slate-900 dark:text-white'
-                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d]'
-                      }`}
-                    >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-[9.5px] font-mono font-semibold ${
-                              isSelected
-                                ? 'text-emerald-600 dark:text-emerald-400'
-                                : 'text-slate-500 dark:text-slate-400'
-                            }`}
-                          >
-                            {doc.category}
-                          </span>
-                          <span className="text-[9.5px] font-mono text-slate-500 flex items-center gap-1">
-                            <Clock size={10} /> {doc.readTime}
-                          </span>
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
-                          {doc.title}
-                        </h4>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                          {doc.subtitle}
-                        </p>
-                      </div>
+          {/* 4 Earning Pillars */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">+25 XP</span>
+                <MapPin size={16} className="text-slate-400" />
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">1. Verified Hazard Report</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Geotagged photo or USSD audio report submitted to local authorities (e.g., burst pipes, potholes, power outages).
+              </p>
+            </div>
 
-                      <div className="flex items-center justify-between border-t border-[#e3e6ea] dark:border-[#262b36] pt-2 text-[10px] font-mono">
-                        <span className="text-slate-500 dark:text-slate-400 text-[9.5px] font-semibold">
-                          {doc.version}
-                        </span>
-                        <span
-                          className={`font-semibold flex items-center gap-1 text-[10px] ${
-                            isSelected
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-slate-500 dark:text-slate-400'
-                          }`}
-                        >
-                          <Eye size={12} />
-                          <span>{isSelected ? 'READING NOW' : 'Tap to Read'}</span>
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">+50 XP</span>
+                <CheckCircle2 size={16} className="text-emerald-500" />
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">2. 3-Signal Confirmation</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                When an agency claims work is complete, nearby citizens inspect on-site and ratify quality with photographic evidence.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-black font-mono text-amber-600 dark:text-amber-400">+100 XP</span>
+                <ShieldAlert size={16} className="text-amber-500" />
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">3. Anti-Graft Whistleblow</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Exposing illegal extortion, ghost projects, or bribe demands with cryptographic forensic corroboration.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-black font-mono text-indigo-600 dark:text-indigo-400">+150 XP</span>
+                <Radio size={16} className="text-indigo-500" />
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">4. Frontline Scout Patrol</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Certified Bodaboda stages and community scouts conducting routine corridor safety and road hazard sweeps.
+              </p>
+            </div>
+          </div>
+
+          {/* Instant XP Store vs. 5 Monthly Vaults */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Left: Instant XP Store */}
+            <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+              <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+                <span className="font-mono text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Tag size={14} className="text-emerald-500" />
+                  <span>The Citizen XP Store (Instant Redemptions)</span>
+                </span>
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Zero Waiting Period
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Any verified citizen can redeem earned XP instantly for live commercial and municipal perks:
+              </p>
+              <div className="space-y-2 text-xs font-mono">
+                <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">🛒 Supermarket &amp; Retail Vouchers</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">10% – 30% Off</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">🚌 Kiira Motors Kayoola EVS Bus Pass</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">Free 1-Day Pass</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">💧 NWSC Water Bill &amp; Umeme Power</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">15,000 UGX Credit</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">📱 MTN / Airtel Mobile Airtime &amp; Data</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">5,000 UGX Bundle</span>
+                </div>
               </div>
             </div>
 
-            {/* In-Screen Document Viewer for Active Selected Document */}
-            <div className="p-5 space-y-5 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-900 dark:text-slate-100">
-              {/* Document Letterhead & Metadata Header */}
-              <div className="border-b border-[#e3e6ea] dark:border-[#262b36] pb-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <FileText size={12} /> {activeDoc.category}
-                    </span>
-                    <span>·</span>
-                    <span>{activeDoc.version}</span>
-                    <span className="hidden sm:inline">·</span>
-                    <span className="hidden sm:inline">{activeDoc.date}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCopyDocText(activeDoc)}
-                      className="px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-                      title="Copy full document text"
-                    >
-                      {copiedDoc ? (
-                        <>
-                          <CheckCheck size={14} className="text-emerald-500" />
-                          <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={14} />
-                          <span>Copy Document</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => window.print()}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 text-xs font-mono font-semibold transition-colors hidden sm:flex items-center gap-1 cursor-pointer"
-                      title="Print or Save as PDF via browser"
-                    >
-                      <Printer size={14} />
-                      <span>Print</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                    {activeDoc.title}
-                  </h1>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
-                    {activeDoc.subtitle}
-                  </p>
-                </div>
-
-                {/* Author & Document Summary Callout */}
-                <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] p-3.5 rounded-xl space-y-2 text-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] font-mono text-slate-600 dark:text-slate-400 border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      Author: {activeDoc.author} ({activeDoc.authorTitle})
-                    </span>
-                    <span className="text-[10px] text-slate-500">Contact: {activeDoc.authorContact}</span>
-                  </div>
-                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
-                    <strong className="text-slate-900 dark:text-white">Executive Context:</strong> {activeDoc.summary}
-                  </p>
-                </div>
-
-                {/* In-Document Search & Quick Jump Section Navigator */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search
-                        size={14}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                      />
-                      <input
-                        type="text"
-                        value={docSearch}
-                        onChange={(e) => setDocSearch(e.target.value)}
-                        placeholder={`Search keywords inside "${activeDoc.title}"...`}
-                        className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                      />
-                    </div>
-                    {docSearch && (
-                      <button
-                        onClick={() => setDocSearch('')}
-                        className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-semibold hover:underline self-start sm:self-center cursor-pointer"
-                      >
-                        Clear Search
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Section Navigator Links */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[10px] font-mono">
-                    <span className="text-slate-500 font-semibold whitespace-nowrap">Sections:</span>
-                    {activeDoc.sections.map((s, idx) => (
-                      <a
-                        key={s.id}
-                        href={`#${s.id}`}
-                        className="px-2 py-0.5 rounded-md bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] whitespace-nowrap transition-colors"
-                      >
-                        {s.num ? `${s.num}. ` : `${idx + 1}. `}
-                        {s.title.split(':')[0].substring(0, 20)}
-                      </a>
-                    ))}
-                  </div>
-                </div>
+            {/* Right: The 5 Jurisdictional Vaults */}
+            <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+              <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
+                <span className="font-mono text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Lock size={14} className="text-amber-500" />
+                  <span>The 5 Monthly Jurisdictional Vaults</span>
+                </span>
+                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                  Zero Cherry-Picking
+                </span>
               </div>
-
-              {/* Rendered Document Sections */}
-              <div className="space-y-5">
-                {filteredSections.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 font-mono text-xs space-y-2">
-                    <p>No sections match your search filter &quot;{docSearch}&quot;.</p>
-                    <button
-                      onClick={() => setDocSearch('')}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[11px] font-semibold cursor-pointer"
-                    >
-                      Reset Search
-                    </button>
-                  </div>
-                ) : (
-                  filteredSections.map((sec, sIdx) => (
-                    <div
-                      key={sec.id}
-                      id={sec.id}
-                      className="space-y-3 text-xs leading-relaxed scroll-mt-24 border-b border-[#e3e6ea] dark:border-[#262b36] pb-5 last:border-b-0"
-                    >
-                      <h3 className="text-sm font-bold uppercase text-slate-900 dark:text-white flex items-center gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-1.5">
-                        {sec.num ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-mono">{sec.num}.</span>
-                        ) : (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-mono">§{sIdx + 1}</span>
-                        )}
-                        <span>{sec.title}</span>
-                      </h3>
-
-                      <div className="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
-                        {sec.content}
-                      </div>
-
-                      {/* Callout box if present */}
-                      {sec.callout && (
-                        <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                          <span className="font-bold text-[11px] font-mono uppercase text-emerald-600 dark:text-emerald-400 block">
-                            {sec.callout.title}
-                          </span>
-                          <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">{sec.callout.text}</p>
-                        </div>
-                      )}
-
-                      {/* Highlights if present */}
-                      {sec.highlights && sec.highlights.length > 0 && (
-                        <div className="space-y-1.5 pt-1">
-                          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500">
-                            Key Specifications &amp; Takeaways:
-                          </span>
-                          <ul className="space-y-1">
-                            {sec.highlights.map((h, hIdx) => (
-                              <li
-                                key={hIdx}
-                                className="flex items-start gap-2 text-slate-700 dark:text-slate-300 text-[11px]"
-                              >
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">·</span>
-                                <span>{h}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Structured table if present */}
-                      {sec.table && (
-                        <div className="overflow-x-auto border border-[#e3e6ea] dark:border-[#262b36] rounded-xl my-2">
-                          <table className="w-full text-left font-mono text-[10px]">
-                            <thead className="bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-800 dark:text-slate-200 font-semibold border-b border-[#e3e6ea] dark:border-[#262b36]">
-                              <tr>
-                                {sec.table.headers.map((th, thIdx) => (
-                                  <th key={thIdx} className="p-2.5">
-                                    {th}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
-                              {sec.table.rows.map((r, rIdx) => (
-                                <tr
-                                  key={rIdx}
-                                  className={
-                                    rIdx % 2 === 0
-                                      ? 'bg-white dark:bg-[#161a22]'
-                                      : 'bg-[#f8f9fa]/60 dark:bg-[#0e1116]/60'
-                                  }
-                                >
-                                  {r.map((cell, cIdx) => (
-                                    <td
-                                      key={cIdx}
-                                      className={`p-2.5 ${
-                                        cIdx === 0
-                                          ? 'font-bold text-slate-900 dark:text-white'
-                                          : 'text-slate-600 dark:text-slate-400'
-                                      }`}
-                                    >
-                                      {cell}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Author & Institutional Signoff Box */}
-              <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
-                <div>
-                  <span className="font-bold text-slate-900 dark:text-white block">
-                    Lead System Architect: Inzama Robin
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    Phone: 0778277900 / 0748338796 · Email: inzamarobin279@gmail.com
-                  </span>
-                  <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 block mt-0.5">
-                    CivicDuty Sovereign Nation Management Platform · Kampala, Uganda
-                  </span>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Monthly municipal budgets are locked into 5 escrow vaults, awarded deterministically to the Top-3 verified contributors:
+              </p>
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">1. Parish Chief Local Vault</span>
+                  <span className="text-[11px] text-slate-500">Parish Top-3 Champions</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleCopyDocText(activeDoc)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-3 rounded-lg flex items-center gap-1.5 w-fit transition-colors text-xs cursor-pointer"
-                  >
-                    <Copy size={13} />
-                    <span>Copy Full Document</span>
-                  </button>
+                <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">2. Sub-County Division Vault</span>
+                  <span className="text-[11px] text-slate-500">Town Council Top-3</span>
                 </div>
-              </div>
-
-              {/* Next/Prev Document Quick Switcher Footer */}
-              <div className="flex items-center justify-between border-t border-[#e3e6ea] dark:border-[#262b36] pt-4 text-xs font-mono">
-                <button
-                  onClick={() => {
-                    const prevIdx = activeDocIndex > 0 ? activeDocIndex - 1 : OFFICIAL_DOCUMENTS.length - 1;
-                    setSelectedDocId(OFFICIAL_DOCUMENTS[prevIdx].id);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="px-3 py-2 bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-700 dark:text-slate-300 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <ChevronLeft size={14} />
-                  <span>Previous: {OFFICIAL_DOCUMENTS[activeDocIndex > 0 ? activeDocIndex - 1 : OFFICIAL_DOCUMENTS.length - 1].category}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    const nextIdx = activeDocIndex < OFFICIAL_DOCUMENTS.length - 1 ? activeDocIndex + 1 : 0;
-                    setSelectedDocId(OFFICIAL_DOCUMENTS[nextIdx].id);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <span>Next: {OFFICIAL_DOCUMENTS[activeDocIndex < OFFICIAL_DOCUMENTS.length - 1 ? activeDocIndex + 1 : 0].category}</span>
-                  <ChevronRight size={14} />
-                </button>
+                <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">3. District CAO Sovereign Vault</span>
+                  <span className="text-[11px] text-slate-500">District Civic Leaders</span>
+                </div>
+                <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">4. Frontline Scout Boda Vault</span>
+                  <span className="text-[11px] text-slate-500">Top Stage Patrols</span>
+                </div>
+                <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+                  <span className="text-slate-800 dark:text-slate-200">5. Professional &amp; Peer Tipping</span>
+                  <span className="text-[11px] text-slate-500">Direct Citizen Tips</span>
+                </div>
               </div>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* PUBLIC TAB: CITIZEN HANDBOOK & USSD *3030# MANUAL         */}
+      {/* ========================================================= */}
+      {activeTab === 'handbook' && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Header */}
+          <div className="p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <BookOpen size={13} /> Citizen Rights &amp; Offline Accessibility Standard
+            </span>
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              Public Citizen Handbook &amp; USSD *3030# Offline Guide
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
+              CivicDuty guarantees that every citizen—whether carrying a modern smartphone or a basic 2G feature phone (Kabiriti)—has equal, sovereign access to report public hazards, track statutory response times, and confirm resolutions.
+            </p>
+          </div>
+
+          {/* 3 Core Protections */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Lock size={16} />
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Zero Plain-Text NIN Storage</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Under the Data Protection and Privacy Act 2019, your raw National ID Number (NIN) or Passport is never stored in plain text. A cryptographic SHA-256 digest is generated with an anonymized fragment (e.g. <code>#9028</code>).
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <ShieldCheck size={16} />
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">1 Verified ID = 1 Authentic Voice</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Bots, fake accounts, coordinated smear campaigns, and troll networks are mathematically impossible on CivicDuty. Every verified voice has genuine weight before statutory committees.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <ShieldAlert size={16} />
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Whistleblower Protection</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Whistleblowers reporting corruption or municipal extortion are shielded under the Whistleblowers Protection Act 2010. Identity masking is irreversible across public feeds.
+              </p>
+            </div>
+          </div>
+
+          {/* USSD *3030# Interactive Flow Card */}
+          <div className="p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Smartphone size={13} /> Universal Telecom Ingress
+                </span>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                  Offline USSD *3030# Kabiriti Protocol
+                </h4>
+              </div>
+              <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold">
+                No Internet Required
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 font-mono text-xs">
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">STEP 1: DIAL</span>
+                <p className="text-slate-900 dark:text-white font-bold">*3030#</p>
+                <p className="text-[10px] text-slate-500">Free call on MTN, Airtel, or Uganda Telecom.</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">STEP 2: SELECT DEPT</span>
+                <p className="text-slate-900 dark:text-white font-bold">1. Road / 2. Water</p>
+                <p className="text-[10px] text-slate-500">Pick Roads, Water, Power, Health, or Police.</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">STEP 3: PARISH DISPATCH</span>
+                <p className="text-slate-900 dark:text-white font-bold">Auto-Routed</p>
+                <p className="text-[10px] text-slate-500">Telecom cell tower pings closest Parish Chief.</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">STEP 4: SMS TICKET</span>
+                <p className="text-slate-900 dark:text-white font-bold">SHA-256 Receipt</p>
+                <p className="text-[10px] text-slate-500">Receive tracking code &amp; 48-hour SLA deadline.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* TAB 1: PICTORIAL PITCH SLIDES DECK                        */}

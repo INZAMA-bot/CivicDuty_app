@@ -18,7 +18,16 @@ import { HeaderSettingsMenu } from '../components/HeaderSettingsMenu';
 import { InstallPwaBanner } from '../components/InstallPwaBanner';
 import { Footer } from '../components/Footer';
 
-const VALID_MASTER_CODES = ['CIVICDUTY-UG-2026', 'CIVICDUTY2026', 'CIVIC2026', 'UGANDA2026'];
+// Official master code & private visitor demo codes (demo codes are shared in chat/direct outreach, never displayed on-screen)
+const VALID_MASTER_CODES = [
+  'CIVICDUTY-UG-2026', // Official Master Access Code
+  'CIVIC-DEMO-2026',   // Visitor Demo Access Code
+  'GUEST-UG-2026',     // Alternate Visitor Access Code
+  'VISITOR-CIVIC-2026',
+  'CIVICDUTY2026',
+  'CIVIC2026',
+  'UGANDA2026',
+];
 
 export const SplashView: React.FC = () => {
   const {
@@ -305,9 +314,8 @@ export const SplashView: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center justify-between">
-                  <span>Master Access Code</span>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal">CIVICDUTY-UG-2026</span>
+                <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
+                  Access Code
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -320,7 +328,7 @@ export const SplashView: React.FC = () => {
                       setAccessCodeInput(e.target.value.toUpperCase());
                       setAccessError(null);
                     }}
-                    placeholder="CIVICDUTY-UG-2026"
+                    placeholder="ENTER ACCESS CODE"
                     autoFocus
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-xs font-mono font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 uppercase tracking-wider"
                   />
@@ -332,33 +340,21 @@ export const SplashView: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setAccessCodeInput('CIVICDUTY-UG-2026');
-                    setAccessError(null);
-                  }}
-                  className="text-[11px] text-slate-500 hover:text-emerald-600 underline cursor-pointer"
+                  onClick={() => setShowAccessModal(false)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  Fill master code
+                  Cancel
                 </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAccessModal(false)}
-                    className="px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>Authorize</span>
-                    <ArrowRight size={13} />
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Authorize</span>
+                  <ArrowRight size={13} />
+                </button>
               </div>
             </form>
           </div>
