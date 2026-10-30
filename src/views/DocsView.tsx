@@ -622,40 +622,40 @@ export const DocsView: React.FC = () => {
               </div>
             </div>
 
-            {/* Right: The 5 Jurisdictional Vaults */}
+            {/* Right: The 5 Sovereign Operational Vaults */}
             <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
               <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2">
                 <span className="font-mono text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                   <Lock size={14} className="text-amber-500" />
-                  <span>The 5 Monthly Jurisdictional Vaults</span>
+                  <span>The 5 Sovereign Operational Vaults</span>
                 </span>
-                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                  Zero Cherry-Picking
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                  CSR Profit-Sharing Standard
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Monthly municipal budgets are locked into 5 escrow vaults, awarded deterministically to the Top-3 verified contributors:
+                CivicDuty shares platform SaaS subscription revenue (like X/Twitter Creator Monetization) directly into community escrows:
               </p>
               <div className="space-y-1.5 text-xs font-mono">
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
                   <span className="text-slate-800 dark:text-slate-200">1. Parish Chief Local Vault</span>
-                  <span className="text-[11px] text-slate-500">Parish Top-3 Champions</span>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Parish Top-3 Champions</span>
                 </div>
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">2. Sub-County Division Vault</span>
-                  <span className="text-[11px] text-slate-500">Town Council Top-3</span>
+                  <span className="text-slate-800 dark:text-slate-200">2. Workstation / Stage Vault</span>
+                  <span className="text-[11px] text-slate-500">15-Peer Auto-Spawn &amp; Tips</span>
                 </div>
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">3. District CAO Sovereign Vault</span>
-                  <span className="text-[11px] text-slate-500">District Civic Leaders</span>
+                  <span className="text-slate-800 dark:text-slate-200">3. Individual Citizen Vault</span>
+                  <span className="text-[11px] text-slate-500">Parish-Locked XP Wallet</span>
                 </div>
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">4. Frontline Scout Boda Vault</span>
-                  <span className="text-[11px] text-slate-500">Top Stage Patrols</span>
+                  <span className="text-slate-800 dark:text-slate-200">4. Private Provider Vault</span>
+                  <span className="text-[11px] text-slate-500">Merchant CSAT &amp; CSR Clearing</span>
                 </div>
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">5. Professional &amp; Peer Tipping</span>
-                  <span className="text-[11px] text-slate-500">Direct Citizen Tips</span>
+                  <span className="text-slate-800 dark:text-slate-200">5. Contractor / Utility Vault</span>
+                  <span className="text-[11px] text-slate-500">Public Works Retention</span>
                 </div>
               </div>
             </div>

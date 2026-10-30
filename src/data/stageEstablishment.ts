@@ -22,6 +22,27 @@ export interface FrontlineScoutEntry {
   reportSnippet?: string;
 }
 
+export interface StageMember {
+  id: string;
+  name: string;
+  rank: number;
+  points: number;
+  monthlyReports: number;
+  qualifiedForShare: boolean; // At least monthly engagement (>= 1 report)
+  joinedAt: string;
+  lionSharePct: number;
+  bountyShareUgx: number;
+}
+
+export interface ScarceWorkstationPerk {
+  id: string;
+  title: string;
+  quantity: number;
+  recipientEligibility: 'top_3_only';
+  allocatedToRanks: number[];
+  icon: string;
+}
+
 export interface FrontlineStage {
   id: string;
   name: string; // e.g. "Equatorial Boda Stage"
@@ -39,7 +60,7 @@ export interface FrontlineStage {
   isCertified: boolean; // scoutCount >= 15
   officialLabel: string; // e.g. "Certified Equatorial Bodaboda Stage"
   certifiedAt?: string;
-  patronSponsorPoolUgx: number; // Patron Sponsoring enabled
+  patronSponsorPoolUgx: number; // Dedicated Workstation Vault Pool
   patronCount: number;
   patrons: Array<{
     patronName: string;
@@ -54,6 +75,8 @@ export interface FrontlineStage {
     badge: string;
     bountyShareUgx: number;
   }>;
+  members?: StageMember[];
+  scarcePerks?: ScarceWorkstationPerk[];
   recentScouts: Array<{
     scoutName: string;
     reportedAt: string;
@@ -170,9 +193,23 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { patronName: 'Sarah K. (Diaspora)', amountUgx: 200000, sponsoredAt: '2026-10-08', diasporaOrigin: 'Boston, USA' },
     ],
     topScouts: [
-      { name: 'Kato Paul (Stage Secretary)', rank: 1, points: 420, badge: 'Road Safety Champion', bountyShareUgx: 275000 },
-      { name: 'Ssemwogerere David', rank: 2, points: 340, badge: 'Pothole Watchdog', bountyShareUgx: 165000 },
-      { name: 'Okello Denis', rank: 3, points: 295, badge: 'Night Rider Scout', bountyShareUgx: 110000 },
+      { name: 'Kato Paul (Stage Secretary)', rank: 1, points: 420, badge: 'Road Safety Champion', bountyShareUgx: 247500 },
+      { name: 'Ssemwogerere David', rank: 2, points: 340, badge: 'Pothole Watchdog', bountyShareUgx: 137500 },
+      { name: 'Okello Denis', rank: 3, points: 295, badge: 'Night Rider Scout', bountyShareUgx: 82500 },
+    ],
+    members: [
+      { id: 'scout-kato-paul', name: 'Kato Paul (Stage Secretary)', rank: 1, points: 420, monthlyReports: 14, qualifiedForShare: true, joinedAt: '2026-08-10', lionSharePct: 45, bountyShareUgx: 247500 },
+      { id: 'scout-ssemwogerere-david', name: 'Ssemwogerere David', rank: 2, points: 340, monthlyReports: 9, qualifiedForShare: true, joinedAt: '2026-08-15', lionSharePct: 25, bountyShareUgx: 137500 },
+      { id: 'scout-okello-denis', name: 'Okello Denis', rank: 3, points: 295, monthlyReports: 7, qualifiedForShare: true, joinedAt: '2026-08-20', lionSharePct: 15, bountyShareUgx: 82500 },
+      { id: 'scout-mugerwa-fred', name: 'Mugerwa Fred', rank: 4, points: 190, monthlyReports: 5, qualifiedForShare: true, joinedAt: '2026-09-01', lionSharePct: 5, bountyShareUgx: 27500 },
+      { id: 'scout-nabirye-grace', name: 'Nabirye Grace', rank: 5, points: 160, monthlyReports: 3, qualifiedForShare: true, joinedAt: '2026-09-05', lionSharePct: 5, bountyShareUgx: 27500 },
+      { id: 'scout-byaruhanga-sam', name: 'Byaruhanga Sam', rank: 6, points: 130, monthlyReports: 2, qualifiedForShare: true, joinedAt: '2026-09-12', lionSharePct: 5, bountyShareUgx: 27500 },
+      { id: 'scout-tumusiime-ben', name: 'Tumusiime Ben', rank: 7, points: 70, monthlyReports: 0, qualifiedForShare: false, joinedAt: '2026-09-25', lionSharePct: 0, bountyShareUgx: 0 },
+    ],
+    scarcePerks: [
+      { id: 'sp-helmet-01', title: 'DOT-Certified Safety Helmet', quantity: 2, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2], icon: 'Bike' },
+      { id: 'sp-jacket-02', title: 'High-Visibility Reflective Armor Jacket', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'ShieldCheck' },
+      { id: 'sp-oil-03', title: 'TotalEnergies 4T Engine Oil Voucher', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'Award' },
     ],
     recentScouts: [
       { scoutName: 'Kato Paul', reportedAt: '2 hours ago', lat: 0.3161, lng: 32.5782 },
@@ -204,9 +241,21 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { patronName: 'Nakasero Traders SACCO', amountUgx: 400000, sponsoredAt: '2026-10-06' },
     ],
     topScouts: [
-      { name: 'Mama Betty Nakato', rank: 1, points: 510, badge: 'Clean Drains Guardian', bountyShareUgx: 375000 },
-      { name: 'Hajjat Fatuma N.', rank: 2, points: 410, badge: 'Waste Disposal Auditor', bountyShareUgx: 225000 },
-      { name: 'Sula Kato', rank: 3, points: 360, badge: 'Cold Chain Watch', bountyShareUgx: 150000 },
+      { name: 'Mama Betty Nakato', rank: 1, points: 510, badge: 'Clean Drains Guardian', bountyShareUgx: 337500 },
+      { name: 'Hajjat Fatuma N.', rank: 2, points: 410, badge: 'Waste Disposal Auditor', bountyShareUgx: 187500 },
+      { name: 'Sula Kato', rank: 3, points: 360, badge: 'Cold Chain Watch', bountyShareUgx: 112500 },
+    ],
+    members: [
+      { id: 'scout-mama-betty', name: 'Mama Betty Nakato', rank: 1, points: 510, monthlyReports: 16, qualifiedForShare: true, joinedAt: '2026-08-01', lionSharePct: 45, bountyShareUgx: 337500 },
+      { id: 'scout-fatuma-n', name: 'Hajjat Fatuma N.', rank: 2, points: 410, monthlyReports: 11, qualifiedForShare: true, joinedAt: '2026-08-04', lionSharePct: 25, bountyShareUgx: 187500 },
+      { id: 'scout-sula-kato', name: 'Sula Kato', rank: 3, points: 360, monthlyReports: 8, qualifiedForShare: true, joinedAt: '2026-08-10', lionSharePct: 15, bountyShareUgx: 112500 },
+      { id: 'scout-kibirige-r', name: 'Kibirige Ronald', rank: 4, points: 210, monthlyReports: 4, qualifiedForShare: true, joinedAt: '2026-08-20', lionSharePct: 7.5, bountyShareUgx: 56250 },
+      { id: 'scout-namatovu-j', name: 'Namatovu Jane', rank: 5, points: 180, monthlyReports: 3, qualifiedForShare: true, joinedAt: '2026-09-02', lionSharePct: 7.5, bountyShareUgx: 56250 },
+    ],
+    scarcePerks: [
+      { id: 'sp-apron-01', title: 'Heavy-Duty Waterproof Vendor Aprons', quantity: 2, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2], icon: 'Store' },
+      { id: 'sp-scale-02', title: 'Digital Solar Produce Scale', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'Award' },
+      { id: 'sp-clean-03', title: 'Commercial Sanitation Disinfectant Pack', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'ShieldCheck' },
     ],
     recentScouts: [
       { scoutName: 'Mama Betty Nakato', reportedAt: '1 hour ago', lat: 0.313, lng: 32.5795 },
@@ -525,6 +574,76 @@ export function registerScoutWorkstationConsensus(params: {
   }
 }
 
+/**
+ * Algorithmic Lion's Share Pool Distribution:
+ * - Direct CSR profit sharing modeled after X/Twitter Creator monetization.
+ * - Minimum monthly engagement: member must have at least 1 monthly report to qualify.
+ * - Rank 1: 45% (The Lion's share)
+ * - Rank 2: 25%
+ * - Rank 3: 15%
+ * - Rank 4+: Share remaining 15% equally or weighted across qualified active members.
+ * - Limited items in workstation vault go strictly to Top 3 scouts.
+ */
+export function distributeStageLionShare(
+  totalPoolUgx: number,
+  existingMembers?: StageMember[],
+  existingTopScouts?: Array<{ name: string; rank: number; points: number; badge: string; bountyShareUgx: number }>
+): {
+  topScouts: Array<{ name: string; rank: number; points: number; badge: string; bountyShareUgx: number }>;
+  members: StageMember[];
+} {
+  const members = (existingMembers || []).map((m) => ({ ...m }));
+  
+  // Sort members by points descending
+  members.sort((a, b) => b.points - a.points);
+
+  // Assign ranks
+  members.forEach((m, idx) => {
+    m.rank = idx + 1;
+    m.qualifiedForShare = m.monthlyReports >= 1;
+  });
+
+  const qualifiedLowerRankMembers = members.filter((m) => m.rank >= 4 && m.qualifiedForShare);
+  const lowerShareTotalPct = qualifiedLowerRankMembers.length > 0 ? 15 : 0;
+  const rank1Pct = qualifiedLowerRankMembers.length > 0 ? 45 : 53;
+  const rank2Pct = qualifiedLowerRankMembers.length > 0 ? 25 : 29;
+  const rank3Pct = qualifiedLowerRankMembers.length > 0 ? 15 : 18;
+
+  members.forEach((m) => {
+    if (!m.qualifiedForShare) {
+      m.lionSharePct = 0;
+      m.bountyShareUgx = 0;
+      return;
+    }
+    if (m.rank === 1) {
+      m.lionSharePct = rank1Pct;
+      m.bountyShareUgx = Math.round((totalPoolUgx * rank1Pct) / 100);
+    } else if (m.rank === 2) {
+      m.lionSharePct = rank2Pct;
+      m.bountyShareUgx = Math.round((totalPoolUgx * rank2Pct) / 100);
+    } else if (m.rank === 3) {
+      m.lionSharePct = rank3Pct;
+      m.bountyShareUgx = Math.round((totalPoolUgx * rank3Pct) / 100);
+    } else {
+      const perMemberPct = lowerShareTotalPct / Math.max(1, qualifiedLowerRankMembers.length);
+      m.lionSharePct = Number(perMemberPct.toFixed(1));
+      m.bountyShareUgx = Math.round((totalPoolUgx * perMemberPct) / 100);
+    }
+  });
+
+  const updatedTopScouts = (existingTopScouts || []).map((ts, idx) => {
+    const mem = members.find((m) => m.rank === idx + 1);
+    const shareRatio = idx === 0 ? rank1Pct / 100 : idx === 1 ? rank2Pct / 100 : rank3Pct / 100;
+    return {
+      ...ts,
+      rank: idx + 1,
+      bountyShareUgx: mem ? mem.bountyShareUgx : Math.round(totalPoolUgx * shareRatio),
+    };
+  });
+
+  return { topScouts: updatedTopScouts, members };
+}
+
 export function contributePatronSponsorship(
   stageId: string,
   amountUgx: number,
@@ -547,14 +666,12 @@ export function contributePatronSponsorship(
     ...stage.patrons,
   ];
 
-  // Re-calculate top-3 bounty shares based on 50% / 30% / 20% rule
-  const updatedTopScouts = stage.topScouts.map((scout, idx) => {
-    const shareRatio = idx === 0 ? 0.5 : idx === 1 ? 0.3 : 0.2;
-    return {
-      ...scout,
-      bountyShareUgx: Math.round(updatedPool * shareRatio),
-    };
-  });
+  // Algorithmic Lion's Share Distribution (45% Rank 1, 25% Rank 2, 15% Rank 3, 15% Ranks 4+)
+  const { topScouts: updatedTopScouts, members: updatedMembers } = distributeStageLionShare(
+    updatedPool,
+    stage.members,
+    stage.topScouts
+  );
 
   const updatedStage: FrontlineStage = {
     ...stage,
@@ -562,9 +679,71 @@ export function contributePatronSponsorship(
     patronCount: stage.patronCount + 1,
     patrons: updatedPatrons,
     topScouts: updatedTopScouts,
+    members: updatedMembers,
   };
 
   stages[index] = updatedStage;
   saveStoredStages(stages);
   return updatedStage;
+}
+
+/**
+ * Voluntary Exit from Workstation Virtual Group:
+ * A boda stage, market, or hospital worker is free to exit their station cluster at any time.
+ */
+export function exitStageGroup(
+  stageId: string,
+  scoutIdOrName: string
+): { success: boolean; stage?: FrontlineStage; message: string } {
+  const stages = getStoredStages();
+  const index = stages.findIndex((s) => s.id === stageId);
+  if (index < 0) {
+    return { success: false, message: 'Workstation stage not found' };
+  }
+
+  const stage = stages[index];
+  const currentMembers = stage.members || [];
+  const targetLower = scoutIdOrName.toLowerCase().trim();
+
+  const remainingMembers = currentMembers.filter(
+    (m) => m.id.toLowerCase() !== targetLower && !m.name.toLowerCase().includes(targetLower)
+  );
+
+  if (remainingMembers.length === currentMembers.length) {
+    // If not found in members, remove from recentScouts
+    const remainingRecent = stage.recentScouts.filter(
+      (r) => !r.scoutName.toLowerCase().includes(targetLower)
+    );
+    const updatedCount = Math.max(1, stage.scoutCount - 1);
+    const updatedStage: FrontlineStage = {
+      ...stage,
+      scoutCount: updatedCount,
+      recentScouts: remainingRecent,
+    };
+    stages[index] = updatedStage;
+    saveStoredStages(stages);
+    return { success: true, stage: updatedStage, message: `Successfully exited ${stage.name}.` };
+  }
+
+  const newScoutCount = Math.max(1, stage.scoutCount - 1);
+  const { topScouts: updatedTopScouts, members: reCalculatedMembers } = distributeStageLionShare(
+    stage.patronSponsorPoolUgx,
+    remainingMembers,
+    stage.topScouts.filter((ts) => !ts.name.toLowerCase().includes(targetLower))
+  );
+
+  const updatedStage: FrontlineStage = {
+    ...stage,
+    scoutCount: newScoutCount,
+    members: reCalculatedMembers,
+    topScouts: updatedTopScouts,
+  };
+
+  stages[index] = updatedStage;
+  saveStoredStages(stages);
+  return {
+    success: true,
+    stage: updatedStage,
+    message: `You have successfully exited ${stage.name}. Your workstation slot has been freed.`,
+  };
 }

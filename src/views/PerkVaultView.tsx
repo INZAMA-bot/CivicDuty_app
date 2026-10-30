@@ -65,6 +65,7 @@ import {
   QrCode,
   Utensils,
   Camera,
+  Sparkles,
 } from 'lucide-react';
 
 export interface RankedJurisdictionCitizen {
@@ -4042,7 +4043,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               }`}
             >
               <Gift size={12} strokeWidth={1.75} />
-              <span>Citizen XP Store</span>
+              <span>X-Style XP Monetization</span>
             </button>
             <button
               onClick={() => setActiveTab('csr_leaderboard')}
@@ -5432,21 +5433,25 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </form>
         )}
 
-        {/* TAB 4: CITIZEN SELF-REDEMPTION STORE (REDEEM CIVICSCORE XP) */}
+        {/* TAB 4: CITIZEN SELF-REDEMPTION STORE (X/TWITTER-STYLE ENGAGEMENT MONETIZATION) */}
         {activeTab === 'redeem_xp' && (
           <div className="space-y-4 animate-fade-in">
-            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-emerald-500/10 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mono">
-                    Citizen Self-Redemption Store · Earned Civic Stewardship
+                  <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mono flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-amber-500" />
+                    <span>X-Style Creator Engagement Monetization · CivicDuty Profit-Sharing</span>
                   </span>
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
-                    Anti-Farming Guardrails Active
+                    Direct CSR Channel
+                  </span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-bold">
+                    Home Parish Lock: {userHomeParish}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl">
-                  Active citizens don&apos;t have to wait for an official to manually reward them. Redeem your earned <strong>CivicScore XP</strong> directly for unassigned utility vouchers in the Sovereign Escrow Vault.
+                <p className="text-xs text-slate-700 dark:text-slate-300 max-w-2xl leading-relaxed">
+                  CivicDuty functions exactly like <strong>Twitter/X Creator Monetization for engagement</strong>: platform subscription and ad profits are directly profit-shared with active civic scouts. <strong>CivicDuty acts as a paying client</strong> reimbursing verified Private Provider Desks (salons, bodas, clinics, grocers) within your registered Parish ({userHomeParish}). This incentivizes local merchants to create vouchers because CivicDuty pays them in real money!
                 </p>
                 <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400 mono">
                   <span>• Transit Pass: <strong>100 XP</strong></span>
@@ -5454,6 +5459,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   <span>• Supermarket 1,000 KSh Basket: <strong>175 XP</strong></span>
                   <span>• Water / Power Token: <strong>200 XP</strong></span>
                   <span>• Cooldown Limit: <strong>Max 1 Claim / 7 Days</strong></span>
+                  <span>• Parish Lock: <strong>Redeemable within {userHomeParish}</strong></span>
                 </div>
               </div>
 

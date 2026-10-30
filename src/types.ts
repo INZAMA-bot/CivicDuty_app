@@ -216,6 +216,9 @@ export interface Department {
   qrPlacardUrl?: string;
   nudgeCount?: number;
   unclaimedReason?: string;
+  is_main_branch?: boolean;
+  parent_dept_id?: string;
+  is_branch?: boolean;
 }
 
 export interface CountryInfo {

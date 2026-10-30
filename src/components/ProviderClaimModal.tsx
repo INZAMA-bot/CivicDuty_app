@@ -81,12 +81,13 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
   const branding = getCountryBranding(country);
   const currentPartnership = INITIAL_PARTNERSHIPS.find((p) => p.countryCode === country);
 
-  // Available departments strictly filtered for PRIVATE commercial / consumer entities.
-  // Government ministries, statutory agencies, and regulatory authorities are provisioned
-  // centrally under the Sovereign National Accord by Government-appointed personnel.
+  // Available departments strictly filtered for PRIVATE commercial / consumer entities,
+  // and ONLY Main Branch desks. Child branches are covered and provisioned through their Main Branch.
   const rawDepts = allDepts(country);
-  const privateDepts = rawDepts.filter((d) => !isCivicDept(d));
-  const availableDepts = privateDepts.length > 0 ? privateDepts : rawDepts;
+  const privateDepts = rawDepts.filter(
+    (d) => !isCivicDept(d) && d.is_main_branch !== false && !d.parent_dept_id && !d.is_branch
+  );
+  const availableDepts = privateDepts.length > 0 ? privateDepts : rawDepts.filter((d) => d.is_main_branch !== false && !d.parent_dept_id && !d.is_branch);
 
   // Track whether viewing sovereign civic statutory explanation notice
   const [viewingCivicNotice, setViewingCivicNotice] = useState<boolean>(() => isCivicDept(targetDept));
@@ -200,67 +201,67 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
   const territoryPlans: Record<TerritoryPlanKey, TerritoryPlanConfig> = {
     community_single: {
       id: 'community_single',
-      name: `${primary} Coverage`,
-      scopeLabel: `1 ${primary} (Single Branch / Neighborhood)`,
+      name: `${primary} Tier ($0)`,
+      scopeLabel: `1 Main Branch covering strictly 1 ${primary}`,
       unitRange: `1 local ${primary} footprint`,
       units: 1,
       monthlyUsd: 0,
       annualUsd: 0,
       free: true,
       features: [
+        `1 Main Branch covering strictly one ${primary}`,
+        `0 Child branches permitted (single parish locked)`,
         `Official Verified Checkmark on Public Directory`,
-        `Direct Citizen Complaint SMS / Email Dispatch`,
-        `Official Signed Public Response capability`,
+        `Direct Citizen Complaint SMS & Signed Responses`,
         `Standard 48h Public SLA tracking`,
-        `Up to 2 Staff responder seats (Self-Serve)`,
       ],
     },
     cluster: {
       id: 'cluster',
-      name: 'Sub-County Coverage',
-      scopeLabel: `Sub-County / Division Multi-${primary} Desk`,
-      unitRange: `Up to 50 ${primaryPlural}`,
+      name: 'Sub-County Tier ($5/mo)',
+      scopeLabel: `Sub-County Main Branch Desk`,
+      unitRange: `Up to 50 ${primaryPlural} in Sub-County`,
       units: 25,
       monthlyUsd: 5,
       annualUsd: 50, // Saves $10 (2 months free)
       features: [
-        `Everything in ${primary} Free Tier`,
-        `Multi-neighborhood complaint triage & routing`,
+        `Sub-County Main Branch Desk covering your sub-county`,
+        `Capable of creating Parish branches *only* within this sub-county`,
+        `All child branch costs covered under Main Branch subscription ($0/branch)`,
         `UNLIMITED Staff responder & supervisor seats ($0 per seat)`,
         `Weekly Customer Satisfaction (CSAT) analytics`,
-        `Mobile Money (MTN / Airtel / M-Pesa) billing`,
       ],
     },
     district: {
       id: 'district',
-      name: `${l1Unit} Coverage`,
-      scopeLabel: `Full ${l1Unit} / City-Wide Network`,
+      name: `${l1Unit} Tier ($10/mo)`,
+      scopeLabel: `Full ${l1Unit} / District Branch Desk`,
       unitRange: `${l1Unit}-wide operating network`,
       units: 150,
       monthlyUsd: 10,
       annualUsd: 100, // Saves $20 (2 months free)
       popular: true,
       features: [
-        `Everything in Sub-County ($5/mo) Tier`,
-        `UNLIMITED Staff responder, branch manager & engineer seats`,
+        `District Main Branch Desk covering full ${l1Unit}`,
+        `Capable of creating Sub-County and Parish branches *only* within this district`,
+        `All child branch payments covered through Main Branch subscription`,
         `Fast-Track 12h / 24h Resolution SLA Guarantee badge`,
         `Embeddable "CivicDuty Verified Trust Index" Website Badge`,
-        `Official Resolution Certificate & Sponsor Perk Vaults`,
       ],
     },
     national: {
       id: 'national',
-      name: 'National Coverage',
-      scopeLabel: `All ${primaryPlural} (Whole-of-Country)`,
+      name: 'National Tier ($20/mo)',
+      scopeLabel: `National HQ Desk (Whole-of-Country)`,
       unitRange: `Nationwide branch network`,
       units: 501,
       monthlyUsd: 20,
       annualUsd: 200, // Saves $40 (2 months free)
       features: [
-        `Everything in ${l1Unit} ($10/mo) Tier`,
-        `Unrestricted nationwide consumer & branch coverage`,
-        `UNLIMITED Staff responder & executive auditor seats`,
-        `CRM Webhook & API integration (Zendesk / Salesforce / ERP)`,
+        `National HQ Desk with whole-of-country jurisdiction`,
+        `Capable of creating District, Sub-County, and Parish branches nationwide`,
+        `Unlimited branches nationwide covered under Main Branch subscription`,
+        `Enterprise CRM & Webhook API (Zendesk / Salesforce / ERP)`,
         `Dedicated CivicDuty Dispute Resolution Arbiter`,
       ],
     },

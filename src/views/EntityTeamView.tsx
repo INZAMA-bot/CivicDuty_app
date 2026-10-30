@@ -85,11 +85,24 @@ export const EntityTeamView: React.FC = () => {
     logAudit,
     toast,
     execGovLoginByData,
+    getClaimedEntity,
   } = useApp();
 
   // Strict Role Division: Corporate Superadmin (HQ) vs Branch Manager
   const isBranchManager = Boolean(user?.is_branch_manager || (user?.branch_id && !user?.is_superadmin && !user?.is_main_branch));
   const isSuperadmin = !isBranchManager && Boolean(user?.is_superadmin || user?.is_main_branch || user?.role === 'platform_admin');
+
+  // Provider Desk Subscription Tier & Branch Permissions:
+  // $0 Parish: 1 main branch covering strictly 1 parish (0 child branches permitted)
+  // $5/mo Sub-county: Main branch covering sub-county; can create Parish branches only within that sub-county
+  // $10/mo District: District branch; can create Sub-County and Parish branches only within that district
+  // $20/mo National: National desk; can create District, Sub-County, and Parish branches nationwide
+  const currentClaimedEntity = user?.dept ? getClaimedEntity(user.dept) : undefined;
+  const providerPlanKey: 'community_single' | 'cluster' | 'district' | 'national' =
+    (currentClaimedEntity?.plan as any) ||
+    (user?.subscription_plan as any) ||
+    'national';
+  const canCreateBranches = providerPlanKey !== 'community_single';
 
   // Active section tab in Entity Team view (Branch Managers default to their branch and squads)
   const [activeTab, setActiveTab] = useState<'staff' | 'branches' | 'my_branch' | 'invite' | 'roles' | 'pending' | 'audit'>(() => {
@@ -248,6 +261,10 @@ export const EntityTeamView: React.FC = () => {
     e.preventDefault();
     if (!isSuperadmin) {
       toast('Branch provisioning is restricted to Corporate HQ Superadmin.', 'amber');
+      return;
+    }
+    if (!canCreateBranches) {
+      toast('Parish Tier ($0) covers strictly 1 parish. Upgrade to Sub-County ($5), District ($10), or National ($20) to create branches.', 'amber');
       return;
     }
     if (!newBranchName.trim()) {
@@ -1050,14 +1067,29 @@ export const EntityTeamView: React.FC = () => {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowCreateBranchModal(true)}
-                className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs mono uppercase flex items-center gap-2 transition-all shadow-md shrink-0 cursor-pointer self-start sm:self-auto"
-              >
-                <Plus size={15} />
-                <span>Provision New Branch</span>
-              </button>
+              {canCreateBranches ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCreateBranchModal(true)}
+                  className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs mono uppercase flex items-center gap-2 transition-all shadow-md shrink-0 cursor-pointer self-start sm:self-auto"
+                >
+                  <Plus size={15} />
+                  <span>Provision New Branch</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast('Parish Tier ($0) covers strictly 1 Parish. Upgrade to Sub-County ($5), District ($10), or National ($20) to provision child branches.', 'amber');
+                    go('entity_register');
+                  }}
+                  className="py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-500 font-bold text-xs mono uppercase flex items-center gap-2 transition-all shrink-0 cursor-pointer self-start sm:self-auto"
+                  title="Parish Tier ($0) covers strictly 1 Parish. Upgrade to provision child branches."
+                >
+                  <Lock size={14} />
+                  <span>Branch Provisioning Locked ($0 Parish Tier)</span>
+                </button>
+              )}
             </div>
 
             {/* Quick Metrics */}
@@ -1091,10 +1123,13 @@ export const EntityTeamView: React.FC = () => {
 
               <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40">
                 <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 block uppercase">
-                  Avg SLA Performance
+                  Subscription Coverage
                 </span>
-                <span className="text-lg font-black text-amber-900 dark:text-amber-200 font-mono">
-                  95.4% Ontime
+                <span className="text-xs font-bold text-amber-900 dark:text-amber-200 font-mono block">
+                  {providerPlanKey === 'national' ? 'National ($20/mo)' : providerPlanKey === 'district' ? 'District ($10/mo)' : providerPlanKey === 'cluster' ? 'Sub-County ($5/mo)' : 'Parish ($0 Free)'}
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400">
+                  Child branches $0/mo
                 </span>
               </div>
             </div>
@@ -1106,10 +1141,10 @@ export const EntityTeamView: React.FC = () => {
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
                   <span className="text-[10px] font-black uppercase mono text-purple-600 dark:text-purple-400">
-                    Central Admin Action
+                    Central Admin Action · All Branch Costs Covered by Main Branch ($0 / Branch)
                   </span>
                   <h4 className="text-base font-black text-slate-900 dark:text-white">
-                    Provision Nationwide Branch to LC2 Parish
+                    Provision Branch Desk (LC2 Parish Level)
                   </h4>
                 </div>
                 <button
@@ -1119,6 +1154,23 @@ export const EntityTeamView: React.FC = () => {
                 >
                   <X size={16} />
                 </button>
+              </div>
+
+              {/* Tier Jurisdiction Guidance Banner */}
+              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 text-xs space-y-1">
+                <div className="flex items-center justify-between font-mono font-bold text-purple-800 dark:text-purple-300">
+                  <span>
+                    Current Plan: {providerPlanKey === 'national' ? 'National Coverage ($20/mo)' : providerPlanKey === 'district' ? 'District Coverage ($10/mo)' : 'Sub-County Coverage ($5/mo)'}
+                  </span>
+                  <span className="text-emerald-600 dark:text-emerald-400">100% Covered by Main Branch</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  {providerPlanKey === 'cluster'
+                    ? `Sub-County tier ($5/mo): Capable of creating Parish branches *only* within ${selectedSubcountyNode?.name || 'your assigned sub-county'}. District & Sub-county are locked to your Main Branch jurisdiction.`
+                    : providerPlanKey === 'district'
+                    ? `District tier ($10/mo): Capable of creating Sub-County and Parish branches *only* within ${selectedDistrictNode?.name || 'your assigned district'}. District is locked to your Main Branch jurisdiction.`
+                    : 'National tier ($20/mo): Unrestricted nationwide branch provisioning across all districts, sub-counties, and parishes.'}
+                </p>
               </div>
 
               <form onSubmit={handleCreateBranch} className="space-y-4">
@@ -1160,10 +1212,16 @@ export const EntityTeamView: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
-                        1. District / City
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block">
+                          1. District / City
+                        </label>
+                        {providerPlanKey !== 'national' && (
+                          <span className="text-[9px] font-mono text-amber-600 font-bold uppercase">Locked</span>
+                        )}
+                      </div>
                       <select
+                        disabled={providerPlanKey === 'cluster' || providerPlanKey === 'district'}
                         value={selectedDistrictId}
                         onChange={(e) => {
                           setSelectedDistrictId(e.target.value);
@@ -1175,7 +1233,9 @@ export const EntityTeamView: React.FC = () => {
                             }
                           }
                         }}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white"
+                        className={`w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white ${
+                          providerPlanKey === 'cluster' || providerPlanKey === 'district' ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''
+                        }`}
                       >
                         {countryTerritories.map((d: any) => (
                           <option key={d.id} value={d.id}>
@@ -1186,10 +1246,16 @@ export const EntityTeamView: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
-                        2. Subcounty / Division
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block">
+                          2. Subcounty / Division
+                        </label>
+                        {providerPlanKey === 'cluster' && (
+                          <span className="text-[9px] font-mono text-amber-600 font-bold uppercase">Locked</span>
+                        )}
+                      </div>
                       <select
+                        disabled={providerPlanKey === 'cluster'}
                         value={selectedSubcountyId}
                         onChange={(e) => {
                           setSelectedSubcountyId(e.target.value);
@@ -1198,7 +1264,9 @@ export const EntityTeamView: React.FC = () => {
                             setSelectedParishName(sub.children[0].name);
                           }
                         }}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white"
+                        className={`w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white ${
+                          providerPlanKey === 'cluster' ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''
+                        }`}
                       >
                         {subcountyNodes.map((s: any) => (
                           <option key={s.id} value={s.id}>

@@ -25,6 +25,7 @@ import {
   Building2,
   CheckCircle2,
   X,
+  Users,
 } from 'lucide-react';
 import { UserSession } from '../types';
 
@@ -59,7 +60,7 @@ export const GovLoginView: React.FC = () => {
   // Universal / Manual Access Code fallback
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'hierarchy' | 'ministries' | 'providers' | 'manual'>('hierarchy');
+  const [activeTab, setActiveTab] = useState<'hierarchy' | 'team_roster' | 'ministries' | 'providers' | 'manual'>('hierarchy');
   const [providerSearch, setProviderSearch] = useState('');
   const [providerCategory, setProviderCategory] = useState<string>('all');
 
@@ -540,6 +541,7 @@ export const GovLoginView: React.FC = () => {
             <div className="flex border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] rounded-t-xl overflow-x-auto scrollbar-none">
               {[
                 { id: 'hierarchy', label: '5-Tier Escalation Hierarchy', icon: Layers },
+                { id: 'team_roster', label: 'Statutory Team Roster (12 Desks)', icon: Users },
                 {
                   id: 'ministries',
                   label: `Accounting & Ministry Desks (${profile.accountingDesks.length})`,
@@ -702,6 +704,186 @@ export const GovLoginView: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* TAB 1B: Complete Statutory Team Simulation Roster (12 Active Roles) */}
+            {activeTab === 'team_roster' && (
+              <div className="space-y-3 animate-fade-in">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-mono space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-emerald-600" />
+                    <span>Statutory Team Roster · Accounting Officer &amp; Invited Staff Simulation</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 font-sans">
+                    Experience real interactions from grassroots village leadership to apex Permanent Secretary. Click any desk below to instantly experience their duties, notices, baraza broadcasts, and escalation chains.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    {
+                      code: 'LC1-CHAIR-01',
+                      title: 'LC1 Village Chairperson',
+                      official: 'Kigozi Lawrence (LC1 Chairperson, Nakasero Village)',
+                      tier: 'Tier 1 Grassroots',
+                      badge: 'Village Leadership',
+                      role: 'spokesperson',
+                      desc: 'Frontline village baraza, community dispute resolution, local emergency notices & citizen identity verification.',
+                      border: 'border-amber-400/50 dark:border-amber-500/40 bg-amber-500/5',
+                    },
+                    {
+                      code: 'PARISH-CHIEF-01',
+                      title: 'Parish Chief / Ward Agent',
+                      official: 'Namyalo Christine (Parish Chief & PDM Registrar, Nakasero Parish)',
+                      tier: 'Tier 1 Grassroots',
+                      badge: 'Statutory Accounting Officer',
+                      role: 'spokesperson',
+                      desc: 'Lowest statutory accounting officer (PFMA S.45), PDM SACCO enterprise approvals, parish baraza & frontline ticket escalation.',
+                      border: 'border-emerald-500/50 dark:border-emerald-400/40 bg-emerald-500/5',
+                    },
+                    {
+                      code: 'VHT-COORD-01',
+                      title: 'Village Health Team (VHT) Coordinator',
+                      official: 'Dr. Nabukalu Sarah (VHT Coordinator)',
+                      tier: 'Tier 1 Grassroots',
+                      badge: 'Grassroots Health',
+                      role: 'spokesperson',
+                      desc: 'Household health surveys, clinic medicine stockouts, immunization campaigns & frontline disease alert reporting.',
+                      border: 'border-rose-400/50 dark:border-rose-500/40 bg-rose-500/5',
+                    },
+                    {
+                      code: 'PARISH-WOMEN-01',
+                      title: 'Parish Youth & Women Representative',
+                      official: 'Akello Harriet (Youth & Women Representative)',
+                      tier: 'Tier 1 Grassroots',
+                      badge: 'Affirmative Action Lead',
+                      role: 'spokesperson',
+                      desc: 'Affirmative action advocacy, women enterprise empowerment, youth skill vouchers & grassroots civic monitoring.',
+                      border: 'border-purple-400/50 dark:border-purple-500/40 bg-purple-500/5',
+                    },
+                    {
+                      code: 'CDO-OFFICER-01',
+                      title: 'Community Development Officer (CDO)',
+                      official: 'Mugisha Robert (Community Development Officer)',
+                      tier: 'Tier 2 Sub-County',
+                      badge: 'Community Services Lead',
+                      role: 'spokesperson',
+                      desc: 'Sub-county social mobilization, registered SACCO audits, community labour schemes & grassroots dispute arbitration.',
+                      border: 'border-blue-400/50 dark:border-blue-500/40 bg-blue-500/5',
+                    },
+                    {
+                      code: 'TOWN-CLERK-01',
+                      title: 'Division Town Clerk / Sub-County Chief',
+                      official: 'Kavuma David (Division Town Clerk)',
+                      tier: 'Tier 2 Sub-County',
+                      badge: 'LLG Statutory Accounting Officer',
+                      role: 'node_admin',
+                      desc: 'Lower Local Government (LLG) administration, sub-county works supervision, town council revenues & frontline budget oversight.',
+                      border: 'border-cyan-400/50 dark:border-cyan-500/40 bg-cyan-500/5',
+                    },
+                    {
+                      code: 'LC3-CHAIR-01',
+                      title: 'LC3 Sub-County Chairperson',
+                      official: 'Hon. Ssempijja Ronald (LC3 Chairperson)',
+                      tier: 'Tier 2 Sub-County',
+                      badge: 'Sub-County Political Executive',
+                      role: 'spokesperson',
+                      desc: 'Sub-county political head, council baraza presiding officer, citizen service complaints & feeder road inspection.',
+                      border: 'border-indigo-400/50 dark:border-indigo-500/40 bg-indigo-500/5',
+                    },
+                    {
+                      code: 'RDC-SECURITY-01',
+                      title: 'Resident District Commissioner (RDC)',
+                      official: 'Col. Fred Mwesigwa (RDC District Security & Central Oversight)',
+                      tier: 'Tier 3 Statutory Oversight',
+                      badge: 'Presidency Security (Read-Only)',
+                      role: 'read_only',
+                      desc: 'Presidential central government representative, district security committee chair, PDM fund monitoring & anti-corruption audit oversight.',
+                      border: 'border-red-400/50 dark:border-red-500/40 bg-red-500/5',
+                    },
+                    {
+                      code: 'LC5-CHAIR-01',
+                      title: 'LC5 District Chairperson',
+                      official: 'Hon. Matovu Patrick (LC5 District Chairperson)',
+                      tier: 'Tier 3 District',
+                      badge: 'District Political Executive Head',
+                      role: 'spokesperson',
+                      desc: 'Higher Local Government (HLG) political leadership, district council policy, state-of-district address & civic governance.',
+                      border: 'border-violet-400/50 dark:border-violet-500/40 bg-violet-500/5',
+                    },
+                    {
+                      code: 'DISTRICT-CAO-01',
+                      title: 'Chief Administrative Officer (CAO)',
+                      official: 'Bwambale Godfrey (CAO Wakiso / District Administration)',
+                      tier: 'Tier 3 District',
+                      badge: 'HLG Statutory Accounting Officer',
+                      role: 'node_admin',
+                      desc: 'Head of public service in the district, vote controller, statutory tender awarder, accounting officer for all district allocations.',
+                      border: 'border-teal-400/50 dark:border-teal-500/40 bg-teal-500/5',
+                    },
+                    {
+                      code: 'DISTRICT-PRO-01',
+                      title: 'District Communications Officer & PRO',
+                      official: 'Atuhaire Brenda (District PRO & Media Desk)',
+                      tier: 'Tier 3 District',
+                      badge: 'Media Desk & Public Relations',
+                      role: 'spokesperson',
+                      desc: 'Official government spokesperson, citizen radio & digital press releases, public announcements & verified media advisories.',
+                      border: 'border-sky-400/50 dark:border-sky-500/40 bg-sky-500/5',
+                    },
+                    {
+                      code: 'PS-MOLG-01',
+                      title: 'Permanent Secretary, MoLG',
+                      official: 'Ben Kumumanya (Statutory Accounting Officer Vote 011)',
+                      tier: 'Tier 5 National Apex',
+                      badge: 'Apex Accounting Officer & Superadmin',
+                      role: 'platform_admin',
+                      desc: 'Ministry of Local Government accounting officer Vote 011, nationwide local government rollout superadmin, apex ticket escalation.',
+                      border: 'border-emerald-600 dark:border-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-500/30',
+                    },
+                  ].map((officer) => (
+                    <div
+                      key={officer.code}
+                      className={`p-3.5 rounded-xl border ${officer.border} flex flex-col justify-between gap-2.5 text-left transition-all hover:shadow-xs`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400">
+                            {officer.tier}
+                          </span>
+                          <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-black/40 border border-[#e3e6ea] dark:border-[#262b36] font-semibold text-slate-700 dark:text-slate-300">
+                            {officer.badge}
+                          </span>
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                          {officer.title}
+                        </h4>
+                        <div className="text-[11px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 truncate">
+                          {officer.official}
+                        </div>
+                        <p className="text-[10.5px] text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                          {officer.desc}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-black/30 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                          {officer.code}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => authenticateWithCode(officer.code, officer.code, officer.title)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 text-[10.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <span>Mount Desk</span>
+                          <ArrowRight size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

@@ -887,47 +887,6 @@ export const FeedView: React.FC = () => {
       </div>
 
       {/* 2. CONTEXTUAL GRASSROOTS STRIPS */}
-      {/* 2a. FOLLOWING DESKS & LEADERSHIP STRIP */}
-      {feedTab === 'following' && (
-        <div className="bg-[#f8f9fa] dark:bg-[#0d101a] border-b border-slate-200/90 dark:border-[#1e2536] px-3.5 sm:px-4 py-2.5">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Grassroots Desks &amp; Authorities You Follow ({followed.length})
-            </span>
-            <span className="text-[11px] text-slate-500 font-mono">1-Tap Follow</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-            {[
-              { id: 'kcca', name: 'City Authority', label: 'KCCA' },
-              { id: 'nwsc', name: 'Water & Sewerage', label: 'NWSC' },
-              { id: 'umeme', name: 'Power Grid', label: 'Umeme' },
-              { id: 'moh_ug', name: 'Health Ministry', label: 'MoH' },
-              { id: 'kla_cbd', name: 'Central Ward Desk', label: 'Central Ward' },
-              { id: 'nakasero_chief', name: 'Nakasero Chief', label: 'Nakasero Parish' },
-            ].map((d) => {
-              const isF = followed.includes(d.id);
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => toggleFollowDept(d.id)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition cursor-pointer flex items-center gap-1 ${
-                    isF
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                      : 'bg-white dark:bg-[#111520] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#1e2536] hover:border-slate-400'
-                  }`}
-                >
-                  <span>{d.label}</span>
-                  <span className={`text-[10px] ${isF ? 'text-emerald-400 dark:text-emerald-600' : 'text-slate-400'}`}>
-                    {isF ? '✓' : '+'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* 2b. NEAR ME GRASSROOTS HIERARCHY CONTROLS (PARISH · WARD · GRASSROOT) */}
       {feedTab === 'near_me' && (

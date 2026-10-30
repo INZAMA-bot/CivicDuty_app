@@ -627,7 +627,7 @@ export const DepartmentsView: React.FC = () => {
                       <QrCode size={13} />
                     </button>
 
-                    {isPrivateEntity && !isClaimed && (
+                    {isPrivateEntity && !isClaimed && (d.is_main_branch !== false && !d.parent_dept_id && !d.is_branch && !d.id.includes('-branch-')) && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -639,6 +639,12 @@ export const DepartmentsView: React.FC = () => {
                       >
                         Claim Desk
                       </button>
+                    )}
+
+                    {isPrivateEntity && (d.is_main_branch === false || Boolean(d.parent_dept_id) || Boolean(d.is_branch) || d.id.includes('-branch-')) && (
+                      <span className="px-2 py-1 text-[9.5px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 rounded-md border border-slate-200 dark:border-slate-800">
+                        Child Branch · Paid by Main Branch
+                      </span>
                     )}
 
                     <button

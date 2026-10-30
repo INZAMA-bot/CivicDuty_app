@@ -6,6 +6,7 @@ import {
   FRONTLINE_CATEGORIES,
   getStoredStages,
   contributePatronSponsorship,
+  exitStageGroup,
 } from '../data/stageEstablishment';
 import {
   Bike,
@@ -28,6 +29,8 @@ import {
   Globe,
   Radio,
   X,
+  LogOut,
+  Sparkles,
 } from 'lucide-react';
 
 interface FrontlineStageExplorerProps {
@@ -43,12 +46,25 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
   onSelectStageForCompose,
   compact = false,
 }) => {
-  const { toast, go } = useApp();
+  const { toast, go, user } = useApp();
   const [stages, setStages] = useState<FrontlineStage[]>(() => getStoredStages());
   const [selectedCategory, setSelectedCategory] = useState<FrontlineScoutCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [parishFilter, setParishFilter] = useState(selectedParish || 'all');
   const [sponsorModalStage, setSponsorModalStage] = useState<FrontlineStage | null>(null);
+
+  // Voluntary Exit Group Handler
+  const handleExitWorkstationGroup = (stageId: string, stageName: string) => {
+    const scoutId = user?.id || 'usr-9028-UG';
+    const scoutName = user?.name || 'Citizen Scout';
+    const res = exitStageGroup(stageId, scoutName);
+    if (res.success) {
+      setStages(getStoredStages());
+      toast(`Exited ${stageName}. Your slot has been freed.`, 'emerald');
+    } else {
+      toast(res.message, 'amber');
+    }
+  };
 
   // Patron Sponsor Form State
   const [patronName, setPatronName] = useState('');
@@ -332,30 +348,58 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                 )}
               </div>
 
-              {/* Patron Sponsoring Pool & Top 3 Scouts */}
-              <div className="space-y-2 pt-1 border-t border-[#e3e6ea] dark:border-[#262b36]">
-                <div className="flex items-center justify-between gap-2">
+              {/* Patron Sponsoring Pool & Lion's Share Algorithmic Breakdown */}
+              <div className="space-y-2.5 pt-1.5 border-t border-[#e3e6ea] dark:border-[#262b36]">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <HeartHandshake size={13} className="text-amber-600 dark:text-amber-400" />
                     <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
-                      Patron Sponsor Pool:
+                      Station Vault Pool:
                     </span>
                     <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
                       {stage.patronSponsorPoolUgx.toLocaleString()} UGX
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setSponsorModalStage(stage)}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10.5px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <DollarSign size={11} />
-                    <span>Sponsor Stage</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSponsorModalStage(stage)}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <DollarSign size={11} />
+                      <span>Deposit to Station Vault</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleExitWorkstationGroup(stage.id, stage.name)}
+                      title="Voluntarily exit this workstation virtual cluster at any time"
+                      className="px-2 py-1 rounded-lg hover:bg-rose-500/15 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent hover:border-rose-500/30 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <LogOut size={10} />
+                      <span>Exit Group</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Top 3 Scouts Rewards Breakdown */}
+                {/* Lion's Share Formula Notice */}
+                <div className="p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-[9.5px] font-mono text-slate-600 dark:text-slate-400 space-y-1">
+                  <div className="flex items-center justify-between font-bold text-emerald-800 dark:text-emerald-300">
+                    <span className="flex items-center gap-1">
+                      <Sparkles size={10} className="text-amber-500" />
+                      <span>CivicDuty Lion's Share Algorithm</span>
+                    </span>
+                    <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-emerald-500/20 uppercase font-black">
+                      Automated Dispatch
+                    </span>
+                  </div>
+                  <p>
+                    Rank 1: <strong>45% (Lion's Share)</strong> · Rank 2: <strong>25%</strong> · Rank 3: <strong>15%</strong> · Ranks 4+: <strong>15% shared</strong> (requires ≥1 monthly report to qualify).
+                  </p>
+                </div>
+
+                {/* Top Scouts Rewards Breakdown */}
                 {stage.topScouts && stage.topScouts.length > 0 && (
                   <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono">
                     {stage.topScouts.slice(0, 3).map((scout, idx) => (
@@ -364,8 +408,10 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                         className="p-1.5 rounded-md bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-0.5"
                       >
                         <div className="flex items-center justify-between text-slate-500">
-                          <span className="font-bold text-emerald-600">#{idx + 1}</span>
-                          <span className="text-[9px] truncate max-w-[60px]">{scout.points} pts</span>
+                          <span className="font-bold text-emerald-600">
+                            #{idx + 1} {idx === 0 ? '(Lion 45%)' : idx === 1 ? '(25%)' : '(15%)'}
+                          </span>
+                          <span className="text-[9px] truncate max-w-[55px]">{scout.points} pts</span>
                         </div>
                         <div className="font-bold truncate text-slate-800 dark:text-slate-200" title={scout.name}>
                           {scout.name.split(' ')[0]}
@@ -375,6 +421,32 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Scarce Perks (Limited Items Reserved Strictly for Top 3) */}
+                {stage.scarcePerks && stage.scarcePerks.length > 0 && (
+                  <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] font-mono space-y-1.5">
+                    <div className="flex items-center justify-between font-bold text-amber-800 dark:text-amber-300">
+                      <span className="flex items-center gap-1">
+                        <Award size={11} />
+                        <span>Scarce Physical Items Vault</span>
+                      </span>
+                      <span className="text-[8.5px] px-1.5 py-0.2 rounded bg-amber-500/20 uppercase font-black">
+                        Top-3 Only
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-[9px]">
+                      {stage.scarcePerks.map((perk) => (
+                        <div
+                          key={perk.id}
+                          className="p-1 rounded bg-white/70 dark:bg-black/30 border border-amber-500/20 text-slate-800 dark:text-slate-200 truncate"
+                          title={perk.title}
+                        >
+                          <strong>{perk.quantity}x</strong> {perk.title.split('(')[0]}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -454,7 +526,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                     <span>Home Parish Lock: {sponsorModalStage.parish}</span>
                   </div>
                   <p>
-                    100% of your patronage is allocated to the Top 3 frontline scouts of this stage who enforce road safety, pothole reporting, and public hygiene.
+                    <strong>Direct Workstation Vault Deposit:</strong> 100% of your funds are split algorithmically across members of this station based on rank and monthly engagement. Rank 1 receives the lion's share (45%), Rank 2 gets 25%, Rank 3 gets 15%, and remaining qualified members share 15% (requires ≥1 monthly report). Scarce physical items go strictly to the Top 3.
                   </p>
                 </div>
 
