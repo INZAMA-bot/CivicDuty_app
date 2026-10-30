@@ -25,6 +25,7 @@ import {
   PanelLeftOpen,
   SlidersHorizontal,
   Briefcase,
+  HardHat,
 } from 'lucide-react';
 import { TrafficLightLogo } from './TrafficLightLogo';
 
@@ -134,7 +135,11 @@ export const Navigation: React.FC<NavigationProps> = () => {
         : 'Provider Desk',
       icon: Building2,
     },
-    { id: 'gov_projects', label: 'Facility Upgrades', icon: Briefcase },
+    {
+      id: 'gov_projects',
+      label: activeUser.entity_category === 'private_contractor' ? 'Contract Works' : 'Facility Upgrades',
+      icon: activeUser.entity_category === 'private_contractor' ? HardHat : Briefcase,
+    },
     { id: 'entity_team', label: 'Staff & Team Roster', icon: Users },
     { id: 'gov_audit', label: 'Audit Chain', icon: Scale },
     { id: 'entity_register', label: 'Desk Profile & Tier', icon: Layers },

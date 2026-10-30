@@ -25,10 +25,17 @@ import {
   AlertTriangle,
   ThumbsUp,
   ThumbsDown,
+  Camera,
+  Image as ImageIcon,
+  Eye,
+  Upload,
+  X,
+  FileText,
+  Sparkles,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { RewardModal } from '../components/RewardModal';
-import { ProjectMilestone, Post } from '../types';
+import { ProjectMilestone, MilestoneEvidenceImage, Post } from '../types';
 import { saveFiscalVoucherToCloud } from '../services/firestoreSync';
 import { getCountryCapacityPresets } from '../data/tiers';
 
@@ -67,6 +74,27 @@ export const ProjectView: React.FC = () => {
       contractorVerified: true,
       contractorSignedBy: 'Lead Engineer (Contractor)',
       contractorSignedAt: '2026-01-18',
+      contractorNotes: 'Baseline topographic surveys and GPS benchmarks established; 1.5km bush clearing stripped to 300mm depth.',
+      ipcNumber: 'IPC-01/2026',
+      awarderAuditNotes: 'Supervising engineer verified setting-out coordinates with KCCA/MoWT survey benchmarks.',
+      evidenceImages: [
+        {
+          id: 'ev-1-1',
+          url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+          caption: 'Baseline topographic survey & benchmark establishment at Chainage 0+000',
+          uploadedAt: '2026-01-16',
+          uploadedBy: 'Lead Surveyor & Site Engineer',
+          gpsTag: '0.3476° N, 32.5825° E',
+        },
+        {
+          id: 'ev-1-2',
+          url: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=800&q=80',
+          caption: 'Mechanical bush clearance & topsoil stripping (300mm depth)',
+          uploadedAt: '2026-01-17',
+          uploadedBy: 'Heavy Plant Supervisor',
+          gpsTag: '0.3478° N, 32.5828° E',
+        },
+      ],
     },
     {
       id: '2',
@@ -79,16 +107,39 @@ export const ProjectView: React.FC = () => {
       contractorVerified: true,
       contractorSignedBy: 'Managing Director (Contractor)',
       contractorSignedAt: '2026-02-02',
+      contractorNotes: 'Joint site possession protocol signed. Mobilization of site camp, safety hoardings, and plant.',
+      ipcNumber: 'IPC-02/2026',
+      awarderAuditNotes: 'Handover protocol signed; insurance and advance payment guarantee validated.',
+      evidenceImages: [
+        {
+          id: 'ev-2-1',
+          url: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80',
+          caption: 'Site camp establishment, safety signage & hoardings along project corridor',
+          uploadedAt: '2026-02-01',
+          uploadedBy: 'Safety Officer & Site Agent',
+          gpsTag: '0.3480° N, 32.5830° E',
+        },
+      ],
     },
     {
       id: '3',
       title: 'Phase 3: Substructure Drainage Channel Heavy Excavation',
       date: 'May 2026',
       done: false,
-      awarderVerified: true,
-      awarderSignedBy: 'Resident Engineer (Gov)',
-      awarderSignedAt: '2026-05-10',
+      awarderVerified: false,
       contractorVerified: false,
+      contractorNotes: 'Excavation 1.8m depth for hydraulic flow completed. Ready for joint inspection.',
+      ipcNumber: 'IPC-03/2026',
+      evidenceImages: [
+        {
+          id: 'ev-3-1',
+          url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=800&q=80',
+          caption: 'Channel prism trench excavation to grade with CAT 320 excavator',
+          uploadedAt: '2026-05-08',
+          uploadedBy: 'Excavation Foreman',
+          gpsTag: '0.3485° N, 32.5835° E',
+        },
+      ],
     },
     {
       id: '4',
@@ -97,6 +148,7 @@ export const ProjectView: React.FC = () => {
       done: false,
       awarderVerified: false,
       contractorVerified: false,
+      evidenceImages: [],
     },
     {
       id: '5',
@@ -105,6 +157,7 @@ export const ProjectView: React.FC = () => {
       done: false,
       awarderVerified: false,
       contractorVerified: false,
+      evidenceImages: [],
     },
     {
       id: '6',
@@ -113,6 +166,7 @@ export const ProjectView: React.FC = () => {
       done: false,
       awarderVerified: false,
       contractorVerified: false,
+      evidenceImages: [],
     },
   ];
 
@@ -123,6 +177,22 @@ export const ProjectView: React.FC = () => {
   const [signingRole, setSigningRole] = useState<'awarder' | 'contractor'>('awarder');
   const [newWallMilestoneTitle, setNewWallMilestoneTitle] = useState('');
   const [newWallMilestoneDate, setNewWallMilestoneDate] = useState('');
+
+  // Milestone Evidence Modal States
+  const [selectedMilestoneForEvidence, setSelectedMilestoneForEvidence] = useState<ProjectMilestone | null>(null);
+  const [evidenceModalMode, setEvidenceModalMode] = useState<'contractor_upload' | 'procuring_entity_inspect' | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<MilestoneEvidenceImage | null>(null);
+
+  // Contractor Evidence Form State
+  const [contractorNotesInput, setContractorNotesInput] = useState('');
+  const [ipcNumberInput, setIpcNumberInput] = useState('IPC-03/2026');
+  const [gpsTagInput, setGpsTagInput] = useState('0.3478° N, 32.5829° E (Chainage 2+150)');
+  const [uploadedImages, setUploadedImages] = useState<MilestoneEvidenceImage[]>([]);
+  const [customCaption, setCustomCaption] = useState('');
+  const [customImageUrl, setCustomImageUrl] = useState('');
+
+  // Procuring Entity Inspection State
+  const [awarderAuditNotesInput, setAwarderAuditNotesInput] = useState('');
 
   useEffect(() => {
     if (proj?.milestones && proj.milestones.length > 0) {
@@ -252,21 +322,74 @@ export const ProjectView: React.FC = () => {
     }
   };
 
+  const SAMPLE_CIVIL_PHOTO_PRESETS = [
+    {
+      title: 'Concrete Box Culvert Bedding & Invert Slab',
+      url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=800&q=80',
+      caption: 'Precast box culvert units placed on 150mm class 15 concrete blinding bedding',
+    },
+    {
+      title: 'Trench Prism Hydraulic Excavation',
+      url: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=800&q=80',
+      caption: 'Trapezoidal drainage channel excavation completed per hydraulic slope DWG-03',
+    },
+    {
+      title: 'Subgrade Compaction & Slump Test Verification',
+      url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80',
+      caption: 'Nuclear density gauge test verifying 98% MDD compaction on base gravel layer',
+    },
+    {
+      title: 'Asphalt Concrete (AC20) Binder Course Laying',
+      url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+      caption: 'Vögele asphalt paver laying 60mm AC20 binder course at 155°C compaction temperature',
+    },
+    {
+      title: 'Solar Streetlight Mast Foundation & Armature',
+      url: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+      caption: 'C25 reinforced concrete plinth & anchor bolts installed for 8m solar streetlight masts',
+    },
+  ];
+
+  const handleOpenContractorEvidenceModal = (milestone: ProjectMilestone) => {
+    setSelectedMilestoneForEvidence(milestone);
+    setUploadedImages(milestone.evidenceImages ? [...milestone.evidenceImages] : []);
+    setContractorNotesInput(milestone.contractorNotes || '');
+    setIpcNumberInput(milestone.ipcNumber || `IPC-0${milestones.indexOf(milestone) + 1}/2026`);
+    setGpsTagInput(proj.location ? `${proj.location} (Chainage ${milestones.indexOf(milestone) * 2}+150)` : '0.3478° N, 32.5829° E');
+    setEvidenceModalMode('contractor_upload');
+  };
+
+  const handleOpenProcuringEntityInspector = (milestone: ProjectMilestone) => {
+    setSelectedMilestoneForEvidence(milestone);
+    setAwarderAuditNotesInput(milestone.awarderAuditNotes || 'On-site engineering inspection confirmed compliance with contract specifications.');
+    setEvidenceModalMode('procuring_entity_inspect');
+  };
+
   const handleToggleAwarder = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (signingRole !== 'awarder') {
       toast('ACCESS DENIED: Contractor Executives/Engineers CANNOT sign the Procuring Entity slot!', 'amber');
       return;
     }
+    const target = milestones.find((m) => m.id === id);
+    if (!target) return;
+
+    // MANDATORY REQUIREMENT: Contractor MUST have attached pictorial evidence before Procuring Entity signs off
+    if (!target.awarderVerified && (!target.evidenceImages || target.evidenceImages.length === 0)) {
+      toast('BLOCKED: Mandatory on-site pictorial evidence required before Procuring Entity can verify and sign off!', 'amber');
+      handleOpenProcuringEntityInspector(target);
+      return;
+    }
+
     setMilestones((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m;
         const nextAwarder = !m.awarderVerified;
         const isBoth = nextAwarder && Boolean(m.contractorVerified);
         if (isBoth) {
-          toast('Dual Signoff Complete! Phase 100% verified by Procuring Entity & Contractor', 'emerald');
+          toast('Dual Signoff Complete! Phase 100% verified by Procuring Entity & Contractor with on-site pictorial proof', 'emerald');
         } else if (nextAwarder) {
-          toast('Procuring Entity (Gov Authority) signoff appended', 'emerald');
+          toast('Procuring Entity (Gov Authority) signoff appended after reviewing photographic proof', 'emerald');
         } else {
           toast('Procuring Entity signoff removed', 'amber');
         }
@@ -287,6 +410,16 @@ export const ProjectView: React.FC = () => {
       toast('ACCESS DENIED: Government Officials CANNOT sign the Contractor Executive slot!', 'amber');
       return;
     }
+    const target = milestones.find((m) => m.id === id);
+    if (!target) return;
+
+    // If contractor has NOT attached pictorial evidence yet, launch mandatory evidence modal
+    if (!target.contractorVerified && (!target.evidenceImages || target.evidenceImages.length === 0)) {
+      handleOpenContractorEvidenceModal(target);
+      toast('Mandatory Pictorial Evidence: Attach on-site completion photos to sign this milestone.', 'amber');
+      return;
+    }
+
     setMilestones((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m;
@@ -295,19 +428,76 @@ export const ProjectView: React.FC = () => {
         if (isBoth) {
           toast('Dual Signoff Complete! Phase 100% verified by Government & Contractor', 'emerald');
         } else if (nextContractor) {
-          toast('Contractor Executive signoff appended', 'emerald');
+          toast('Contractor Executive signoff appended with pictorial proof', 'emerald');
         } else {
           toast('Contractor Executive signoff removed', 'amber');
         }
         return {
           ...m,
           contractorVerified: nextContractor,
-          contractorSignedBy: nextContractor ? `${proj.contractor} Executive` : undefined,
+          contractorSignedBy: nextContractor ? `${proj.contractor} Lead Site Engineer` : undefined,
           contractorSignedAt: nextContractor ? new Date().toISOString().split('T')[0] : undefined,
           done: isBoth,
         };
       })
     );
+  };
+
+  const handleSaveContractorEvidenceAndSign = () => {
+    if (!selectedMilestoneForEvidence) return;
+    if (uploadedImages.length === 0) {
+      toast('Please attach at least one on-site photographic evidence.', 'amber');
+      return;
+    }
+
+    const updatedMilestones = milestones.map((m) => {
+      if (m.id !== selectedMilestoneForEvidence.id) return m;
+      const nextContractor = true;
+      const isBoth = Boolean(m.awarderVerified) && nextContractor;
+      return {
+        ...m,
+        contractorVerified: nextContractor,
+        contractorSignedBy: `${proj.contractor} Lead Site Engineer`,
+        contractorSignedAt: new Date().toISOString().split('T')[0],
+        evidenceImages: [...uploadedImages],
+        contractorNotes: contractorNotesInput.trim() || 'All structural works, testing and surveys completed to specifications.',
+        ipcNumber: ipcNumberInput.trim() || `IPC-0${milestones.indexOf(m) + 1}/2026`,
+        done: isBoth,
+      };
+    });
+
+    setMilestones(updatedMilestones);
+    setEvidenceModalMode(null);
+    setSelectedMilestoneForEvidence(null);
+    setUploadedImages([]);
+    toast(`Pictorial evidence saved & milestone signed by Contractor! Procuring Entity can now inspect and sign off.`, 'emerald');
+  };
+
+  const handleProcuringEntityVerifyEvidenceAndSign = () => {
+    if (!selectedMilestoneForEvidence) return;
+    if (!selectedMilestoneForEvidence.evidenceImages || selectedMilestoneForEvidence.evidenceImages.length === 0) {
+      toast('Cannot verify: No on-site pictorial evidence submitted by contractor.', 'amber');
+      return;
+    }
+
+    const updatedMilestones = milestones.map((m) => {
+      if (m.id !== selectedMilestoneForEvidence.id) return m;
+      const nextAwarder = true;
+      const isBoth = Boolean(m.contractorVerified) && nextAwarder;
+      return {
+        ...m,
+        awarderVerified: nextAwarder,
+        awarderSignedBy: user?.name || 'Procuring Entity Supervising Engineer',
+        awarderSignedAt: new Date().toISOString().split('T')[0],
+        awarderAuditNotes: awarderAuditNotesInput.trim() || 'Visual on-site inspection & core strength tests verified and approved.',
+        done: isBoth,
+      };
+    });
+
+    setMilestones(updatedMilestones);
+    setEvidenceModalMode(null);
+    setSelectedMilestoneForEvidence(null);
+    toast(`Procuring Entity verified pictorial evidence & signed off milestone! Dual sign-off unlocked.`, 'emerald');
   };
 
   const handleAddWallMilestone = () => {
@@ -670,46 +860,162 @@ export const ProjectView: React.FC = () => {
                   </h3>
                 </div>
 
+                {/* MANDATORY PICTORIAL EVIDENCE SECTION */}
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                      <Camera size={13} className="text-amber-600 dark:text-amber-400" />
+                      <span>On-Site Pictorial Evidence &amp; Engineering Dossier:</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {m.evidenceImages && m.evidenceImages.length > 0 ? (
+                        <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1">
+                          <CheckCircle2 size={10} />
+                          <span>{m.evidenceImages.length} On-Site Photos Attached</span>
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1">
+                          <AlertTriangle size={10} />
+                          <span>No Photos Attached (Sign-Off Blocked)</span>
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenProcuringEntityInspector(m)}
+                        className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 hover:border-amber-500 text-slate-800 dark:text-slate-200 flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Eye size={10} />
+                        <span>Inspect Photos</span>
+                      </button>
+
+                      {signingRole === 'contractor' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenContractorEvidenceModal(m)}
+                          className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-800 dark:text-amber-300 flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <Upload size={10} />
+                          <span>+ Upload Photos</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Thumbnail Row */}
+                  {m.evidenceImages && m.evidenceImages.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                        {m.evidenceImages.map((img, photoIdx) => (
+                          <div
+                            key={img.id || photoIdx}
+                            onClick={() => setLightboxImage(img)}
+                            className="relative group cursor-pointer shrink-0 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 hover:border-amber-500 transition-all w-24 h-16 bg-slate-900"
+                            title={`${img.caption} (Click to inspect full resolution)`}
+                          >
+                            <img
+                              src={img.url}
+                              alt={img.caption}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-end p-1">
+                              <span className="text-[8px] text-white truncate drop-shadow-sm font-sans font-medium">
+                                #{photoIdx + 1} {img.caption.slice(0, 14)}...
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {m.contractorNotes && (
+                        <p className="text-[10px] text-slate-600 dark:text-slate-300 font-sans italic border-l-2 border-amber-500/60 pl-2">
+                          <strong>Contractor Note ({m.ipcNumber || 'IPC'}):</strong> {m.contractorNotes}
+                        </p>
+                      )}
+                      {m.awarderAuditNotes && (
+                        <p className="text-[10px] text-emerald-800 dark:text-emerald-300 font-sans border-l-2 border-emerald-500/60 pl-2">
+                          <strong>Procuring Entity Audit:</strong> {m.awarderAuditNotes}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-[9.5px] font-mono text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2">
+                      <span>
+                        ⚠️ <strong>Procuring Entity Rule:</strong> Procuring entity cannot sign off this milestone without verified on-site photos of completed works.
+                      </span>
+                      {signingRole === 'contractor' && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenContractorEvidenceModal(m)}
+                          className="px-2 py-0.5 rounded bg-amber-600 text-white font-bold text-[9px] shrink-0 cursor-pointer"
+                        >
+                          Attach Now
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Interactive Dual Signoff Action Row */}
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Tick 1: Procuring Entity / Supervising Officer */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleAwarder(m.id, e)}
-                      className={`px-3 py-1.5 rounded-lg border font-bold transition-all flex items-center gap-1.5 text-[10px] ${
-                        signingRole === 'awarder'
-                          ? awarderSigned
-                            ? 'bg-teal-100 border-teal-400 text-teal-900 dark:bg-teal-500/25 dark:border-teal-400 dark:text-teal-200'
-                            : 'bg-teal-700 text-white hover:bg-teal-600'
-                          : 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-900/60 dark:border-slate-800 dark:text-slate-500 cursor-not-allowed opacity-60'
-                      }`}
-                    >
-                      {signingRole === 'awarder' ? (
-                        <><Landmark size={11} strokeWidth={1.75} /> Procuring Entity {awarderSigned ? 'Signed' : '+ Sign'}</>
+                    {signingRole === 'awarder' ? (
+                      m.evidenceImages && m.evidenceImages.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleAwarder(m.id, e)}
+                          className={`px-3 py-1.5 rounded-lg border font-bold transition-all flex items-center gap-1.5 text-[10px] ${
+                            awarderSigned
+                              ? 'bg-teal-100 border-teal-400 text-teal-900 dark:bg-teal-500/25 dark:border-teal-400 dark:text-teal-200 cursor-pointer'
+                              : 'bg-teal-700 text-white hover:bg-teal-600 cursor-pointer'
+                          }`}
+                        >
+                          <Landmark size={11} strokeWidth={1.75} />
+                          <span>Procuring Entity {awarderSigned ? 'Verified & Signed' : 'Verify & Sign Off'}</span>
+                        </button>
                       ) : (
-                        <><Lock size={11} strokeWidth={1.75} /> Gov Slot Locked {awarderSigned ? '(Signed)' : ''}</>
-                      )}
-                    </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toast('SIGN-OFF BLOCKED: Contractor must upload on-site pictorial evidence before the Procuring Entity can verify!', 'amber');
+                            handleOpenProcuringEntityInspector(m);
+                          }}
+                          className="px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold flex items-center gap-1.5 text-[10px] cursor-pointer"
+                          title="Locked until contractor attaches pictorial evidence"
+                        >
+                          <Lock size={11} className="text-amber-600" />
+                          <span>Blocked · Awaiting Evidence Photos</span>
+                        </button>
+                      )
+                    ) : (
+                      <div className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500 text-[10px] font-bold flex items-center gap-1.5 opacity-70">
+                        <Lock size={11} />
+                        <span>Gov Slot Locked {awarderSigned ? '(Signed)' : ''}</span>
+                      </div>
+                    )}
 
                     {/* Tick 2: Contractor Executive */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleContractor(m.id, e)}
-                      className={`px-3 py-1.5 rounded-lg border font-bold transition-all flex items-center gap-1.5 text-[10px] ${
-                        signingRole === 'contractor'
-                          ? contractorSigned
+                    {signingRole === 'contractor' ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleContractor(m.id, e)}
+                        className={`px-3 py-1.5 rounded-lg border font-bold transition-all flex items-center gap-1.5 text-[10px] cursor-pointer ${
+                          contractorSigned
                             ? 'bg-amber-50 border-amber-600/40 text-amber-900 dark:bg-amber-500/25 dark:border-amber-400 dark:text-amber-200'
                             : 'bg-amber-700 text-white hover:bg-amber-600'
-                          : 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-900/60 dark:border-slate-800 dark:text-slate-500 cursor-not-allowed opacity-60'
-                      }`}
-                    >
-                      {signingRole === 'contractor' ? (
-                        <><HardHat size={11} strokeWidth={1.75} /> Contractor Exec {contractorSigned ? 'Signed' : '+ Sign'}</>
-                      ) : (
-                        <><Lock size={11} strokeWidth={1.75} /> Contractor Slot Locked {contractorSigned ? '(Signed)' : ''}</>
-                      )}
-                    </button>
+                        }`}
+                      >
+                        <HardHat size={11} strokeWidth={1.75} />
+                        <span>Contractor Exec {contractorSigned ? 'Signed' : (m.evidenceImages && m.evidenceImages.length > 0 ? '+ Sign Milestone' : '+ Attach Photos & Sign')}</span>
+                      </button>
+                    ) : (
+                      <div className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500 text-[10px] font-bold flex items-center gap-1.5 opacity-70">
+                        <Lock size={11} />
+                        <span>Contractor Slot Locked {contractorSigned ? '(Signed)' : ''}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Audit Trail Signatures display */}
@@ -719,7 +1025,7 @@ export const ProjectView: React.FC = () => {
                         Gov: {m.awarderSignedBy} ({m.awarderSignedAt || 'Verified'})
                       </span>
                     ) : (
-                      <span className="text-slate-400 dark:text-slate-500 italic">Gov: Pending</span>
+                      <span className="text-slate-400 dark:text-slate-500 italic">Gov: Pending Review</span>
                     )}
 
                     {m.contractorSignedBy ? (
@@ -727,7 +1033,7 @@ export const ProjectView: React.FC = () => {
                         Exec: {m.contractorSignedBy} ({m.contractorSignedAt || 'Verified'})
                       </span>
                     ) : (
-                      <span className="text-slate-400 dark:text-slate-500 italic">Exec: Pending</span>
+                      <span className="text-slate-400 dark:text-slate-500 italic">Exec: Pending Claim</span>
                     )}
 
                     {dualVerified && (
@@ -1009,6 +1315,455 @@ export const ProjectView: React.FC = () => {
                   Warrant Settled via RTGS / Bank Escrow
                 </span>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1: CONTRACTOR MILESTONE EVIDENCE & PHOTO UPLOAD */}
+      {evidenceModalMode === 'contractor_upload' && selectedMilestoneForEvidence && (
+        <div
+          onClick={() => {
+            setEvidenceModalMode(null);
+            setSelectedMilestoneForEvidence(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/80 backdrop-blur-xs animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#161a22] border border-amber-500/40 rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto text-slate-900 dark:text-slate-100"
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 flex items-center justify-center shrink-0">
+                  <Camera size={20} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase text-amber-700 dark:text-amber-400 font-bold block">
+                    Mandatory Contractor Physical Proof · Milestone Delivery
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Attach Pictorial Evidence: {selectedMilestoneForEvidence.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEvidenceModalMode(null);
+                  setSelectedMilestoneForEvidence(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Instruction Banner */}
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono text-slate-700 dark:text-slate-300 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                <AlertTriangle size={13} />
+                <span>Statutory Procurement Requirement</span>
+              </div>
+              <p>
+                The Procuring Entity (Supervising Engineer) cannot sign off this completed milestone without clear on-site photographic evidence. Attach actual photographs showing completed excavation, concrete casting, compaction, or installation.
+              </p>
+            </div>
+
+            {/* Project & Milestone Metadata */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+              <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <span className="text-[9.5px] text-slate-400 block uppercase">Contractor</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{proj.contractor}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <span className="text-[9.5px] text-slate-400 block uppercase">IPC Claim Reference</span>
+                <input
+                  type="text"
+                  value={ipcNumberInput}
+                  onChange={(e) => setIpcNumberInput(e.target.value)}
+                  placeholder="e.g. IPC-03/2026"
+                  className="w-full bg-transparent font-bold text-amber-600 dark:text-amber-400 focus:outline-none"
+                />
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <span className="text-[9.5px] text-slate-400 block uppercase">GPS / Chainage Stamp</span>
+                <input
+                  type="text"
+                  value={gpsTagInput}
+                  onChange={(e) => setGpsTagInput(e.target.value)}
+                  placeholder="e.g. 0.3478° N, 32.5829° E"
+                  className="w-full bg-transparent font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Contractor Technical Note */}
+            <div>
+              <label className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                Contractor BOQ Delivery Statement &amp; Engineering Details
+              </label>
+              <textarea
+                rows={2}
+                value={contractorNotesInput}
+                onChange={(e) => setContractorNotesInput(e.target.value)}
+                placeholder="Describe completed works, materials used, concrete grade (C25/C30), layer compaction percentage, or test results..."
+                className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            {/* Quick-Select Sample Engineering Photo Presets (for instant live testing) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1">
+                  <Sparkles size={11} className="text-amber-500" />
+                  <span>1-Tap Realistic Civil Engineering Photo Presets:</span>
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400">Click to add preset photo</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {SAMPLE_CIVIL_PHOTO_PRESETS.map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      const newPhoto: MilestoneEvidenceImage = {
+                        id: `ev-upload-${Date.now()}-${idx}`,
+                        url: preset.url,
+                        caption: preset.caption,
+                        uploadedAt: new Date().toISOString().split('T')[0],
+                        uploadedBy: `${proj.contractor} Lead Site Engineer`,
+                        gpsTag: gpsTagInput || '0.3478° N, 32.5829° E',
+                      };
+                      setUploadedImages((prev) => [...prev, newPhoto]);
+                      toast(`Added "${preset.title}" to evidence dossier!`, 'emerald');
+                    }}
+                    className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left flex items-center gap-2 transition-all cursor-pointer group"
+                  >
+                    <img src={preset.url} alt={preset.title} className="w-10 h-10 rounded object-cover shrink-0" />
+                    <div className="truncate text-left">
+                      <div className="text-[10px] font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-amber-600">
+                        {preset.title}
+                      </div>
+                      <div className="text-[8.5px] font-mono text-slate-400 truncate">
+                        + Add photo to milestone
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Or Custom Photo Upload / URL Entry */}
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+              <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-400 uppercase block">
+                Or Upload from Camera / Device / Custom URL:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  value={customImageUrl}
+                  onChange={(e) => setCustomImageUrl(e.target.value)}
+                  placeholder="Paste Image URL (https://...)"
+                  className="sm:col-span-2 px-3 py-1.5 text-xs font-mono bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!customImageUrl.trim()) {
+                      toast('Paste a valid image URL first', 'amber');
+                      return;
+                    }
+                    const newPhoto: MilestoneEvidenceImage = {
+                      id: `ev-custom-${Date.now()}`,
+                      url: customImageUrl.trim(),
+                      caption: customCaption.trim() || 'On-site engineering inspection evidence',
+                      uploadedAt: new Date().toISOString().split('T')[0],
+                      uploadedBy: `${proj.contractor} Site Agent`,
+                      gpsTag: gpsTagInput || '0.3478° N, 32.5829° E',
+                    };
+                    setUploadedImages((prev) => [...prev, newPhoto]);
+                    setCustomImageUrl('');
+                    setCustomCaption('');
+                    toast('Custom photo attached to evidence dossier!', 'emerald');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-mono font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Plus size={12} />
+                  <span>Attach Image</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Current Attached Photos Gallery with Delete Action */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className="text-emerald-500" />
+                  <span>Photos Staged for Milestone ({uploadedImages.length}):</span>
+                </span>
+                <span className="text-slate-400 text-[10px]">
+                  {uploadedImages.length > 0 ? 'Ready for submission' : 'At least 1 photo required'}
+                </span>
+              </div>
+
+              {uploadedImages.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {uploadedImages.map((img, idx) => (
+                    <div
+                      key={img.id || idx}
+                      className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900 group"
+                    >
+                      <img src={img.url} alt={img.caption} className="w-full h-24 object-cover" />
+                      <div className="p-1.5 bg-white/95 dark:bg-[#161a22]/95 border-t border-slate-200 dark:border-slate-800">
+                        <div className="text-[9px] font-mono text-slate-800 dark:text-slate-200 truncate font-semibold" title={img.caption}>
+                          {img.caption}
+                        </div>
+                        <div className="text-[8px] font-mono text-slate-400 truncate">
+                          {img.gpsTag || 'GPS Geotagged'}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center text-xs shadow-md cursor-pointer"
+                        title="Remove photo"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-center border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-xl text-slate-400 text-xs font-mono">
+                  No photographs staged yet. Tap a preset above or paste an image URL to attach evidence.
+                </div>
+              )}
+            </div>
+
+            {/* Action Bar */}
+            <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setEvidenceModalMode(null);
+                  setSelectedMilestoneForEvidence(null);
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveContractorEvidenceAndSign}
+                disabled={uploadedImages.length === 0}
+                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-mono font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer transition-all"
+              >
+                <Camera size={14} />
+                <span>Submit Pictorial Evidence &amp; Sign Contractor Slot</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: PROCURING ENTITY (GOV) EVIDENCE INSPECTOR & AUDIT SIGN-OFF */}
+      {evidenceModalMode === 'procuring_entity_inspect' && selectedMilestoneForEvidence && (
+        <div
+          onClick={() => {
+            setEvidenceModalMode(null);
+            setSelectedMilestoneForEvidence(null);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/80 backdrop-blur-xs animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-[#161a22] border border-teal-500/40 rounded-3xl max-w-2xl w-full p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto text-slate-900 dark:text-slate-100"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-600 flex items-center justify-center shrink-0">
+                  <Landmark size={20} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase text-teal-700 dark:text-teal-400 font-bold block">
+                    Procuring Entity Supervisory Technical Audit
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Inspect Milestone Proof: {selectedMilestoneForEvidence.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEvidenceModalMode(null);
+                  setSelectedMilestoneForEvidence(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Evidence Evaluation Status */}
+            {selectedMilestoneForEvidence.evidenceImages && selectedMilestoneForEvidence.evidenceImages.length > 0 ? (
+              <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/30 text-[11px] font-mono text-slate-700 dark:text-slate-300 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-teal-800 dark:text-teal-300">
+                  <CheckCircle2 size={13} />
+                  <span>Contractor Pictorial Evidence Ready for Supervisory Audit</span>
+                </div>
+                <p>
+                  {selectedMilestoneForEvidence.evidenceImages.length} photographic records uploaded by contractor <strong>{proj.contractor}</strong>. Review below prior to appending the Procuring Entity sign-off.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-[11px] font-mono text-rose-800 dark:text-rose-300 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertTriangle size={14} />
+                  <span>SIGN-OFF STRICTLY BLOCKED: No Evidence Photos Uploaded</span>
+                </div>
+                <p>
+                  Contractor has not attached photographic evidence of completed physical works for this stage. The Procuring Entity cannot certify or authorize milestone disbursements without on-site proof.
+                </p>
+              </div>
+            )}
+
+            {/* Contractor Technical Note & IPC Claim */}
+            <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono space-y-1.5">
+              <div className="flex items-center justify-between text-slate-500 text-[10px]">
+                <span>Contractor: <strong>{proj.contractor}</strong></span>
+                <span>IPC Claim: <strong>{selectedMilestoneForEvidence.ipcNumber || 'IPC-03/2026'}</strong></span>
+                <span>Date: <strong>{selectedMilestoneForEvidence.contractorSignedAt || selectedMilestoneForEvidence.date}</strong></span>
+              </div>
+              <div className="text-slate-800 dark:text-slate-200">
+                <strong>Contractor Statement:</strong> {selectedMilestoneForEvidence.contractorNotes || 'Structural works completed in accordance with BoQ specifications and core compaction tests.'}
+              </div>
+            </div>
+
+            {/* High-Resolution Photo Gallery */}
+            {selectedMilestoneForEvidence.evidenceImages && selectedMilestoneForEvidence.evidenceImages.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono font-bold uppercase text-slate-500 block">
+                  Verified On-Site Photographs (Click to enlarge):
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {selectedMilestoneForEvidence.evidenceImages.map((img, idx) => (
+                    <div
+                      key={img.id || idx}
+                      onClick={() => setLightboxImage(img)}
+                      className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900 cursor-pointer hover:border-teal-500 transition-all group"
+                    >
+                      <div className="relative h-40 overflow-hidden">
+                        <img
+                          src={img.url}
+                          alt={img.caption}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 text-white font-mono text-[9px] flex items-center gap-1">
+                          <Eye size={10} />
+                          <span>Inspect Fullscreen</span>
+                        </div>
+                      </div>
+                      <div className="p-2.5 bg-white dark:bg-[#161a22] space-y-1 text-[10px] font-mono">
+                        <div className="font-bold text-slate-900 dark:text-white leading-tight">
+                          {img.caption}
+                        </div>
+                        <div className="flex items-center justify-between text-slate-400 text-[9px]">
+                          <span>GPS: {img.gpsTag || 'Verified Geotag'}</span>
+                          <span>Uploaded: {img.uploadedAt}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Procuring Entity Supervisory Audit Notes Input */}
+            <div>
+              <label className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                Supervising Engineer / CAO Inspector Statutory Audit Memo
+              </label>
+              <textarea
+                rows={2}
+                value={awarderAuditNotesInput}
+                onChange={(e) => setAwarderAuditNotesInput(e.target.value)}
+                placeholder="Enter technical audit findings (e.g. Slump test C30 compliant, drainage gradient verified, core samples approved)..."
+                className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-teal-500"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setEvidenceModalMode(null);
+                  setSelectedMilestoneForEvidence(null);
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold cursor-pointer"
+              >
+                Close Dossier
+              </button>
+
+              {signingRole === 'awarder' && (
+                <button
+                  type="button"
+                  onClick={handleProcuringEntityVerifyEvidenceAndSign}
+                  disabled={!selectedMilestoneForEvidence.evidenceImages || selectedMilestoneForEvidence.evidenceImages.length === 0}
+                  className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white font-mono font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer transition-all"
+                >
+                  <Landmark size={14} />
+                  <span>Verify Evidence &amp; Append Procuring Entity Sign-Off</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: FULLSCREEN HIGH-RES LIGHTBOX */}
+      {lightboxImage && (
+        <div
+          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl w-full bg-slate-950 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl space-y-3 p-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-white">
+              <div className="text-xs font-mono font-bold flex items-center gap-2">
+                <Camera size={14} className="text-amber-500" />
+                <span>On-Site Photographic Evidence (Full Resolution)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLightboxImage(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] flex items-center justify-center bg-black rounded-2xl overflow-hidden">
+              <img
+                src={lightboxImage.url}
+                alt={lightboxImage.caption}
+                className="max-h-[68vh] w-auto max-w-full object-contain"
+              />
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
+              <div className="font-bold text-white text-sm">{lightboxImage.caption}</div>
+              <div className="flex items-center justify-between text-slate-400 text-[10px]">
+                <span>GPS Location: <strong>{lightboxImage.gpsTag || 'Chainage Geotagged'}</strong></span>
+                <span>Uploaded By: <strong>{lightboxImage.uploadedBy}</strong> ({lightboxImage.uploadedAt})</span>
+              </div>
             </div>
           </div>
         </div>

@@ -755,6 +755,15 @@ export interface EnrolledSectorMinister {
   notes?: string;
 }
 
+export interface MilestoneEvidenceImage {
+  id: string;
+  url: string;
+  caption: string;
+  uploadedAt: string;
+  uploadedBy: string;
+  gpsTag?: string;
+}
+
 export interface ProjectMilestone {
   id: string;
   title: string;
@@ -766,6 +775,10 @@ export interface ProjectMilestone {
   contractorVerified?: boolean;
   contractorSignedBy?: string;
   contractorSignedAt?: string;
+  evidenceImages?: MilestoneEvidenceImage[];
+  contractorNotes?: string;
+  ipcNumber?: string;
+  awarderAuditNotes?: string;
 }
 
 export interface Project {
