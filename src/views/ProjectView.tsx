@@ -32,10 +32,20 @@ import {
   X,
   FileText,
   Sparkles,
+  HeartHandshake,
+  Printer,
+  Wrench,
+  Clock,
+  Layers,
+  QrCode,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { RewardModal } from '../components/RewardModal';
-import { ProjectMilestone, MilestoneEvidenceImage, Post } from '../types';
+import { DefectsLiabilityPanel } from '../components/DefectsLiabilityPanel';
+import { ContractorCsrModal } from '../components/ContractorCsrModal';
+import { SiteDepotBranchesCard } from '../components/SiteDepotBranchesCard';
+import { PrintableTreasuryWarrantModal } from '../components/PrintableTreasuryWarrantModal';
+import { ProjectMilestone, MilestoneEvidenceImage, Post, ContractorCsrDisbursement } from '../types';
 import { saveFiscalVoucherToCloud } from '../services/firestoreSync';
 import { getCountryCapacityPresets } from '../data/tiers';
 
@@ -193,6 +203,38 @@ export const ProjectView: React.FC = () => {
 
   // Procuring Entity Inspection State
   const [awarderAuditNotesInput, setAwarderAuditNotesInput] = useState('');
+
+  // DLP Lifecycle Stage Switcher ('active' = Works in progress, 'defects' = 12-Month DLP & Warranty Watch)
+  const [lifecycleStage, setLifecycleStage] = useState<'active' | 'defects'>(() => {
+    return proj?.status === 'defects' ? 'defects' : 'active';
+  });
+
+  // CSR Grants State
+  const [csrModalOpen, setCsrModalOpen] = useState(false);
+  const [corridorCsrGrants, setCorridorCsrGrants] = useState<ContractorCsrDisbursement[]>([
+    {
+      id: 'csr-init-1',
+      projectId: proj.id,
+      contractor: proj.contractor,
+      targetGroup: 'Bukoto Central Boda Boda Stage Vault',
+      parish: 'Bukoto Parish',
+      itemTitle: '25x Certified DOT Boda Safety Helmets',
+      itemCount: 25,
+      monetaryValueUgx: 1500000,
+      disbursedAt: '2026-08-10',
+      donorStatement: `${proj.contractor} dispatched certified high-impact safety helmets to local commercial riders along the construction works corridor.`,
+    },
+  ]);
+
+  // Printable Treasury Warrant Slip Modal
+  const [printableModalOpen, setPrintableModalOpen] = useState(false);
+  const [voucherForPrint, setVoucherForPrint] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (proj?.status === 'defects') {
+      setLifecycleStage('defects');
+    }
+  }, [proj?.status]);
 
   useEffect(() => {
     if (proj?.milestones && proj.milestones.length > 0) {
@@ -725,6 +767,159 @@ export const ProjectView: React.FC = () => {
           <span className="text-amber-800 dark:text-amber-300 font-bold">{proj.code}</span>
         </div>
       </div>
+
+      {/* Project Lifecycle Stage Switcher (Works in Progress vs 12-Month Defects Liability Period) */}
+      <div className="card p-3 sm:p-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm rounded-2xl space-y-2.5 font-mono text-xs">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <Building2 size={14} className="text-amber-600" />
+              Contract Lifecycle Stage:
+            </span>
+            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase border ${
+              lifecycleStage === 'defects'
+                ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:border-amber-700 dark:text-amber-300'
+                : 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950 dark:border-teal-700 dark:text-teal-300'
+            }`}>
+              {lifecycleStage === 'defects' ? '12-Month Defects Liability Window' : 'Works In Progress'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => {
+                setLifecycleStage('active');
+                toast('Switched view to Contract Works in Progress', 'emerald');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                lifecycleStage === 'active'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              Works in Progress (Phases)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLifecycleStage('defects');
+                toast('Switched view to 12-Month Defects Liability Period & Citizen Warranty Watch', 'amber');
+              }}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                lifecycleStage === 'defects'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+              }`}
+            >
+              <Clock size={11} />
+              <span>12-Month Defects (DLP)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ITEM 3: SUBCONTRACTOR & SITE DEPOT CHILD BRANCHES ($0 Free Delegation) */}
+      <SiteDepotBranchesCard project={proj} toast={toast} />
+
+      {/* ITEM 2: CONTRACTOR CSR DIRECT CORRIDOR GRANTS SECTION */}
+      <div className="card p-4 sm:p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm rounded-2xl space-y-3 font-mono text-xs">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 flex items-center justify-center shrink-0">
+              <HeartHandshake size={16} />
+            </div>
+            <div>
+              <span className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs block">
+                Contractor Corridor CSR &amp; Grassroots Vaults
+              </span>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                Direct corporate social responsibility grants dedicated to transport &amp; community hubs along {proj.title}.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCsrModalOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-700 hover:bg-amber-600 text-white font-bold text-[10.5px] flex items-center gap-1.5 shadow-xs cursor-pointer transition-all"
+          >
+            <Gift size={12} />
+            <span>Disburse Contractor CSR to Parishes →</span>
+          </button>
+        </div>
+
+        {/* List of Recent Corridor CSR Disbursements */}
+        <div className="space-y-2 pt-1">
+          {corridorCsrGrants.map((grant) => (
+            <div
+              key={grant.id}
+              className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3 flex-wrap"
+            >
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900 dark:text-white">{grant.itemTitle}</span>
+                  <span className="text-[8.5px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-md border border-emerald-300">
+                    Disbursed to {grant.targetGroup}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Parish: <strong>{grant.parish}</strong> · Date: {grant.disbursedAt}
+                </div>
+                <p className="text-[10px] text-slate-600 dark:text-slate-300 italic pt-0.5">
+                  "{grant.donorStatement}"
+                </p>
+              </div>
+
+              <div className="text-right shrink-0">
+                <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                  UGX {grant.monetaryValueUgx.toLocaleString()}
+                </span>
+                <span className="text-[9px] text-slate-400 block font-semibold">{grant.itemCount} items</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ITEM 1: DEFECTS LIABILITY PERIOD (DLP) & CITIZEN WARRANTY WATCH (Shown in 'defects' mode) */}
+      {lifecycleStage === 'defects' && (
+        <DefectsLiabilityPanel
+          project={proj}
+          signingRole={signingRole}
+          user={user}
+          posts={posts}
+          toast={toast}
+          onOpenLightbox={(url, caption) => {
+            setLightboxImage({
+              id: 'lb-' + Date.now(),
+              url,
+              caption,
+              uploadedAt: new Date().toISOString().split('T')[0],
+              uploadedBy: 'Site Engineer / Citizen Reporter',
+            });
+          }}
+          onReleaseRetentionSuccess={(warrant) => {
+            setVoucherForPrint({
+              voucherNumber: warrant.warrantNumber,
+              projectTitle: proj.title,
+              contractor: proj.contractor,
+              milestoneTitle: 'Final Technical Handover & 5% Retention Escrow Clearance',
+              grossAmount: warrant.retentionAmount,
+              whtTaxDeduction: 0,
+              retentionEscrowHold: 0,
+              netPayable: warrant.retentionAmount,
+              currency: warrant.currency || 'UGX',
+              awarderSigner: warrant.awarderSigner || 'Supervising Engineer (Gov)',
+              contractorSigner: `${proj.contractor} Managing Director`,
+              issuedAt: warrant.releasedAt || new Date().toISOString(),
+              disbursementStatus: 'completed_bank_transfer',
+              blockchainSeal: warrant.sha256Seal,
+            });
+            setPrintableModalOpen(true);
+          }}
+        />
+      )}
 
       {/* Milestones Timeline */}
       <div className="card p-5 space-y-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm rounded-2xl">
@@ -1293,7 +1488,7 @@ export const ProjectView: React.FC = () => {
               <div>• Blockchain Audit Seal: <span className="text-teal-600 dark:text-teal-400 font-bold">{activeVoucher.blockchainSeal}</span></div>
             </div>
 
-            <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 flex-wrap">
               <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase ${
                 activeVoucher.disbursementStatus === 'completed_bank_transfer'
                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
@@ -1302,19 +1497,33 @@ export const ProjectView: React.FC = () => {
                 {activeVoucher.disbursementStatus === 'completed_bank_transfer' ? 'Disbursed to Bank' : 'Certified: Pending Release'}
               </span>
 
-              {activeVoucher.disbursementStatus !== 'completed_bank_transfer' ? (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleReleaseEscrowFunds(activeVoucher.id)}
-                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                  type="button"
+                  onClick={() => {
+                    setVoucherForPrint(activeVoucher);
+                    setPrintableModalOpen(true);
+                  }}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <ShieldCheck size={14} />
-                  <span>Authorize Bank Disbursement Release →</span>
+                  <Printer size={13} />
+                  <span>Print / Save Warrant Slip</span>
                 </button>
-              ) : (
-                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                  Warrant Settled via RTGS / Bank Escrow
-                </span>
-              )}
+
+                {activeVoucher.disbursementStatus !== 'completed_bank_transfer' ? (
+                  <button
+                    onClick={() => handleReleaseEscrowFunds(activeVoucher.id)}
+                    className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <ShieldCheck size={14} />
+                    <span>Authorize Bank Disbursement Release →</span>
+                  </button>
+                ) : (
+                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                    Warrant Settled via RTGS / Bank Escrow
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1768,6 +1977,24 @@ export const ProjectView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Contractor CSR Direct Corridor Disburse Modal */}
+      <ContractorCsrModal
+        isOpen={csrModalOpen}
+        onClose={() => setCsrModalOpen(false)}
+        project={proj}
+        user={user}
+        onDisburseSuccess={(grant) => setCorridorCsrGrants((prev) => [grant, ...prev])}
+        toast={toast}
+      />
+
+      {/* Printable MoFPED Treasury Warrant Slip Modal */}
+      <PrintableTreasuryWarrantModal
+        isOpen={printableModalOpen}
+        onClose={() => setPrintableModalOpen(false)}
+        voucher={voucherForPrint}
+        project={proj}
+      />
     </div>
   );
 };

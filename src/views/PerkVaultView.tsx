@@ -5433,33 +5433,56 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           </form>
         )}
 
-        {/* TAB 4: CITIZEN SELF-REDEMPTION STORE (X/TWITTER-STYLE ENGAGEMENT MONETIZATION) */}
+        {/* TAB 4: CITIZEN SELF-REDEMPTION STORE (CIVIC EXPOSURE POINTS - DIRECT CSR PROFIT-SHARING) */}
         {activeTab === 'redeem_xp' && (
           <div className="space-y-4 animate-fade-in">
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-emerald-500/10 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 mono flex items-center gap-1.5">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 mono flex items-center gap-1.5">
                     <Sparkles size={13} className="text-amber-500" />
-                    <span>X-Style Creator Engagement Monetization · CivicDuty Profit-Sharing</span>
+                    <span>Civic eXposure Points (XP) · Direct CSR Profit-Sharing</span>
                   </span>
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold">
-                    Direct CSR Channel
+                    Civic Proof of Engagement
                   </span>
                   <span className="text-[9px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-bold">
-                    Home Parish Lock: {userHomeParish}
+                    Home Parish Priority: {userHomeParish}
                   </span>
                 </div>
                 <p className="text-xs text-slate-700 dark:text-slate-300 max-w-2xl leading-relaxed">
-                  CivicDuty functions exactly like <strong>Twitter/X Creator Monetization for engagement</strong>: platform subscription and ad profits are directly profit-shared with active civic scouts. <strong>CivicDuty acts as a paying client</strong> reimbursing verified Private Provider Desks (salons, bodas, clinics, grocers) within your registered Parish ({userHomeParish}). This incentivizes local merchants to create vouchers because CivicDuty pays them in real money!
+                  <strong>Civic eXposure Points (XP)</strong> represents your verified community impact score. CivicDuty directly shares institutional subscription fees with active citizens who drive high-impact grassroots accountability. <strong>CivicDuty acts as the client</strong>, buying real goods and reimbursing verified <strong>Paid-Tier Private Providers</strong> ($5, $10, $20/mo desks) within your registered Parish ({userHomeParish}).
                 </p>
+                <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-emerald-500/20 text-[10.5px] text-slate-700 dark:text-slate-300 space-y-1">
+                  <div className="font-bold text-emerald-800 dark:text-emerald-300 font-mono text-[10px] uppercase">
+                    Viral Impact Qualification Standards (How to Earn XP):
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[9.5px]">
+                    <div className="p-1.5 rounded bg-slate-100 dark:bg-slate-800">
+                      <span className="text-emerald-600 font-bold">5+ Witnesses</span>
+                      <p className="text-slate-500 text-[8.5px]">Co-signers compiled</p>
+                    </div>
+                    <div className="p-1.5 rounded bg-slate-100 dark:bg-slate-800">
+                      <span className="text-emerald-600 font-bold">250+ Views</span>
+                      <p className="text-slate-500 text-[8.5px]">Civic feed reach</p>
+                    </div>
+                    <div className="p-1.5 rounded bg-slate-100 dark:bg-slate-800">
+                      <span className="text-emerald-600 font-bold">25+ Upvotes</span>
+                      <p className="text-slate-500 text-[8.5px]">Citizen corroboration</p>
+                    </div>
+                    <div className="p-1.5 rounded bg-slate-100 dark:bg-slate-800">
+                      <span className="text-emerald-600 font-bold">Paid Provider</span>
+                      <p className="text-slate-500 text-[8.5px]">$5/$10/$20 Reimbursed</p>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400 mono">
                   <span>• Transit Pass: <strong>100 XP</strong></span>
                   <span>• Mobile Data Pack: <strong>150 XP</strong></span>
                   <span>• Supermarket 1,000 KSh Basket: <strong>175 XP</strong></span>
                   <span>• Water / Power Token: <strong>200 XP</strong></span>
                   <span>• Cooldown Limit: <strong>Max 1 Claim / 7 Days</strong></span>
-                  <span>• Parish Lock: <strong>Redeemable within {userHomeParish}</strong></span>
+                  <span>• Parish Lock: <strong>Redeemable first in {userHomeParish}</strong></span>
                 </div>
               </div>
 
@@ -5549,33 +5572,52 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
               </div>
             )}
 
-            {/* Available Escrow Vouchers for Citizen XP Redemption */}
+            {/* Available Escrow Vouchers for Citizen XP Redemption (Parish First) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {vouchers
                 .filter((v) => v.country.toUpperCase() === selectedCountry.toUpperCase() && v.status === 'escrow_unassigned')
+                .sort((a, b) => {
+                  const aParish = (a.parish || a.sponsoredBy || '').toLowerCase().includes(userHomeParish.toLowerCase());
+                  const bParish = (b.parish || b.sponsoredBy || '').toLowerCase().includes(userHomeParish.toLowerCase());
+                  if (aParish && !bParish) return -1;
+                  if (!aParish && bParish) return 1;
+                  return 0;
+                })
                 .map((v) => {
                   const xpCost = getXpCostForCategory(v.category);
                   const canAfford = citizenXp >= xpCost && !cooldownInfo.onCooldown;
+                  const isLocalParish = (v.parish || v.sponsoredBy || '').toLowerCase().includes(userHomeParish.toLowerCase());
                   return (
                     <div
                       key={v.id}
-                      className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 flex flex-col justify-between gap-3 hover:border-indigo-500/40 transition-all"
+                      className={`p-3.5 rounded-2xl border flex flex-col justify-between gap-3 transition-all ${
+                        isLocalParish
+                          ? 'border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-xs'
+                          : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60'
+                      }`}
                     >
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
                           <span className="inline-flex items-center gap-1 text-xs font-black text-slate-900 dark:text-white">
                             {getCategoryIcon(v.category)}
                             <span>{v.brand}</span>
                           </span>
-                          <span
-                            className={`text-[9px] px-2 py-0.5 rounded-full font-black mono ${
-                              v.isDemo
-                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                                : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                            }`}
-                          >
-                            {v.isDemo ? 'DEMO TOKEN' : 'LIVE ESCROW'}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            {isLocalParish && (
+                              <span className="text-[8.5px] px-2 py-0.5 rounded-full font-bold mono bg-emerald-600 text-white">
+                                Parish Merchant
+                              </span>
+                            )}
+                            <span
+                              className={`text-[8.5px] px-2 py-0.5 rounded-full font-black mono ${
+                                v.isDemo
+                                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                                  : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30'
+                              }`}
+                            >
+                              Paid-Tier Provider
+                            </span>
+                          </div>
                         </div>
                         <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{v.title}</div>
                         {v.packagedItems && v.packagedItems.length > 0 && (

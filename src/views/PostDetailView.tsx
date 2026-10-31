@@ -523,6 +523,57 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
         </div>
       </div>
 
+      {/* Sticky Quick-Jump Navigation Anchor Bar */}
+      <div className="sticky top-0 z-30 px-4 py-2 bg-white/95 dark:bg-[#161a22]/95 backdrop-blur-md border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1.5 overflow-x-auto scrollbar-none shadow-xs text-xs font-mono">
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('post-discussion-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:bg-emerald-100"
+        >
+          <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
+          <span>Discussion ({p.comments?.length || 0})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('post-stepper-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:border-emerald-500"
+        >
+          <ShieldCheck size={13} className="text-emerald-500" />
+          <span>Audit Stepper</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('post-ladder-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:border-amber-500"
+        >
+          <TrendingUp size={13} className="text-amber-500" />
+          <span>SLA Escalation</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById('post-dossier-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:border-indigo-500"
+        >
+          <Layers size={13} className="text-indigo-500" />
+          <span>Master Dossier ({compiledCount})</span>
+        </button>
+      </div>
+
       {/* Praise & Commendation Direct Banner */}
       {/* Illustrative Demo Showcase vs Live Citizen Dispatch Banner */}
       {p.is_demo ? (
@@ -904,7 +955,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
 
         {/* MASTER DOSSIER & MULTI-REPORT ISSUE COMPILATION ENGINE */}
         {!isPraise && (
-          <div className="p-4 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] border-l-4 border-l-indigo-500 space-y-3.5">
+          <div id="post-dossier-section" className="p-4 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] border-l-4 border-l-indigo-500 space-y-3.5 scroll-mt-14">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-mono text-xs font-black">
@@ -1221,7 +1272,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
         )}
 
         {/* 48-Hour Response SLA Countdown HUD Box */}
-        <div className="p-3.5 rounded-2xl bg-slate-100/90 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 space-y-2">
+        <div id="post-ladder-section" className="p-3.5 rounded-2xl bg-slate-100/90 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 space-y-2 scroll-mt-14">
           <div className="flex items-center justify-between text-[11px] font-black">
             <span className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Clock size={13} className="text-emerald-600 dark:text-emerald-400" />
@@ -1467,7 +1518,9 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
         </div>
 
         {/* 5-Stage Sovereign Audit Timeline */}
-        <TicketAuditTimeline post={p} />
+        <div id="post-stepper-section" className="scroll-mt-14">
+          <TicketAuditTimeline post={p} />
+        </div>
 
         {/* Support Action Bar */}
         <div className="space-y-3 pt-2">
@@ -1749,7 +1802,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
       )}
 
       {/* Official Response Thread & Citizen Comments */}
-      <div className="px-4 py-4 space-y-3.5">
+      <div id="post-discussion-section" className="px-4 py-4 space-y-3.5 scroll-mt-14">
         {/* Header & Role-Segmented Filter Tabs */}
         {(() => {
           const allComments = p.comments || [];

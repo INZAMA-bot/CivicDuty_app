@@ -533,6 +533,16 @@ export interface UserSession {
   branch_district?: string;
   branch_subcounty?: string;
   branch_parish?: string;
+  last_parish_change_iso?: string;
+  parish_relocation_history?: ParishRelocationRecord[];
+}
+
+export interface ParishRelocationRecord {
+  id: string;
+  fromParish: string;
+  toParish: string;
+  movedAt: string;
+  reason: string;
 }
 
 export interface GovCodeData {
@@ -781,6 +791,36 @@ export interface ProjectMilestone {
   awarderAuditNotes?: string;
 }
 
+export interface DefectItem {
+  id: string;
+  title: string;
+  location: string;
+  reportedBy: string;
+  reportedAt: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  photoUrl?: string;
+  status: 'flagged' | 'dispatched' | 'rectified' | 'verified_cleared';
+  rectificationNotes?: string;
+  rectificationPhotoUrl?: string;
+  rectifiedBy?: string;
+  rectifiedAt?: string;
+  supervisingVerifiedAt?: string;
+}
+
+export interface ContractorCsrDisbursement {
+  id: string;
+  projectId: string;
+  contractor: string;
+  targetGroup: string;
+  parish: string;
+  itemTitle: string;
+  itemCount: number;
+  monetaryValueUgx: number;
+  disbursedAt: string;
+  donorStatement: string;
+}
+
 export interface Project {
   id: string;
   dept?: string;
@@ -796,6 +836,9 @@ export interface Project {
   code: string;
   country?: CountryCode;
   milestones?: ProjectMilestone[];
+  defects?: DefectItem[];
+  retentionFundReleased?: boolean;
+  retentionReleaseWarrantNo?: string;
 }
 
 export interface Subscription {

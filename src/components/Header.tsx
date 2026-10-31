@@ -151,7 +151,7 @@ export const Header: React.FC = () => {
                   </span>
                 )}
               </div>
-              <span className="text-[7.5px] sm:text-[8px] font-mono text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-tight mt-0.5 truncate">
+              <span className="hidden min-[360px]:block text-[7.5px] sm:text-[8px] font-mono text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-tight mt-0.5 truncate">
                 {!isPortalAuthView && isGov
                   ? `${activeUser.scope_label || activeUser.scope || currentCountry} · Locked`
                   : 'Speak · Serve · Be Heard'}
@@ -231,33 +231,19 @@ export const Header: React.FC = () => {
                   </span>
                 </button>
               ) : isPrivateProvider ? (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => go('gov_inbox')}
-                    title="Open Provider Operations Desk"
-                    className="h-8 px-2 sm:px-2.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-500 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Building size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span className="max-w-[120px] truncate">
-                      {activeUser.organization_name
-                        ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 16)}`
-                        : 'Provider Desk'}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUser(null);
-                      go('splash');
-                    }}
-                    title="Exit Provider Desk & Sign Out"
-                    className="h-8 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Power size={12} strokeWidth={2} />
-                    <span className="hidden sm:inline">Exit</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => go('gov_inbox')}
+                  title="Open Provider Operations Desk"
+                  className="h-8 px-2 sm:px-2.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-500 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Building size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="max-w-[90px] sm:max-w-[140px] truncate">
+                    {activeUser.organization_name
+                      ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 18)}`
+                      : 'Provider Desk'}
+                  </span>
+                </button>
               ) : (
                 <button
                   type="button"

@@ -747,17 +747,22 @@ export const GovProjectsView: React.FC = () => {
                         <span
                           className={`chip ${
                             p.status === 'defects'
-                              ? 'ch-overdue'
+                              ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:border-amber-700 dark:text-amber-300 font-bold'
                               : p.status === 'active'
                               ? 'ch-invest'
                               : 'ch-resolved'
                           }`}
                         >
-                          {PROJECT_STATUS_LABELS[p.status] || p.status}
+                          {p.status === 'defects' ? '12-Mo Defects Liability (DLP)' : PROJECT_STATUS_LABELS[p.status] || p.status}
                         </span>
                         {unresolvedReports > 0 && (
                           <span className="chip ch-overdue">
                             {unresolvedReports} pending report{unresolvedReports > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {p.status === 'defects' && (
+                          <span className="chip bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-300 font-bold">
+                            Citizen Warranty Radar Active
                           </span>
                         )}
                       </div>
@@ -768,7 +773,9 @@ export const GovProjectsView: React.FC = () => {
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <p className="text-[8.5px] mono text-slate-500 uppercase font-bold">Wall Closes</p>
+                      <p className="text-[8.5px] mono text-slate-500 uppercase font-bold">
+                        {p.status === 'defects' ? 'Warranty Window' : 'Wall Closes'}
+                      </p>
                       <p
                         className={`text-[11px] mono font-bold ${
                           daysLeft < 90 && daysLeft > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'
@@ -781,16 +788,18 @@ export const GovProjectsView: React.FC = () => {
 
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-[9px] mono">
                     <div>
-                      <span className="text-slate-500 block">Value</span>
-                      <span className="text-amber-700 dark:text-amber-400 font-bold">{p.value}</span>
+                      <span className="text-slate-500 block">{p.status === 'defects' ? '5% Retention Escrow' : 'Value'}</span>
+                      <span className="text-amber-700 dark:text-amber-400 font-bold">
+                        {p.status === 'defects' ? '5% Held in Escrow' : p.value}
+                      </span>
                     </div>
                     <div>
                       <span className="text-slate-500 block">Completion</span>
                       <span className="text-slate-700 dark:text-slate-300 font-medium">{p.completes}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block">Reports</span>
-                      <span className="text-teal-700 dark:text-teal-400 font-bold">{projectReports.length} filed</span>
+                      <span className="text-slate-500 block">{p.status === 'defects' ? 'Defects Radar' : 'Reports'}</span>
+                      <span className="text-teal-700 dark:text-teal-400 font-bold">{projectReports.length} {p.status === 'defects' ? 'flagged' : 'filed'}</span>
                     </div>
                   </div>
 

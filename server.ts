@@ -381,6 +381,34 @@ Session ended.`;
     });
   });
 
+  app.post('/api/disbursements/release-retention', (req, res) => {
+    const { projectId, projectTitle, contractor, country, retentionAmount, currency, awarderSigner } = req.body || {};
+    const amount = Number(retentionAmount || 46000000);
+    const warrantNumber = 'RET-WNT-' + (country || 'UG') + '-' + Math.floor(100000 + Math.random() * 900000);
+    const sha256Seal = 'FIDIC-CLEAR-' + Buffer.from(warrantNumber + (projectId || 'PRJ') + amount).toString('hex').slice(0, 32).toUpperCase();
+
+    const record = {
+      id: 'ret_' + Math.random().toString(36).substring(2, 9),
+      warrantNumber,
+      projectId,
+      projectTitle: projectTitle || 'Public Works Project',
+      contractor: contractor || 'Certified Contractor',
+      country: country || 'UG',
+      retentionAmount: amount,
+      currency: currency || 'UGX',
+      awarderSigner: awarderSigner || 'Supervising Engineer (Procuring Entity)',
+      status: 'final_retention_disbursed',
+      releasedAt: new Date().toISOString(),
+      sha256Seal,
+    };
+
+    res.json({
+      success: true,
+      message: `Final Technical Handover Certificate & 5% Retention Escrow of ${record.currency} ${record.retentionAmount.toLocaleString()} released to ${record.contractor}.`,
+      warrant: record,
+    });
+  });
+
   // =========================================================================
   // ITEM 4: AFRICAN PAYMENT GATEWAY (MOMO & CARDS - PHASE 5)
   // =========================================================================

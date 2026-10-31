@@ -29,9 +29,13 @@ import {
   Inbox,
   Users,
   Briefcase,
+  Home,
+  History,
+  ArrowRight,
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
+import { ParishRelocationModal } from '../components/ParishRelocationModal';
 
 export const ProfileView: React.FC = () => {
   const {
@@ -83,6 +87,31 @@ export const ProfileView: React.FC = () => {
   const [showCivicCardModal, setShowCivicCardModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showReputationRules, setShowReputationRules] = useState(false);
+  const [showParishModal, setShowParishModal] = useState(false);
+
+  const handleUpdateParish = (newParish: string, reason: string) => {
+    const now = new Date().toISOString().split('T')[0];
+    const prevParish = activeUser.parish || activeUser.parish_ward || 'Bukoto Central Parish';
+    const newRecord = {
+      id: 'move-' + Date.now(),
+      fromParish: prevParish,
+      toParish: newParish,
+      movedAt: now,
+      reason,
+    };
+    const existingHistory = activeUser.parish_relocation_history || [];
+    const updatedUser = {
+      ...activeUser,
+      parish: newParish,
+      last_parish_change_iso: new Date().toISOString(),
+      parish_relocation_history: [newRecord, ...existingHistory],
+    };
+    setUser(updatedUser);
+    setEditLocation(`${newParish} · Registered Neighborhood`);
+    try {
+      localStorage.setItem('cd_user', JSON.stringify(updatedUser));
+    } catch {}
+  };
 
   const activeCountry = activeUser.country || 'UG';
   const countryPerks = getCountryPerks(activeCountry);
@@ -653,33 +682,90 @@ export const ProfileView: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. Jurisdiction & Session Controls */}
-      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-          Zero-PII Session · SHA-256 Ledger Linked
+      {/* 5. Parish Neighborhood & Relocation Docket */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div>
+            <div className="flex items-center gap-2">
+              <Home size={15} className="text-emerald-600 dark:text-emerald-400" />
+              <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-mono">
+                Registered Parish &amp; Neighborhood
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+              Current: <strong className="text-slate-900 dark:text-white">{activeUser.parish || 'Bukoto Central Parish'}</strong>
+              <span className="text-slate-400 dark:text-slate-500 font-mono text-[11px] ml-2">
+                (Local perks &amp; grassroots near-me feed bound to this jurisdiction)
+              </span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowParishModal(true)}
+              className="px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Home size={12} />
+              <span>Change Parish</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setUser(null);
+                go('splash');
+              }}
+              className="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/15 text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 cursor-pointer"
+            >
+              <LogOut size={12} />
+              <span>Exit Session</span>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => go('ob1')}
-            className="px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
-          >
-            <Globe size={12} />
-            <span>Change Jurisdiction</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setUser(null);
-              go('splash');
-            }}
-            className="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/15 text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 cursor-pointer"
-          >
-            <LogOut size={12} />
-            <span>Exit Session</span>
-          </button>
-        </div>
+
+        {/* Relocation History Log */}
+        {activeUser.parish_relocation_history && activeUser.parish_relocation_history.length > 0 && (
+          <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+            <div className="flex items-center gap-1.5 text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
+              <History size={12} className="text-indigo-500" />
+              <span>Parish Relocation History &amp; Move Log</span>
+            </div>
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {activeUser.parish_relocation_history.map((record) => (
+                <div
+                  key={record.id}
+                  className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px] truncate">
+                      {record.fromParish}
+                    </span>
+                    <ArrowRight size={11} className="text-slate-400 shrink-0" />
+                    <span className="font-semibold text-slate-900 dark:text-white truncate">
+                      {record.toParish}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10.5px] font-mono text-slate-500 shrink-0">
+                    <span>{record.movedAt}</span>
+                    <span className="italic text-slate-400 truncate max-w-[150px]">
+                      "{record.reason}"
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Parish Relocation Modal */}
+      <ParishRelocationModal
+        isOpen={showParishModal}
+        onClose={() => setShowParishModal(false)}
+        user={activeUser}
+        onUpdateParish={handleUpdateParish}
+        toast={toast}
+      />
 
       {/* Avatar Photo Upload Modal */}
       <AvatarUploadModal

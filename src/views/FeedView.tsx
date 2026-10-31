@@ -248,7 +248,7 @@ export const FeedView: React.FC = () => {
       ? followPosts 
       : feedTab === 'trending' 
         ? trendPosts 
-        : (nearMePosts.length > 0 ? nearMePosts : allC);
+        : nearMePosts;
 
   const matchesQuery = (p: any, q: string) => {
     if (!q) return true;

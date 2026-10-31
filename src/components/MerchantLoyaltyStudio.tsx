@@ -25,7 +25,9 @@ import {
   FileText,
   BadgeAlert,
   ChevronRight,
+  Camera,
 } from 'lucide-react';
+import { VoucherScannerModal } from './VoucherScannerModal';
 import { useApp } from '../context/AppContext';
 import {
   MerchantProductService,
@@ -107,6 +109,25 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
   const [isVerifyingPos, setIsVerifyingPos] = useState<boolean>(false);
   const [verifiedVoucher, setVerifiedVoucher] = useState<EscrowPerkVoucher | null>(null);
   const [posReceipt, setPosReceipt] = useState<any>(null);
+  const [showCameraScanner, setShowCameraScanner] = useState<boolean>(false);
+
+  const handleScannerRedeem = (voucher: EscrowPerkVoucher) => {
+    setVerifiedVoucher(voucher);
+    setPosReceipt({
+      voucherCode: voucher.voucherCode,
+      customerName: voucher.dispatchedTo?.recipientName || 'Verified Citizen Watchdog',
+      amount: voucher.faceValue,
+      payout: Math.round(voucher.faceValue * 0.98),
+      fee: Math.round(voucher.faceValue * 0.02),
+      timestamp: new Date().toLocaleTimeString(),
+      brand: voucher.brand,
+    });
+    if (onVoucherRedeemed) {
+      onVoucherRedeemed(voucher);
+    }
+    toast(`Voucher ${voucher.voucherCode} verified! 98% settlement dispatched to merchant till.`, 'emerald');
+    setShowCameraScanner(false);
+  };
 
   // Local products list state
   const [productsList, setProductsList] = useState<MerchantProductService[]>(() => getStoredMerchantProducts());
@@ -730,6 +751,22 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
             </div>
 
             <div className="space-y-3">
+              {/* 1-Tap Live Camera QR Scanner */}
+              <button
+                type="button"
+                onClick={() => setShowCameraScanner(true)}
+                className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              >
+                <Camera size={15} />
+                <span>Launch Live Camera QR Scanner (1-Tap Scan)</span>
+              </button>
+
+              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 py-0.5">
+                <div className="flex-1 h-px bg-[#e3e6ea] dark:bg-[#262b36]" />
+                <span>OR MANUAL USSD / SERIAL LOOKUP</span>
+                <div className="flex-1 h-px bg-[#e3e6ea] dark:bg-[#262b36]" />
+              </div>
+
               <div>
                 <label className="text-[10.5px] font-mono font-bold text-slate-600 dark:text-slate-400 block mb-1">
                   Enter Voucher Code, QR Payload, or Barcode
@@ -923,6 +960,16 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
           </div>
         </div>
       )}
+
+      {/* Live Camera QR Scanner Modal */}
+      <VoucherScannerModal
+        isOpen={showCameraScanner}
+        onClose={() => setShowCameraScanner(false)}
+        vouchers={currentVouchers}
+        onRedeemVoucher={handleScannerRedeem}
+        activeDeptName={merchantName}
+        activeBranchParish={parish}
+      />
     </div>
   );
 };
