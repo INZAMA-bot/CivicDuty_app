@@ -132,29 +132,27 @@ export const Header: React.FC = () => {
       className="sticky top-0 z-30 backdrop-blur-md border-b border-[#e3e6ea] dark:border-[#262b36] bg-white/95 dark:bg-[#161a22]/95 transition-colors"
     >
       {/* Mobile-First Uncongested Top App Bar */}
-      <div className="h-13 px-2.5 sm:px-5 flex items-center justify-between gap-2 max-w-full overflow-hidden">
-        {/* Left: Green Light Logo + Brand & Compact Jurisdiction Subtitle */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+      <div className="h-13 px-2 sm:px-4 flex items-center justify-between gap-1.5 sm:gap-2 max-w-full">
+        {/* Left: Green Light Logo + Brand & Tagline (Permanently Protected & Never Blocked) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-fit">
           <div
             onClick={() => go(isPortalAuthView ? 'splash' : isGov ? 'gov_inbox' : 'feed')}
-            className="flex items-center gap-2 cursor-pointer min-w-0"
+            className="flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 min-w-fit"
           >
             <TrafficLightLogo size="sm" variant="green-only" />
-            <div className="flex flex-col leading-none min-w-0">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs font-black tracking-tight text-slate-900 dark:text-slate-100 shrink-0">
+            <div className="flex flex-col leading-tight shrink-0 min-w-fit">
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs sm:text-[13px] font-black tracking-tight text-slate-900 dark:text-slate-100 shrink-0 select-none">
                   CIVICDUTY
                 </span>
                 {!isPortalAuthView && isGov && (
-                  <span className="text-[9px] font-mono font-bold text-emerald-700 dark:text-emerald-400 truncate max-w-[115px] sm:max-w-[180px]">
+                  <span className="text-[8px] font-mono font-bold text-emerald-700 dark:text-emerald-400 hidden lg:inline max-w-[100px] truncate">
                     · {activeUser.real_title_short || activeUser.role_label || 'GOV'}
                   </span>
                 )}
               </div>
-              <span className="hidden min-[360px]:block text-[7.5px] sm:text-[8px] font-mono text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-tight mt-0.5 truncate">
-                {!isPortalAuthView && isGov
-                  ? `${activeUser.scope_label || activeUser.scope || currentCountry} · Locked`
-                  : 'Speak · Serve · Be Heard'}
+              <span className="text-[7.5px] sm:text-[8px] font-mono text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-tight whitespace-nowrap block shrink-0 select-none">
+                Speak · Serve · Be Heard
               </span>
             </div>
           </div>
@@ -234,15 +232,16 @@ export const Header: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => go('gov_inbox')}
-                  title="Open Provider Operations Desk"
-                  className="h-8 px-2 sm:px-2.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-500 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title={`Open Provider Desk (${activeUser.organization_name || 'Operations'})`}
+                  className="h-8 px-2 sm:px-2.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-500 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
                 >
                   <Building size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="max-w-[90px] sm:max-w-[140px] truncate">
+                  <span className="hidden sm:inline max-w-[120px] truncate">
                     {activeUser.organization_name
-                      ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 18)}`
-                      : 'Provider Desk'}
+                      ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 16)}`
+                      : 'Desk'}
                   </span>
+                  <span className="sm:hidden text-[9px] font-mono font-bold">Desk</span>
                 </button>
               ) : (
                 <button

@@ -245,17 +245,6 @@ export const GovTeamView: React.FC = () => {
     directLoginWithGovCode,
   } = useApp();
 
-  // If user is strictly a non-government private commercial entity, delegate to EntityTeamView
-  const isPrivateEntity =
-    user?.entity_type === 'non_government_entity' ||
-    user?.dept?.startsWith('ent-') ||
-    user?.dept?.startsWith('ctr-') ||
-    user?.dept?.startsWith('ngo-');
-
-  if (isPrivateEntity) {
-    return <EntityTeamView />;
-  }
-
   const country = user?.country || 'UG';
   const countryMeta = COUNTRIES[country] || COUNTRIES.UG;
   const rolloutConfig = useMemo(() => getCountryRolloutConfig(country), [country]);
@@ -390,15 +379,11 @@ export const GovTeamView: React.FC = () => {
     }
   }, [user, go]);
 
-  if (!user || (!['node_admin', 'platform_admin', 'spokesperson'].includes(user.role) && !user.is_admin)) {
-    return null;
-  }
-
-  const d = getDept(user.country, user.dept || 'kcca');
+  const d = getDept(user?.country || 'UG', user?.dept || 'kcca');
 
   // Filter team members and invites strictly to officers under this user's supervisory mandate
   const allSupervisedTeam = teamMembers
-    .filter((m) => m.dept === user.dept && (!m.country || m.country === user.country))
+    .filter((m) => m.dept === user?.dept && (!m.country || m.country === user?.country))
     .filter((m) =>
       isScopeUnderSupervisor(
         m.scope,
@@ -406,7 +391,7 @@ export const GovTeamView: React.FC = () => {
         districtObj?.id,
         subcountyObj?.id,
         parishObj?.id,
-        user.country
+        user?.country || 'UG'
       )
     );
 
@@ -429,7 +414,7 @@ export const GovTeamView: React.FC = () => {
   const stoodDownCount = allSupervisedTeam.filter((m) => !m.active).length;
 
   const openInv = invites
-    .filter((i) => !i.used && i.dept === user.dept && (!i.country || i.country === user.country))
+    .filter((i) => !i.used && i.dept === user?.dept && (!i.country || i.country === user?.country))
     .filter((i) =>
       isScopeUnderSupervisor(
         i.scope,
@@ -437,7 +422,7 @@ export const GovTeamView: React.FC = () => {
         districtObj?.id,
         subcountyObj?.id,
         parishObj?.id,
-        user.country
+        user?.country || 'UG'
       )
     );
 
@@ -541,14 +526,18 @@ export const GovTeamView: React.FC = () => {
         },
       ];
     }
-    return getJurisdictionDesignations(user.country as CountryCode, tier, user.scope);
-  }, [user.country, tier, user.scope, isLinePs, psInfo, countryMeta.name]);
+    return getJurisdictionDesignations((user?.country as CountryCode) || 'UG', tier, user?.scope);
+  }, [user?.country, tier, user?.scope, isLinePs, psInfo, countryMeta.name]);
 
   const presetsToDisplay = jurisdictionDesignations;
 
   const selectedDesigObj =
     jurisdictionDesignations.find((d) => d.id === selectedPresetId) ||
     jurisdictionDesignations.find((d) => d.title.toLowerCase() === inviteTitle.toLowerCase().trim());
+
+  if (!user || (!['node_admin', 'platform_admin', 'spokesperson'].includes(user.role) && !user.is_admin)) {
+    return null;
+  }
 
   const handleIssueInvite = () => {
     if (!inviteName.trim()) {

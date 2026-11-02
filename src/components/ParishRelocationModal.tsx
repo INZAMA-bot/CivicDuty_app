@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { MapPin, X, ShieldCheck, Clock, AlertTriangle, Check, ArrowRight, History, Home, Lock } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { MapPin, X, Check, ArrowRight, History, Home, Lock, Building, Navigation } from 'lucide-react';
 import { UserSession, ParishRelocationRecord } from '../types';
+import { TERRITORY } from '../data/countries';
 
 interface ParishRelocationModalProps {
   isOpen: boolean;
@@ -17,8 +18,6 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
   onUpdateParish,
   toast,
 }) => {
-  if (!isOpen) return null;
-
   const currentParish = user?.parish || user?.parish_ward || 'Bukoto Central Parish';
   const history: ParishRelocationRecord[] = user?.parish_relocation_history || [
     {
@@ -36,28 +35,58 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
   const isOnCooldown = lastChangeTime > 0 && elapsed < FOURTEEN_DAYS_MS;
   const daysRemaining = isOnCooldown ? Math.ceil((FOURTEEN_DAYS_MS - elapsed) / (24 * 60 * 60 * 1000)) : 0;
 
-  // Local sample parishes list for the country/district
-  const availableParishes = [
-    'Bukoto I Parish',
-    'Bukoto II Parish',
-    'Nakasero Parish',
-    'Kamwokya I Parish',
-    'Kamwokya II Parish',
-    'Kisaasi Parish',
-    'Ntinda Parish',
-    'Kigoowa Parish',
-    'Naguru I Parish',
-    'Naguru II Parish',
-    'Kisugu Parish',
-    'Muyenga Parish',
-    'Kabalagala Parish',
-    'Kansanga Parish',
-    'Ggaba Parish',
-  ].filter((p) => p.toLowerCase() !== currentParish.toLowerCase());
+  // National 3-layer territory coverage from national database
+  const userCountry = (user?.country || 'UG').toUpperCase();
+  const nationalDistricts = TERRITORY[userCountry] || TERRITORY.UG || [];
 
-  const [selectedParish, setSelectedParish] = useState(availableParishes[0]);
+  // 1. District level
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string>(() => {
+    // Attempt to locate district of current parish
+    const foundDistrict = nationalDistricts.find((d) =>
+      d.children?.some((s) =>
+        s.children?.some((p) => p.name.toLowerCase() === currentParish.toLowerCase())
+      )
+    );
+    return foundDistrict?.id || nationalDistricts[0]?.id || 'kla';
+  });
+
+  // 2. Sub-county level
+  const availableSubcounties = useMemo(() => {
+    const distObj = nationalDistricts.find((d) => d.id === selectedDistrictId);
+    return distObj?.children || [];
+  }, [nationalDistricts, selectedDistrictId]);
+
+  const [selectedSubcountyId, setSelectedSubcountyId] = useState<string>(() => {
+    return availableSubcounties[0]?.id || '';
+  });
+
+  useEffect(() => {
+    if (availableSubcounties.length > 0 && !availableSubcounties.some((s) => s.id === selectedSubcountyId)) {
+      setSelectedSubcountyId(availableSubcounties[0].id);
+    }
+  }, [availableSubcounties, selectedSubcountyId]);
+
+  // 3. Parish level
+  const availableParishes = useMemo(() => {
+    const subObj = availableSubcounties.find((s) => s.id === selectedSubcountyId);
+    return subObj?.children || [];
+  }, [availableSubcounties, selectedSubcountyId]);
+
+  const [selectedParishName, setSelectedParishName] = useState<string>(() => {
+    return availableParishes[0]?.name || 'Nakasero I';
+  });
+
+  useEffect(() => {
+    if (availableParishes.length > 0 && !availableParishes.some((p) => p.name === selectedParishName)) {
+      setSelectedParishName(availableParishes[0]?.name || '');
+    }
+  }, [availableParishes, selectedParishName]);
+
   const [moveReason, setMoveReason] = useState('Shifted to a new rented residence in this neighborhood');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const selectedDistrictObj = nationalDistricts.find((d) => d.id === selectedDistrictId);
+  const selectedSubcountyObj = availableSubcounties.find((s) => s.id === selectedSubcountyId);
 
   const handleConfirmRelocation = () => {
     if (isOnCooldown) {
@@ -65,19 +94,26 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
       return;
     }
 
-    if (!selectedParish) {
+    if (!selectedParishName) {
       toast('Please select target destination Parish', 'amber');
+      return;
+    }
+
+    if (selectedParishName.toLowerCase() === currentParish.toLowerCase()) {
+      toast('Selected Parish is identical to your current neighborhood.', 'amber');
       return;
     }
 
     setIsSubmitting(true);
     setTimeout(() => {
-      onUpdateParish(selectedParish, moveReason);
-      toast(`Relocated to ${selectedParish}! Near Me feed and local shop perks updated.`, 'emerald');
+      onUpdateParish(selectedParishName, moveReason);
+      toast(`Relocated to ${selectedParishName}! Near Me feed and local shop perks updated.`, 'emerald');
       setIsSubmitting(false);
       onClose();
     }, 400);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -86,17 +122,17 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-[#161a22] border-2 border-[#e3e6ea] dark:border-[#262b36] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-[#161a22] border-2 border-[#e3e6ea] dark:border-[#262b36] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
-        {/* Header */}
-        <div className="p-4 sm:p-5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+        {/* Fixed Pinned Header */}
+        <div className="p-4 sm:p-5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
               <Home size={18} />
             </div>
             <div>
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
-                Resident Neighborhood Registration
+                Grassroots Resident Neighborhood Registry
               </span>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Relocate Parish (Change Neighborhood)
@@ -113,17 +149,17 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs font-mono">
+        {/* Scrollable Body Container */}
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 min-h-0 space-y-4 text-xs font-mono">
           {/* Current Parish Badge */}
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
-            <span className="text-[9.5px] uppercase font-bold text-slate-400 block">Current Registered Parish:</span>
-            <div className="text-base font-black text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-              <MapPin size={16} />
-              <span>{currentParish}</span>
+            <span className="text-[9.5px] uppercase font-bold text-slate-400 block">Current Registered Neighborhood:</span>
+            <div className="text-sm sm:text-base font-black text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 truncate">
+              <MapPin size={16} className="shrink-0" />
+              <span className="truncate">{currentParish}</span>
             </div>
-            <p className="text-[10px] text-slate-500 pt-0.5">
-              Your &quot;Near Me&quot; civic feed and XP shop redemptions are locked to this registered neighborhood.
+            <p className="text-[10px] text-slate-500 pt-0.5 leading-relaxed">
+              Your &quot;Near Me&quot; civic feed and XP shop redemptions are locked to this registered parish.
             </p>
           </div>
 
@@ -131,7 +167,7 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
           {isOnCooldown ? (
             <div className="p-3.5 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 dark:text-amber-200 space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold text-xs text-amber-800 dark:text-amber-300">
-                <Lock size={14} />
+                <Lock size={14} className="shrink-0" />
                 <span>14-Day Neighborhood Residence Cooldown Active</span>
               </div>
               <p className="text-[11px] leading-relaxed">
@@ -143,26 +179,81 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="space-y-3 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-[10.5px] font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                  Select New Destination Parish
-                </label>
-                <select
-                  value={selectedParish}
-                  onChange={(e) => setSelectedParish(e.target.value)}
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                >
-                  {availableParishes.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
+            <div className="space-y-3.5 pt-1">
+              {/* Authentic 3-Layer Cascading Jurisdiction Dropdowns (Speak Page Model) */}
+              <div className="space-y-2.5 p-3 rounded-2xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <div className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  <Navigation size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>3-Layer National Jurisdiction Selector</span>
+                </div>
+
+                {/* Layer 1: District */}
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
+                    1. Select District / Local Government ({nationalDistricts.length} Nationwide)
+                  </label>
+                  <select
+                    value={selectedDistrictId}
+                    onChange={(e) => setSelectedDistrictId(e.target.value)}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  >
+                    {nationalDistricts.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Layer 2: Sub-County / Division */}
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
+                    2. Select Sub-County / Municipal Division ({availableSubcounties.length} Available)
+                  </label>
+                  <select
+                    value={selectedSubcountyId}
+                    onChange={(e) => setSelectedSubcountyId(e.target.value)}
+                    disabled={availableSubcounties.length === 0}
+                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                  >
+                    {availableSubcounties.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Layer 3: Parish / Ward */}
+                <div className="space-y-1">
+                  <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
+                    3. Select Destination Parish / Ward ({availableParishes.length} Grassroots Units)
+                  </label>
+                  <select
+                    value={selectedParishName}
+                    onChange={(e) => setSelectedParishName(e.target.value)}
+                    disabled={availableParishes.length === 0}
+                    className="w-full bg-white dark:bg-[#161a22] border-2 border-emerald-500/50 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+                  >
+                    {availableParishes.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-[10px] flex items-center justify-between">
+                  <span className="font-bold">Target Location:</span>
+                  <span className="font-mono">
+                    {selectedParishName} · {selectedSubcountyObj?.name} · {selectedDistrictObj?.name}
+                  </span>
+                </div>
               </div>
 
+              {/* Relocation Reason */}
               <div className="space-y-1.5">
-                <label className="text-[10.5px] font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                   Reason for Moving Neighborhood
                 </label>
                 <textarea
@@ -170,13 +261,13 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
                   value={moveReason}
                   onChange={(e) => setMoveReason(e.target.value)}
                   placeholder="e.g. Shifted to new apartment / rented house, job relocation..."
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 resize-none"
                 />
               </div>
 
               <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 space-y-1">
                 <div>• Relocating updates your <strong>Near Me</strong> civic feed to your new parish.</div>
-                <div>• Local merchant XP redemptions will automatically switch to shops in {selectedParish}.</div>
+                <div>• Local merchant XP redemptions will automatically switch to verified shops in {selectedParishName}.</div>
                 <div>• You will be locked from relocating again for <strong>14 days (2 weeks)</strong>.</div>
               </div>
             </div>
@@ -212,12 +303,12 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3">
+        {/* Fixed Pinned Footer Actions */}
+        <div className="p-3 sm:p-4 bg-[#f8f9fa] dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold cursor-pointer"
+            className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             Cancel
           </button>
@@ -227,7 +318,7 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
               type="button"
               onClick={handleConfirmRelocation}
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-mono font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-mono font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer transition-all"
             >
               <Check size={14} />
               <span>{isSubmitting ? 'Updating Ledger...' : 'Confirm Neighborhood Relocation →'}</span>

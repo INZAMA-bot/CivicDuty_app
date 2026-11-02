@@ -355,17 +355,83 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             {menuOpen && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 top-full mt-1 w-48 rounded-xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-xl z-30 py-1 text-xs animate-fade-in"
+                className="absolute right-0 top-full mt-1 w-56 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-2xl z-30 py-1.5 text-xs animate-fade-in"
               >
+                <div className="px-3 py-1 text-[9.5px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                  Audits &amp; Escalation
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStepperModal(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
+                >
+                  <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>3-Signal Sovereign Stepper</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLadderModal(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
+                >
+                  <Clock size={14} className="text-amber-500 shrink-0" />
+                  <span>Statutory 4-Tier SLA Ladder</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDossierModal(true);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
+                >
+                  <Layers size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span>Master Dossier ({compiledCount})</span>
+                </button>
+
+                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
+                <div className="px-3 py-1 text-[9.5px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                  Community &amp; Actions
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSocialModalTab('quote');
+                    setSocialModalPost(post);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
+                >
+                  <Repeat2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Quote-Dispatch</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSocialModalTab('note');
+                    setSocialModalPost(post);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
+                >
+                  <FileCheck2 size={14} className="text-amber-500 shrink-0" />
+                  <span>+ Community Note</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setShowQr(true);
                     setMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-300"
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
                 >
-                  <QrCode size={13} />
+                  <QrCode size={14} className="shrink-0" />
                   <span>Docket QR Verification</span>
                 </button>
                 <button
@@ -374,20 +440,34 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
                     setRewardOpen(true);
                     setMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 cursor-pointer"
                 >
-                  <Gift size={13} />
-                  <span>Peer Gratitude Reward</span>
+                  <Gift size={14} className="shrink-0" />
+                  <span>Peer Gratitude Reward (Tip)</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleBookmark(post.id);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
+                >
+                  <Bookmark size={14} className={`shrink-0 ${isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
+                  <span>{isBookmarked ? 'Remove Bookmark' : 'Save to Bookmarks'}</span>
+                </button>
+
+                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
                 <button
                   type="button"
                   onClick={() => {
                     deletePost(post.id);
                     setMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600"
+                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 cursor-pointer"
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={14} className="shrink-0" />
                   <span>Delete Post</span>
                 </button>
               </div>
@@ -466,6 +546,54 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               {grassroots.district}
             </span>
           </button>
+        </div>
+
+        {/* Compact Statutory Audit Status Chips (Slim non-intrusive strip) */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[9.5px] font-mono">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowStepperModal(true);
+            }}
+            className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800/80 dark:hover:bg-emerald-950/40 border border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 flex items-center gap-1 transition cursor-pointer"
+            title="Open 3-Signal Sovereign Audit Stepper"
+          >
+            <ShieldCheck size={11} className={isGreen ? 'text-emerald-500' : isAmber ? 'text-amber-500' : 'text-rose-500'} />
+            <span className="font-semibold">{isGreen ? 'Signal 3 · Verified' : isAmber ? 'Signal 2 · Triaged' : 'Signal 1 · Filed'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowLadderModal(true);
+            }}
+            className={`px-2 py-0.5 rounded-md border flex items-center gap-1 transition cursor-pointer ${
+              hoursLeft <= 0
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300 font-semibold'
+                : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/60 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Open Statutory Escalation Ladder"
+          >
+            <Clock size={11} className={hoursLeft <= 0 ? 'text-rose-500' : 'text-amber-500'} />
+            <span>{hoursLeft > 0 ? `${Math.round(hoursLeft)}h SLA Clock` : 'SLA Breached · Escalated'}</span>
+          </button>
+
+          {compiledCount > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDossierModal(true);
+              }}
+              className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 flex items-center gap-1 transition font-bold cursor-pointer"
+              title="Open Multi-Witness Evidence Locker & Master Dossier"
+            >
+              <Layers size={11} />
+              <span>{compiledCount} Witnesses Dossier</span>
+            </button>
+          )}
         </div>
 
         {/* Title */}
@@ -724,93 +852,13 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               go('post_detail');
             }}
             className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600 flex items-center gap-1.5 transition cursor-pointer"
-            title="Public Discussion & Official Response Only"
+            title="Public Discussion & Official Response"
           >
             <MessageSquare size={14} className="text-emerald-600 dark:text-emerald-400" />
             <span className="hidden sm:inline">Discussion</span>
             <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono">
               {post.comments?.length || 0}
             </span>
-          </button>
-
-          {/* 2. 3-Signal Sovereign Audit Stepper */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowStepperModal(true);
-            }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600 flex items-center gap-1.5 transition cursor-pointer"
-            title="3-Signal Sovereign Audit Stepper"
-          >
-            <ShieldCheck size={14} className={isGreen ? 'text-emerald-600' : isAmber ? 'text-amber-500' : 'text-rose-600'} />
-            <span className="hidden md:inline">Audit Stepper</span>
-            <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400">
-              {isGreen ? 'Signal 3' : isAmber ? 'Signal 2' : 'Signal 1'}
-            </span>
-          </button>
-
-          {/* 3. Statutory 4-Tier Escalation Ladder & SLA Clock */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowLadderModal(true);
-            }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-amber-500 hover:text-amber-600 flex items-center gap-1.5 transition cursor-pointer"
-            title="Statutory 4-Tier Escalation Ladder & SLA Clock"
-          >
-            <Clock size={14} className={hoursLeft <= 0 ? 'text-rose-600' : 'text-amber-500'} />
-            <span className="hidden md:inline">SLA Ladder</span>
-            <span className={`text-[10.5px] font-mono font-bold ${hoursLeft <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>
-              {hoursLeft > 0 ? `${Math.round(hoursLeft)}h` : 'Escalated'}
-            </span>
-          </button>
-
-          {/* 4. Master Dossier & Multi-Witness Evidence Locker */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDossierModal(true);
-            }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-indigo-500 hover:text-indigo-600 flex items-center gap-1.5 transition cursor-pointer"
-            title="Multi-Witness Evidence Locker & Master Dossier"
-          >
-            <Layers size={14} className="text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden md:inline">Dossier</span>
-            <span className="px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[11px] font-mono font-bold">
-              {compiledCount}
-            </span>
-          </button>
-
-          {/* 5. Community Note & Quote-Dispatch */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSocialModalTab('quote');
-              setSocialModalPost(post);
-            }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-slate-400 flex items-center gap-1.5 transition cursor-pointer"
-            title="Quote-Dispatch & Add Community Note"
-          >
-            <FileCheck2 size={14} className="text-amber-600 dark:text-amber-400" />
-            <span className="hidden md:inline">Note / Quote</span>
-          </button>
-
-          {/* Peer Gratitude Reward Button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setRewardOpen(true);
-            }}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-medium bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition flex items-center gap-1 cursor-pointer"
-            title="Send peer recognition reward / airtime voucher"
-          >
-            <Gift size={13} className="text-amber-600 dark:text-amber-400" />
-            <span className="hidden sm:inline">Tip</span>
           </button>
 
           {/* Bookmark Button */}
@@ -830,7 +878,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             <Bookmark size={14} className={isBookmarked ? 'fill-amber-500' : ''} />
           </button>
 
-          {/* Share / QR Docket */}
+          {/* Share / Safety Link Button */}
           <button
             type="button"
             onClick={(e) => {

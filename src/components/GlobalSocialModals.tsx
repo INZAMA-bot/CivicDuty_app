@@ -35,6 +35,7 @@ import {
   Monitor,
   Search,
   ChevronDown,
+  ChevronLeft,
   Maximize2,
   Calendar,
   Pin,
@@ -115,6 +116,7 @@ export const GlobalSocialModals: React.FC = () => {
   const [dmVoiceNote, setDmVoiceNote] = useState(false);
   const [dmRecordingVoice, setDmRecordingVoice] = useState(false);
   const [dmGps, setDmGps] = useState<{ lat: number; lng: number; label?: string } | null>(null);
+  const [mobileDmView, setMobileDmView] = useState<'threads' | 'chat'>('chat');
 
   const [quoteTitle, setQuoteTitle] = useState('');
   const [quoteBody, setQuoteBody] = useState('');
@@ -515,9 +517,13 @@ export const GlobalSocialModals: React.FC = () => {
 
           <div className="flex-1 flex flex-col sm:flex-row min-h-0">
             {/* Thread List with Search Bar */}
-            <div className="w-full sm:w-72 border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 max-h-48 sm:max-h-none bg-slate-50/50 dark:bg-slate-950/30">
+            <div className={`border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/50 dark:bg-slate-950/30 min-h-0 ${
+              mobileDmView === 'threads'
+                ? 'w-full flex-1 flex'
+                : 'hidden sm:flex sm:w-72 sm:border-r shrink-0'
+            }`}>
               {/* Search Bar */}
-              <div className="p-2.5 border-b border-slate-200 dark:border-slate-800">
+              <div className="p-2.5 border-b border-slate-200 dark:border-slate-800 shrink-0">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus-within:border-emerald-500 transition-colors">
                   <Search size={13} className="text-slate-400 shrink-0" />
                   <input
@@ -540,7 +546,7 @@ export const GlobalSocialModals: React.FC = () => {
               </div>
 
               {/* Thread Items & Directory Search */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+              <div className="flex-1 overflow-y-auto p-2 space-y-1.5 min-h-0">
                 {filteredDmThreads.length === 0 && directoryMatches.length === 0 ? (
                   <div className="p-4 text-center text-xs text-slate-400">
                     No contacts matching &ldquo;{dmSearch}&rdquo;
@@ -554,7 +560,10 @@ export const GlobalSocialModals: React.FC = () => {
                         <button
                           key={th.thread_id}
                           type="button"
-                          onClick={() => setActiveDmThreadId(th.thread_id)}
+                          onClick={() => {
+                            setActiveDmThreadId(th.thread_id);
+                            setMobileDmView('chat');
+                          }}
                           className={`w-full text-left p-2.5 rounded-2xl border transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-700 shadow-2xs'
@@ -598,6 +607,7 @@ export const GlobalSocialModals: React.FC = () => {
                               onClick={() => {
                                 openDmWithCitizen(c.name, c.role);
                                 setDmSearch('');
+                                setMobileDmView('chat');
                               }}
                               className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold shrink-0 cursor-pointer"
                             >
@@ -613,18 +623,35 @@ export const GlobalSocialModals: React.FC = () => {
             </div>
 
             {/* Active Conversation */}
-            {currentThread && (
-              <div className="flex-1 flex flex-col min-h-0">
-                <div className="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
-                  <div>
-                    <div className="text-xs font-black flex items-center gap-1.5">
-                      <span>{currentThread.participant_name}</span>
-                      <span className="text-[10px] font-mono text-slate-500">{currentThread.participant_handle}</span>
-                    </div>
-                    <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">
-                      {currentThread.participant_role} · End-to-End Protected Civic Channel
+            {currentThread ? (
+              <div className={`flex-col min-h-0 ${
+                mobileDmView === 'chat'
+                  ? 'w-full flex-1 flex'
+                  : 'hidden sm:flex sm:flex-1'
+              }`}>
+                <div className="px-3 sm:px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
+                  <div className="flex items-center min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setMobileDmView('threads')}
+                      className="sm:hidden flex items-center gap-1 px-2 py-1 mr-2 rounded-lg bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold shrink-0 cursor-pointer"
+                    >
+                      <ChevronLeft size={15} />
+                      <span>Inbox</span>
+                    </button>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black flex items-center gap-1.5 truncate">
+                        <span className="truncate">{currentThread.participant_name}</span>
+                        <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">{currentThread.participant_handle}</span>
+                      </div>
+                      <div className="text-[9.5px] sm:text-[10px] text-emerald-700 dark:text-emerald-400 font-mono truncate">
+                        {currentThread.participant_role}
+                      </div>
                     </div>
                   </div>
+                  <span className="text-[9px] font-mono font-bold text-slate-400 uppercase hidden md:inline">
+                    End-to-End Civic Channel
+                  </span>
                 </div>
 
                 <div className="flex-1 p-4 overflow-y-auto space-y-2.5">
@@ -840,6 +867,10 @@ export const GlobalSocialModals: React.FC = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            ) : (
+              <div className="hidden sm:flex flex-1 items-center justify-center p-6 text-center text-xs text-slate-400">
+                Select a contact from the inbox list to view conversation
               </div>
             )}
           </div>

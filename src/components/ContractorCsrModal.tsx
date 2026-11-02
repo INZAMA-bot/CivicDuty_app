@@ -19,8 +19,6 @@ export const ContractorCsrModal: React.FC<ContractorCsrModalProps> = ({
   onDisburseSuccess,
   toast,
 }) => {
-  if (!isOpen) return null;
-
   const corridorBeneficiaries = [
     {
       group: 'Bukoto Central Boda Boda Stage Vault',
@@ -107,6 +105,8 @@ export const ContractorCsrModal: React.FC<ContractorCsrModalProps> = ({
       onClose();
     }, 450);
   };
+
+  if (!isOpen) return null;
 
   return (
     <div

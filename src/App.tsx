@@ -273,7 +273,7 @@ const AppContent: React.FC = () => {
       case 'gov_audit':
         return <GovAuditView />;
       case 'gov_team':
-        return <GovTeamView />;
+        return isPrivateProvider ? <EntityTeamView /> : <GovTeamView />;
       case 'gov_bulk':
         return <GovBulkView />;
       case 'gov_admin':

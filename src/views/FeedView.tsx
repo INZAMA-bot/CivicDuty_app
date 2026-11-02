@@ -78,6 +78,7 @@ export const FeedView: React.FC = () => {
     bookmarks,
     mutedAuthors,
     blockedAuthors,
+    followingCitizens,
     setUser,
     toast,
     openGuide,
@@ -172,7 +173,8 @@ export const FeedView: React.FC = () => {
   const matchedFollowPosts = allC.filter((p) =>
     followed.includes(p.dept) ||
     normFollowed.includes(p.dept) ||
-    followed.includes(`${activeUser.country.toLowerCase()}-${p.dept}`)
+    followed.includes(`${activeUser.country.toLowerCase()}-${p.dept}`) ||
+    (followingCitizens && (followingCitizens.includes(p.citizen_name) || followingCitizens.includes(p.author || '')))
   );
   
   const followPosts =
@@ -182,8 +184,7 @@ export const FeedView: React.FC = () => {
             followed.includes(p.dept) ||
             normFollowed.includes(p.dept) ||
             followed.includes(`${activeUser.country.toLowerCase()}-${p.dept}`) ||
-            p.category === 'praise' ||
-            p.is_master_dossier
+            (followingCitizens && (followingCitizens.includes(p.citizen_name) || followingCitizens.includes(p.author || '')))
         )
       : allC;
   const toggleFollowDept = (deptId: string) => {

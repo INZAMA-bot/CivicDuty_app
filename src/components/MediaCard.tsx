@@ -52,6 +52,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
   const [expandedDocIdx, setExpandedDocIdx] = useState<number | null>(null);
   const [fullscreenDoc, setFullscreenDoc] = useState<MediaItem | null>(null);
+  const [docViewMode, setDocViewMode] = useState<Record<number, 'abstract' | 'pdf'>>({});
 
   const [audioState, setAudioState] = useState<{ playing: boolean; progress: number; speed: number }>({
     playing: false,
@@ -699,8 +700,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
             key={i}
             className="rounded-xl overflow-hidden border-2 border-amber-500/40 bg-amber-50/40 dark:bg-slate-900/90 shadow-2xs"
           >
-            <div className="p-3 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="p-3 sm:p-4 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                   <FileText size={20} />
                 </div>
@@ -710,9 +711,12 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[9px] font-mono font-bold uppercase">
                       OFFICIAL DOCUMENT
                     </span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[8.5px] font-mono font-semibold flex items-center gap-1">
+                      <CheckCircle2 size={9} /> Offline Cached
+                    </span>
                   </div>
-                  <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
-                    <span>{m.size || '840 KB'} · PDF / Statutory Record</span>
+                  <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span>{m.size || '1.2 MB'} · PDF / Statutory Record</span>
                     <span>·</span>
                     <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
                       <ShieldCheck size={11} /> SHA-256 Sealed
@@ -721,15 +725,37 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => setExpandedDocIdx(isExpanded ? null : i)}
+                  onClick={() => {
+                    const current = docViewMode[i] || 'abstract';
+                    setDocViewMode((prev) => ({ ...prev, [i]: current === 'abstract' && isExpanded ? 'pdf' : 'abstract' }));
+                    setExpandedDocIdx(isExpanded && (docViewMode[i] || 'abstract') === 'abstract' ? null : i);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                    isExpanded && (docViewMode[i] || 'abstract') === 'abstract'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-amber-500/10 border border-amber-500/40 text-amber-800 dark:text-amber-300 hover:bg-amber-500/20'
+                  }`}
+                  title="Instant 2KB Low-Data Abstract (Works on 2G)"
+                >
+                  <Zap size={11} />
+                  <span>Quick Abstract</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocViewMode((prev) => ({ ...prev, [i]: 'pdf' }));
+                    setExpandedDocIdx(isExpanded && docViewMode[i] === 'pdf' ? null : i);
+                  }}
                   className="px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
                 >
                   <Eye size={12} />
-                  <span>{isExpanded ? 'Hide Preview' : 'Read Full Document'}</span>
+                  <span>{isExpanded && docViewMode[i] === 'pdf' ? 'Hide Doc' : 'Read Full Document'}</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setFullscreenDoc(m)}
@@ -741,49 +767,120 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
               </div>
             </div>
 
-            {/* Inline Full Document Reader Sheet */}
+            {/* Inline Full Document Reader & Low-Data Abstract Sheet */}
             {isExpanded && (
               <div className="p-4 bg-white dark:bg-slate-950 border-t border-amber-500/30 space-y-3 animate-fade-in">
-                {m.url ? (
-                  <div className="space-y-2">
-                    <iframe
-                      src={m.url}
-                      title={docTitle}
-                      className="w-full h-80 rounded-lg border border-slate-200 dark:border-slate-800 bg-white"
-                    />
-                    <div className="flex justify-end">
-                      <a
-                        href={m.url}
-                        download={docTitle}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1.5"
-                      >
-                        <Download size={12} />
-                        <span>Download Original File</span>
-                      </a>
+                {/* Segmented Mode Selector */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setDocViewMode((prev) => ({ ...prev, [i]: 'abstract' }))}
+                      className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold flex items-center gap-1 transition ${
+                        (docViewMode[i] || 'abstract') === 'abstract'
+                          ? 'bg-amber-600 text-white'
+                          : 'text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <Zap size={10} />
+                      <span>⚡ Quick Abstract (2 KB · Rural Edge)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDocViewMode((prev) => ({ ...prev, [i]: 'pdf' }))}
+                      className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold flex items-center gap-1 transition ${
+                        docViewMode[i] === 'pdf'
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                          : 'text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      <FileText size={10} />
+                      <span>Full Scan / PDF Document</span>
+                    </button>
+                  </div>
+
+                  <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <ShieldCheck size={11} /> Cryptographically Sealed Record
+                  </span>
+                </div>
+
+                {(docViewMode[i] || 'abstract') === 'abstract' ? (
+                  /* 1. Low-Bandwidth Statutory Abstract (Instant 2KB display) */
+                  <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-slate-900/80 border border-amber-500/30 space-y-3 text-xs font-mono">
+                    <div className="flex items-center justify-between border-b border-amber-500/20 pb-2 text-[10px] text-amber-800 dark:text-amber-300 font-bold">
+                      <span>STATUTORY ABSTRACT · LOW-BANDWIDTH CITIZEN EXTRACT</span>
+                      <span>DOCKET #{postId.slice(-6).toUpperCase()}</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-800 dark:text-slate-200">
+                      <div>
+                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Document Reference:</div>
+                        <div className="font-bold text-sm text-slate-950 dark:text-white mt-0.5">{docTitle}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Statutory Authority:</div>
+                        <div className="font-bold text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">District Works &amp; Engineering Directorate</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Legal &amp; Audit Reference:</div>
+                        <div className="text-xs font-medium mt-0.5">Public Procurement &amp; Disposal of Public Assets Act (S.68)</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Offline Access Status:</div>
+                        <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">✓ Cached locally — Viewable with 0% data usage</div>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-white dark:bg-slate-950 border border-amber-500/20 text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                      <strong>Executive Summary:</strong> Official verified documentation attached to Dispatch #{postId.slice(-6).toUpperCase()}. Verifies engineering specifications, procurement authorization, and milestone sign-off criteria. Registered on the immutable public ledger for citizen oversight and supervisory audit.
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5 font-mono text-xs">
-                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                      <span>CERTIFIED PUBLIC RECORD · DOCKET #{postId.slice(-6).toUpperCase()}</span>
-                      <span>VERIFIED ATTACHMENT</span>
-                    </div>
-                    <div className="font-sans text-xs text-slate-800 dark:text-slate-200 space-y-2 leading-relaxed">
-                      <p className="font-bold text-sm">{docTitle}</p>
-                      <p>
-                        This statutory document attachment has been cryptographically indexed to Dispatch{' '}
-                        <strong>#{postId.slice(-6).toUpperCase()}</strong> for public inspection, engineering verification,
-                        and audit trail compliance.
-                      </p>
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400">
-                        <div>File Reference: {docTitle}</div>
-                        <div>File Size: {m.size || '842 KB'}</div>
-                        <div>Chain Custody: Immutable Public Ledger · Open Inspection Enabled</div>
+                  /* 2. Full PDF Viewer / Download */
+                  m.url ? (
+                    <div className="space-y-2">
+                      <iframe
+                        src={m.url}
+                        title={docTitle}
+                        className="w-full h-80 rounded-lg border border-slate-200 dark:border-slate-800 bg-white"
+                      />
+                      <div className="flex justify-between items-center flex-wrap gap-2 pt-1">
+                        <span className="text-[10px] font-mono text-slate-500">
+                          File Size: {m.size || '1.2 MB'} · Format: Portable Document Format (PDF)
+                        </span>
+                        <a
+                          href={m.url}
+                          download={docTitle}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1.5"
+                        >
+                          <Download size={12} />
+                          <span>Download Original File</span>
+                        </a>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5 font-mono text-xs">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                        <span>CERTIFIED PUBLIC RECORD · DOCKET #{postId.slice(-6).toUpperCase()}</span>
+                        <span>VERIFIED ATTACHMENT</span>
+                      </div>
+                      <div className="font-sans text-xs text-slate-800 dark:text-slate-200 space-y-2 leading-relaxed">
+                        <p className="font-bold text-sm">{docTitle}</p>
+                        <p>
+                          This statutory document attachment has been cryptographically indexed to Dispatch{' '}
+                          <strong>#{postId.slice(-6).toUpperCase()}</strong> for public inspection, engineering verification,
+                          and audit trail compliance.
+                        </p>
+                        <div className="p-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400">
+                          <div>File Reference: {docTitle}</div>
+                          <div>File Size: {m.size || '1.2 MB'}</div>
+                          <div>Chain Custody: Immutable Public Ledger · Open Inspection Enabled</div>
+                        </div>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             )}

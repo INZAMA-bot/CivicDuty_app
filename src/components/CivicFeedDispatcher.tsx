@@ -147,6 +147,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     const handleOpen = () => {
@@ -281,6 +282,26 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     e.target.value = '';
   };
 
+  const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files: File[] = Array.from(e.target.files);
+    const newItems = files.map((f: File) => {
+      const url = URL.createObjectURL(f);
+      const isPdf = f.name.toLowerCase().endsWith('.pdf');
+      const cleanName = isPdf ? f.name : `${f.name.replace(/\.[^/.]+$/, '')}_official_scan.pdf`;
+      return {
+        type: 'doc' as const,
+        url,
+        name: cleanName,
+        size: (f.size / (1024 * 1024)).toFixed(1) + ' MB',
+        file: f,
+      };
+    });
+    setStagedMedia((prev) => [...prev, ...newItems]);
+    toast(`${newItems.length} official document / photocopy scan(s) attached!`, 'emerald');
+    e.target.value = '';
+  };
+
   const removeStagedMedia = (idx: number) => {
     setStagedMedia((prev) => prev.filter((_, i) => i !== idx));
   };
@@ -318,7 +339,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     const finalMedia: MediaItem[] = stagedMedia.map((m, idx) => {
       if (m.type === 'image') return { type: 'image', url: m.url, caption: m.caption?.trim() || `Evidence #${idx + 1}` };
       if (m.type === 'video') return { type: 'video', url: m.url, thumb: m.url, duration: '0:30' };
-      return { type: 'doc', name: m.name, size: m.size };
+      return { type: 'doc', name: m.name, size: m.size, url: m.url };
     });
 
     compileWitnessIntoPost(targetPost.id, {
@@ -372,7 +393,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
       const finalMedia: MediaItem[] = stagedMedia.map((m, idx) => {
         if (m.type === 'image') return { type: 'image', url: m.url, caption: m.caption?.trim() || `Field evidence photograph #${idx + 1}` };
         if (m.type === 'video') return { type: 'video', url: m.url, thumb: m.url, duration: '0:30' };
-        return { type: 'doc', name: m.name, size: m.size };
+        return { type: 'doc', name: m.name, size: m.size, url: m.url };
       });
 
       const voicePayload = voiceSaved
@@ -936,12 +957,12 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
               </div>
             </div>
 
-            {/* 1-Tap Thumb Action Bar (Camera, Mic, GPS) */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* 1-Tap Thumb Action Bar (Photo/Video, Snap Paperwork/Doc, Mic, GPS) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,video/*,.pdf"
+                accept="image/*,video/*"
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
@@ -950,13 +971,36 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className={`py-2 px-2 rounded-lg border text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                  stagedMedia.length > 0
+                  stagedMedia.some((m) => m.type === 'image' || m.type === 'video')
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600'
                     : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
                 }`}
+                title="Attach Field Photograph or Video Proof"
               >
-                <Camera size={14} className="text-emerald-600 dark:text-emerald-400" />
-                <span className="truncate">{stagedMedia.length > 0 ? `Proof (${stagedMedia.length})` : 'Attach Photo'}</span>
+                <Camera size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="truncate">Photo / Video</span>
+              </button>
+
+              <input
+                ref={docInputRef}
+                type="file"
+                accept="application/pdf,image/*,.doc,.docx"
+                multiple
+                onChange={handleDocFileSelect}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => docInputRef.current?.click()}
+                className={`py-2 px-2 rounded-lg border text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                  stagedMedia.some((m) => m.type === 'doc')
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-amber-400'
+                }`}
+                title="Snap Photocopied Notice, Stamped LC1 Letter, or PDF Dossier"
+              >
+                <FileText size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="truncate">Snap Paperwork</span>
               </button>
 
               <button
@@ -969,8 +1013,9 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                     ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                     : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
                 }`}
+                title="Record Voice Testimony"
               >
-                <Mic size={14} className={isRecording ? 'text-rose-600' : ''} />
+                <Mic size={14} className={isRecording ? 'text-rose-600 shrink-0' : 'shrink-0'} />
                 <span className="truncate">{isRecording ? 'Recording...' : voiceSaved ? 'Voice Locked' : 'Voice Note'}</span>
               </button>
 
@@ -982,8 +1027,9 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
                     : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
                 }`}
+                title="Pin Accurate GPS Coordinates"
               >
-                <MapPin size={14} className={gps ? 'text-emerald-600' : 'text-slate-400'} />
+                <MapPin size={14} className={gps ? 'text-emerald-600 shrink-0' : 'text-slate-400 shrink-0'} />
                 <span className="truncate">{gps ? 'GPS Locked' : 'Lock GPS'}</span>
               </button>
             </div>

@@ -163,13 +163,11 @@ export const GovAuditView: React.FC = () => {
   const [issuedAuditorToken, setIssuedAuditorToken] = useState<string | null>(null);
   const [copiedAuditorToken, setCopiedAuditorToken] = useState<boolean>(false);
 
-  if (!user) return null;
-
-  const countryCode = user.country || 'UG';
+  const countryCode = user?.country || 'UG';
   const countryObj = COUNTRIES[countryCode] || COUNTRIES['UG'];
   const d = getDept(
     countryCode,
-    user.dept || (countryCode === 'KE' ? 'kplc' : countryCode === 'RW' ? 'reg' : countryCode === 'GH' ? 'ecg' : 'kcca')
+    user?.dept || (countryCode === 'KE' ? 'kplc' : countryCode === 'RW' ? 'reg' : countryCode === 'GH' ? 'ecg' : 'kcca')
   );
 
   const auditSpec: AuditSpec = COUNTRY_AUDIT_SPECS[countryCode] || {
@@ -214,16 +212,20 @@ export const GovAuditView: React.FC = () => {
   };
 
   // Determine the nature of the logged-in desk for jurisdiction & desk-type scoping
-  const isSuperAdminOrNationalOversight =
-    user.role === 'platform_admin' ||
-    user.is_superadmin ||
-    user.is_oversight ||
-    user.scope === 'national' ||
-    user.dept === 'molg' ||
-    user.dept === 'igg';
+  const isSuperAdminOrNationalOversight = Boolean(
+    user && (
+      user.role === 'platform_admin' ||
+      user.is_superadmin ||
+      user.is_oversight ||
+      user.scope === 'national' ||
+      user.dept === 'molg' ||
+      user.dept === 'igg'
+    )
+  );
 
-  const isServiceProviderDesk =
-    user.entity_type === 'non_government_entity' || Boolean(user.is_utility);
+  const isServiceProviderDesk = Boolean(
+    user && (user.entity_type === 'non_government_entity' || Boolean(user.is_utility))
+  );
 
   const [scopeMode, setScopeMode] = useState<'desk_scoped' | 'national_ledger'>(
     isSuperAdminOrNationalOversight ? 'national_ledger' : 'desk_scoped'
@@ -232,24 +234,24 @@ export const GovAuditView: React.FC = () => {
   const deskNatureTitle = isSuperAdminOrNationalOversight
     ? `National Sovereign Audit Ledger (${countryObj.name})`
     : isServiceProviderDesk
-    ? `Service Provider Desk Audit & SLA Ledger · ${user.organization_name || d.name}`
-    : `Jurisdictional Accounting Officer Audit Ledger · ${user.jurisdiction_label || user.organization_name || d.name}`;
+    ? `Service Provider Desk Audit & SLA Ledger · ${user?.organization_name || d.name}`
+    : `Jurisdictional Accounting Officer Audit Ledger · ${user?.jurisdiction_label || user?.organization_name || d.name}`;
 
   const deskNatureBadge = isSuperAdminOrNationalOversight
     ? 'SUPERADMIN & NATIONAL OVERSIGHT (ALL DESKS)'
     : isServiceProviderDesk
     ? 'SERVICE PROVIDER DESK SCOPE (CUSTOMER SLA & ESCROW)'
-    : `ACCOUNTING OFFICER JURISDICTION (${(user.scope || 'TERRITORIAL').toUpperCase()})`;
+    : `ACCOUNTING OFFICER JURISDICTION (${(user?.scope || 'TERRITORIAL').toUpperCase()})`;
 
   const countryAudit = useMemo(() => {
     const byCountry = audit.filter((entry) => (entry.country || 'UG') === countryCode);
     if (scopeMode === 'national_ledger' && isSuperAdminOrNationalOversight) {
       return byCountry;
     }
-    const orgKey = (user.organization_name || d.name || '').toLowerCase();
-    const deptKey = (user.dept || '').toLowerCase();
-    const jurKey = (user.jurisdiction_label || user.parish || user.subcounty || user.district || '').toLowerCase();
-    const officerKey = (user.officer_name || user.name || '').toLowerCase();
+    const orgKey = (user?.organization_name || d.name || '').toLowerCase();
+    const deptKey = (user?.dept || '').toLowerCase();
+    const jurKey = (user?.jurisdiction_label || user?.parish || user?.subcounty || user?.district || '').toLowerCase();
+    const officerKey = (user?.officer_name || user?.name || '').toLowerCase();
 
     const scoped = byCountry.filter((entry) => {
       const hay = `${entry.actor_name || ''} ${entry.actor_role || ''} ${entry.detail || ''} ${entry.ticket_id || ''}`.toLowerCase();
@@ -270,9 +272,9 @@ export const GovAuditView: React.FC = () => {
     if (scopeMode === 'national_ledger' && isSuperAdminOrNationalOversight) {
       return byCountry;
     }
-    const deptKey = (user.dept || '').toLowerCase();
-    const orgKey = (user.organization_name || d.name || '').toLowerCase();
-    const jurKey = (user.jurisdiction_label || user.parish || user.subcounty || user.district || '').toLowerCase();
+    const deptKey = (user?.dept || '').toLowerCase();
+    const orgKey = (user?.organization_name || d.name || '').toLowerCase();
+    const jurKey = (user?.jurisdiction_label || user?.parish || user?.subcounty || user?.district || '').toLowerCase();
     const scoped = byCountry.filter((q) => {
       const hay = `${q.target_dept || ''} ${q.target_officer_title || ''} ${q.target_officer_name || ''} ${q.issuer_title || ''} ${q.subject || ''}`.toLowerCase();
       return (
@@ -311,6 +313,8 @@ export const GovAuditView: React.FC = () => {
       return true;
     });
   }, [countryAudit, filterType, searchQuery]);
+
+  if (!user) return null;
 
   const toAuditCsv = (rows: typeof audit) => {
     const header = [

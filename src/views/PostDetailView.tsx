@@ -141,15 +141,11 @@ export const PostDetailView: React.FC = () => {
     }
   }, [activePost, prevView, go]);
 
-  if (!activePost) {
-    return null;
-  }
-
-  const p = posts.find((item) => item.id === activePost.id) || activePost;
+  const p = activePost ? (posts.find((item) => item.id === activePost.id) || activePost) : (posts[0] || null);
 
   // Active post list for Next / Prev navigation within the active feed/country
-  const postsList = posts.filter((item) => item.country === p.country);
-  const currentIndex = postsList.findIndex((item) => item.id === p.id);
+  const postsList = p ? posts.filter((item) => item.country === p.country) : [];
+  const currentIndex = p ? postsList.findIndex((item) => item.id === p.id) : -1;
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex >= 0 && currentIndex < postsList.length - 1;
 
@@ -188,34 +184,36 @@ export const PostDetailView: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, postsList, hasNext, hasPrev]);
 
-  const compiledCount = p.compiled_count || (p.compiled_reports ? p.compiled_reports.length + 1 : 1);
-  const candidateDuplicatePosts = posts.filter(
-    (other) =>
-      other.id !== p.id &&
-      other.country === p.country &&
-      other.status !== 'resolved' &&
-      other.category !== 'praise'
-  );
-  const d = getDept(p.country, p.dept);
-  const sla = slaStatus(p);
-  const cat = catByID(p.category);
-  const isConsumer = p.lane === 'consumer';
-  const isCorrupt = p.category === 'corruption';
-  const isPraise = p.category === 'praise';
+  const compiledCount = p ? (p.compiled_count || (p.compiled_reports ? p.compiled_reports.length + 1 : 1)) : 1;
+  const candidateDuplicatePosts = p
+    ? posts.filter(
+        (other) =>
+          other.id !== p.id &&
+          other.country === p.country &&
+          other.status !== 'resolved' &&
+          other.category !== 'praise'
+      )
+    : [];
+  const d = getDept(p?.country || 'UG', p?.dept || 'kcca');
+  const sla = p ? slaStatus(p) : { status: 'on_track', text: 'Active' };
+  const cat = catByID(p?.category || 'other');
+  const isConsumer = p?.lane === 'consumer';
+  const isCorrupt = p?.category === 'corruption';
+  const isPraise = p?.category === 'praise';
   const isGov = user && ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(user.role);
   const isReadOnly = user?.role === 'read_only';
-  const isSupported = user ? !!supportsMap[user.id]?.[p.id] : false;
+  const isSupported = user && p ? !!supportsMap[user.id]?.[p.id] : false;
 
-  const cryptoSeal = p.crypto_seal_hash || generateCryptoSealSync(`TICKET:${p.id}:${p.title}`);
+  const cryptoSeal = p?.crypto_seal_hash || (p ? generateCryptoSealSync(`TICKET:${p.id}:${p.title}`) : '');
 
   // Dynamic Budget Estimation if not present
-  const budget = p.budget_allocation || {
+  const budget = p?.budget_allocation || {
     source: isCorrupt ? 'IGG Special Recovery Track' : 'MoFPED DDEG Capital Grant #2026/88',
-    allocated_amount: p.category === 'pothole' ? 45000000 : p.category === 'water' ? 28000000 : p.category === 'health' ? 62000000 : 15000000,
-    spent_amount: p.status === 'resolved' ? (p.category === 'pothole' ? 42500000 : 25000000) : 8500000,
+    allocated_amount: p?.category === 'pothole' ? 45000000 : p?.category === 'water' ? 28000000 : p?.category === 'health' ? 62000000 : 15000000,
+    spent_amount: p?.status === 'resolved' ? (p?.category === 'pothole' ? 42500000 : 25000000) : 8500000,
     currency: 'UGX',
     contractor_name: isConsumer ? 'Private Utility Franchise' : 'District Works Department / Local SACCO',
-    milestone_progress: p.status === 'resolved' ? 100 : p.status === 'investigating' ? 45 : 15,
+    milestone_progress: p?.status === 'resolved' ? 100 : p?.status === 'investigating' ? 45 : 15,
   };
 
   const handleCopyCitation = () => {
@@ -416,6 +414,8 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
     setVerifyTarget(cryptoSeal);
     go('verify');
   };
+
+  if (!activePost || !p) return null;
 
   return (
     <div
