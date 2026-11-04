@@ -55,6 +55,7 @@ import { MinisterialCommandView } from './views/MinisterialCommandView';
 import { CivicDutyGuideModal } from './components/CivicDutyGuideModal';
 import { LegalTrustModal } from './components/LegalTrustModal';
 import { GlobalSocialModals } from './components/GlobalSocialModals';
+import { isPlatformUnlocked } from './constants/masterAuth';
 
 const StudioRightInspector: React.FC = () => {
   const { user, ensureCitizenSession, posts, go, trafficSignalFilter, setTrafficSignalFilter } = useApp();
@@ -232,7 +233,7 @@ const StudioRightInspector: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { user, ensureCitizenSession, view, guideModalOpen, closeGuide, guideInitialTab, legalModalOpen, closeLegalCenter, legalInitialTab } = useApp();
+  const { user, ensureCitizenSession, view, go, guideModalOpen, closeGuide, guideInitialTab, legalModalOpen, closeLegalCenter, legalInitialTab } = useApp();
   const activeUser = user || ensureCitizenSession();
   const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
   const isPrivateProvider = Boolean(
@@ -241,6 +242,19 @@ const AppContent: React.FC = () => {
       activeUser.entity_category ||
       ['gayaza_hs', 'namagunga', 'cafe_javas', 'mak_univ', 'mulago_hosp', 'nakasero_hosp', 'serena_hotel_kla', 'stanbic', 'centenary_bank', 'kotsa_taxi', 'kigo_contractors'].includes(activeUser.dept || '')
   );
+
+  // Platform perimeter guard: unauthorized visitors are strictly contained to splash, docs lock, or cd-ops lock
+  React.useEffect(() => {
+    if (
+      !isPlatformUnlocked() &&
+      view !== 'splash' &&
+      view !== 'company_management' &&
+      view !== 'cd_ops' &&
+      view !== 'docs'
+    ) {
+      go('splash');
+    }
+  }, [view, go]);
 
   const renderView = () => {
     switch (view) {

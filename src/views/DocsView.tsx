@@ -49,12 +49,23 @@ import {
   Ticket,
   HelpCircle,
   Radio,
+  KeyRound,
 } from 'lucide-react';
 import { InteractiveRoleSandboxGrid } from '../components/InteractiveRoleSandboxGrid';
 import { trackVisitorInteraction } from '../services/analyticsService';
+import {
+  validateMasterKey,
+  isPlatformUnlocked,
+  unlockPlatform,
+} from '../constants/masterAuth';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
+  const [docsUnlocked, setDocsUnlocked] = useState<boolean>(() => {
+    return isPlatformUnlocked() || user?.role === 'platform_admin' || (user as any)?.is_civicduty_internal === true;
+  });
+  const [docsKeyInput, setDocsKeyInput] = useState<string>('');
+  const [docsAuthError, setDocsAuthError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'architecture' | 'journeys' | 'perks_guide' | 'pitch' | 'partner' | 'handbook'>(() => {
     try {
       const saved = localStorage.getItem('cd_docs_initial_tab');
@@ -317,6 +328,106 @@ export const DocsView: React.FC = () => {
 
     toast(`Partnership Inquiry ${ref} logged! CivicDuty Secretariat notified.`, 'emerald');
   };
+
+  const handleDocsAuthorize = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = docsKeyInput.trim().toUpperCase();
+    if (validateMasterKey(clean)) {
+      unlockPlatform();
+      setDocsUnlocked(true);
+      setDocsAuthError(null);
+      toast('Master Key Verified. Technical architecture & documentation unlocked.', 'emerald');
+    } else {
+      setDocsAuthError('Invalid Master Access Code. Please enter your authorized sovereign key or contact administrator.');
+    }
+  };
+
+  // -------------------------------------------------------------
+  // SECURE GATEKEEPER: TIGHT RESTRICTION AGAINST DOCS LEAKAGE
+  // -------------------------------------------------------------
+  if (!docsUnlocked) {
+    return (
+      <div className="max-w-xl mx-auto p-4 sm:p-6 my-8 animate-fade-in text-slate-900 dark:text-slate-100">
+        <div className="rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-xl overflow-hidden">
+          <div className="p-5 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <Lock size={18} strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                  Restricted Technical Documentation
+                </h3>
+                <p className="text-[11px] text-slate-500 font-mono">
+                  Confidential Architecture &amp; Statutory Repository
+                </p>
+              </div>
+            </div>
+            <span className="text-[9.5px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-bold">
+              Key Required
+            </span>
+          </div>
+
+          <form onSubmit={handleDocsAuthorize} className="p-5 space-y-4">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed space-y-1.5">
+              <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-slate-100">
+                <ShieldAlert size={14} className="text-amber-500 shrink-0" />
+                <span>Master Authorization Perimeter</span>
+              </div>
+              <p>
+                Access to the Sovereign CivicDuty Architecture, statutory SLA escalation matrices, USSD gateway routing rules, and inter-ministerial data contracts is strictly restricted.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block">
+                Enter Master Key Code
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <KeyRound size={15} />
+                </div>
+                <input
+                  type="text"
+                  value={docsKeyInput}
+                  onChange={(e) => {
+                    setDocsKeyInput(e.target.value.toUpperCase());
+                    setDocsAuthError(null);
+                  }}
+                  placeholder="ENTER MASTER KEY"
+                  autoFocus
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-xs font-mono font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 uppercase tracking-wider"
+                />
+              </div>
+              {docsAuthError && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                  {docsAuthError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => go('splash')}
+                className="px-3.5 py-2 rounded-xl text-xs font-mono font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <ChevronLeft size={13} />
+                <span>Return to Home</span>
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <span>Authorize &amp; View Docs</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-5 space-y-4 animate-fade-in pb-20 text-slate-900 dark:text-slate-100">

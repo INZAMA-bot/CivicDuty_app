@@ -73,6 +73,7 @@ import {
   CD_OPS_STAFF_ROSTER,
   CdOpsStaffMember,
 } from '../data/partnerships';
+import { isPlatformUnlocked } from '../constants/masterAuth';
 
 interface AppContextType {
   user: UserSession | null;
@@ -539,9 +540,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [view, setView] = useState<ViewType>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      if (hash === 'advertising' || hash === 'branding' || hash === 'transit_preview' || hash === 'livery') return 'transit_preview';
-      if (hash === 'feed') return 'feed';
-      if (hash === 'docs') return 'docs';
+      // Only honor direct deep-links if the platform has been master-authorized
+      if (isPlatformUnlocked()) {
+        if (hash === 'advertising' || hash === 'branding' || hash === 'transit_preview' || hash === 'livery') return 'transit_preview';
+        if (hash === 'feed') return 'feed';
+        if (hash === 'docs') return 'docs';
+        if (hash === 'cd_ops' || hash === 'company_management') return 'company_management';
+      }
     }
     return 'splash';
   });

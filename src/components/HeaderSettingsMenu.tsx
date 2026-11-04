@@ -202,115 +202,151 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
             </div>
           </div>
 
-          {/* 4. Launch Mode: Demos & Mannequins */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                4. National Launch Mode
-              </span>
-              <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded ${
-                !showDemos 
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' 
-                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-              }`}>
-                {!showDemos ? 'LIVE PRODUCTION' : 'SANDBOX DEMOS'}
-              </span>
+          {/* 4. Launch Mode: Demos & Mannequins (Hidden on splash for unauthenticated visitors) */}
+          {!isSplash && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  4. National Launch Mode
+                </span>
+                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                  !showDemos 
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' 
+                    : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                }`}>
+                  {!showDemos ? 'LIVE PRODUCTION' : 'SANDBOX DEMOS'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (showDemos) {
+                      setShowDemos(false);
+                      toast('Production Mode Active: All demo & mannequin posts turned OFF platform-wide.', 'emerald');
+                    }
+                  }}
+                  className={`min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                    !showDemos
+                      ? 'bg-emerald-600 text-white shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  title="Disable all demo posts for live launch"
+                >
+                  <span>Demos Off</span>
+                  {!showDemos && <Check size={11} strokeWidth={2} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!showDemos) {
+                      setShowDemos(true);
+                      toast('Sandbox Mode Active: Illustrative demo mannequin posts enabled.', 'amber');
+                    }
+                  }}
+                  className={`min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                    showDemos
+                      ? 'bg-amber-600 text-white shadow-2xs font-bold'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  title="Enable sample demo posts for testing and exhibition"
+                >
+                  <span>Demos On</span>
+                  {showDemos && <Check size={11} strokeWidth={2} />}
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
-              <button
-                type="button"
-                onClick={() => {
-                  if (showDemos) {
-                    setShowDemos(false);
-                    toast('Production Mode Active: All demo & mannequin posts turned OFF platform-wide.', 'emerald');
-                  }
-                }}
-                className={`min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                  !showDemos
-                    ? 'bg-emerald-600 text-white shadow-2xs font-bold'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="Disable all demo posts for live launch"
-              >
-                <span>Demos Off</span>
-                {!showDemos && <Check size={11} strokeWidth={2} />}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!showDemos) {
-                    setShowDemos(true);
-                    toast('Sandbox Mode Active: Illustrative demo mannequin posts enabled.', 'amber');
-                  }
-                }}
-                className={`min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                  showDemos
-                    ? 'bg-amber-600 text-white shadow-2xs font-bold'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="Enable sample demo posts for testing and exhibition"
-              >
-                <span>Demos On</span>
-                {showDemos && <Check size={11} strokeWidth={2} />}
-              </button>
-            </div>
-          </div>
+          )}
 
-          {/* 5. Documentation & Quick Consoles */}
+          {/* 5. Documentation & Quick Consoles (Strictly Guarded on Splash Homepage) */}
           <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block pb-0.5">
-              Documentation &amp; Consoles
-            </span>
-
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  go('docs');
-                }}
-                className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <BookOpen size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="truncate">Docs</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  openGuide('quickstart');
-                }}
-                className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <HelpCircle size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="truncate">Field Guide</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  go('ussd');
-                }}
-                className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <Terminal size={13} strokeWidth={1.75} className="text-amber-500 shrink-0" />
-                <span className="truncate">*3030# USSD</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  go('verify');
-                }}
-                className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <FileCheck2 size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="truncate">Verify Seal</span>
-              </button>
+            <div className="flex items-center justify-between pb-0.5">
+              <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Documentation &amp; Consoles
+              </span>
+              {isSplash && (
+                <span className="text-[9px] font-mono text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
+                  <Shield size={10} />
+                  <span>RESTRICTED</span>
+                </span>
+              )}
             </div>
+
+            {isSplash ? (
+              /* Restricted Docs Trigger for Homepage: Requires Master Key Authorization */
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    window.dispatchEvent(
+                      new CustomEvent('civicduty_open_master_auth', { detail: { target: 'docs' } })
+                    );
+                  }}
+                  className="w-full min-h-[40px] px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15 text-xs font-mono font-semibold text-amber-800 dark:text-amber-300 flex items-center justify-between transition-colors cursor-pointer"
+                  title="Master Key Required to View Architecture & Documentation"
+                >
+                  <span className="flex items-center gap-2">
+                    <BookOpen size={13} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Technical Architecture &amp; Docs</span>
+                  </span>
+                  <span className="text-[9.5px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-900 dark:text-amber-200 font-bold">
+                    Key Required
+                  </span>
+                </button>
+              </div>
+            ) : (
+              /* Authenticated Inside Workspace: Full Console Access */
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    go('docs');
+                  }}
+                  className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <BookOpen size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="truncate">Docs</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    openGuide('quickstart');
+                  }}
+                  className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <HelpCircle size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="truncate">Field Guide</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    go('ussd');
+                  }}
+                  className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Terminal size={13} strokeWidth={1.75} className="text-amber-500 shrink-0" />
+                  <span className="truncate">*3030# USSD</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    go('verify');
+                  }}
+                  className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <FileCheck2 size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="truncate">Verify Seal</span>
+                </button>
+              </div>
+            )}
 
             <button
               type="button"

@@ -18,17 +18,11 @@ import { HeaderSettingsMenu } from '../components/HeaderSettingsMenu';
 import { InstallPwaBanner } from '../components/InstallPwaBanner';
 import { Footer } from '../components/Footer';
 import { trackVisitorInteraction } from '../services/analyticsService';
-
-// Official master code & private visitor demo codes (demo codes are shared in chat/direct outreach, never displayed on-screen)
-const VALID_MASTER_CODES = [
-  'CIVICDUTY-UG-2026', // Official Master Access Code
-  'CIVIC-DEMO-2026',   // Visitor Demo Access Code
-  'GUEST-UG-2026',     // Alternate Visitor Access Code
-  'VISITOR-CIVIC-2026',
-  'CIVICDUTY2026',
-  'CIVIC2026',
-  'UGANDA2026',
-];
+import {
+  validateMasterKey,
+  isPlatformUnlocked,
+  unlockPlatform,
+} from '../constants/masterAuth';
 
 export const SplashView: React.FC = () => {
   const {
@@ -41,7 +35,7 @@ export const SplashView: React.FC = () => {
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [accessCodeInput, setAccessCodeInput] = useState('');
   const [accessError, setAccessError] = useState<string | null>(null);
-  const [pendingRoute, setPendingRoute] = useState<'ob1' | 'ob2' | 'entity' | null>(null);
+  const [pendingRoute, setPendingRoute] = useState<string | null>(null);
 
   const total = posts.length;
   const resolved = posts.filter((p) => p.status === 'resolved').length;
@@ -50,23 +44,36 @@ export const SplashView: React.FC = () => {
 
   useEffect(() => {
     trackVisitorInteraction('page_view', 'Homepage Loaded');
+
+    const handleExternalOpenAuth = (e: Event) => {
+      const customEvent = e as CustomEvent<{ target?: string }>;
+      const target = customEvent.detail?.target || 'ob1';
+      setPendingRoute(target);
+      setAccessCodeInput('');
+      setAccessError(null);
+      setShowAccessModal(true);
+    };
+
+    window.addEventListener('civicduty_open_master_auth', handleExternalOpenAuth);
+    return () => {
+      window.removeEventListener('civicduty_open_master_auth', handleExternalOpenAuth);
+    };
   }, []);
 
-  const isPlatformUnlocked = () => {
-    try {
-      return sessionStorage.getItem('civicduty_platform_unlocked') === 'true';
-    } catch {
-      return false;
-    }
-  };
-
-  const handlePortalEntry = (target: 'ob1' | 'ob2' | 'entity') => {
-    const targetLabel = target === 'ob1' ? 'citizen_portal' : target === 'ob2' ? 'gov_desk' : 'provider_desk';
+  const handlePortalEntry = (target: string) => {
+    const targetLabel =
+      target === 'ob1'
+        ? 'citizen_portal'
+        : target === 'ob2'
+        ? 'gov_desk'
+        : target === 'entity'
+        ? 'provider_desk'
+        : target;
     trackVisitorInteraction('cta_click', `Clicked ${targetLabel}`, targetLabel);
 
     if (isPlatformUnlocked()) {
       if (target === 'ob1') ensureCitizenSession();
-      go(target);
+      go(target as any);
       return;
     }
     setPendingRoute(target);
@@ -78,20 +85,16 @@ export const SplashView: React.FC = () => {
   const handleVerifyAccessCode = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const clean = accessCodeInput.trim().toUpperCase();
-    if (VALID_MASTER_CODES.includes(clean)) {
+    if (validateMasterKey(clean)) {
       trackVisitorInteraction('access_code_attempt', 'Master Code Authorized', undefined, { success: true });
-      try {
-        sessionStorage.setItem('civicduty_platform_unlocked', 'true');
-      } catch (err) {
-        console.error(err);
-      }
+      unlockPlatform();
       setShowAccessModal(false);
       const dest = pendingRoute || 'ob1';
       if (dest === 'ob1') ensureCitizenSession();
-      go(dest);
+      go(dest as any);
     } else {
       trackVisitorInteraction('access_code_attempt', 'Invalid Code Entered', undefined, { success: false });
-      setAccessError('Invalid Master Access Code. Please verify your credentials or contact administrator.');
+      setAccessError('Invalid Master Access Code. Please enter your authorized sovereign key or contact administrator.');
     }
   };
 

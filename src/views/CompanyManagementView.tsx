@@ -38,6 +38,11 @@ import { CdOpsOfficialDirectiveCard } from '../components/cdops/CdOpsOfficialDir
 import { CdOpsRosterPanel } from '../components/cdops/CdOpsRosterPanel';
 import { CdOpsDispatchMatrix } from '../components/cdops/CdOpsDispatchMatrix';
 import { CdOpsAccessCodesVault } from '../components/cdops/CdOpsAccessCodesVault';
+import {
+  validateMasterKey,
+  unlockPlatform,
+  isPlatformUnlocked,
+} from '../constants/masterAuth';
 import { CdOpsCampaignStudio } from '../components/cdops/CdOpsCampaignStudio';
 import { CdOpsLaunchCountdown } from '../components/cdops/CdOpsLaunchCountdown';
 import { CdOpsOfficialDossiersPanel } from '../components/cdops/CdOpsOfficialDossiersPanel';
@@ -96,16 +101,12 @@ export const CompanyManagementView: React.FC = () => {
   const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
   const [isNewDirectiveModalOpen, setIsNewDirectiveModalOpen] = useState(false);
 
-  // Authentication handler — Single Sovereign Master Code
+  // Authentication handler — Unified Sovereign Master Code (Works for Homepage & CD-Ops)
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanKey = inputKey.trim().toUpperCase();
-    if (
-      cleanKey === 'CD-CORP-9999' ||
-      cleanKey === 'CIVICDUTY-UG-2026' ||
-      cleanKey === 'CIVIC2026' ||
-      cleanKey === 'CIVICDUTY2026'
-    ) {
+    if (validateMasterKey(cleanKey)) {
+      unlockPlatform();
       setInternalUnlocked(true);
       setUser({
         id: 'cd-internal-01',
@@ -115,9 +116,9 @@ export const CompanyManagementView: React.FC = () => {
         role: 'platform_admin',
         is_civicduty_internal: true,
       } as any);
-      toast('CivicDuty CD-Ops Command Studio authenticated.', 'emerald');
+      toast('CivicDuty CD-Ops Command Studio authenticated. Platform unlocked.', 'emerald');
     } else {
-      toast('Invalid Internal CivicDuty Key. Access Restricted.', 'red');
+      toast('Invalid Master Key. CD-Ops access restricted to authorized founders and command staff.', 'red');
     }
   };
 
