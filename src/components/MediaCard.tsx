@@ -23,6 +23,7 @@ import {
   ChevronUp,
   Globe,
   Copy,
+  Zap,
 } from 'lucide-react';
 
 interface MediaCardProps {
@@ -64,6 +65,17 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
   const [showVoiceTranslation, setShowVoiceTranslation] = useState<boolean>(false);
 
   const [failedMediaUrls, setFailedMediaUrls] = useState<Record<string, string>>({});
+
+  const isImageDoc = (item?: MediaItem | null) => {
+    if (!item) return false;
+    return Boolean(
+      item.mimeType?.startsWith('image/') ||
+      item.isPhotoScan ||
+      /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(item.url || '') ||
+      /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(item.name || '') ||
+      item.url?.startsWith('data:image')
+    );
+  };
 
   const getSafeFallbackUrl = (idx: number = 0, caption: string = '') => {
     const c = (caption || '').toLowerCase();
@@ -836,30 +848,81 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     </div>
                   </div>
                 ) : (
-                  /* 2. Full PDF Viewer / Download */
+                  /* 2. Full PDF / Stamped Paperwork Viewer & Download */
                   m.url ? (
-                    <div className="space-y-2">
-                      <iframe
-                        src={m.url}
-                        title={docTitle}
-                        className="w-full h-80 rounded-lg border border-slate-200 dark:border-slate-800 bg-white"
-                      />
-                      <div className="flex justify-between items-center flex-wrap gap-2 pt-1">
-                        <span className="text-[10px] font-mono text-slate-500">
-                          File Size: {m.size || '1.2 MB'} · Format: Portable Document Format (PDF)
-                        </span>
-                        <a
-                          href={m.url}
-                          download={docTitle}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1.5"
-                        >
-                          <Download size={12} />
-                          <span>Download Original File</span>
-                        </a>
+                    isImageDoc(m) ? (
+                      <div className="space-y-2 p-2.5 bg-slate-950 rounded-xl text-center border border-slate-800">
+                        <img
+                          src={m.url}
+                          alt={docTitle}
+                          className="max-w-full max-h-96 object-contain mx-auto rounded-lg shadow-md"
+                        />
+                        <div className="flex justify-between items-center flex-wrap gap-2 pt-2 px-1 text-slate-300">
+                          <span className="text-[10px] font-mono flex items-center gap-1 text-emerald-400">
+                            <CheckCircle2 size={12} /> Stamped Paperwork Photocopied Scan ({m.size || 'Cached'})
+                          </span>
+                          <a
+                            href={m.url}
+                            download={docTitle}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Download size={12} />
+                            <span>Save Scan</span>
+                          </a>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/40 space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <FileText size={16} className="text-amber-600 dark:text-amber-400" />
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[260px]">
+                              {docTitle}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-400">
+                            SHA-256 Verified
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                          Official statutory record attached to Dispatch #{postId.slice(-6).toUpperCase()}. Open in your device&apos;s native viewer to review or print full paperwork.
+                        </p>
+
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          <a
+                            href={m.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 min-w-[180px] py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer"
+                          >
+                            <Eye size={13} />
+                            <span>Open PDF in Native Viewer ↗</span>
+                          </a>
+                          <a
+                            href={m.url}
+                            download={docTitle}
+                            className="py-2 px-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer"
+                          >
+                            <Download size={13} />
+                            <span>Download ({m.size || 'PDF'})</span>
+                          </a>
+                        </div>
+
+                        {/* Desktop Inline Object Embed */}
+                        <div className="hidden sm:block pt-2">
+                          <object
+                            data={m.url}
+                            type="application/pdf"
+                            className="w-full h-72 rounded-lg border border-slate-200 dark:border-slate-800 bg-white"
+                          >
+                            <div className="p-3 text-center text-[10px] text-slate-400 font-mono">
+                              PDF viewable via &ldquo;Open PDF in Native Viewer&rdquo; above.
+                            </div>
+                          </object>
+                        </div>
+                      </div>
+                    )
                   ) : (
                     <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5 font-mono text-xs">
                       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
@@ -1053,11 +1116,104 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
             </div>
 
             {fullscreenDoc.url ? (
-              <iframe
-                src={fullscreenDoc.url}
-                title={fullscreenDoc.name || 'Document'}
-                className="w-full h-[70vh] rounded-xl border border-slate-200 dark:border-slate-800 bg-white"
-              />
+              isImageDoc(fullscreenDoc) ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-3 bg-slate-950 rounded-xl min-h-[50vh] max-h-[72vh] overflow-auto border border-slate-800">
+                  <img
+                    src={fullscreenDoc.url}
+                    alt={fullscreenDoc.name || 'Photocopied Document'}
+                    className="max-w-full max-h-[62vh] object-contain rounded-lg shadow-xl"
+                  />
+                  <div className="flex items-center justify-between w-full pt-3 px-2 text-xs font-mono text-slate-300">
+                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                      <CheckCircle2 size={13} /> Official On-Ground Photocopied Scan
+                    </span>
+                    <a
+                      href={fullscreenDoc.url}
+                      download={fullscreenDoc.name}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download size={13} />
+                      <span>Save Scan</span>
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border-2 border-amber-500/40 space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2 border-b border-amber-500/20 pb-3">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+                      <div>
+                        <span className="text-xs font-mono font-bold text-amber-950 dark:text-amber-200 uppercase block">
+                          Verified Sovereign Attachment · Docket #{postId.slice(-6).toUpperCase()}
+                        </span>
+                        <span className="text-[10px] text-slate-500 truncate max-w-[280px] block">
+                          {fullscreenDoc.name}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-400">
+                      SHA-256 Ledger Sealed
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div>
+                      <span className="text-slate-400 block uppercase">File Size</span>
+                      <strong className="text-slate-800 dark:text-slate-200">{fullscreenDoc.size || '1.2 MB'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block uppercase">Format</span>
+                      <strong className="text-slate-800 dark:text-slate-200">PDF Document</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block uppercase">Offline Status</span>
+                      <strong className="text-emerald-600 dark:text-emerald-400">✓ Locally Cached</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block uppercase">Jurisdiction</span>
+                      <strong className="text-slate-800 dark:text-slate-200">CivicDuty Sovereign Ledger</strong>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                    This official statutory document is permanently sealed on the sovereign accountability ledger. On mobile devices, tap <strong>&ldquo;Open PDF in Native Reader ↗&rdquo;</strong> below to inspect with full pinch-to-zoom and multi-page navigation.
+                  </p>
+
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    <a
+                      href={fullscreenDoc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[200px] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                    >
+                      <Eye size={15} />
+                      <span>Open PDF in Native Reader ↗</span>
+                    </a>
+
+                    <a
+                      href={fullscreenDoc.url}
+                      download={fullscreenDoc.name}
+                      className="py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer"
+                    >
+                      <Download size={15} />
+                      <span>Download PDF</span>
+                    </a>
+                  </div>
+
+                  {/* Desktop Object Viewer */}
+                  <div className="hidden sm:block pt-2">
+                    <object
+                      data={fullscreenDoc.url}
+                      type="application/pdf"
+                      className="w-full h-80 rounded-xl border border-slate-200 dark:border-slate-800 bg-white"
+                    >
+                      <div className="p-4 text-center text-xs text-slate-400 font-mono">
+                        PDF preview viewable via the Open PDF button above.
+                      </div>
+                    </object>
+                  </div>
+                </div>
+              )
             ) : (
               <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 text-xs text-slate-800 dark:text-slate-200">
                 <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">

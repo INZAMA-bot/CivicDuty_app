@@ -287,14 +287,24 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     const files: File[] = Array.from(e.target.files);
     const newItems = files.map((f: File) => {
       const url = URL.createObjectURL(f);
-      const isPdf = f.name.toLowerCase().endsWith('.pdf');
-      const cleanName = isPdf ? f.name : `${f.name.replace(/\.[^/.]+$/, '')}_official_scan.pdf`;
+      const isImage = f.type.startsWith('image/');
+      const isPdf = f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
+      const cleanName = isPdf
+        ? f.name
+        : isImage
+        ? (f.name.match(/\.(png|jpe?g|webp)$/i) ? f.name : `${f.name.replace(/\.[^/.]+$/, '')}_stamped_photocopy.png`)
+        : f.name;
+      const formattedSize =
+        f.size >= 1048576
+          ? (f.size / (1024 * 1024)).toFixed(1) + ' MB'
+          : Math.max(1, Math.round(f.size / 1024)) + ' KB';
       return {
         type: 'doc' as const,
         url,
         name: cleanName,
-        size: (f.size / (1024 * 1024)).toFixed(1) + ' MB',
-        file: f,
+        size: formattedSize,
+        mimeType: f.type,
+        isPhotoScan: isImage,
       };
     });
     setStagedMedia((prev) => [...prev, ...newItems]);

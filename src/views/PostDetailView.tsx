@@ -115,6 +115,7 @@ export const PostDetailView: React.FC = () => {
   const [gpsStatus, setGpsStatus] = useState<string>('Not acquired');
   const [commentFilter, setCommentFilter] = useState<'all' | 'official' | 'witnesses'>('all');
   const [composerExpanded, setComposerExpanded] = useState<boolean>(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<'discussion' | 'audit' | 'dossier'>('discussion');
 
   // Touch Swipe Gesture Tracking for fluid next/previous post navigation
   const touchStartX = useRef<number>(0);
@@ -523,55 +524,48 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
         </div>
       </div>
 
-      {/* Sticky Quick-Jump Navigation Anchor Bar */}
-      <div className="sticky top-0 z-30 px-4 py-2 bg-white/95 dark:bg-[#161a22]/95 backdrop-blur-md border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1.5 overflow-x-auto scrollbar-none shadow-xs text-xs font-mono">
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById('post-discussion-section');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:bg-emerald-100"
-        >
-          <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
-          <span>Discussion ({p.comments?.length || 0})</span>
-        </button>
+      {/* Segmented Detail View Tabs: Strict Separation between Discussion, Sovereign Audit, and Master Dossier */}
+      <div className="sticky top-0 z-30 px-3 py-2 bg-white/95 dark:bg-[#161a22]/95 backdrop-blur-md border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-1 shadow-xs text-xs font-mono">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full">
+          <button
+            type="button"
+            onClick={() => setActiveDetailTab('discussion')}
+            className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all ${
+              activeDetailTab === 'discussion'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <MessageSquare size={13} className={activeDetailTab === 'discussion' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'} />
+            <span>Public Discussion &amp; Official Response ({p.comments?.length || 0})</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById('post-stepper-section');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:border-emerald-500"
-        >
-          <ShieldCheck size={13} className="text-emerald-500" />
-          <span>Audit Stepper</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveDetailTab('audit')}
+            className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all ${
+              activeDetailTab === 'audit'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <ShieldCheck size={13} className={activeDetailTab === 'audit' ? 'text-white' : 'text-emerald-500'} />
+            <span>Sovereign Audit &amp; SLA</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById('post-ladder-section');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:border-amber-500"
-        >
-          <TrendingUp size={13} className="text-amber-500" />
-          <span>SLA Escalation</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById('post-dossier-section');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
-          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:border-indigo-500"
-        >
-          <Layers size={13} className="text-indigo-500" />
-          <span>Master Dossier ({compiledCount})</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveDetailTab('dossier')}
+            className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all ${
+              activeDetailTab === 'dossier'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Layers size={13} className={activeDetailTab === 'dossier' ? 'text-white' : 'text-indigo-500'} />
+            <span>Master Dossier ({compiledCount})</span>
+          </button>
+        </div>
       </div>
 
       {/* Praise & Commendation Direct Banner */}
@@ -741,158 +735,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
           />
         </p>
 
-        {/* Social Media Amplification, Quote-Dispatch, Fact-Check & Bookmark Toolbar */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 pb-1 border-y border-slate-200 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={() => {
-              setSocialModalTab('quote');
-              setSocialModalPost(p);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
-          >
-            <Repeat2 size={13} className="text-emerald-600 dark:text-emerald-400" />
-            <span>Quote-Dispatch ({p.reposts || 0})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSocialModalTab('community_note');
-              setSocialModalPost(p);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
-          >
-            <FileCheck2 size={13} />
-            <span>+ Community Note</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => toggleBookmark(p.id)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer ${
-              (bookmarks || []).includes(p.id)
-                ? 'bg-amber-500 text-slate-950 border-amber-600'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            <Bookmark size={13} />
-            <span>{(bookmarks || []).includes(p.id) ? 'Bookmarked' : 'Bookmark'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSocialModalTab('share');
-              setSocialModalPost(p);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
-          >
-            <Share2 size={13} />
-            <span>Share / Safety</span>
-          </button>
-        </div>
-
-        {/* Interactive Civic Poll inside Post Detail */}
-        {p.poll && (
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
-            <div className="flex items-center justify-between text-[10px] font-mono font-black uppercase text-emerald-700 dark:text-emerald-400">
-              <span className="flex items-center gap-1.5">
-                <BarChart3 size={12} />
-                <span>Public Civic Poll · {p.poll.total_votes.toLocaleString()} Votes</span>
-              </span>
-              {p.poll.ends_at && <span className="text-slate-500">{p.poll.ends_at}</span>}
-            </div>
-            <div className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">{p.poll.question}</div>
-            <div className="space-y-1.5">
-              {p.poll.options.map((opt) => {
-                const pct = p.poll && p.poll.total_votes > 0 ? Math.round((opt.votes / p.poll.total_votes) * 100) : 0;
-                const isSelected = p.poll?.voted_option_id === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => voteCivicPoll(p.id, opt.id)}
-                    className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40'
-                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-400'
-                    }`}
-                  >
-                    <div
-                      className="absolute inset-y-0 left-0 bg-emerald-500/15 dark:bg-emerald-500/20 transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                    <div className="relative flex items-center justify-between text-xs font-bold">
-                      <span>{opt.label}</span>
-                      <span className="font-mono text-[10.5px] text-emerald-700 dark:text-emerald-400 font-black">
-                        {pct}% ({opt.votes})
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Verified Community Notes inside Post Detail */}
-        {p.community_notes && p.community_notes.length > 0 && (
-          <div className="p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 space-y-1.5">
-            <div className="flex items-center justify-between text-[10px] font-mono font-black text-amber-900 dark:text-amber-300 uppercase">
-              <span className="flex items-center gap-1.5">
-                <FileCheck2 size={12} />
-                <span>Readers Added Context · Verified Community Note</span>
-              </span>
-              <span>{p.community_notes[0].author_name}</span>
-            </div>
-            <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
-              {p.community_notes[0].body}
-            </p>
-          </div>
-        )}
-
-        {/* Interactive Before & After Visual Proof Comparison Studio */}
-        {(() => {
-          const citizenImg = p.media?.find((m) => m.type === 'image' && m.url)?.url;
-          const govImg = [...(p.comments || [])]
-            .reverse()
-            .find((c) => c.role === 'gov' && c.media?.some((m) => m.type === 'image'))
-            ?.media?.find((m) => m.type === 'image')?.url;
-
-          const ba =
-            p.before_after ||
-            (citizenImg && govImg
-              ? {
-                  before_url: citizenImg,
-                  after_url: govImg,
-                  before_label: 'Citizen Field Report',
-                  after_label: 'Official Resolution Proof',
-                  turnaround_hrs: `${Math.max(1, Math.round(hrsElapsed))}h`,
-                  gps_verified: Boolean(p.gps),
-                  verified_by: d.name,
-                }
-              : null);
-
-          if (!ba) return null;
-          return (
-            <BeforeAfterSlider
-              beforeUrl={ba.before_url}
-              afterUrl={ba.after_url}
-              beforeLabel={ba.before_label || 'Citizen Field Report'}
-              afterLabel={ba.after_label || 'Verified Fix'}
-              turnaroundTime={ba.turnaround_hrs || `${Math.max(1, Math.round(hrsElapsed))}h`}
-              gpsCoords={p.gps}
-              gpsVerified={ba.gps_verified ?? true}
-              verifiedBy={ba.verified_by || d.name}
-              cryptoSeal={cryptoSeal}
-              compact={false}
-              defaultMode="toggle"
-            />
-          );
-        })()}
-
-        {/* Media Player Grid / Video / Audio / Docs (Deduplicated against Before/After Proof) */}
+        {/* Media Player Grid / Photos / Documents (Compact Context) */}
         {(() => {
           const baUrls = [p.before_after?.before_url, p.before_after?.after_url].filter(Boolean);
           const filteredMedia = (p.media || []).filter(
@@ -908,53 +751,305 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
             />
           );
         })()}
+      </div>
 
-        {/* Metadata Grid */}
-        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 grid grid-cols-2 gap-3 text-[10px] mono">
-          <div>
-            <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Category</span>
-            <span style={{ color: cat.color }} className="font-black">{cat.label}</span>
+      <QrCodeModal
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        type="ticket"
+        post={p}
+      />
+
+      {/* TAB 3: EVIDENCE DOSSIER, COMMUNITY NOTES & REACTION TOOLS */}
+      {activeDetailTab === 'dossier' && (
+        <div className="p-4 space-y-4 animate-fade-in">
+          {/* Support Action Bar */}
+          <div className="space-y-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => upvotePost(p.id)}
+                  className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all mono active:scale-95 cursor-pointer ${
+                    isSupported
+                      ? 'bg-emerald-700 text-white shadow-md'
+                      : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200'
+                  }`}
+                >
+                  <ArrowUp size={14} /> {isSupported ? 'Supporting' : 'Support Report'} <span>{p.upvotes}</span>
+                </button>
+
+                <button
+                  onClick={() => downvotePost(p.id)}
+                  className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all mono active:scale-95 cursor-pointer ${
+                    user && downvotesMap[user.id]?.[p.id]
+                      ? 'bg-rose-700 text-white shadow-md'
+                      : 'bg-rose-100 dark:bg-rose-950/60 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-700 hover:bg-rose-200'
+                  }`}
+                  title="Flag report as inaccurate or disputed. Escalation SLA remains protected."
+                >
+                  <ArrowDown size={14} /> <span>Dispute ({p.downvotes || 0})</span>
+                </button>
+
+                <button
+                  onClick={() => setQrModalOpen(true)}
+                  className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all mono flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Verify and Print QR Code Docket"
+                >
+                  <QrCode size={14} className="text-amber-500" />
+                  <span>QR Docket</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedRewardTarget({
+                      name: p.citizen_name || 'Verified Citizen',
+                    });
+                    setRewardModalOpen(true);
+                  }}
+                  className="bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-3 py-2.5 rounded-xl text-xs font-black transition-all mono flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <Gift size={14} className="text-amber-700 dark:text-amber-400" />
+                  <span>Reward</span>
+                </button>
+              </div>
+
+              <div className="text-[10px] mono font-bold text-slate-700 dark:text-slate-300 inline-flex items-center gap-1">
+                {p.anonymous ? (
+                  <>
+                    <Lock size={10} strokeWidth={1.75} />
+                    <span>Protected Anonymous Citizen</span>
+                  </>
+                ) : (
+                  p.citizen_name
+                )}{' '}
+                · {p.citizen_rank}
+              </div>
+            </div>
+
+            {/* Consensus Ratio Bar */}
+            {((p.upvotes || 0) > 0 || (p.downvotes || 0) > 0) && (
+              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs flex items-center justify-between gap-3">
+                <span className="font-bold text-[11px] text-slate-600 dark:text-slate-400">
+                  Community Sentiment:
+                </span>
+                <div className="flex-1 bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden flex">
+                  <div
+                    style={{
+                      width: `${Math.round(((p.upvotes || 0) / Math.max(1, (p.upvotes || 0) + (p.downvotes || 0))) * 100)}%`,
+                    }}
+                    className="bg-emerald-500 h-full"
+                  />
+                  <div
+                    style={{
+                      width: `${Math.round(((p.downvotes || 0) / Math.max(1, (p.upvotes || 0) + (p.downvotes || 0))) * 100)}%`,
+                    }}
+                    className="bg-rose-500 h-full"
+                  />
+                </div>
+                <span className="font-mono text-[10px] font-black text-slate-700 dark:text-slate-300">
+                  {Math.round(((p.upvotes || 0) / Math.max(1, (p.upvotes || 0) + (p.downvotes || 0))) * 100)}% Endorsed
+                </span>
+              </div>
+            )}
           </div>
-          <div>
-            <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Territory</span>
-            <span className="text-slate-900 dark:text-slate-100 font-bold">{pathStr(p.country, p.territory)}</span>
+
+          {/* Social Media Amplification, Quote-Dispatch, Fact-Check & Bookmark Toolbar */}
+          <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setSocialModalTab('quote');
+                setSocialModalPost(p);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Repeat2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Quote-Dispatch ({p.reposts || 0})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSocialModalTab('community_note');
+                setSocialModalPost(p);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileCheck2 size={13} />
+              <span>+ Community Note</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => toggleBookmark(p.id)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer ${
+                (bookmarks || []).includes(p.id)
+                  ? 'bg-amber-500 text-slate-950 border-amber-600'
+                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <Bookmark size={13} />
+              <span>{(bookmarks || []).includes(p.id) ? 'Bookmarked' : 'Bookmark'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSocialModalTab('share');
+                setSocialModalPost(p);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Share2 size={13} />
+              <span>Share / Safety</span>
+            </button>
           </div>
-          <div>
-            <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Origin Source</span>
-            <span className="text-slate-900 dark:text-slate-100 font-bold">{srcLabel(p.source)}</span>
-          </div>
-          <div>
-            <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Filed Time</span>
-            <span className="text-slate-900 dark:text-slate-100 font-bold">{timeAgo(p.created_at)}</span>
-          </div>
-          {p.gps && (
-            <div className="col-span-2 border-t border-slate-200 dark:border-slate-800 pt-2 flex items-center justify-between">
-              <span className="text-slate-600 dark:text-slate-400 font-bold">GIS Geocoded GPS:</span>
-              <span className="text-emerald-700 dark:text-emerald-400 font-black">
-                {p.gps.lat}, {p.gps.lng}
-              </span>
+
+          {/* Interactive Before & After Visual Proof Comparison Studio */}
+          {(() => {
+            const citizenImg = p.media?.find((m) => m.type === 'image' && m.url)?.url;
+            const govImg = [...(p.comments || [])]
+              .reverse()
+              .find((c) => c.role === 'gov' && c.media?.some((m) => m.type === 'image'))
+              ?.media?.find((m) => m.type === 'image')?.url;
+
+            const ba =
+              p.before_after ||
+              (citizenImg && govImg
+                ? {
+                    before_url: citizenImg,
+                    after_url: govImg,
+                    before_label: 'Citizen Field Report',
+                    after_label: 'Official Resolution Proof',
+                    turnaround_hrs: `${Math.max(1, Math.round(hrsElapsed))}h`,
+                    gps_verified: Boolean(p.gps),
+                    verified_by: d.name,
+                  }
+                : null);
+
+            if (!ba) return null;
+            return (
+              <BeforeAfterSlider
+                beforeUrl={ba.before_url}
+                afterUrl={ba.after_url}
+                beforeLabel={ba.before_label || 'Citizen Field Report'}
+                afterLabel={ba.after_label || 'Verified Fix'}
+                turnaroundTime={ba.turnaround_hrs || `${Math.max(1, Math.round(hrsElapsed))}h`}
+                gpsCoords={p.gps}
+                gpsVerified={ba.gps_verified ?? true}
+                verifiedBy={ba.verified_by || d.name}
+                cryptoSeal={cryptoSeal}
+                compact={false}
+                defaultMode="toggle"
+              />
+            );
+          })()}
+
+          {/* Interactive Civic Poll inside Post Detail */}
+          {p.poll && (
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between text-[10px] font-mono font-black uppercase text-emerald-700 dark:text-emerald-400">
+                <span className="flex items-center gap-1.5">
+                  <BarChart3 size={12} />
+                  <span>Public Civic Poll · {p.poll.total_votes.toLocaleString()} Votes</span>
+                </span>
+                {p.poll.ends_at && <span className="text-slate-500">{p.poll.ends_at}</span>}
+              </div>
+              <div className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">{p.poll.question}</div>
+              <div className="space-y-1.5">
+                {p.poll.options.map((opt) => {
+                  const pct = p.poll && p.poll.total_votes > 0 ? Math.round((opt.votes / p.poll.total_votes) * 100) : 0;
+                  const isSelected = p.poll?.voted_option_id === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => voteCivicPoll(p.id, opt.id)}
+                      className={`w-full text-left relative overflow-hidden rounded-xl border p-2.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-400'
+                      }`}
+                    >
+                      <div
+                        className="absolute inset-y-0 left-0 bg-emerald-500/15 dark:bg-emerald-500/20 transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                      <div className="relative flex items-center justify-between text-xs font-bold">
+                        <span>{opt.label}</span>
+                        <span className="font-mono text-[10.5px] text-emerald-700 dark:text-emerald-400 font-black">
+                          {pct}% ({opt.votes})
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {p.author_profession && (
-            <div className="col-span-2 border-t border-slate-200 dark:border-slate-800 pt-2 flex items-center justify-between flex-wrap gap-2">
-              <span className="text-slate-600 dark:text-slate-400 font-bold">Reporter Profession:</span>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold ${
-                p.author_profession.toLowerCase().includes('boda')
-                  ? 'bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-                  : 'bg-blue-100 text-blue-950 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
-              }`}>
-                {p.author_profession.toLowerCase().includes('boda') && (
-                  <Bike size={13} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400" />
-                )}
-                <span>{p.author_profession.toLowerCase().includes('boda') ? 'Bodaboda Frontline Road Scout' : p.author_profession}</span>
-              </span>
+          {/* Verified Community Notes inside Post Detail */}
+          {p.community_notes && p.community_notes.length > 0 && (
+            <div className="p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-mono font-black text-amber-900 dark:text-amber-300 uppercase">
+                <span className="flex items-center gap-1.5">
+                  <FileCheck2 size={12} />
+                  <span>Readers Added Context · Verified Community Note</span>
+                </span>
+                <span>{p.community_notes[0].author_name}</span>
+              </div>
+              <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
+                {p.community_notes[0].body}
+              </p>
             </div>
           )}
-        </div>
 
-        {/* MASTER DOSSIER & MULTI-REPORT ISSUE COMPILATION ENGINE */}
-        {!isPraise && (
+          {/* Metadata Grid */}
+          <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 grid grid-cols-2 gap-3 text-[10px] mono">
+            <div>
+              <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Category</span>
+              <span style={{ color: cat.color }} className="font-black">{cat.label}</span>
+            </div>
+            <div>
+              <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Territory</span>
+              <span className="text-slate-900 dark:text-slate-100 font-bold">{pathStr(p.country, p.territory)}</span>
+            </div>
+            <div>
+              <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Origin Source</span>
+              <span className="text-slate-900 dark:text-slate-100 font-bold">{srcLabel(p.source)}</span>
+            </div>
+            <div>
+              <span className="text-slate-600 dark:text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">Filed Time</span>
+              <span className="text-slate-900 dark:text-slate-100 font-bold">{timeAgo(p.created_at)}</span>
+            </div>
+            {p.gps && (
+              <div className="col-span-2 border-t border-slate-200 dark:border-slate-800 pt-2 flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-400 font-bold">GIS Geocoded GPS:</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-black">
+                  {p.gps.lat}, {p.gps.lng}
+                </span>
+              </div>
+            )}
+
+            {p.author_profession && (
+              <div className="col-span-2 border-t border-slate-200 dark:border-slate-800 pt-2 flex items-center justify-between flex-wrap gap-2">
+                <span className="text-slate-600 dark:text-slate-400 font-bold">Reporter Profession:</span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                  p.author_profession.toLowerCase().includes('boda')
+                    ? 'bg-amber-100 text-amber-950 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                    : 'bg-blue-100 text-blue-950 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                }`}>
+                  {p.author_profession.toLowerCase().includes('boda') && (
+                    <Bike size={13} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400" />
+                  )}
+                  <span>{p.author_profession.toLowerCase().includes('boda') ? 'Bodaboda Frontline Road Scout' : p.author_profession}</span>
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Master Dossier & Multi-Report Issue Compilation Engine */}
+          {!isPraise ? (
           <div id="post-dossier-section" className="p-4 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] border-l-4 border-l-indigo-500 space-y-3.5 scroll-mt-14">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2.5">
@@ -1269,8 +1364,17 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
               )}
             </div>
           </div>
+        ) : (
+          <div className="p-4 text-center font-mono text-xs text-slate-500">
+            Dossier aggregation is active for citizen grievances and public works issues.
+          </div>
         )}
+        </div>
+      )}
 
+      {/* TAB 2: SOVEREIGN AUDIT, STATUTORY SLA & EXPENDITURE LEDGER */}
+      {activeDetailTab === 'audit' && (
+        <div className="p-4 space-y-4 animate-fade-in">
         {/* 48-Hour Response SLA Countdown HUD Box */}
         <div id="post-ladder-section" className="p-3.5 rounded-2xl bg-slate-100/90 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 space-y-2 scroll-mt-14">
           <div className="flex items-center justify-between text-[11px] font-black">
@@ -1522,103 +1626,60 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
           <TicketAuditTimeline post={p} />
         </div>
 
-        {/* Support Action Bar */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => upvotePost(p.id)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all mono active:scale-95 cursor-pointer ${
-                  isSupported
-                    ? 'bg-emerald-700 text-white shadow-md'
-                    : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200'
-                }`}
-              >
-                <ArrowUp size={14} /> {isSupported ? 'Supporting' : 'Support Report'} <span>{p.upvotes}</span>
-              </button>
-
-              <button
-                onClick={() => downvotePost(p.id)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all mono active:scale-95 cursor-pointer ${
-                  user && downvotesMap[user.id]?.[p.id]
-                    ? 'bg-rose-700 text-white shadow-md'
-                    : 'bg-rose-100 dark:bg-rose-950/60 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-700 hover:bg-rose-200'
-                }`}
-                title="Flag report as inaccurate or disputed. Escalation SLA remains protected."
-              >
-                <ArrowDown size={14} /> <span>Dispute ({p.downvotes || 0})</span>
-              </button>
-
-              <button
-                onClick={() => setQrModalOpen(true)}
-                className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all mono flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                title="Verify and Print QR Code Docket"
-              >
-                <QrCode size={14} className="text-amber-500" />
-                <span>QR Docket</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setSelectedRewardTarget({
-                    name: p.citizen_name || 'Verified Citizen',
-                  });
-                  setRewardModalOpen(true);
-                }}
-                className="bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 px-3 py-2.5 rounded-xl text-xs font-black transition-all mono flex items-center gap-1.5 active:scale-95 cursor-pointer"
-              >
-                <Gift size={14} className="text-amber-700 dark:text-amber-400" />
-                <span>Reward</span>
-              </button>
-            </div>
-
-            <div className="text-[10px] mono font-bold text-slate-700 dark:text-slate-300 inline-flex items-center gap-1">
-              {p.anonymous ? (
-                <>
-                  <Lock size={10} strokeWidth={1.75} />
-                  <span>Protected Anonymous Citizen</span>
-                </>
-              ) : (
-                p.citizen_name
-              )}{' '}
-              · {p.citizen_rank}
-            </div>
-          </div>
-
-          {/* Consensus Ratio Bar */}
-          {((p.upvotes || 0) > 0 || (p.downvotes || 0) > 0) && (
-            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs flex items-center justify-between gap-3">
-              <span className="font-bold text-[11px] text-slate-600 dark:text-slate-400">
-                Community Sentiment:
-              </span>
-              <div className="flex-1 bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden flex">
-                <div
-                  style={{
-                    width: `${Math.round(((p.upvotes || 0) / Math.max(1, (p.upvotes || 0) + (p.downvotes || 0))) * 100)}%`,
-                  }}
-                  className="bg-emerald-500 h-full"
-                />
-                <div
-                  style={{
-                    width: `${Math.round(((p.downvotes || 0) / Math.max(1, (p.upvotes || 0) + (p.downvotes || 0))) * 100)}%`,
-                  }}
-                  className="bg-rose-500 h-full"
-                />
-              </div>
-              <span className="font-mono text-[10px] font-black text-slate-700 dark:text-slate-300">
-                {Math.round(((p.upvotes || 0) / Math.max(1, (p.upvotes || 0) + (p.downvotes || 0))) * 100)}% Endorsed
-              </span>
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
-      <QrCodeModal
-        isOpen={qrModalOpen}
-        onClose={() => setQrModalOpen(false)}
-        type="ticket"
-        post={p}
-      />
+      {/* TAB 1: STRICTLY PUBLIC DISCUSSION & OFFICIAL RESPONSE */}
+      {activeDetailTab === 'discussion' && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Pinned Official Response Banner (if government desk responded) */}
+          {(() => {
+            const govComment = (p.comments || []).find((c) => c.role === 'gov');
+            if (!govComment) {
+              return (
+                <div className="mx-4 mt-3 p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-dashed border-amber-300 dark:border-amber-800/60 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                    <div>
+                      <span className="text-xs font-mono font-bold text-amber-950 dark:text-amber-200 block">
+                        Awaiting Official Response from {d.name}
+                      </span>
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400">
+                        Public comments &amp; citizen witness notes are open below.
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300">
+                    Statutory SLA: {hoursLeft > 0 ? `${hoursLeft.toFixed(1)}h remaining` : 'Breached SLA'}
+                  </span>
+                </div>
+              );
+            }
+            return (
+              <div className="mx-4 mt-3 p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-950/30 border-2 border-amber-500/60 shadow-sm space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-[10.5px] font-mono font-black uppercase text-amber-950 dark:text-amber-300 flex items-center gap-1.5">
+                    <Lock size={12} className="text-amber-600 dark:text-amber-400" />
+                    <span>PINNED OFFICIAL DESK RESPONSE · {govComment.sender}</span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {govComment.status_tag && statusChip(govComment.status_tag)}
+                    <span className="text-[9.5px] font-mono text-slate-500 font-bold">
+                      {timeAgo(govComment.created_at)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-950 dark:text-slate-100 font-medium leading-relaxed">
+                  {govComment.body}
+                </p>
+                {govComment.media && govComment.media.length > 0 && (
+                  <div className="pt-1">
+                    <MediaCard media={govComment.media} postId={p.id + '-pinned-gov'} onToast={(msg) => toast(msg)} />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
       {/* CITIZEN VERIFICATION & MULTI-PARTY DISPUTE LOOP (72-HOUR REVIEW WINDOW) */}
       {p.status === 'resolved' && (
@@ -2245,17 +2306,17 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                     <span>{acquiredGps ? 'GPS Locked' : 'GPS Pin'}</span>
                   </button>
 
-                  {/* Video / Doc */}
-                  <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-2 py-1.5 rounded-xl text-[10px] font-mono font-bold flex items-center gap-1 transition-colors">
+                  {/* Paperwork / Document */}
+                  <label className="cursor-pointer bg-slate-100 dark:bg-slate-800/90 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 text-slate-700 dark:text-slate-200 px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-colors">
                     <input
                       type="file"
-                      accept="video/*,.pdf"
+                      accept="application/pdf,image/*,.doc,.docx"
                       className="hidden"
                       multiple
                       onChange={handleFileSelect}
                     />
-                    <Video size={12} className="text-rose-500" />
-                    <span>Media</span>
+                    <FileText size={13} className="text-amber-600 dark:text-amber-400" />
+                    <span>Snap Paperwork</span>
                   </label>
                 </div>
 
@@ -2336,6 +2397,8 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
           )
         )}
       </div>
+      </div>
+      )}
 
       {/* Reward Citizen Modal */}
       <RewardModal

@@ -46,6 +46,7 @@ import {
   TrendingUp,
   Zap,
   Check,
+  CheckCheck,
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 import { RewardModal } from './RewardModal';
@@ -97,6 +98,8 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
     setFeedTab,
     compileWitnessIntoPost,
     triggerManualEscalation,
+    ratifyResolution,
+    disputeResolution,
   } = useApp();
 
   const [showQr, setShowQr] = useState<boolean>(false);
@@ -112,6 +115,12 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const [witnessObservation, setWitnessObservation] = useState<string>('');
   const [witnessRole, setWitnessRole] = useState<string>('Bodaboda Rider / Cyclist');
   const [witnessAnon, setWitnessAnon] = useState<boolean>(false);
+
+  // 72-Hour Citizen Ratification Loop inline states
+  const [showRatifyInline, setShowRatifyInline] = useState<boolean>(false);
+  const [ratifyNotes, setRatifyNotes] = useState<string>('');
+  const [showDisputeInline, setShowDisputeInline] = useState<boolean>(false);
+  const [disputeNotes, setDisputeNotes] = useState<string>('');
 
   // Swipe detection refs for touch ergonomics
   const touchStartX = useRef<number | null>(null);
@@ -790,6 +799,146 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* 2.5 BE HEARD · 72-HOUR CITIZEN RATIFICATION LOOP BANNER */}
+        {post.status === 'resolved' && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="p-3.5 rounded-2xl bg-emerald-50/90 dark:bg-[#11191f] border-2 border-emerald-500/40 space-y-2.5 shadow-xs animate-fade-in"
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  <CheckCheck size={14} />
+                </div>
+                <div>
+                  <div className="text-[11px] font-mono font-black uppercase text-emerald-950 dark:text-emerald-300 flex items-center gap-1.5">
+                    <span>BE HEARD · 72-Hour Citizen Ratification Loop</span>
+                  </div>
+                  <div className="text-[9.5px] text-slate-600 dark:text-slate-300">
+                    Frontline service desk marked this issue as resolved. Citizen on-ground confirmation required.
+                  </div>
+                </div>
+              </div>
+              <span className="text-[8px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-400 shrink-0">
+                72H REVIEW WINDOW
+              </span>
+            </div>
+
+            {post.citizen_dispute_status === 'confirmed_by_community' ? (
+              <div className="p-2.5 rounded-xl bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-950 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+                <span>Community Confirmed: Resolution verified on ground by citizens &amp; sealed on sovereign ledger.</span>
+              </div>
+            ) : post.citizen_dispute_status === 'disputed_with_counter_evidence' ? (
+              <div className="p-2.5 rounded-xl bg-rose-100/90 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-700 text-rose-950 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
+                <AlertTriangle size={14} className="text-rose-700 dark:text-rose-400 shrink-0" />
+                <span>Disputed by Community: Issue re-opened and escalated directly to CAO Desk.</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {user && ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(user.role) ? (
+                  <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-400">
+                    ℹ️ <strong>Officer Notice:</strong> Awaiting citizen eyewitness ratification. Frontline desk officers cannot self-ratify resolutions.
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setShowRatifyInline(!showRatifyInline)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer"
+                    >
+                      <CheckCircle2 size={13} />
+                      <span>Confirm Fix &amp; Ratify (+25 XP)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDisputeInline(!showDisputeInline)}
+                      className="py-2 px-3 rounded-xl bg-rose-100 dark:bg-rose-950/60 hover:bg-rose-200 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 font-mono font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <AlertTriangle size={13} />
+                      <span>Dispute / Re-open</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Inline Ratify Form */}
+                {showRatifyInline && (
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-emerald-300 dark:border-emerald-800 space-y-2 animate-fade-in text-xs">
+                    <div className="font-bold text-slate-900 dark:text-white text-[11px]">
+                      Attest that the physical repair is complete &amp; satisfactory:
+                    </div>
+                    <input
+                      type="text"
+                      value={ratifyNotes}
+                      onChange={(e) => setRatifyNotes(e.target.value)}
+                      placeholder="e.g. 'Inspected on ground: culvert cleared and water flowing'..."
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowRatifyInline(false)}
+                        className="px-2.5 py-1 rounded-lg text-slate-500 text-[11px] font-mono cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          ratifyResolution(post.id, ratifyNotes || 'Confirmed satisfactorily fixed on-ground by local citizen.');
+                          setShowRatifyInline(false);
+                        }}
+                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs cursor-pointer shadow-xs"
+                      >
+                        Seal Ratification (+25 XP)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline Dispute Form */}
+                {showDisputeInline && (
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-rose-300 dark:border-rose-800 space-y-2 animate-fade-in text-xs">
+                    <div className="font-bold text-rose-950 dark:text-rose-200 text-[11px]">
+                      Why is this resolution defective or incomplete?
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={disputeNotes}
+                      onChange={(e) => setDisputeNotes(e.target.value)}
+                      placeholder="Describe defects (e.g. 'Only dumped gravel, already washed out by rain')..."
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowDisputeInline(false)}
+                        className="px-2.5 py-1 rounded-lg text-slate-500 text-[11px] font-mono cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!disputeNotes.trim()) {
+                            toast('Provide counter-evidence or reason for dispute', 'amber');
+                            return;
+                          }
+                          disputeResolution(post.id, disputeNotes);
+                          setShowDisputeInline(false);
+                        }}
+                        className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-mono font-bold text-xs cursor-pointer shadow-xs"
+                      >
+                        Submit Dispute &amp; Re-Open
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

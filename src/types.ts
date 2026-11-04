@@ -250,6 +250,8 @@ export interface MediaItem {
   name?: string;
   size?: string;
   waveform?: number[];
+  mimeType?: string;
+  isPhotoScan?: boolean;
 }
 
 export interface Comment {
