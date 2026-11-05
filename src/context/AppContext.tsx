@@ -155,7 +155,7 @@ interface AppContextType {
   addCommentToPost: (postId: string, comment: any) => void;
   rateReply: (postId: string, commentIndex: number, helpful: boolean) => void;
   markPostSatisfied: (postId: string, satisfied: boolean) => void;
-  updatePostStatus: (postId: string, status: any, beforeAfter?: Post['before_after']) => void;
+  updatePostStatus: (postId: string, status: any, beforeAfter?: Post['before_after'], extra?: Partial<Post>) => void;
   addTeamMember: (member: TeamMember) => void;
   standDownTeamMember: (id: string, reason: string, note: string) => void;
   reinstateTeamMember: (id: string) => void;
@@ -289,6 +289,12 @@ interface AppContextType {
   }) => MinisterialDirective;
   acknowledgeMinisterialDirectiveByPs: (directiveId: string, psNotes: string, warrantHold: boolean) => void;
   updateMinisterialDirectiveStatus: (directiveId: string, status: MinisterialDirective['status']) => void;
+  submitDirectiveCompliance: (
+    directiveId: string,
+    statement: string,
+    status?: 'compliant' | 'in_progress' | 'escalated_to_igg',
+    evidenceUrls?: string[]
+  ) => void;
   enrollSectorMinister: (minister: {
     ministryKey: string;
     ministryName: string;
@@ -1705,6 +1711,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const submitDirectiveCompliance = (
+    directiveId: string,
+    statement: string,
+    status: 'compliant' | 'in_progress' | 'escalated_to_igg' = 'in_progress',
+    evidenceUrls?: string[]
+  ) => {
+    const auditHash = `SHA256-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+    const report = {
+      id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      directiveId,
+      submittedBy: user?.officer_name || user?.real_title_short || user?.name || 'Local Government Officer',
+      officerTitle: user?.real_title_short || user?.role || 'Technical Officer',
+      officerDeskCode: user?.deskCode || user?.dept || 'UG-DISTRICT-DESK',
+      departmentOrDistrict: user?.scope_label || user?.branch_name || user?.organization_name || 'District Local Government',
+      reportStatement: statement.trim(),
+      status,
+      evidenceUrls: evidenceUrls || [],
+      auditHash,
+      submittedAt: new Date().toISOString(),
+    };
+
+    setMinisterialDirectives((prev) =>
+      prev.map((d) => {
+        if (d.id === directiveId) {
+          const nextReports = [...(d.complianceReports || []), report];
+          const nextStatus = status === 'compliant' ? 'closed' : 'in_execution';
+          return {
+            ...d,
+            complianceReports: nextReports,
+            status: nextStatus,
+          };
+        }
+        return d;
+      })
+    );
+
+    const directive = ministerialDirectives.find((d) => d.id === directiveId);
+    const ref = directive?.directiveRef || directiveId;
+
+    logAudit(
+      'directive_compliance',
+      ref,
+      `Milestone Compliance Report logged by ${user?.real_title_short || 'Desk Officer'}: "${statement.slice(0, 90)}..." [Audit Hash: ${auditHash}]`,
+      user?.country || 'UG',
+      user?.dept || 'molg'
+    );
+
+    toast(`Milestone compliance filed for ${ref}! Audit Seal: ${auditHash.slice(0, 16)}...`, 'emerald');
+  };
+
   const enrollSectorMinister = (data: {
     ministryKey: string;
     ministryName: string;
@@ -2154,7 +2210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     toast('Statutory Escalation Triggered! Promoted to next administrative tier.', 'amber');
   };
 
-  const updatePostStatus = (postId: string, newStatus: any, beforeAfter?: Post['before_after']) => {
+  const updatePostStatus = (postId: string, newStatus: any, beforeAfter?: Post['before_after'], extra?: Partial<Post>) => {
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
@@ -2163,12 +2219,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: newStatus === 'resolved' ? 'resolved' : p.status,
             gov_status: newStatus,
             before_after: beforeAfter || p.before_after,
+            ...(extra || {}),
           };
         }
         return p;
       })
     );
-    logAudit('status_change', postId, `Status changed: → ${newStatus}${beforeAfter ? ' (with Before & After Proof)' : ''}`);
+    const prjNote = extra?.linked_project ? ` (Linked to Capital Works Project: ${extra.linked_project.title})` : '';
+    logAudit('status_change', postId, `Status changed: → ${newStatus}${beforeAfter ? ' (with Before & After Proof)' : ''}${prjNote}`);
     toast(`Marked ${newStatus}`, newStatus === 'resolved' ? 'emerald' : 'amber');
   };
 
@@ -4321,6 +4379,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         issueMinisterialDirective,
         acknowledgeMinisterialDirectiveByPs,
         updateMinisterialDirectiveStatus,
+        submitDirectiveCompliance,
         enrollSectorMinister,
         revokeSectorMinister,
         promotionalAds,

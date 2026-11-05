@@ -55,6 +55,7 @@ import { MinisterialCommandView } from './views/MinisterialCommandView';
 import { CivicDutyGuideModal } from './components/CivicDutyGuideModal';
 import { LegalTrustModal } from './components/LegalTrustModal';
 import { GlobalSocialModals } from './components/GlobalSocialModals';
+import { OfflineSyncHUD } from './components/OfflineSyncHUD';
 import { isPlatformUnlocked } from './constants/masterAuth';
 
 const StudioRightInspector: React.FC = () => {
@@ -374,6 +375,7 @@ const AppContent: React.FC = () => {
 
       {/* Center + Right Studio Workspace Column */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        <OfflineSyncHUD />
         <Header />
         <InstallPwaBanner />
 

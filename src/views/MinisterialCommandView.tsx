@@ -629,6 +629,56 @@ export const MinisterialCommandView: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Submitted Milestone Compliance Reports */}
+                {d.complianceReports && d.complianceReports.length > 0 && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-purple-500/10 dark:bg-purple-950/30 border border-purple-500/30 space-y-2">
+                    <div className="flex items-center justify-between text-[10px] font-mono font-bold text-purple-900 dark:text-purple-300">
+                      <span className="flex items-center gap-1.5 uppercase tracking-wider">
+                        <FileCheck2 size={13} className="text-purple-600 dark:text-purple-400" />
+                        <span>Statutory Milestone Compliance Ledger ({d.complianceReports.length})</span>
+                      </span>
+                      <span className="text-emerald-700 dark:text-emerald-400">
+                        Two-Way Verification Active
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {d.complianceReports.map((report) => (
+                        <div
+                          key={report.id}
+                          className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1 text-xs"
+                        >
+                          <div className="flex items-center justify-between flex-wrap gap-1 text-[10px] font-mono">
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              {report.submittedBy} · {report.officerTitle} ({report.departmentOrDistrict})
+                            </span>
+                            <span
+                              className={`px-2 py-0.2 rounded font-bold uppercase ${
+                                report.status === 'compliant'
+                                  ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
+                                  : report.status === 'escalated_to_igg'
+                                  ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300'
+                                  : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
+                              }`}
+                            >
+                              {report.status.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
+                            {report.reportStatement}
+                          </p>
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[9.5px] font-mono text-slate-500">
+                            <span>Filed: {new Date(report.submittedAt).toLocaleString()}</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <CheckCircle2 size={10} /> Seal: {report.auditHash}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {d.auditSealSha256 && (
                   <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate flex items-center gap-1.5 pt-1">
                     <Lock className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />

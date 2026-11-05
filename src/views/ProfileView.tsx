@@ -32,6 +32,11 @@ import {
   Home,
   History,
   ArrowRight,
+  Ticket,
+  Gift,
+  Zap,
+  Sparkles,
+  Clock,
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
@@ -83,11 +88,75 @@ export const ProfileView: React.FC = () => {
   );
   const [isAnonMode, setIsAnonMode] = useState((activeUser as any).anon !== false);
 
-  const [activeTab, setActiveTab] = useState<'reports' | 'resolved' | 'praise' | 'saved'>('reports');
+  const [activeTab, setActiveTab] = useState<'reports' | 'resolved' | 'praise' | 'saved' | 'vouchers'>('reports');
   const [showCivicCardModal, setShowCivicCardModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showReputationRules, setShowReputationRules] = useState(false);
   const [showParishModal, setShowParishModal] = useState(false);
+  const [selectedVoucherPass, setSelectedVoucherPass] = useState<any | null>(null);
+
+  // User Civic Vouchers & Courtesy Goodwill Passes
+  const postCourtesyVouchers = (posts || []).flatMap((p) =>
+    (p.comments || [])
+      .filter((c) => c.courtesy_voucher)
+      .map((c) => ({
+        id: `post-cv-${c.id}`,
+        code: c.courtesy_voucher!.voucherCode,
+        title: c.courtesy_voucher!.title,
+        brand: c.courtesy_voucher!.brand,
+        faceValue: Number(c.courtesy_voucher!.faceValue || 5000),
+        currency: c.courtesy_voucher!.currency || 'UGX',
+        note: c.courtesy_voucher!.note || 'Issued in appreciation for verified civic feedback.',
+        source: `Official Desk · Dispatch #${p.id.slice(-6).toUpperCase()}`,
+        expires: 'Valid 60 Days',
+        status: 'active',
+        type: 'courtesy',
+      }))
+  );
+
+  const defaultCivicPasses = [
+    {
+      id: 'civic-pass-01',
+      code: `FUEL-${activeUser.country || 'UG'}-7721`,
+      title: 'TotalEnergies / Shell Frontline Fuel Pass',
+      brand: 'TotalEnergies Stations Ltd',
+      faceValue: 40000,
+      currency: activeUser.country === 'KE' ? 'KES' : 'UGX',
+      note: 'Civic Watchdog Frontline Bounty · Redeemable at any certified pump station.',
+      source: 'Civic Watchdog Merit Escrow',
+      expires: 'Valid 45 Days',
+      status: 'active',
+      type: 'merit',
+    },
+    {
+      id: 'civic-pass-02',
+      code: `DATA-${activeUser.country || 'UG'}-9012`,
+      title: 'MTN / Airtel 10GB Watchdog Data Bundle',
+      brand: 'National Telecom Cooperative',
+      faceValue: 25000,
+      currency: activeUser.country === 'KE' ? 'KES' : 'UGX',
+      note: 'Sponsored connectivity for verified on-ground GPS report transmission.',
+      source: 'Statutory Telecom CSR Allocation',
+      expires: 'Valid 30 Days',
+      status: 'active',
+      type: 'merit',
+    },
+    {
+      id: 'civic-pass-03',
+      code: `GROC-${activeUser.country || 'UG'}-5510`,
+      title: 'Fresh Produce & Grocery Community Relief Pack',
+      brand: 'Capital Shoppers / Naivas Groceries',
+      faceValue: 30000,
+      currency: activeUser.country === 'KE' ? 'KES' : 'UGX',
+      note: 'Redeemable for fresh farm produce, rice, flour, and pantry staples.',
+      source: 'Neighborhood Trader Alliance',
+      expires: 'Valid 90 Days',
+      status: 'active',
+      type: 'merit',
+    },
+  ];
+
+  const allVouchers = [...postCourtesyVouchers, ...defaultCivicPasses];
 
   const handleUpdateParish = (newParish: string, reason: string) => {
     const now = new Date().toISOString().split('T')[0];
@@ -640,6 +709,7 @@ export const ProfileView: React.FC = () => {
             { id: 'resolved', label: `Resolved (${myResolvedPosts.length})` },
             { id: 'praise', label: `Praise (${myPraisePosts.length})` },
             { id: 'saved', label: `Saved (${savedPosts.length})` },
+            { id: 'vouchers', label: `Passes & Vouchers (${allVouchers.length})` },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -659,27 +729,120 @@ export const ProfileView: React.FC = () => {
           })}
         </div>
 
-        <div className="divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
-          {displayedPosts.length === 0 ? (
-            <div className="p-8 text-center space-y-2.5">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                No dispatches in this view yet.
-              </p>
+        {activeTab === 'vouchers' ? (
+          /* =========================================================================
+             CITIZEN VOUCHER & CIVIC PASS WALLET
+             ========================================================================= */
+          <div className="p-4 space-y-4 animate-fade-in">
+            {/* Wallet Balance & Escrow Banner */}
+            <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-600/15 via-emerald-500/10 to-amber-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Sovereign Citizen Perk &amp; Pass Wallet</span>
+                </div>
+                <div className="text-base sm:text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
+                  {allVouchers.reduce((acc, v) => acc + Number(v.faceValue || 0), 0).toLocaleString()} {activeCountry === 'KE' ? 'KES' : 'UGX'} Available
+                </div>
+                <p className="text-[10.5px] text-slate-600 dark:text-slate-400 mt-0.5">
+                  Secured by CivicDuty Sovereign Escrow. Present QR passes directly at cashier counters.
+                </p>
+              </div>
+
               <button
                 type="button"
-                onClick={() => go('compose')}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+                onClick={() => go('perk_vault')}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
               >
-                <Plus size={14} />
-                <span>File New Dispatch</span>
+                <Plus size={12} />
+                <span>Browse Perk Vault</span>
               </button>
             </div>
-          ) : (
-            displayedPosts.map((post) => (
-              <PostCardComponent key={post.id} post={post} />
-            ))
-          )}
-        </div>
+
+            {/* Vouchers Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {allVouchers.map((v) => (
+                <div
+                  key={v.id}
+                  className="rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] p-3.5 flex flex-col justify-between gap-3 hover:border-emerald-500/50 transition shadow-2xs"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold uppercase tracking-wider">
+                        {v.brand}
+                      </span>
+                      <span className="text-[9.5px] font-mono text-slate-400 dark:text-slate-500">
+                        {v.expires}
+                      </span>
+                    </div>
+
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                      {v.title}
+                    </h4>
+
+                    <div className="text-base font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      {v.currency} {Number(v.faceValue).toLocaleString()} VALUE
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                      {v.note}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] px-2 py-1 rounded select-all truncate">
+                        {v.code}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(v.code);
+                          toast(`Voucher code ${v.code} copied to clipboard!`, 'emerald');
+                        }}
+                        className="p-1 rounded text-slate-400 hover:text-emerald-600 transition"
+                        title="Copy Code"
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVoucherPass(v)}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10.5px] font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition"
+                    >
+                      <QrCode size={12} />
+                      <span>Show QR Pass</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
+            {displayedPosts.length === 0 ? (
+              <div className="p-8 text-center space-y-2.5">
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  No dispatches in this view yet.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => go('compose')}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>File New Dispatch</span>
+                </button>
+              </div>
+            ) : (
+              displayedPosts.map((post) => (
+                <PostCardComponent key={post.id} post={post} />
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* 5. Parish Neighborhood & Relocation Docket */}
@@ -856,6 +1019,96 @@ export const ProfileView: React.FC = () => {
                   <span>Download PNG</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CASHIER COUNTERTOP QR PASS MODAL */}
+      {selectedVoucherPass && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl shadow-2xl overflow-hidden animate-scale-up">
+            <div className="p-4 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Ticket size={16} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 dark:text-white">
+                    Cashier Redemption Pass
+                  </h4>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    CivicDuty Escrow Backed
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedVoucherPass(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 text-center space-y-4">
+              <div className="space-y-1">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block font-bold">
+                  {selectedVoucherPass.brand}
+                </span>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  {selectedVoucherPass.title}
+                </h3>
+                <div className="text-xl font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {selectedVoucherPass.currency} {Number(selectedVoucherPass.faceValue).toLocaleString()} VALUE
+                </div>
+              </div>
+
+              {/* High-Resolution Interactive Visual QR Pass */}
+              <div className="p-4 bg-white rounded-xl border-2 border-dashed border-emerald-500/40 inline-block shadow-inner mx-auto">
+                <div className="w-44 h-44 bg-slate-950 p-2 rounded-lg flex flex-col items-center justify-center text-white relative">
+                  {/* Outer Frame Corners */}
+                  <div className="absolute top-1 left-1 w-7 h-7 border-t-4 border-l-4 border-emerald-400" />
+                  <div className="absolute top-1 right-1 w-7 h-7 border-t-4 border-r-4 border-emerald-400" />
+                  <div className="absolute bottom-1 left-1 w-7 h-7 border-b-4 border-l-4 border-emerald-400" />
+                  <div className="absolute bottom-1 right-1 w-7 h-7 border-b-4 border-r-4 border-emerald-400" />
+                  <QrCode size={110} className="text-white" />
+                  <span className="text-[8.5px] font-mono tracking-widest text-emerald-400 mt-1 font-bold">
+                    SCAN AT TILL
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
+                  Alphanumeric Cashier PIN
+                </span>
+                <div className="text-base font-mono font-bold text-slate-900 dark:text-white bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] py-2 px-3 rounded-lg select-all flex items-center justify-between">
+                  <span>{selectedVoucherPass.code}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedVoucherPass.code);
+                      toast('Code copied to clipboard!', 'emerald');
+                    }}
+                    className="text-xs font-mono text-emerald-600 hover:underline cursor-pointer"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-sans">
+                Present this pass at any participating merchant or utility counter. The cashier scans the QR code or inputs the PIN into their CivicDuty terminal for instant credit redemption.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setSelectedVoucherPass(null)}
+                className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold cursor-pointer transition shadow-xs"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

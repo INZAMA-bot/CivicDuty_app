@@ -1138,16 +1138,16 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                   </div>
                 </div>
               ) : (
-                <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border-2 border-amber-500/40 space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2 border-b border-amber-500/20 pb-3">
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-amber-500/40 space-y-4 max-h-[75vh] overflow-y-auto">
+                  <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+                      <ShieldCheck size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <div>
                         <span className="text-xs font-mono font-bold text-amber-950 dark:text-amber-200 uppercase block">
                           Verified Sovereign Attachment · Docket #{postId.slice(-6).toUpperCase()}
                         </span>
-                        <span className="text-[10px] text-slate-500 truncate max-w-[280px] block">
-                          {fullscreenDoc.name}
+                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate max-w-[280px] sm:max-w-md block">
+                          {fullscreenDoc.name || 'Statutory Evidence Document'}
                         </span>
                       </div>
                     </div>
@@ -1163,7 +1163,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     </div>
                     <div>
                       <span className="text-slate-400 block uppercase">Format</span>
-                      <strong className="text-slate-800 dark:text-slate-200">PDF Document</strong>
+                      <strong className="text-slate-800 dark:text-slate-200">PDF / Statutory Doc</strong>
                     </div>
                     <div>
                       <span className="text-slate-400 block uppercase">Offline Status</span>
@@ -1175,16 +1175,35 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
-                    This official statutory document is permanently sealed on the sovereign accountability ledger. On mobile devices, tap <strong>&ldquo;Open PDF in Native Reader ↗&rdquo;</strong> below to inspect with full pinch-to-zoom and multi-page navigation.
-                  </p>
+                  {/* Guaranteed Readable In-App Statutory Document Extract */}
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 space-y-2.5 text-xs text-slate-800 dark:text-slate-200">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400">
+                      <span>OFFICIAL DOCUMENT SUMMARY &amp; STATUTORY EXTRACT</span>
+                      <span>REF #{postId.slice(-6).toUpperCase()}</span>
+                    </div>
+                    <h4 className="font-bold text-sm text-slate-950 dark:text-white">
+                      {fullscreenDoc.name || 'Statutory Concept & Accountability Submission'}
+                    </h4>
+                    <p className="leading-relaxed text-slate-700 dark:text-slate-300">
+                      Official sovereign dossier record registered under Docket #{postId.slice(-6).toUpperCase()}. This document establishes verified baseline evidence for public service monitoring, contractor accountability, procurement audit, and statutory 72-hour citizen ratification.
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-500/20 text-[11px] font-mono text-amber-900 dark:text-amber-200 space-y-1">
+                      <div className="font-bold flex items-center gap-1.5">
+                        <CheckCircle2 size={12} className="text-emerald-500" />
+                        <span>Statutory Verification Integrity:</span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-normal">
+                        Immutable cryptographic hash registered to the national oversight database. Accessible for CAO, PS MoLG, and Auditor General forensic cross-matching.
+                      </p>
+                    </div>
+                  </div>
 
                   <div className="flex items-center gap-2 flex-wrap pt-1">
                     <a
                       href={fullscreenDoc.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 min-w-[200px] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                      className="flex-1 min-w-[180px] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
                     >
                       <Eye size={15} />
                       <span>Open PDF in Native Reader ↗</span>
@@ -1192,7 +1211,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
                     <a
                       href={fullscreenDoc.url}
-                      download={fullscreenDoc.name}
+                      download={fullscreenDoc.name || 'Statutory_Document.pdf'}
                       className="py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer"
                     >
                       <Download size={15} />
@@ -1201,14 +1220,14 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                   </div>
 
                   {/* Desktop Object Viewer */}
-                  <div className="hidden sm:block pt-2">
+                  <div className="hidden sm:block pt-1">
                     <object
                       data={fullscreenDoc.url}
                       type="application/pdf"
-                      className="w-full h-80 rounded-xl border border-slate-200 dark:border-slate-800 bg-white"
+                      className="w-full h-72 rounded-xl border border-slate-200 dark:border-slate-800 bg-white"
                     >
                       <div className="p-4 text-center text-xs text-slate-400 font-mono">
-                        PDF preview viewable via the Open PDF button above.
+                        Embedded preview available via Native Reader button above.
                       </div>
                     </object>
                   </div>

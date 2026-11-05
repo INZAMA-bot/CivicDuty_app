@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept, pathStr, timeAgo } from '../utils/helpers';
-import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon, Gift, Ticket, Copy, Check, MapPin, Store, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Lock, Upload, FileText, SlidersHorizontal, Image as ImageIcon, Gift, Ticket, Copy, Check, MapPin, Store, CheckCircle2, Building2, HardHat, Link2, ExternalLink } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { NoteBox } from '../components/NoteBox';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { TicketStatus } from '../types';
 
 export const GovReplyView: React.FC = () => {
-  const { user, activePost, go, addCommentToPost, updatePostStatus, logAudit, addPoints, toast } = useApp();
+  const { user, activePost, go, addCommentToPost, updatePostStatus, logAudit, addPoints, toast, projects } = useApp();
 
   const [status, setStatus] = useState<TicketStatus>('received');
   const [replyText, setReplyText] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(activePost?.project || '');
   const [stagedProof, setStagedProof] = useState<
     { type: 'image' | 'video' | 'doc'; url: string; name: string; size: string }[]
   >([]);
@@ -187,12 +188,28 @@ export const GovReplyView: React.FC = () => {
           }
         : undefined;
 
+    const selectedPrj = (projects || []).find((pr) => pr.id === selectedProjectId);
+    const extraPayload = {
+      project: selectedProjectId || undefined,
+      linked_project: selectedPrj
+        ? {
+            id: selectedPrj.id,
+            code: selectedPrj.code,
+            title: selectedPrj.title,
+            tender: selectedPrj.tender,
+            contractor: selectedPrj.contractor,
+            value: selectedPrj.value,
+            status: selectedPrj.status,
+          }
+        : undefined,
+    };
+
     if (resolve) {
-      updatePostStatus(p.id, 'resolved', beforeAfterPayload);
+      updatePostStatus(p.id, 'resolved', beforeAfterPayload, extraPayload);
       logAudit(
         'resolve',
         p.id,
-        `Resolved with ${proofMedia.length} proof file(s)${beforeAfterPayload ? ' + Auto-Paired Before & After Proof' : ''}${courtesyVoucherPayload ? ` + Attached Courtesy Voucher (${courtesyVoucherPayload.currency} ${courtesyVoucherPayload.faceValue} ${courtesyVoucherPayload.voucherCode})` : ''}`
+        `Resolved with ${proofMedia.length} proof file(s)${beforeAfterPayload ? ' + Auto-Paired Before & After Proof' : ''}${selectedPrj ? ` + Linked to Capital Works Project: ${selectedPrj.title} (${selectedPrj.code})` : ''}${courtesyVoucherPayload ? ` + Attached Courtesy Voucher (${courtesyVoucherPayload.currency} ${courtesyVoucherPayload.faceValue} ${courtesyVoucherPayload.voucherCode})` : ''}`
       );
       if (p.citizen_id) {
         addPoints(p.citizen_id, 250, '+250pts · Issue resolved by GOV');
@@ -200,19 +217,23 @@ export const GovReplyView: React.FC = () => {
       toast(
         courtesyVoucherPayload
           ? `Resolved with ${courtesyVoucherPayload.currency} ${courtesyVoucherPayload.faceValue.toLocaleString()} courtesy token & proof published!`
+          : selectedPrj
+          ? `Resolved & linked to Capital Works Tender #${selectedPrj.code}!`
           : 'Resolved — Before & After proof published & citizen notified to confirm',
         'emerald'
       );
     } else {
-      updatePostStatus(p.id, status, beforeAfterPayload);
+      updatePostStatus(p.id, status, beforeAfterPayload, extraPayload);
       logAudit(
         'reply',
         p.id,
-        `Status → ${status}${proofMedia.length ? `, ${proofMedia.length} proof file(s)` : ''}${courtesyVoucherPayload ? ` + Attached Courtesy Voucher (${courtesyVoucherPayload.voucherCode})` : ''}`
+        `Status → ${status}${proofMedia.length ? `, ${proofMedia.length} proof file(s)` : ''}${selectedPrj ? ` + Linked to Capital Works Project: ${selectedPrj.title}` : ''}${courtesyVoucherPayload ? ` + Attached Courtesy Voucher (${courtesyVoucherPayload.voucherCode})` : ''}`
       );
       toast(
         courtesyVoucherPayload
           ? `Response posted + ${courtesyVoucherPayload.currency} ${courtesyVoucherPayload.faceValue.toLocaleString()} courtesy token dispatched to citizen!`
+          : selectedPrj
+          ? `Response posted & linked to Tender #${selectedPrj.code}!`
           : 'Response posted',
         'amber'
       );
@@ -487,6 +508,90 @@ export const GovReplyView: React.FC = () => {
               <Lock size={12} /> Upload proof to enable Resolve
             </div>
           )}
+        </div>
+
+        {/* LINK TO DISTRICT CAPITAL WORKS PROJECT / TENDER DOCKET */}
+        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                <Building2 size={16} />
+              </div>
+              <div>
+                <span className="text-xs font-bold font-mono text-slate-900 dark:text-white block">
+                  Link to Capital Works Project / Tender Docket
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  District Infrastructure &amp; Procurement Accountability
+                </span>
+              </div>
+            </div>
+            {selectedProjectId && (
+              <button
+                type="button"
+                onClick={() => setSelectedProjectId('')}
+                className="text-[10px] font-mono text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+              >
+                Clear Link
+              </button>
+            )}
+          </div>
+
+          <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+            Link this citizen dispatch directly to an active procurement tender or public works contract. This anchors citizen reporting to the statutory contractor milestone ledger.
+          </p>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
+              Select Tender Contract / Project Docket
+            </label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116] text-slate-900 dark:text-white font-mono focus:outline-none focus:border-teal-500 cursor-pointer"
+            >
+              <option value="">-- No Linked Capital Project (Independent Dispatch) --</option>
+              {(projects || [])
+                .filter((pr) => !pr.country || pr.country === user.country || pr.dept === user.dept)
+                .map((pr) => (
+                  <option key={pr.id} value={pr.id}>
+                    [{pr.code}] {pr.title} — {pr.contractor} ({pr.value})
+                  </option>
+                ))}
+            </select>
+
+            {selectedProjectId && (() => {
+              const prj = (projects || []).find((pr) => pr.id === selectedProjectId);
+              if (!prj) return null;
+              return (
+                <div className="p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/20 border border-teal-500/30 text-xs space-y-1.5 animate-fade-in font-mono">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-bold text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+                      <HardHat size={14} />
+                      <span>{prj.title}</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-900 text-teal-900 dark:text-teal-200 uppercase font-black">
+                      {prj.status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] text-slate-600 dark:text-slate-300 pt-1">
+                    <div>
+                      <span className="text-slate-400 block uppercase">Contractor:</span>
+                      <strong className="text-slate-900 dark:text-white">{prj.contractor}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block uppercase">Tender Value:</span>
+                      <strong className="text-teal-700 dark:text-teal-400">{prj.value}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block uppercase">Docket Ref:</span>
+                      <strong className="text-slate-900 dark:text-white">{prj.code}</strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
         {/* OPTIONAL COURTESY VOUCHER / RESOLUTION TOKEN (CUSTOMER CARE LOOP) */}

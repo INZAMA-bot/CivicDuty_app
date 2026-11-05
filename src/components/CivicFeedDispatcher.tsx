@@ -29,6 +29,11 @@ import {
   ChevronUp,
   Zap,
   Plus,
+  QrCode,
+  Download,
+  Share2,
+  Copy,
+  Clock,
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
@@ -77,6 +82,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   const territory = TERRITORY[country] || [];
 
   const [expanded, setExpanded] = useState<boolean>(defaultExpanded || standalonePage);
+  const [submittedDocketPost, setSubmittedDocketPost] = useState<Post | null>(null);
   const [signalBulb, setSignalBulb] = useState<'red' | 'amber' | 'green'>('red');
   const [dept, setDept] = useState(() => activeDept || (country === 'KE' ? 'kplc' : 'kcca'));
   const [wallSearchQuery, setWallSearchQuery] = useState('');
@@ -532,12 +538,13 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         toast(`🎉 Stage Certified! ${consensusResult.stage.name} crossed 15 scouts within 2km!`, 'emerald');
       }
 
-      // Reset form and turn off citizen speaking mode
+      // Reset form and activate instant filing receipt docket modal
       setTitle('');
       setBody('');
       setStagedMedia([]);
       setVoiceSaved(false);
       setIsCitizenSpeaking(false);
+      setSubmittedDocketPost(newPost);
       if (!standalonePage) {
         setExpanded(false);
       }
@@ -1496,6 +1503,144 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                 >
                   <Send size={14} />
                   <span>{isSubmitting ? 'Dispatching...' : 'Dispatch Signal →'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         STATUTORY DISPATCH DOCKET & PROOF OF FILING RECEIPT MODAL
+         ========================================================================= */}
+      {submittedDocketPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl shadow-2xl overflow-hidden animate-scale-up">
+            {/* Modal Top Bar */}
+            <div className="p-4 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between bg-emerald-600/10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                  <CheckCircle2 size={16} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider font-mono">
+                    Statutory Filing Docket Issued
+                  </h4>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    SHA-256 Public Sovereign Ledger
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSubmittedDocketPost(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-slate-400">DOCKET ID</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 select-all">
+                    #{submittedDocketPost.id.slice(-6).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-slate-400">AUTHORITY DESK</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+                    {selectedDeptObj.name}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-slate-400">LOCATION</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[200px]">
+                    {submittedDocketPost.territory?.parish || parish}, {submittedDocketPost.territory?.district || district}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-slate-400">STATUTORY SLA</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Clock size={11} />
+                    <span>48h Response Window Active</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                  {submittedDocketPost.title}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                  {submittedDocketPost.body}
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-1">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `
+================================================================================
+          CIVICDUTY SOVEREIGN DISPATCH DOCKET & FILING RECEIPT
+================================================================================
+Docket Ref:    #${submittedDocketPost.id.slice(-6).toUpperCase()}
+Issued Date:   ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+Authority:     ${selectedDeptObj.name}
+Jurisdiction:  ${submittedDocketPost.territory?.parish || parish}, ${submittedDocketPost.territory?.district || district} (${submittedDocketPost.country})
+SLA Window:    Statutory 48-Hour Response Deadline Active
+Digest Hash:   SHA256-DOCKET-${submittedDocketPost.id.toUpperCase()}
+Title:         ${submittedDocketPost.title}
+================================================================================
+Permanently inscribed on the immutable CivicDuty Sovereign Accountability Ledger.
+`;
+                      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `CivicDuty_Docket_${submittedDocketPost.id.slice(-6).toUpperCase()}.txt`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast('Filing docket receipt downloaded!', 'emerald');
+                    }}
+                    className="py-2.5 px-3 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Download size={13} />
+                    <span>Download Slip</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const shareMsg = `CivicDuty Statutory Docket #${submittedDocketPost.id.slice(-6).toUpperCase()}: Filed grievance to ${selectedDeptObj.name} in ${parish}. Statutory 48h SLA timer active.`;
+                      navigator.clipboard.writeText(shareMsg);
+                      toast('Docket summary copied! Ready to share on WhatsApp.', 'emerald');
+                    }}
+                    className="py-2.5 px-3 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Share2 size={13} />
+                    <span>Share Docket</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const post = submittedDocketPost;
+                    setSubmittedDocketPost(null);
+                    setActivePost(post);
+                    go('post_detail');
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer"
+                >
+                  <span>View Live on Public Ledger →</span>
                 </button>
               </div>
             </div>

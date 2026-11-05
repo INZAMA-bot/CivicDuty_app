@@ -25,6 +25,7 @@ import {
   Coins,
   TrendingUp,
   Building,
+  Building2,
   RotateCcw,
   ExternalLink,
   Flame,
@@ -82,6 +83,7 @@ export const PostDetailView: React.FC = () => {
     setVerifyTarget,
     toast,
     posts,
+    projects,
     compileWitnessIntoPost,
     mergeDuplicatePostsIntoDossier,
     setSocialModalPost,
@@ -734,6 +736,50 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
             }}
           />
         </p>
+
+        {/* Linked Capital Works Project / Public Tender Banner */}
+        {(() => {
+          const linkedPrj = p.linked_project || (projects || []).find((pr) => pr.id === p.project);
+          if (!linkedPrj) return null;
+          return (
+            <div className="p-3 sm:p-3.5 rounded-xl bg-teal-500/10 dark:bg-teal-950/30 border border-teal-500/30 flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex items-start gap-2.5">
+                <div className="p-2 rounded-lg bg-teal-500/20 text-teal-700 dark:text-teal-300 shrink-0 mt-0.5">
+                  <Building2 size={16} />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-mono uppercase font-black px-2 py-0.5 rounded bg-teal-200 dark:bg-teal-900 text-teal-900 dark:text-teal-200">
+                      Linked Capital Works Tender
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500 font-semibold">
+                      Docket #{linkedPrj.code || linkedPrj.tender || 'CONTRACT'}
+                    </span>
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    {linkedPrj.title}
+                  </h4>
+                  <div className="text-[10.5px] font-mono text-slate-600 dark:text-slate-400 flex items-center gap-3 flex-wrap pt-0.5">
+                    {linkedPrj.contractor && (
+                      <span>Contractor: <strong className="text-slate-900 dark:text-slate-200">{linkedPrj.contractor}</strong></span>
+                    )}
+                    {linkedPrj.value && (
+                      <span>Value: <strong className="text-teal-700 dark:text-teal-400">{linkedPrj.value}</strong></span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => go('gov_projects')}
+                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-mono font-bold text-[10px] flex items-center gap-1.5 shadow-xs transition-colors shrink-0 cursor-pointer"
+              >
+                <span>View Tender Docket</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Media Player Grid / Photos / Documents (Compact Context) */}
         {(() => {

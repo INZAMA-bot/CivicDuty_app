@@ -390,6 +390,15 @@ export interface Post {
   budget_allocation?: BudgetAllocation;
   crypto_seal_hash?: string;
   project?: string;
+  linked_project?: {
+    id: string;
+    code: string;
+    title: string;
+    tender?: string;
+    contractor?: string;
+    value?: string;
+    status?: string;
+  };
   compiled_reports?: CompiledWitnessReport[];
   compiled_count?: number;
   is_master_dossier?: boolean;
@@ -749,6 +758,21 @@ export interface MinisterialDirective {
   issuedAt: string;
   linkedQueryId?: string;
   auditSealSha256?: string;
+  complianceReports?: MinisterialComplianceReport[];
+}
+
+export interface MinisterialComplianceReport {
+  id: string;
+  directiveId: string;
+  submittedBy: string;
+  officerTitle: string;
+  officerDeskCode: string;
+  departmentOrDistrict: string;
+  reportStatement: string;
+  status: 'compliant' | 'in_progress' | 'escalated_to_igg';
+  evidenceUrls?: string[];
+  auditHash: string;
+  submittedAt: string;
 }
 
 export interface EnrolledSectorMinister {

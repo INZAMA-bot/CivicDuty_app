@@ -56,7 +56,7 @@ import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
 import { DeptIcon } from '../components/DeptIcon';
 import { COUNTRIES } from '../data/countries';
 import { getBranchesForDept, loadAllBranches } from '../data/enterpriseBranches';
-import { EnterpriseBranch } from '../types';
+import { EnterpriseBranch, MinisterialDirective } from '../types';
 
 export const GovInboxView: React.FC = () => {
   const {
@@ -86,6 +86,8 @@ export const GovInboxView: React.FC = () => {
     rejectModificationBySuperadmin,
     showDemos,
     projects,
+    ministerialDirectives,
+    submitDirectiveCompliance,
   } = useApp();
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
   const [selectedDupToMerge, setSelectedDupToMerge] = useState<string>('');
@@ -93,6 +95,12 @@ export const GovInboxView: React.FC = () => {
   const [modSubject, setModSubject] = useState('');
   const [modBody, setModBody] = useState('');
   const [modPriority, setModPriority] = useState<'routine' | 'urgent' | 'statutory_directive'>('routine');
+
+  // Ministerial Directive Compliance Modal State
+  const [complianceModalDirective, setComplianceModalDirective] = useState<MinisterialDirective | null>(null);
+  const [complianceStatement, setComplianceStatement] = useState('');
+  const [complianceStatus, setComplianceStatus] = useState<'compliant' | 'in_progress' | 'escalated_to_igg'>('in_progress');
+  const [complianceSubmitting, setComplianceSubmitting] = useState(false);
 
   // Dedicated Private Provider Desk State (for Schools, Restaurants, Hospitals, Commercial Desks)
   const [providerDeskTab, setProviderDeskTab] = useState<
@@ -356,6 +364,8 @@ export const GovInboxView: React.FC = () => {
         return q.filter((p) => p.status === 'pending' || p.gov_status === 'pending' || p.gov_status === 'received');
       case 'overdue':
         return q.filter((p) => p.escalated || p.status === 'overdue');
+      case 'disputed':
+        return q.filter((p) => p.citizen_dispute_status === 'disputed_with_counter_evidence');
       case 'investigating':
         return q.filter((p) => p.gov_status === 'investigating');
       case 'corruption':
@@ -373,6 +383,7 @@ export const GovInboxView: React.FC = () => {
   const resolvedCount = queue.filter((p) => p.status === 'resolved').length;
   const pendingCount = queue.filter((p) => p.status !== 'resolved').length;
   const overdueCount = queue.filter((p) => p.escalated || p.status === 'overdue').length;
+  const disputedCount = queue.filter((p) => p.citizen_dispute_status === 'disputed_with_counter_evidence').length;
   const corruptionCount = queue.filter((p) => p.category === 'corruption').length;
   const resPct = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
 
@@ -3004,6 +3015,75 @@ export const GovInboxView: React.FC = () => {
             </p>
           </div>
         )}
+
+        {/* ACTIVE MINISTERIAL DIRECTIVES & TWO-WAY COMPLIANCE ACTIONS */}
+        {ministerialDirectives && ministerialDirectives.length > 0 && (
+          <div className="mt-3 p-3.5 rounded-xl bg-gradient-to-r from-purple-900/10 via-emerald-950/10 to-transparent border-2 border-purple-500/40 space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Scale className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">
+                  Active Ministerial Directives ({ministerialDirectives.filter((d) => d.status !== 'closed').length})
+                </span>
+              </div>
+              <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-300 font-bold border border-purple-400">
+                MoLG Statutory Oversight
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {ministerialDirectives
+                .filter((d) => d.status !== 'closed')
+                .slice(0, 2)
+                .map((directive) => {
+                  const reportsCount = directive.complianceReports?.length || 0;
+                  return (
+                    <div
+                      key={directive.id}
+                      className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[10.5px] font-black text-purple-700 dark:text-purple-400">
+                            {directive.directiveRef}
+                          </span>
+                          <span className="text-[9.5px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+                            {directive.targetJurisdiction}
+                          </span>
+                          <span className="text-[9px] font-mono text-slate-500">
+                            By {directive.ministerName}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                          {directive.subject}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {reportsCount > 0 && (
+                          <span className="text-[9.5px] font-mono font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <ShieldCheck size={12} /> {reportsCount} Compliance Filed
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setComplianceModalDirective(directive);
+                            setComplianceStatement('');
+                            setComplianceStatus('in_progress');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-[10.5px] flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <FileText size={12} />
+                          <span>Submit Milestone Compliance Report</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs Filter */}
@@ -3012,24 +3092,35 @@ export const GovInboxView: React.FC = () => {
           ['all', 'All'],
           ['pending', 'Pending'],
           ['overdue', 'Overdue'],
+          ['disputed', 'Disputed'],
           ['investigating', 'Active'],
           ['corruption', 'Corruption'],
           ['resolved', 'Resolved'],
         ].map(([t, l]) => {
           const active = govTab === t;
-          const alarm = (t === 'overdue' && overdueCount > 0) || (t === 'corruption' && corruptionCount > 0);
-          const cnt = t === 'overdue' ? overdueCount : t === 'corruption' ? corruptionCount : 0;
+          const alarm =
+            (t === 'overdue' && overdueCount > 0) ||
+            (t === 'corruption' && corruptionCount > 0) ||
+            (t === 'disputed' && disputedCount > 0);
+          const cnt =
+            t === 'overdue'
+              ? overdueCount
+              : t === 'corruption'
+              ? corruptionCount
+              : t === 'disputed'
+              ? disputedCount
+              : 0;
           return (
             <button
               key={t}
               onClick={() => setGovTab(t as any)}
-              className={`flex-shrink-0 px-3.5 py-3 text-[9px] mono font-bold uppercase tracking-widest transition-colors whitespace-nowrap ${
+              className={`flex-shrink-0 px-3.5 py-3 text-[9px] mono font-bold uppercase tracking-widest transition-colors whitespace-nowrap cursor-pointer ${
                 active
                   ? alarm
-                    ? 'text-rose-700 dark:text-rose-400 border-b-2 border-rose-500'
+                    ? 'text-rose-700 dark:text-rose-400 border-b-2 border-rose-500 font-black'
                     : 'text-teal-700 dark:text-teal-400 border-b-2 border-teal-600 dark:border-teal-400 bg-white dark:bg-transparent'
                   : alarm
-                  ? 'text-rose-600 hover:text-rose-700 dark:text-rose-500 dark:hover:text-rose-400'
+                  ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400 font-bold'
                   : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
@@ -3083,6 +3174,18 @@ export const GovInboxView: React.FC = () => {
                     {p.media && p.media.length > 0 && (
                       <div className="text-[8px] mono text-teal-700 dark:text-teal-400 mt-1 flex items-center gap-1">
                         <Paperclip size={10} /> {p.media.length} evidence file{p.media.length > 1 ? 's' : ''} attached
+                      </div>
+                    )}
+
+                    {p.citizen_dispute_status === 'disputed_with_counter_evidence' && (
+                      <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200 text-xs font-mono mt-2 space-y-1">
+                        <div className="font-bold flex items-center gap-1.5 text-rose-700 dark:text-rose-400 uppercase tracking-wider text-[10px]">
+                          <AlertTriangle size={12} />
+                          <span>Community Disputed Resolution · Escalated</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed">
+                          &ldquo;{p.dispute_evidence || 'Citizen submitted counter-evidence claiming resolution was defective or incomplete.'}&rdquo;
+                        </p>
                       </div>
                     )}
                   </div>
@@ -3443,6 +3546,133 @@ export const GovInboxView: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MINISTERIAL DIRECTIVE COMPLIANCE MODAL */}
+      {complianceModalDirective && (
+        <div
+          onClick={() => setComplianceModalDirective(null)}
+          className="fixed inset-0 bg-black/80 z-[99999] flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-xl w-full bg-white dark:bg-[#161a22] border-2 border-purple-500/50 rounded-2xl overflow-hidden shadow-2xl p-5 space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Scale className="text-purple-600 dark:text-purple-400" size={20} />
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white font-mono">
+                    Statutory Milestone Compliance Report
+                  </h3>
+                  <p className="text-[10px] font-mono text-purple-700 dark:text-purple-300 font-bold">
+                    Directive Ref: {complianceModalDirective.directiveRef} · Issued by {complianceModalDirective.ministerName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setComplianceModalDirective(null)}
+                className="p-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-500/20 text-xs space-y-1.5">
+              <div className="font-bold text-slate-900 dark:text-white">
+                {complianceModalDirective.subject}
+              </div>
+              <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
+                <strong>Executive Instructions:</strong> {complianceModalDirective.executiveInstructions}
+              </p>
+              <div className="text-[10px] font-mono text-slate-500 pt-1">
+                Target: {complianceModalDirective.targetJurisdiction} ({complianceModalDirective.targetScope})
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 font-bold block mb-1">
+                  Compliance Status Determination
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: 'in_progress', label: 'In Progress (Active Work)' },
+                    { id: 'compliant', label: 'Full Remedial Compliance' },
+                    { id: 'escalated_to_igg', label: 'Escalate to IGG Subpoena' },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setComplianceStatus(s.id as any)}
+                      className={`p-2 rounded-lg text-left text-xs font-mono font-bold border transition-colors cursor-pointer ${
+                        complianceStatus === s.id
+                          ? 'border-purple-500 bg-purple-500/15 text-purple-950 dark:text-purple-200'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0e1116] text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 font-bold block mb-1">
+                  Official Compliance Statement / Remedial Actions Taken
+                </label>
+                <textarea
+                  rows={4}
+                  value={complianceStatement}
+                  onChange={(e) => setComplianceStatement(e.target.value)}
+                  placeholder="Detail the administrative actions executed, field inspections completed, funds frozen, or contractors dispatched in accordance with this ministerial directive..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-mono focus:outline-none focus:border-purple-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/30 flex items-center gap-2 text-[10px] font-mono text-emerald-800 dark:text-emerald-300">
+                <ShieldCheck size={14} className="shrink-0 text-emerald-600" />
+                <span>
+                  Submission is cryptographically signed with a SHA-256 seal and archived in the Permanent Ministerial Oversight Ledger.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setComplianceModalDirective(null)}
+                className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!complianceStatement.trim() || complianceSubmitting}
+                onClick={() => {
+                  if (!complianceStatement.trim()) return;
+                  setComplianceSubmitting(true);
+                  submitDirectiveCompliance(
+                    complianceModalDirective.id,
+                    complianceStatement.trim(),
+                    complianceStatus
+                  );
+                  setComplianceSubmitting(false);
+                  setComplianceModalDirective(null);
+                }}
+                className={`px-4 py-2 rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  complianceStatement.trim() && !complianceSubmitting
+                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-md'
+                    : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <CheckCircle2 size={14} />
+                <span>Sign &amp; File Milestone Compliance Report</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
