@@ -14,6 +14,7 @@ import {
   Terminal,
   FileCheck2,
   Shield,
+  ShieldCheck,
   Power,
   Check,
 } from 'lucide-react';
@@ -344,6 +345,21 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
                 >
                   <FileCheck2 size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span className="truncate">Verify Seal</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    go('ob1');
+                  }}
+                  className="col-span-2 min-h-[38px] px-2.5 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/15 text-xs font-mono font-medium text-emerald-800 dark:text-emerald-300 flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <ShieldCheck size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Citizen Onboarding / ID Setup</span>
+                  </span>
+                  <span className="text-[10px] font-mono">→</span>
                 </button>
               </div>
             )}

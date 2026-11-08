@@ -74,6 +74,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     selectedCountry,
     isCitizenSpeaking,
     setIsCitizenSpeaking,
+    addNotification,
   } = useApp();
 
   const activeUser = user || ensureCitizenSession();
@@ -599,6 +600,24 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
       } else {
         addPost(newPost);
         toast('Sovereign Civic Signal Dispatched to Public Ledger!', 'emerald');
+      }
+
+      // Non-SLA Advisory Alerting for Grassroots & LC1 Village Desk:
+      // Even though LC1 is unsalaried with zero statutory SLA penalties, they receive
+      // real-time neighborhood advisory alerts for incidents inside their cell / village.
+      if (addNotification) {
+        const cellName = grassroot || parish || 'Local Jurisdiction';
+        addNotification({
+          id: `notif-lc1-${Date.now()}`,
+          type: 'lc1_advisory',
+          title: `[LC1 Village Advisory] New Citizen Signal in ${cellName}`,
+          body: `Notice issued to ${cellName} Village Council & LC1 Chairperson: "${derivedTitle}". Advisory notice only — zero SLA countdown or administrative penalty.`,
+          post_id: newPost.id,
+          actor_name: `LC1 Desk · ${cellName}`,
+          country: (activeUser.country || selectedCountry || 'UG') as any,
+          created_at: 'Just now',
+          read: false,
+        });
       }
 
       if (consensusResult?.newlyEstablished) {

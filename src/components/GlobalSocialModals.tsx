@@ -109,7 +109,7 @@ export const GlobalSocialModals: React.FC = () => {
   } = useApp();
 
   const activeUser = user || ensureCitizenSession();
-  const [notifFilter, setNotifFilter] = useState<'all' | 'sla_update' | 'reply' | 'upvote'>('all');
+  const [notifFilter, setNotifFilter] = useState<'all' | 'lc1_advisory' | 'sla_update' | 'reply' | 'upvote'>('all');
   const [dmSearch, setDmSearch] = useState('');
   const [dmInput, setDmInput] = useState('');
   const [dmMedia, setDmMedia] = useState<Array<{ name: string; type: string; size: string; dataUrl?: string }>>([]);
@@ -141,6 +141,7 @@ export const GlobalSocialModals: React.FC = () => {
   const [newBarazaDept, setNewBarazaDept] = useState('Municipal Works & Water Desk');
   const [newBarazaCoHost, setNewBarazaCoHost] = useState('Chief Municipal Engineer');
   const [newBarazaMode, setNewBarazaMode] = useState<'video_stage' | 'field_cam' | 'audio_low_data'>('video_stage');
+  const [conveningDeskRole, setConveningDeskRole] = useState<'lc1' | 'parish' | 'subcounty' | 'district' | 'citizen'>('lc1');
   const [scheduleForLater, setScheduleForLater] = useState(false);
   const [scheduledDateTime, setScheduledDateTime] = useState('');
   const [showModerationPanel, setShowModerationPanel] = useState(false);
@@ -374,6 +375,7 @@ export const GlobalSocialModals: React.FC = () => {
           <div className="px-4 py-2 border-b border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {[
               { id: 'all', label: 'All Activity' },
+              { id: 'lc1_advisory', label: 'LC1 Village Advisories' },
               { id: 'sla_update', label: 'Official SLA' },
               { id: 'reply', label: 'Replies & Mentions' },
               { id: 'upvote', label: 'Co-Signs & Quotes' },
@@ -2097,6 +2099,7 @@ export const GlobalSocialModals: React.FC = () => {
                 co_host_name: newBarazaCoHost,
                 has_video: newBarazaMode !== 'audio_low_data',
                 broadcast_mode: newBarazaMode,
+                category: conveningDeskRole === 'lc1' || conveningDeskRole === 'parish' ? 'near_me' : 'all',
                 scheduled_at: scheduleForLater ? scheduledDateTime || new Date(Date.now() + 86400000).toISOString().slice(0, 16) : undefined,
               });
               setNewBarazaTitle('');
@@ -2105,6 +2108,47 @@ export const GlobalSocialModals: React.FC = () => {
             }}
             className="p-4 space-y-3"
           >
+            {/* Convening Desk / Authority Selector */}
+            <div>
+              <label className="text-[10px] font-mono uppercase font-semibold text-slate-500 dark:text-slate-400 block mb-1">
+                Convene As (Government / Grassroots Desk)
+              </label>
+              <select
+                value={conveningDeskRole}
+                onChange={(e) => {
+                  const role = e.target.value as any;
+                  setConveningDeskRole(role);
+                  if (role === 'lc1') {
+                    setNewBarazaDept('LC1 Village Council · Nakasero Cell');
+                    setNewBarazaCoHost('Kigozi Lawrence (LC1 Chairperson)');
+                    setNewBarazaTag('#VillageBaraza');
+                    setNewBarazaTitle('LC1 Frontline Village Baraza: Sanitation, Security & Service Alerts');
+                  } else if (role === 'parish') {
+                    setNewBarazaDept('Parish Chief / PDM SACCO Desk');
+                    setNewBarazaCoHost('Namyalo Christine (Parish Chief)');
+                    setNewBarazaTag('#ParishAccountability');
+                    setNewBarazaTitle('Parish Development Model (PDM) & Statutory Road SLA Assembly');
+                  } else if (role === 'subcounty') {
+                    setNewBarazaDept('Sub-County Town Clerk / Division Desk');
+                    setNewBarazaCoHost('Town Clerk / Division Engineer');
+                    setNewBarazaTag('#DivisionWorks');
+                    setNewBarazaTitle('Division Council Service Delivery Review');
+                  } else if (role === 'district') {
+                    setNewBarazaDept('Chief Administrative Officer (CAO) Desk');
+                    setNewBarazaCoHost('CAO / District Executive Committee');
+                    setNewBarazaTag('#DistrictSLA');
+                    setNewBarazaTitle('District Full Executive Public Accountability Hearing');
+                  }
+                }}
+                className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value="lc1">LC1 Village Chairperson (Grassroots Council · Auto-Pins to Near Me)</option>
+                <option value="parish">Parish Chief / Ward Agent (Statutory Accounting Desk)</option>
+                <option value="subcounty">Sub-County Town Clerk / Division Administration</option>
+                <option value="district">Chief Administrative Officer (CAO) / District Desk</option>
+                <option value="citizen">Verified Citizen Watchdog / Community Convener</option>
+              </select>
+            </div>
             {/* Broadcast Timing: Live Now vs Scheduled */}
             <div className="flex items-center justify-between p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
               <div className="flex items-center gap-2">

@@ -1258,7 +1258,7 @@ export interface CdOpsPromotionalAd {
 
 export interface CivicNotification {
   id: string;
-  type: 'sla_update' | 'upvote' | 'reply' | 'quote' | 'mention' | 'perk' | 'follow' | 'town_hall';
+  type: 'sla_update' | 'upvote' | 'reply' | 'quote' | 'mention' | 'perk' | 'follow' | 'town_hall' | 'lc1_advisory';
   title: string;
   body: string;
   post_id?: string;

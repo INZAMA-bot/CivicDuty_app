@@ -323,6 +323,7 @@ interface AppContextType {
   setShowDemos: (show: boolean) => void;
   // Global Social Media Platform Capabilities
   notifications: CivicNotification[];
+  addNotification: (n: CivicNotification) => void;
   notifModalOpen: boolean;
   setNotifModalOpen: (v: boolean) => void;
   markNotificationRead: (id: string) => void;
@@ -3720,6 +3721,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [notifModalOpen, setNotifModalOpen] = useState(false);
 
+  const addNotification = (n: CivicNotification) => {
+    setNotifications((prev) => [n, ...prev]);
+  };
+
   const markNotificationRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
@@ -4415,6 +4420,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showDemos,
         setShowDemos,
         notifications,
+        addNotification,
         notifModalOpen,
         setNotifModalOpen,
         markNotificationRead,

@@ -64,6 +64,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
   const [voiceLang, setVoiceLang] = useState<LanguageCode>('EN');
   const [showVoiceTranslation, setShowVoiceTranslation] = useState<boolean>(false);
+  const [translationsCache, setTranslationsCache] = useState<Record<string, string>>({});
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
 
   const [failedMediaUrls, setFailedMediaUrls] = useState<Record<string, string>>({});
 
@@ -171,6 +173,34 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
     }, 80);
     return () => clearInterval(interval);
   }, [audioState.playing, audioState.speed, effectiveVoice.audio_url]);
+
+  useEffect(() => {
+    if (voiceLang === 'EN' || !effectiveVoice.transcript) return;
+    const cleanKey = `${voiceLang}_${effectiveVoice.transcript.slice(0, 48)}`;
+    if (translationsCache[cleanKey]) return;
+
+    let isMounted = true;
+    setIsTranslating(true);
+    fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: effectiveVoice.transcript, targetLang: voiceLang }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data && data.translatedText) {
+          setTranslationsCache((prev) => ({ ...prev, [cleanKey]: data.translatedText }));
+        }
+      })
+      .catch((err) => console.warn('Translation call failed:', err))
+      .finally(() => {
+        if (isMounted) setIsTranslating(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [voiceLang, effectiveVoice.transcript]);
 
   if (images.length === 0 && videos.length === 0 && docs.length === 0 && !hasVoice) {
     return null;
@@ -533,6 +563,10 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
       {hasVoice && (() => {
         const getVoiceTranslation = (lang: LanguageCode, raw: string) => {
           if (lang === 'EN') return raw;
+          const cleanKey = `${lang}_${raw.slice(0, 48)}`;
+          if (translationsCache[cleanKey]) {
+            return translationsCache[cleanKey];
+          }
           if (lang === 'LG') {
             return `[Oluganda / Luganda]: « Obujulizi buno obw'amaloboozi bukakasa ensonga eno eri mu kitundu. Abatuuze basaba gavumenti n'abakwatibwako okuyingirawo amangu ddala okugonjoola obuzibu buno. »`;
           }
@@ -650,6 +684,11 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0">
                       Translate:
                     </span>
+                    {isTranslating && (
+                      <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 animate-pulse shrink-0">
+                        AI Translating...
+                      </span>
+                    )}
                     {/* Quick Common East African Languages */}
                     <div className="flex items-center gap-1 shrink-0">
                       {(['EN', 'SW', 'LG', 'RW', 'NK', 'LU'] as LanguageCode[]).map((code) => (

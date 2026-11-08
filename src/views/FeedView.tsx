@@ -1081,7 +1081,7 @@ export const FeedView: React.FC = () => {
                 onClick={() => setHostBarazaModalOpen(true)}
                 className="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-[#161c2a] text-slate-800 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-[#20273a] text-xs font-semibold transition cursor-pointer border border-slate-300/80 dark:border-[#22293d]"
               >
-                + Host
+                + Convene Baraza
               </button>
 
               <button
@@ -1157,38 +1157,61 @@ export const FeedView: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {filteredLiveBarazaRooms.map((th) => {
-                  const m = getBarazaCategoryMeta(th.category);
-                  return (
-                    <div
-                      key={th.id}
-                      onClick={() => setActiveTownHall(th)}
-                      className={`p-3 rounded-xl bg-white dark:bg-[#111520] border transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-2xs hover:shadow-md ${m.cardBorder}`}
+                {filteredLiveBarazaRooms.length === 0 ? (
+                  <div className="col-span-full p-4 rounded-xl border border-dashed border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa]/70 dark:bg-[#0e1116]/70 text-center space-y-2">
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {barazaCategoryFilter === 'near_me'
+                        ? 'No active Village Baraza in your cell or parish right now.'
+                        : 'No active community assemblies in this channel.'}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                      {barazaCategoryFilter === 'near_me'
+                        ? 'LC1 Village Chairpersons, Parish Chiefs, and neighborhood watchdogs can convene open deliberations here.'
+                        : 'Convened by public officials and verified citizens for open statutory deliberation.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setHostBarazaModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-2xs transition-colors"
                     >
-                      <div className="flex items-center justify-between text-[10px] font-mono gap-1">
-                        <span className={`px-2 py-0.5 rounded font-bold uppercase text-[9px] flex items-center gap-1 ${m.badgeBg}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${m.dotBg}`} />
-                          <span>{m.shortLabel}</span>
-                        </span>
-                        <span className="text-slate-500 dark:text-slate-400 font-semibold">{th.listeners_count} tuned in</span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug">
-                          {th.title}
+                      <Radio size={12} />
+                      <span>{barazaCategoryFilter === 'near_me' ? 'Convene Village Baraza (LC1 / Parish)' : '+ Convene Baraza'}</span>
+                    </button>
+                  </div>
+                ) : (
+                  filteredLiveBarazaRooms.map((th) => {
+                    const m = getBarazaCategoryMeta(th.category);
+                    return (
+                      <div
+                        key={th.id}
+                        onClick={() => setActiveTownHall(th)}
+                        className={`p-3 rounded-xl bg-white dark:bg-[#111520] border transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-2xs hover:shadow-md ${m.cardBorder}`}
+                      >
+                        <div className="flex items-center justify-between text-[10px] font-mono gap-1">
+                          <span className={`px-2 py-0.5 rounded font-bold uppercase text-[9px] flex items-center gap-1 ${m.badgeBg}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${m.dotBg}`} />
+                            <span>{m.shortLabel}</span>
+                          </span>
+                          <span className="text-slate-500 dark:text-slate-400 font-semibold">{th.listeners_count} tuned in</span>
                         </div>
-                        <div className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate">
-                          {th.dept_name}
+
+                        <div className="space-y-1">
+                          <div className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug">
+                            {th.title}
+                          </div>
+                          <div className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate">
+                            {th.dept_name}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 dark:border-[#1e2536] flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-slate-400 truncate max-w-[140px]">{th.host_name}</span>
+                          <span className={`font-bold ${m.accentText}`}>Tune In →</span>
                         </div>
                       </div>
-
-                      <div className="pt-2 border-t border-slate-100 dark:border-[#1e2536] flex items-center justify-between text-[10px] font-mono">
-                        <span className="text-slate-400 truncate max-w-[140px]">{th.host_name}</span>
-                        <span className={`font-bold ${m.accentText}`}>Tune In →</span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
           )}

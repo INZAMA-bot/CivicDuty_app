@@ -1702,6 +1702,88 @@ For each option, provide:
     }
   });
 
+  // Live Vernacular AI Translation Engine (Luganda, Swahili, Runyankore, Luo, French, Arabic, English)
+  app.post('/api/translate', async (req, res) => {
+    const { text, targetLang, sourceLang } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Text parameter is required' });
+    }
+
+    const langNames: Record<string, string> = {
+      EN: 'English',
+      LG: 'Luganda',
+      SW: 'Kiswahili',
+      RW: 'Kinyarwanda',
+      NK: 'Runyankore-Rukiga',
+      LU: 'Luo / Leb-Lango / Acholi',
+      FR: 'French',
+      AR: 'Arabic',
+    };
+
+    const targetName = langNames[targetLang] || targetLang || 'English';
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({
+        success: true,
+        translatedText: `[${targetName}]: ${text}`,
+        sourceLang: sourceLang || 'auto',
+        targetLang,
+        fallback: true,
+      });
+    }
+
+    try {
+      const ai = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        httpOptions: {
+          headers: { 'User-Agent': 'aistudio-build' },
+        },
+      });
+
+      const prompt = `You are the sovereign civic language engine for CivicDuty.
+Translate this citizen ground testimony or public notice into ${targetName}.
+Maintain administrative clarity (e.g. Parish, LC1, CAO, PDM, Umeme, NWSC, KCCA), accurate local vernacular tone, and dignified phrasing.
+Input testimony:
+"""${text}"""
+
+Return a JSON object with:
+- "translatedText": string with the accurate, natural translation.
+- "detectedLanguage": string with the detected source language.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              translatedText: { type: Type.STRING },
+              detectedLanguage: { type: Type.STRING },
+            },
+            required: ['translatedText'],
+          },
+        },
+      });
+
+      const parsed = JSON.parse(response.text || '{}');
+      return res.json({
+        success: true,
+        translatedText: parsed.translatedText || text,
+        detectedLanguage: parsed.detectedLanguage || 'auto',
+        targetLang,
+      });
+    } catch (err: any) {
+      console.warn('AI translation fallback notice:', err?.message);
+      return res.json({
+        success: true,
+        translatedText: `[${targetName}]: ${text}`,
+        targetLang,
+        fallback: true,
+      });
+    }
+  });
+
   // Vite development middleware or production static serving
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');

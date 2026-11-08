@@ -576,6 +576,36 @@ export const ProfileView: React.FC = () => {
         </div>
       </div>
 
+      {/* Citizen Onboarding & Statutory Identity Verification Card */}
+      <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <ShieldCheck size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">Citizen Onboarding &amp; Identity Attestation</h4>
+                <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-semibold">
+                  Zero-Knowledge Verified
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                NIRA National ID (NIN), Foreign Expatriate Permit, and Parish Jurisdiction Setup. Cryptographic salt protects raw PII while securing 1-citizen-1-voice integrity.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => go('ob1')}
+            className="px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
+          >
+            <span>Review Onboarding Setup</span>
+            <ArrowRight size={13} />
+          </button>
+        </div>
+      </div>
+
       {/* 2. Reputation Standing & Perk Escrow Shortcut */}
       <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
