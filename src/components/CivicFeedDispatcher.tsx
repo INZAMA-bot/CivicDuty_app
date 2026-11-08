@@ -131,9 +131,14 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     };
   }, [expanded, setIsCitizenSpeaking]);
 
-  // Voice Note Recording
+  // Real Audio Microphone Capture
   const [isRecording, setIsRecording] = useState(false);
   const [voiceSaved, setVoiceSaved] = useState(false);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Referendum Poll Builder
   const [includePoll, setIncludePoll] = useState(false);
@@ -270,17 +275,23 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     const files: File[] = Array.from(e.target.files);
     const newItems = files.map((f: File) => {
       const url = URL.createObjectURL(f);
-      const type = f.type.includes('image')
-        ? ('image' as const)
-        : f.type.includes('video')
-        ? ('video' as const)
-        : ('doc' as const);
+      const isPdf = f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
+      const isDoc = isPdf || /\.(doc|docx|txt|rtf|odt|xls|xlsx)$/i.test(f.name);
+      const isImage = f.type.startsWith('image/');
+      const isVideo = f.type.startsWith('video/');
+      const type = isImage ? ('image' as const) : isVideo ? ('video' as const) : ('doc' as const);
+      const formattedSize =
+        f.size >= 1048576
+          ? (f.size / (1024 * 1024)).toFixed(1) + ' MB'
+          : Math.max(1, Math.round(f.size / 1024)) + ' KB';
       return {
         type,
         url,
         name: f.name,
-        size: (f.size / 1024).toFixed(0) + 'KB',
+        size: formattedSize,
+        mimeType: f.type,
         file: f,
+        isPhotoScan: false,
       };
     });
     setStagedMedia((prev) => [...prev, ...newItems]);
@@ -291,8 +302,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files: File[] = Array.from(e.target.files);
-    const newItems = files.map((f: File) => {
-      const url = URL.createObjectURL(f);
+    files.forEach((f: File) => {
       const isImage = f.type.startsWith('image/');
       const isPdf = f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
       const cleanName = isPdf
@@ -304,17 +314,26 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         f.size >= 1048576
           ? (f.size / (1024 * 1024)).toFixed(1) + ' MB'
           : Math.max(1, Math.round(f.size / 1024)) + ' KB';
-      return {
-        type: 'doc' as const,
-        url,
-        name: cleanName,
-        size: formattedSize,
-        mimeType: f.type,
-        isPhotoScan: isImage,
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        setStagedMedia((prev) => [
+          ...prev,
+          {
+            type: 'doc' as const,
+            url: dataUrl,
+            name: cleanName,
+            size: formattedSize,
+            mimeType: f.type || 'application/pdf',
+            isPhotoScan: isImage,
+            file: f,
+          },
+        ]);
       };
+      reader.readAsDataURL(f);
     });
-    setStagedMedia((prev) => [...prev, ...newItems]);
-    toast(`${newItems.length} official document / photocopy scan(s) attached!`, 'emerald');
+    toast(`${files.length} official document / dossier attachment(s) onboarded!`, 'emerald');
     e.target.value = '';
   };
 
@@ -322,21 +341,61 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     setStagedMedia((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const toggleRecording = () => {
+  const toggleRecording = async () => {
     if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
       setIsRecording(false);
       setIsCitizenSpeaking(false);
-      setVoiceSaved(true);
-      toast('Voice testimony locked to dispatch', 'emerald');
     } else {
-      setIsRecording(true);
-      setIsCitizenSpeaking(true);
-      toast('Recording audio testimony (Luganda / English)...', 'emerald');
-      setTimeout(() => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          toast('Microphone access is not supported in this browser', 'amber');
+          return;
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunksRef.current = [];
+        const recorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = recorder;
+
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm;codecs=opus' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Audio = reader.result as string;
+            setRecordedAudioUrl(base64Audio);
+            setVoiceSaved(true);
+            toast('Live audio testimony recorded and attached!', 'emerald');
+          };
+          reader.readAsDataURL(blob);
+          stream.getTracks().forEach((track) => track.stop());
+        };
+
+        recorder.start(100);
+        setIsRecording(true);
+        setIsCitizenSpeaking(true);
+        setRecordingSeconds(0);
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingSeconds((prev) => prev + 1);
+        }, 1000);
+        toast('Recording live audio testimony... speak clearly', 'emerald');
+      } catch (err: any) {
+        console.error('Audio capture error:', err);
+        toast('Microphone permission denied or unavailable', 'rose');
         setIsRecording(false);
         setIsCitizenSpeaking(false);
-        setVoiceSaved(true);
-      }, 4500);
+      }
     }
   };
 
@@ -409,16 +468,24 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
       const finalMedia: MediaItem[] = stagedMedia.map((m, idx) => {
         if (m.type === 'image') return { type: 'image', url: m.url, caption: m.caption?.trim() || `Field evidence photograph #${idx + 1}` };
         if (m.type === 'video') return { type: 'video', url: m.url, thumb: m.url, duration: '0:30' };
-        return { type: 'doc', name: m.name, size: m.size, url: m.url };
+        return {
+          type: 'doc',
+          name: m.name,
+          size: m.size,
+          url: m.url,
+          mimeType: (m as any).mimeType || 'application/pdf',
+          isPhotoScan: Boolean((m as any).isPhotoScan),
+        };
       });
 
-      const voicePayload = voiceSaved
+      const voicePayload = (voiceSaved || recordedAudioUrl)
         ? {
-            duration: '0:42',
+            duration: recordingSeconds > 0 ? `0:${recordingSeconds.toString().padStart(2, '0')}` : '0:42',
             language: 'LG · Luganda / EN',
             transcript:
               'Twagala gavumenti etuyambe ku lw’omukutu guno ogwonoonese. Urgent service delivery requested at parish level.',
             waveform: [4, 7, 9, 5, 8, 3, 7, 8, 6, 4, 8, 9, 7, 5, 3, 6, 8, 4, 6],
+            audio_url: recordedAudioUrl || undefined,
           }
         : undefined;
 
@@ -974,12 +1041,12 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
               </div>
             </div>
 
-            {/* 1-Tap Thumb Action Bar (Photo/Video, Snap Paperwork/Doc, Mic, GPS) */}
+            {/* 1-Tap Thumb Action Bar (Photo/Video, Attach Doc/PDF, Mic, GPS) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*,video/*,.pdf,application/pdf,.doc,.docx"
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
@@ -1001,7 +1068,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
               <input
                 ref={docInputRef}
                 type="file"
-                accept="application/pdf,image/*,.doc,.docx"
+                accept=".pdf,application/pdf,.doc,.docx,.txt,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                 multiple
                 onChange={handleDocFileSelect}
                 className="hidden"
@@ -1014,10 +1081,10 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                     ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300'
                     : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-amber-400'
                 }`}
-                title="Snap Photocopied Notice, Stamped LC1 Letter, or PDF Dossier"
+                title="Attach PDF Dossiers, Official Notices, or Stamped Council Letters"
               >
                 <FileText size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="truncate">Snap Paperwork</span>
+                <span className="truncate">Attach Doc / PDF</span>
               </button>
 
               <button
@@ -1050,6 +1117,29 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                 <span className="truncate">{gps ? 'GPS Locked' : 'Lock GPS'}</span>
               </button>
             </div>
+
+            {recordedAudioUrl && (
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300">
+                    Recorded Audio ({recordingSeconds > 0 ? `${recordingSeconds}s` : 'Audio Ready'})
+                  </span>
+                </div>
+                <audio controls src={recordedAudioUrl} className="h-7 max-w-[200px]" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecordedAudioUrl(null);
+                    setVoiceSaved(false);
+                    setRecordingSeconds(0);
+                  }}
+                  className="text-xs text-rose-500 hover:text-rose-700 ml-2 cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            )}
 
             {/* GPS Feedback & Manual Override */}
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 px-1">
@@ -1105,19 +1195,30 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                       className="p-2.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2 shadow-2xs"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {m.type === 'image' && (
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {m.type === 'image' ? (
                             <img
                               src={m.url}
                               alt={m.name}
-                              className="w-9 h-9 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800"
+                              className="w-10 h-10 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800"
                             />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                              <FileText size={20} />
+                            </div>
                           )}
                           <div className="min-w-0">
                             <p className="text-[11px] font-semibold text-slate-900 dark:text-white truncate">{m.name}</p>
-                            <p className="text-[9.5px] font-mono text-slate-500">
-                              {m.type === 'image' ? `Photo #${idx + 1}` : m.type} · {m.size}
-                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9.5px] font-mono text-slate-500">
+                                {m.type === 'image' ? `Photo #${idx + 1}` : 'Official Doc / PDF'} · {m.size}
+                              </span>
+                              {m.type === 'doc' && (
+                                <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[8.5px] font-mono font-bold">
+                                  ONBOARDED
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <button

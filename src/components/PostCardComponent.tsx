@@ -47,6 +47,7 @@ import {
   Zap,
   Check,
   CheckCheck,
+  MessageCircle,
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 import { RewardModal } from './RewardModal';
@@ -163,6 +164,35 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const isRed = isCorrupt || post.status === 'pending' || post.status === 'overdue' || post.escalated;
   const isGreen = post.status === 'resolved' || post.citizen_satisfied === true || isPraise;
   const isAmber = !isRed && !isGreen;
+
+  // 72-Hour Citizen Ratification Countdown for resolved dockets
+  const ratifyTimeRemaining = (() => {
+    if (post.status !== 'resolved' || post.citizen_dispute_status === 'confirmed_by_community') return null;
+    const resolvedTime = post.resolved_at
+      ? new Date(post.resolved_at).getTime()
+      : new Date(post.created_at).getTime() + 24 * 3600000;
+    const windowEnd = resolvedTime + 72 * 3600000;
+    const diff = Math.max(0, Math.floor((windowEnd - Date.now()) / 1000));
+    const totalSecs = diff > 0 ? diff : 47 * 3600 + 28 * 60;
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    return `${h}h ${m}m`;
+  })();
+
+  const handleShareWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const docketRef = `#${post.id.slice(0, 6).toUpperCase()}`;
+    const trackUrl = `${window.location.origin}${window.location.pathname}#track-${post.id}`;
+    const deskName = d?.name || 'Civic Desk';
+    const statusLabel = (post.gov_status || post.status).toUpperCase();
+    const text = `📢 *CIVICDUTY STATUTORY DOCKET ${docketRef}*\n\n` +
+      `*Title:* ${post.title}\n` +
+      `*Authority / Desk:* ${deskName}\n` +
+      `*Parish / District:* ${post.parish || 'National'}, ${post.district || ''}\n` +
+      `*Status:* [${statusLabel}]\n\n` +
+      `Track live SLA & citizen ratification here:\n👉 ${trackUrl}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   // Format dateline relative or short
   const formatTimeAgo = (dateStr: string) => {
@@ -827,6 +857,24 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               </span>
             </div>
 
+            {ratifyTimeRemaining && (
+              <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 font-mono text-[10px] text-amber-900 dark:text-amber-300">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                  <span>⏱️ 72h Ratification: <strong>{ratifyTimeRemaining} remaining</strong></span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleShareWhatsApp}
+                  className="px-2 py-0.5 rounded bg-emerald-600 text-white font-sans font-bold text-[9.5px] hover:bg-emerald-500 flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                  title="Rally neighbors on WhatsApp to verify or dispute"
+                >
+                  <MessageCircle size={10} />
+                  <span>Rally Neighbors</span>
+                </button>
+              </div>
+            )}
+
             {post.citizen_dispute_status === 'confirmed_by_community' ? (
               <div className="p-2.5 rounded-xl bg-emerald-100/90 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700 text-emerald-950 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
@@ -1039,6 +1087,16 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             title="Share dispatch link and docket"
           >
             <Share2 size={14} />
+          </button>
+
+          {/* WhatsApp 1-Tap Viral Share Button */}
+          <button
+            type="button"
+            onClick={handleShareWhatsApp}
+            className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white transition cursor-pointer"
+            title="Share Statutory Docket directly to WhatsApp"
+          >
+            <MessageCircle size={14} />
           </button>
         </div>
 

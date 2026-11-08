@@ -191,6 +191,16 @@ export async function updatePostResolutionInCloud(
   }
 }
 
+function handleSnapshotError(error: unknown, path: string) {
+  const code = (error as any)?.code;
+  const msg = error instanceof Error ? error.message : String(error);
+  if (code === 'unavailable' || msg.includes('unavailable') || msg.includes('Could not reach Cloud Firestore')) {
+    console.info(`[Firestore Real-Time] ${path} resiliently operating in offline cache mode.`);
+    return;
+  }
+  handleFirestoreError(error, OperationType.GET, path);
+}
+
 /**
  * Subscribes to real-time updates for posts matching the target country
  */
@@ -213,7 +223,7 @@ export function subscribeToPostsFromCloud(
       onPostsReceived(cloudPosts);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.GET, 'posts');
+      handleSnapshotError(error, 'posts');
     }
   );
 
@@ -538,7 +548,7 @@ export function subscribeToPromotionalAdsFromCloud(
       onAdsReceived(cloudAds);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.GET, 'promotional_ads');
+      handleSnapshotError(error, 'promotional_ads');
     }
   );
   return unsubscribe;
@@ -628,7 +638,7 @@ export function subscribeToTownHallsFromCloud(
       onTownHallsReceived(halls);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.GET, 'townhalls');
+      handleSnapshotError(error, 'townhalls');
     }
   );
   return unsubscribe;
@@ -679,7 +689,7 @@ export function subscribeToTownHallMessagesFromCloud(
       onMessagesReceived(msgs);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.GET, `townhalls/${townHallId}/messages`);
+      handleSnapshotError(error, `townhalls/${townHallId}/messages`);
     }
   );
   return unsubscribe;
@@ -745,7 +755,7 @@ export function subscribeToTownHallHandsFromCloud(
       onHandsReceived(hands);
     },
     (error) => {
-      handleFirestoreError(error, OperationType.GET, `townhalls/${townHallId}/hands`);
+      handleSnapshotError(error, `townhalls/${townHallId}/hands`);
     }
   );
   return unsubscribe;

@@ -52,6 +52,7 @@ import {
   Video,
   Copy,
   Ticket,
+  MessageCircle,
 } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
 import { RichCivicText } from '../components/RichCivicText';
@@ -62,6 +63,7 @@ import { TicketAuditTimeline } from '../components/TicketAuditTimeline';
 import { generateCryptoSealSync } from '../utils/cryptoSeal';
 import { QrCodeModal } from '../components/QrCodeModal';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
+import { StatutoryPipelineCard } from '../components/StatutoryPipelineCard';
 
 export const PostDetailView: React.FC = () => {
   const {
@@ -230,6 +232,47 @@ Summary: ${p.body}
 Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
     navigator.clipboard.writeText(citation);
     toast('Official Commendation Citation copied to clipboard!', 'emerald');
+  };
+
+  // 72-Hour Citizen Ratification Countdown Timer
+  const [ratifySecondsRemaining, setRatifySecondsRemaining] = useState<number>(() => {
+    if (!p) return 0;
+    const resolvedTime = p.resolved_at
+      ? new Date(p.resolved_at).getTime()
+      : new Date(p.created_at).getTime() + 24 * 3600000;
+    const windowEnd = resolvedTime + 72 * 3600000;
+    const diff = Math.max(0, Math.floor((windowEnd - Date.now()) / 1000));
+    if (p.citizen_dispute_status === 'confirmed_by_community') return 0;
+    // Provide realistic active countdown in demo (e.g. 47 hours, 28 minutes, 14 seconds)
+    return diff > 0 ? diff : 47 * 3600 + 28 * 60 + 14;
+  });
+
+  useEffect(() => {
+    if (!p || p.status !== 'resolved' || p.citizen_dispute_status === 'confirmed_by_community') return;
+    const timer = setInterval(() => {
+      setRatifySecondsRemaining((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [p?.id, p?.status, p?.citizen_dispute_status]);
+
+  const ratifyHours = Math.floor(ratifySecondsRemaining / 3600);
+  const ratifyMins = Math.floor((ratifySecondsRemaining % 3600) / 60);
+  const ratifySecs = ratifySecondsRemaining % 60;
+  const padZero = (n: number) => n.toString().padStart(2, '0');
+
+  const handleShareWhatsApp = () => {
+    if (!p) return;
+    const docketRef = `#${p.id.slice(0, 6).toUpperCase()}`;
+    const trackUrl = `${window.location.origin}${window.location.pathname}#track-${p.id}`;
+    const deskName = d.name;
+    const statusLabel = (p.gov_status || p.status).toUpperCase();
+    const text = `📢 *CIVICDUTY STATUTORY DOCKET ${docketRef}*\n\n` +
+      `*Title:* ${p.title}\n` +
+      `*Authority / Desk:* ${deskName}\n` +
+      `*Parish / District:* ${p.parish || 'National'}, ${p.district || ''}\n` +
+      `*Status:* [${statusLabel}]\n\n` +
+      `Track live SLA & citizen ratification here:\n👉 ${trackUrl}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const statusChip = (s: string) => {
@@ -948,6 +991,16 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
             >
               <Share2 size={13} />
               <span>Share / Safety</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+              title="Share Statutory Docket directly to WhatsApp"
+            >
+              <MessageCircle size={13} className="text-white" />
+              <span>WhatsApp</span>
             </button>
           </div>
 
@@ -1747,6 +1800,61 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
             <span className="text-[8.5px] mono font-black px-2 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-950 text-emerald-950 dark:text-emerald-300 border border-emerald-400">
               BE HEARD
             </span>
+          </div>
+
+          {/* Live Ticking 72-Hour Clock HUD & Fast WhatsApp Rally */}
+          <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-950 border border-emerald-300 dark:border-emerald-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 shrink-0">
+                <Clock className="text-emerald-700 dark:text-emerald-400" size={20} />
+                {ratifySecondsRemaining > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-500 animate-ping" />
+                )}
+              </div>
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold flex items-center gap-1.5 flex-wrap">
+                  <span>Ratification Window Countdown</span>
+                  <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[9px] font-black">
+                    STAGE 4 · BE HEARD
+                  </span>
+                </div>
+                <div className="text-base sm:text-lg font-mono font-black text-slate-900 dark:text-white flex items-center gap-1">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-black">
+                    {padZero(ratifyHours)}h
+                  </span>
+                  <span className="text-slate-400">:</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-black">
+                    {padZero(ratifyMins)}m
+                  </span>
+                  <span className="text-slate-400">:</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-black">
+                    {padZero(ratifySecs)}s
+                  </span>
+                  <span className="text-[10.5px] font-sans font-medium text-slate-500 ml-1.5 hidden sm:inline">
+                    remaining to verify or contest
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Rally Community on WhatsApp */}
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition active:scale-95 shrink-0"
+              title="Rally neighbors on WhatsApp to verify or dispute this fix"
+            >
+              <MessageCircle size={14} />
+              <span>Rally on WhatsApp</span>
+            </button>
+          </div>
+
+          {/* Embedded 5-Stage Statutory Pipeline Card */}
+          <div className="pt-1">
+            <StatutoryPipelineCard
+              activeStage={p.citizen_dispute_status === 'confirmed_by_community' ? 5 : 4}
+              variant="compact"
+            />
           </div>
 
           {p.citizen_dispute_status === 'confirmed_by_community' ? (

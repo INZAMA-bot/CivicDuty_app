@@ -153,7 +153,7 @@ export const EntityTeamView: React.FC = () => {
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [newRoleTitle, setNewRoleTitle] = useState('');
   const [newRoleDesc, setNewRoleDesc] = useState('');
-  const [newRoleColor, setNewRoleColor] = useState('purple');
+  const [newRoleColor, setNewRoleColor] = useState('emerald');
   const [newRolePerms, setNewRolePerms] = useState<EntityRolePermissions>({
     can_reply: true,
     can_resolve: true,
@@ -685,7 +685,7 @@ export const EntityTeamView: React.FC = () => {
             onClick={() => setActiveTab('my_branch')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
               activeTab === 'my_branch'
-                ? 'bg-purple-600 text-white shadow-md'
+                ? 'bg-emerald-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
@@ -697,7 +697,7 @@ export const EntityTeamView: React.FC = () => {
             onClick={() => setActiveTab('branches')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
               activeTab === 'branches'
-                ? 'bg-purple-600 text-white shadow-md'
+                ? 'bg-emerald-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
@@ -710,7 +710,7 @@ export const EntityTeamView: React.FC = () => {
           onClick={() => setActiveTab('staff')}
           className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'staff'
-              ? 'bg-purple-600 text-white shadow-md'
+              ? 'bg-emerald-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
@@ -722,7 +722,7 @@ export const EntityTeamView: React.FC = () => {
           onClick={() => setActiveTab('invite')}
           className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'invite'
-              ? 'bg-purple-600 text-white shadow-md'
+              ? 'bg-emerald-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
@@ -735,7 +735,7 @@ export const EntityTeamView: React.FC = () => {
             onClick={() => setActiveTab('roles')}
             className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
               activeTab === 'roles'
-                ? 'bg-purple-600 text-white shadow-md'
+                ? 'bg-emerald-600 text-white shadow-md'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
             }`}
           >
@@ -748,7 +748,7 @@ export const EntityTeamView: React.FC = () => {
           onClick={() => setActiveTab('pending')}
           className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'pending'
-              ? 'bg-purple-600 text-white shadow-md'
+              ? 'bg-emerald-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
@@ -760,7 +760,7 @@ export const EntityTeamView: React.FC = () => {
           onClick={() => setActiveTab('audit')}
           className={`px-4 py-2.5 rounded-xl text-xs font-black mono uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'audit'
-              ? 'bg-purple-600 text-white shadow-md'
+              ? 'bg-emerald-600 text-white shadow-md'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
           }`}
         >
@@ -777,7 +777,7 @@ export const EntityTeamView: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3.5">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase font-mono text-purple-600 dark:text-purple-400 flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                     <Store size={13} />
                     Local Branch Operational Desk
                   </span>
@@ -811,7 +811,7 @@ export const EntityTeamView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveBranchForTeam(currentBranch.id)}
-                  className="py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Plus size={14} />
                   <span>Deploy New Squad</span>
@@ -841,7 +841,7 @@ export const EntityTeamView: React.FC = () => {
 
               <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
                 <span className="text-[10px] font-mono text-slate-500 uppercase block font-semibold">Internal Service Squads</span>
-                <span className="text-xs sm:text-sm font-bold text-purple-600 dark:text-purple-400 font-mono block">
+                <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono block">
                   {currentBranch.teams?.length || 0} Squads
                 </span>
                 <span className="text-[9.5px] font-mono text-slate-400 block">
@@ -861,14 +861,14 @@ export const EntityTeamView: React.FC = () => {
             </div>
 
             {/* Strict Notice banner reminding of role boundary */}
-            <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 flex items-center justify-between gap-3 text-xs">
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-purple-600 dark:text-purple-400 shrink-0" />
+                <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="text-[11px] text-slate-700 dark:text-slate-300">
                   <strong>Branch Manager Boundary:</strong> Your administrative authority is locked to this branch&apos;s local parish jurisdiction. Creation and deletion of nationwide branches is exclusively managed by the Central Superadmin at corporate headquarters.
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-mono text-[9px] font-bold uppercase shrink-0">
+              <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-mono text-[9px] font-bold uppercase shrink-0">
                 Superadmin Restricted
               </span>
             </div>
@@ -876,10 +876,10 @@ export const EntityTeamView: React.FC = () => {
 
           {/* Add Squad Form / Modal inside Branch */}
           {activeBranchForTeam === currentBranch.id && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border-2 border-purple-500 shadow-lg space-y-4 animate-fade-in">
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border-2 border-emerald-500 shadow-lg space-y-4 animate-fade-in">
               <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
                 <div>
-                  <span className="text-[10px] font-bold uppercase font-mono text-purple-600 dark:text-purple-400">
+                  <span className="text-[10px] font-bold uppercase font-mono text-emerald-600 dark:text-emerald-400">
                     Internal Branch Administration
                   </span>
                   <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -913,7 +913,7 @@ export const EntityTeamView: React.FC = () => {
                       value={newSubTeamName}
                       onChange={(e) => setNewSubTeamName(e.target.value)}
                       placeholder="e.g. Kitchen Crew, Dispatch Fleet, Field Repair Squad"
-                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
@@ -927,7 +927,7 @@ export const EntityTeamView: React.FC = () => {
                       value={newSubTeamLead}
                       onChange={(e) => setNewSubTeamLead(e.target.value)}
                       placeholder="e.g. Sarah Namagembe"
-                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
@@ -940,7 +940,7 @@ export const EntityTeamView: React.FC = () => {
                     <select
                       value={newSubTeamCategory}
                       onChange={(e) => setNewSubTeamCategory(e.target.value as any)}
-                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     >
                       <option value="operations">Operations &amp; Production Crew</option>
                       <option value="service">Customer Service &amp; Guest Care</option>
@@ -960,7 +960,7 @@ export const EntityTeamView: React.FC = () => {
                       max={50}
                       value={newSubTeamMembers}
                       onChange={(e) => setNewSubTeamMembers(Number(e.target.value))}
-                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-purple-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
@@ -975,7 +975,7 @@ export const EntityTeamView: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-mono text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                   >
                     Deploy Squad
                   </button>
@@ -995,7 +995,7 @@ export const EntityTeamView: React.FC = () => {
                   Teams handling daily ticket resolutions, food safety prep, customer inquiries, and counter deliveries.
                 </p>
               </div>
-              <span className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400">
+              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
                 {currentBranch.teams?.length || 0} Deployed
               </span>
             </div>
@@ -1008,7 +1008,7 @@ export const EntityTeamView: React.FC = () => {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-mono uppercase font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                         {team.category}
                       </span>
                       <button
@@ -1052,10 +1052,10 @@ export const EntityTeamView: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase mono text-purple-600 dark:text-purple-400">
+                  <span className="text-[10px] font-black uppercase mono text-emerald-600 dark:text-emerald-400">
                     Enterprise Hierarchy &amp; Grassroots Mapping
                   </span>
-                  <span className="text-[9px] mono uppercase bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[9px] mono uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
                     Superadmin Hub
                   </span>
                 </div>
@@ -1071,7 +1071,7 @@ export const EntityTeamView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateBranchModal(true)}
-                  className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs mono uppercase flex items-center gap-2 transition-all shadow-md shrink-0 cursor-pointer self-start sm:self-auto"
+                  className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs mono uppercase flex items-center gap-2 transition-all shadow-md shrink-0 cursor-pointer self-start sm:self-auto"
                 >
                   <Plus size={15} />
                   <span>Provision New Branch</span>
@@ -1094,11 +1094,11 @@ export const EntityTeamView: React.FC = () => {
 
             {/* Quick Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40">
+              <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
                 <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 block uppercase">
                   Active Branches
                 </span>
-                <span className="text-lg font-black text-purple-900 dark:text-purple-200 font-mono">
+                <span className="text-lg font-black text-emerald-900 dark:text-emerald-200 font-mono">
                   {myBranches.length} Nodes
                 </span>
               </div>
@@ -1137,10 +1137,10 @@ export const EntityTeamView: React.FC = () => {
 
           {/* Provision Modal / Drawer */}
           {showCreateBranchModal && (
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-purple-500 shadow-xl space-y-4 animate-fade-in">
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-xl space-y-4 animate-fade-in">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div>
-                  <span className="text-[10px] font-black uppercase mono text-purple-600 dark:text-purple-400">
+                  <span className="text-[10px] font-black uppercase mono text-emerald-600 dark:text-emerald-400">
                     Central Admin Action · All Branch Costs Covered by Main Branch ($0 / Branch)
                   </span>
                   <h4 className="text-base font-black text-slate-900 dark:text-white">
@@ -1157,8 +1157,8 @@ export const EntityTeamView: React.FC = () => {
               </div>
 
               {/* Tier Jurisdiction Guidance Banner */}
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/25 text-xs space-y-1">
-                <div className="flex items-center justify-between font-mono font-bold text-purple-800 dark:text-purple-300">
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs space-y-1">
+                <div className="flex items-center justify-between font-mono font-bold text-emerald-800 dark:text-emerald-300">
                   <span>
                     Current Plan: {providerPlanKey === 'national' ? 'National Coverage ($20/mo)' : providerPlanKey === 'district' ? 'District Coverage ($10/mo)' : 'Sub-County Coverage ($5/mo)'}
                   </span>
@@ -1185,7 +1185,7 @@ export const EntityTeamView: React.FC = () => {
                       value={newBranchName}
                       onChange={(e) => setNewBranchName(e.target.value)}
                       placeholder="e.g. Acacia Mall Branch, Jinja Central Center..."
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
@@ -1198,15 +1198,15 @@ export const EntityTeamView: React.FC = () => {
                       value={newBranchLandmark}
                       onChange={(e) => setNewBranchLandmark(e.target.value)}
                       placeholder="e.g. Food Court Level 1, Main Street opposite Post Office"
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Grassroots Hierarchy Cascading Dropdowns */}
-                <div className="p-3.5 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/30 space-y-2.5">
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
-                    <MapPin size={12} className="text-purple-600 dark:text-purple-400" />
+                <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 space-y-2.5">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                    <MapPin size={12} className="text-emerald-600 dark:text-emerald-400" />
                     <span>Grassroots Territory Mapping (Parish · Subcounty · District)</span>
                   </span>
 
@@ -1305,7 +1305,7 @@ export const EntityTeamView: React.FC = () => {
                       value={newBranchManagerName}
                       onChange={(e) => setNewBranchManagerName(e.target.value)}
                       placeholder="e.g. Brian Mugabe"
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
@@ -1318,7 +1318,7 @@ export const EntityTeamView: React.FC = () => {
                       value={newBranchManagerPhone}
                       onChange={(e) => setNewBranchManagerPhone(e.target.value)}
                       placeholder="e.g. +256 772 123 456"
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
@@ -1329,7 +1329,7 @@ export const EntityTeamView: React.FC = () => {
                     <select
                       value={newBranchSlaHours}
                       onChange={(e) => setNewBranchSlaHours(Number(e.target.value))}
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
                     >
                       <option value={4}>4 Hours (Emergency / High Priority)</option>
                       <option value={6}>6 Hours (Hospital / Clinical Care)</option>
@@ -1341,7 +1341,7 @@ export const EntityTeamView: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div className="text-[10.5px] font-mono text-purple-700 dark:text-purple-300 font-semibold">
+                  <div className="text-[10.5px] font-mono text-emerald-700 dark:text-emerald-300 font-semibold">
                     Auto-generated Code: <strong className="font-mono">{generateBranchAccessCode(orgName, newBranchName || 'BRANCH')}</strong>
                   </div>
 
@@ -1355,7 +1355,7 @@ export const EntityTeamView: React.FC = () => {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-black text-xs uppercase transition-all shadow-md cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-black text-xs uppercase transition-all shadow-md cursor-pointer"
                     >
                       Provision &amp; Issue Master Code
                     </button>
@@ -1413,19 +1413,19 @@ export const EntityTeamView: React.FC = () => {
 
                     {/* Master Branch Access Code Pill & Mount Button */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className="px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 flex items-center gap-2">
+                      <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center gap-2">
                         <div>
-                          <span className="text-[8.5px] font-mono font-bold text-purple-700 dark:text-purple-300 block uppercase">
+                          <span className="text-[8.5px] font-mono font-bold text-emerald-700 dark:text-emerald-300 block uppercase">
                             Branch Manager Code
                           </span>
-                          <span className="text-xs font-mono font-black text-purple-950 dark:text-purple-100 tracking-wider">
+                          <span className="text-xs font-mono font-black text-emerald-950 dark:text-emerald-100 tracking-wider">
                             {branch.accessCode}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleCopyCode(branch.accessCode)}
-                          className="p-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-purple-100 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700 transition-colors cursor-pointer"
                           title="Copy Master Branch Code"
                         >
                           {copiedCode === branch.accessCode ? <Check size={13} /> : <Copy size={13} />}
@@ -1446,7 +1446,7 @@ export const EntityTeamView: React.FC = () => {
                   {/* Manager & SLA Status Ribbon */}
                   <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-purple-600 text-white font-bold text-xs flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">
                         {(branch.managerName || 'BM').slice(0, 2).toUpperCase()}
                       </div>
                       <div>
@@ -1467,7 +1467,7 @@ export const EntityTeamView: React.FC = () => {
                         Resolved: <strong className="text-emerald-600 dark:text-emerald-400">{branch.resolvedTicketsCount || 0}</strong>
                       </span>
                       <span className="text-slate-600 dark:text-slate-300">
-                        CSAT: <strong className="text-purple-600 dark:text-purple-400">{branch.ratingScore || 96}%</strong>
+                        CSAT: <strong className="text-emerald-600 dark:text-emerald-400">{branch.ratingScore || 96}%</strong>
                       </span>
                     </div>
                   </div>
@@ -1476,7 +1476,7 @@ export const EntityTeamView: React.FC = () => {
                   <div className="space-y-2.5 pt-1 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                        <Users size={12} className="text-purple-600 dark:text-purple-400" />
+                        <Users size={12} className="text-emerald-600 dark:text-emerald-400" />
                         <span>Internal Teams within Branch ({branch.teams?.length || 0})</span>
                       </span>
 
@@ -1489,7 +1489,7 @@ export const EntityTeamView: React.FC = () => {
                             setActiveBranchForTeam(branch.id);
                           }
                         }}
-                        className="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Plus size={11} />
                         <span>{isSelectedForTeam ? 'Close Team Form' : 'Add Team to Branch'}</span>
@@ -1498,8 +1498,8 @@ export const EntityTeamView: React.FC = () => {
 
                     {/* Inline Sub-Team Form */}
                     {isSelectedForTeam && (
-                      <div className="p-3.5 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 space-y-3 animate-fade-in">
-                        <span className="text-[10px] font-mono font-black uppercase text-purple-900 dark:text-purple-200 block">
+                      <div className="p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-3 animate-fade-in">
+                        <span className="text-[10px] font-mono font-black uppercase text-emerald-900 dark:text-emerald-200 block">
                           Add Internal Team to {branch.name}
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
@@ -1531,7 +1531,7 @@ export const EntityTeamView: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleAddSubTeam(branch.id)}
-                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs uppercase cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs uppercase cursor-pointer"
                           >
                             Save Team
                           </button>
@@ -1580,7 +1580,7 @@ export const EntityTeamView: React.FC = () => {
           <div className="lg:col-span-7 space-y-5">
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                <span className="text-[10px] font-black uppercase mono text-purple-600 dark:text-purple-400">
+                <span className="text-[10px] font-black uppercase mono text-emerald-600 dark:text-emerald-400">
                   Staff Onboarding Dispatch
                 </span>
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">
@@ -1602,7 +1602,7 @@ export const EntityTeamView: React.FC = () => {
                     value={inviteStaffName}
                     onChange={(e) => setInviteStaffName(e.target.value)}
                     placeholder="e.g. Joan Namubiru or Alex Kibet"
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
                   />
                 </div>
 
@@ -1619,7 +1619,7 @@ export const EntityTeamView: React.FC = () => {
                         setNewRoleDesc('');
                         setShowCreateRoleModal(true);
                       }}
-                      className="text-[10px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+                      className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
                     >
                       <Plus size={12} /> Create New Role
                     </button>
@@ -1635,7 +1635,7 @@ export const EntityTeamView: React.FC = () => {
                           onClick={() => setSelectedRoleId(role.id)}
                           className={`p-3 rounded-xl border cursor-pointer transition-all ${
                             isSelected
-                              ? 'border-purple-600 bg-purple-500/10 shadow-sm'
+                              ? 'border-emerald-600 bg-emerald-500/10 shadow-sm'
                               : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700'
                           }`}
                         >
@@ -1644,7 +1644,7 @@ export const EntityTeamView: React.FC = () => {
                               <span className={`w-2 h-2 rounded-full ${color.dot}`} />
                               {role.title}
                             </span>
-                            {isSelected && <Check size={14} className="text-purple-600 dark:text-purple-400" />}
+                            {isSelected && <Check size={14} className="text-emerald-600 dark:text-emerald-400" />}
                           </div>
                           <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
                             {role.description}
@@ -1652,7 +1652,7 @@ export const EntityTeamView: React.FC = () => {
                           <div className="flex items-center gap-1 mt-2 flex-wrap text-[9px] mono text-slate-400">
                             {role.permissions.can_reply && <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded">Replies</span>}
                             {role.permissions.can_resolve && <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded">Resolve</span>}
-                            {role.permissions.can_broadcast && <span className="bg-purple-500/10 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded">Notices</span>}
+                            {role.permissions.can_broadcast && <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded">Notices</span>}
                             {role.permissions.can_view_billing && <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded">Billing</span>}
                           </div>
                         </div>
@@ -1671,7 +1671,7 @@ export const EntityTeamView: React.FC = () => {
                       value={inviteDutyStation}
                       onChange={(e) => setInviteDutyStation(e.target.value)}
                       placeholder="e.g. VIP Counter, Night Shift, Bay 2"
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
 
@@ -1684,7 +1684,7 @@ export const EntityTeamView: React.FC = () => {
                       value={invitePhone}
                       onChange={(e) => setInvitePhone(e.target.value)}
                       placeholder="e.g. +256 700 000 000"
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
                     />
                   </div>
                 </div>
@@ -1695,7 +1695,7 @@ export const EntityTeamView: React.FC = () => {
                   className={`w-full py-3 rounded-xl font-black text-xs mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg ${
                     availableSeats <= 0
                       ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
-                      : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer shadow-purple-600/20'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-emerald-600/20'
                   }`}
                 >
                   <UserPlus size={16} />
@@ -1708,9 +1708,9 @@ export const EntityTeamView: React.FC = () => {
           {/* Right Column: Issued Code Preview or Onboarding Instructions */}
           <div className="lg:col-span-5 space-y-4">
             {issuedCodeData ? (
-              <div className="p-5 rounded-2xl bg-purple-500/10 border-2 border-purple-500/40 shadow-xl space-y-4 animate-scale-up">
+              <div className="p-5 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 shadow-xl space-y-4 animate-scale-up">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase mono text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/80 px-2.5 py-0.5 rounded-full border border-purple-300 dark:border-purple-800">
+                  <span className="text-[10px] font-black uppercase mono text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
                     Pass Generated
                   </span>
                   <button
@@ -1723,7 +1723,7 @@ export const EntityTeamView: React.FC = () => {
 
                 <div className="text-center space-y-1">
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">Staff Access Code</span>
-                  <div className="text-2xl font-black mono tracking-wider text-purple-900 dark:text-purple-200 bg-white/80 dark:bg-slate-900/90 p-3 rounded-xl border border-purple-300 dark:border-purple-700/60 shadow-inner">
+                  <div className="text-2xl font-black mono tracking-wider text-emerald-900 dark:text-emerald-200 bg-white/80 dark:bg-slate-900/90 p-3 rounded-xl border border-emerald-300 dark:border-emerald-700/60 shadow-inner">
                     {issuedCodeData.code}
                   </div>
                 </div>
@@ -1735,7 +1735,7 @@ export const EntityTeamView: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Assigned Role:</span>
-                    <strong className="text-purple-600 dark:text-purple-400">{issuedCodeData.roleTitle}</strong>
+                    <strong className="text-emerald-600 dark:text-emerald-400">{issuedCodeData.roleTitle}</strong>
                   </div>
                   {issuedCodeData.dutyStation && (
                     <div className="flex justify-between">
@@ -1764,7 +1764,7 @@ export const EntityTeamView: React.FC = () => {
 
                 <button
                   onClick={() => handleCopyDispatch(issuedCodeData)}
-                  className="w-full py-2 rounded-xl border border-purple-400 dark:border-purple-700 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-[11px] font-bold mono flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full py-2 rounded-xl border border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[11px] font-bold mono flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <Copy size={13} /> Copy Full SMS / WhatsApp Dispatch
                 </button>
@@ -1772,7 +1772,7 @@ export const EntityTeamView: React.FC = () => {
             ) : (
               <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
-                  <ShieldCheck size={16} className="text-purple-600 dark:text-purple-400" />
+                  <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400" />
                   Staff Account Verification Protocol
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -1780,15 +1780,15 @@ export const EntityTeamView: React.FC = () => {
                 </p>
                 <div className="space-y-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
                   <div className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                    <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
                     <span>Staff member opens CivicDuty Provider Gateway</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                    <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
                     <span>Enters their single-use Staff Access Code</span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                    <span className="w-4 h-4 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
                     <span>Terminal mounts with strict role permission limits</span>
                   </div>
                 </div>
@@ -1812,7 +1812,7 @@ export const EntityTeamView: React.FC = () => {
             </div>
             <button
               onClick={() => setActiveTab('invite')}
-              className="py-2 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs mono uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+              className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs mono uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
             >
               <UserPlus size={14} /> Add Staff
             </button>
@@ -1823,7 +1823,7 @@ export const EntityTeamView: React.FC = () => {
               const isOwner = member.staff_role === 'owner_admin' || member.is_admin;
               const assignedRole = entityRoles.find((r) => r.id === member.assigned_role_id) || {
                 title: member.title || (isOwner ? profTitle : 'Staff Officer'),
-                color: isOwner ? 'purple' : 'indigo',
+                color: isOwner ? 'emerald' : 'indigo',
                 permissions: member.permissions || {
                   can_reply: true,
                   can_resolve: true,
@@ -1890,7 +1890,7 @@ export const EntityTeamView: React.FC = () => {
                       </span>
                     )}
                     {assignedRole.permissions?.can_broadcast && (
-                      <span className="bg-purple-500/10 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded">
+                      <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded">
                         Bulletins
                       </span>
                     )}
@@ -1959,10 +1959,10 @@ export const EntityTeamView: React.FC = () => {
                   setEditingRoleId(null);
                   setNewRoleTitle('');
                   setNewRoleDesc('');
-                  setNewRoleColor('purple');
+                  setNewRoleColor('emerald');
                   setShowCreateRoleModal(true);
                 }}
-                className="py-2 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs mono uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+                className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs mono uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
               >
                 <Plus size={14} /> Create Custom Role
               </button>
@@ -1987,7 +1987,7 @@ export const EntityTeamView: React.FC = () => {
                           {role.title}
                         </span>
                         {role.is_custom && (
-                          <span className="text-[9px] mono uppercase bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 px-1.5 py-0.2 rounded font-bold">
+                          <span className="text-[9px] mono uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded font-bold">
                             Custom
                           </span>
                         )}
@@ -2047,7 +2047,7 @@ export const EntityTeamView: React.FC = () => {
                         setSelectedRoleId(role.id);
                         setActiveTab('invite');
                       }}
-                      className="text-purple-600 dark:text-purple-400 font-bold hover:underline"
+                      className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
                     >
                       + Invite Staff into this Role →
                     </button>
@@ -2073,7 +2073,7 @@ export const EntityTeamView: React.FC = () => {
             </div>
             <button
               onClick={() => setActiveTab('invite')}
-              className="py-2 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs mono uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+              className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs mono uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
             >
               <UserPlus size={14} /> Mint New Invite
             </button>
@@ -2119,12 +2119,12 @@ export const EntityTeamView: React.FC = () => {
                     </div>
 
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                      <span className="mono font-black text-xs text-purple-700 dark:text-purple-300 tracking-wider">
+                      <span className="mono font-black text-xs text-emerald-700 dark:text-emerald-300 tracking-wider">
                         {inv.code}
                       </span>
                       <button
                         onClick={() => handleCopyCode(inv.code)}
-                        className="text-xs text-slate-600 dark:text-slate-300 hover:text-purple-600 font-mono font-bold flex items-center gap-1"
+                        className="text-xs text-slate-600 dark:text-slate-300 hover:text-emerald-600 font-mono font-bold flex items-center gap-1"
                       >
                         {copiedCode === inv.code ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                         {copiedCode === inv.code ? 'Copied' : 'Copy'}
@@ -2161,7 +2161,7 @@ export const EntityTeamView: React.FC = () => {
                             dutyStation: inv.duty_station,
                           })
                         }
-                        className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+                        className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
                       >
                         <Copy size={12} /> Copy SMS
                       </button>
@@ -2205,7 +2205,7 @@ export const EntityTeamView: React.FC = () => {
                 className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3"
               >
                 <div>
-                  <strong className="text-purple-600 dark:text-purple-400 block font-mono">
+                  <strong className="text-emerald-600 dark:text-emerald-400 block font-mono">
                     Staff Code Minted: [{inv.code}]
                   </strong>
                   <span className="text-slate-600 dark:text-slate-300">
@@ -2225,7 +2225,7 @@ export const EntityTeamView: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <span className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                   <Sliders size={16} />
                 </span>
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
@@ -2251,7 +2251,7 @@ export const EntityTeamView: React.FC = () => {
                   value={newRoleTitle}
                   onChange={(e) => setNewRoleTitle(e.target.value)}
                   placeholder="e.g. VIP Floor Lead, Lead Pharmacist, Shift Cashier"
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white outline-none"
                 />
               </div>
 
@@ -2264,7 +2264,7 @@ export const EntityTeamView: React.FC = () => {
                   value={newRoleDesc}
                   onChange={(e) => setNewRoleDesc(e.target.value)}
                   placeholder="Brief summary of duties and accountability..."
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-purple-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none resize-none"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none resize-none"
                 />
               </div>
 
@@ -2281,7 +2281,7 @@ export const EntityTeamView: React.FC = () => {
                       onClick={() => setNewRoleColor(c.id)}
                       className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1.5 ${
                         newRoleColor === c.id
-                          ? `${c.bg} ${c.text} ${c.border} ring-2 ring-purple-500`
+                          ? `${c.bg} ${c.text} ${c.border} ring-2 ring-emerald-500`
                           : 'bg-slate-50 dark:bg-slate-950 text-slate-500 border-slate-200 dark:border-slate-800'
                       }`}
                     >
@@ -2311,7 +2311,7 @@ export const EntityTeamView: React.FC = () => {
                         }
                         className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
                           isChecked
-                            ? 'bg-purple-500/10 border-purple-500/40'
+                            ? 'bg-emerald-500/10 border-emerald-500/40'
                             : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 opacity-70'
                         }`}
                       >
@@ -2319,7 +2319,7 @@ export const EntityTeamView: React.FC = () => {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => {}}
-                          className="mt-0.5 rounded text-purple-600 focus:ring-purple-500"
+                          className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500"
                         />
                         <div>
                           <strong className="text-xs text-slate-900 dark:text-white block">
@@ -2345,7 +2345,7 @@ export const EntityTeamView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="py-2.5 px-5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black mono uppercase tracking-wider shadow-md"
+                  className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black mono uppercase tracking-wider shadow-md"
                 >
                   {editingRoleId ? 'Update Role' : 'Save Role'}
                 </button>

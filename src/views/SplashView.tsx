@@ -11,11 +11,17 @@ import {
   KeyRound,
   X,
   ShieldAlert,
+  Search,
+  Clock,
+  HelpCircle,
+  FileCheck2,
+  MessageCircle,
 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { TrafficLightLogo } from '../components/TrafficLightLogo';
 import { HeaderSettingsMenu } from '../components/HeaderSettingsMenu';
 import { InstallPwaBanner } from '../components/InstallPwaBanner';
+import { StatutoryPipelineCard } from '../components/StatutoryPipelineCard';
 import { Footer } from '../components/Footer';
 import { trackVisitorInteraction } from '../services/analyticsService';
 import {
@@ -28,6 +34,7 @@ export const SplashView: React.FC = () => {
   const {
     go,
     posts,
+    setActivePost,
     ensureCitizenSession,
     t,
   } = useApp();
@@ -71,15 +78,25 @@ export const SplashView: React.FC = () => {
         : target;
     trackVisitorInteraction('cta_click', `Clicked ${targetLabel}`, targetLabel);
 
-    if (isPlatformUnlocked()) {
-      if (target === 'ob1') ensureCitizenSession();
-      go(target as any);
+    // FULL RESTRICTION ENFORCED DURING PREVIEW/DEVELOPMENT (INCLUDING CITIZENS):
+    if (!isPlatformUnlocked()) {
+      setPendingRoute(target);
+      setAccessCodeInput('');
+      setAccessError(null);
+      setShowAccessModal(true);
       return;
     }
-    setPendingRoute(target);
-    setAccessCodeInput('');
-    setAccessError(null);
-    setShowAccessModal(true);
+
+    if (target === 'ob1') {
+      go('ob1');
+      return;
+    }
+    if (target === 'feed') {
+      ensureCitizenSession();
+      go('feed');
+      return;
+    }
+    go(target as any);
   };
 
   const handleVerifyAccessCode = (e?: React.FormEvent) => {
@@ -157,7 +174,7 @@ export const SplashView: React.FC = () => {
           </p>
         </div>
 
-        {/* Workspace Portal Selection Card — Mobile-First Uncrowded Layout */}
+        {/* Workspace Portal Selection Card — Clean Mobile-First Layout */}
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400">
@@ -171,7 +188,7 @@ export const SplashView: React.FC = () => {
           {/* 1. CITIZEN PORTAL (Primary Full-Width Action) */}
           <button
             onClick={() => handlePortalEntry('ob1')}
-            className="w-full min-h-[58px] group p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white border border-emerald-500/30 flex items-center justify-between gap-3 cursor-pointer transition-all text-left"
+            className="w-full min-h-[58px] group p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white border border-emerald-500/30 flex items-center justify-between gap-3 cursor-pointer transition-all text-left shadow-sm"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-lg bg-black/15 flex items-center justify-center shrink-0">
@@ -182,7 +199,7 @@ export const SplashView: React.FC = () => {
                   {t('citizenPortal')}
                 </span>
                 <span className="text-[11px] text-emerald-50 block leading-snug mt-0.5">
-                  Report issues, track SLAs &amp; verify public proof
+                  {t('citizenDesc')}
                 </span>
               </div>
             </div>
@@ -198,18 +215,15 @@ export const SplashView: React.FC = () => {
               onClick={() => handlePortalEntry('ob2')}
               className="min-h-[84px] p-3 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600 active:scale-[0.99] text-left flex flex-col justify-between gap-2 cursor-pointer transition-all group"
             >
-              <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                  <Landmark size={15} strokeWidth={1.75} />
-                </div>
-                <ArrowRight size={13} strokeWidth={1.75} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                <Landmark size={15} strokeWidth={1.75} />
               </div>
               <div>
                 <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 leading-tight">
                   {t('govDesk')}
                 </div>
                 <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  Ministries &amp; Districts
+                  {t('govDesc')}
                 </div>
               </div>
             </button>
@@ -218,27 +232,32 @@ export const SplashView: React.FC = () => {
               onClick={() => handlePortalEntry('entity')}
               className="min-h-[84px] p-3 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-slate-400 dark:hover:border-slate-600 active:scale-[0.99] text-left flex flex-col justify-between gap-2 cursor-pointer transition-all group"
             >
-              <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                  <Building2 size={15} strokeWidth={1.75} />
-                </div>
-                <ArrowRight size={13} strokeWidth={1.75} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                <Building2 size={15} strokeWidth={1.75} />
               </div>
               <div>
                 <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 leading-tight">
                   {t('entityHub')}
                 </div>
                 <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                  Utilities, Banks &amp; Care
+                  {t('entityDesc')}
                 </div>
               </div>
             </button>
           </div>
         </div>
 
-        {/* Live Telemetry & 5-Stage Pipeline Card */}
+        {/* Live National Ledger Telemetry Grid */}
         <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
-          {/* National Ledger Telemetry Grid */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400">
+              National Ledger Telemetry
+            </span>
+            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+              Live Sovereign Metrics
+            </span>
+          </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl p-3">
               <div className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100 leading-none">{total}</div>
@@ -257,35 +276,10 @@ export const SplashView: React.FC = () => {
               <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider mt-1.5">{t('nations')}</div>
             </div>
           </div>
-
-          {/* 5-Stage Sovereign Civic Loop Pipeline */}
-          <div className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
-            <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1.5 font-semibold">
-                <Layers size={12} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400" />
-                <span>5-Stage Statutory Pipeline</span>
-              </span>
-              <span>SHA-256 Ledger</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-1.5 pt-1">
-              {[t('loopSpeaks'), t('loopServes'), t('loopProof'), t('loopHeard'), t('loopResolved')].map((s, i) => (
-                <div
-                  key={i}
-                  className={`p-2 rounded-lg border text-[10px] font-mono leading-snug flex sm:flex-col items-center sm:items-start gap-2 sm:gap-1 ${
-                    i === 4
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-semibold'
-                      : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  <span className="w-4 h-4 rounded bg-[#f1f3f4] dark:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-[9px] font-bold flex items-center justify-center shrink-0">
-                    {i + 1}
-                  </span>
-                  <span>{s}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
+
+        {/* 5-Stage Statutory Pipeline Card (Dual Public & Private Tracks) */}
+        <StatutoryPipelineCard variant="full" />
       </main>
 
       {/* Master Platform Access Code Modal */}

@@ -1,17 +1,17 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, doc, getDoc } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
 
 // CRITICAL: Must use firestoreDatabaseId from firebase-applet-config.json
-// Use initializeFirestore with experimentalAutoDetectLongPolling to handle restricted iframe/proxy environments gracefully
+// Use initializeFirestore with experimentalForceLongPolling to handle restricted iframe/proxy environments gracefully
 export const db = initializeFirestore(
   app,
   {
-    experimentalAutoDetectLongPolling: true,
+    experimentalForceLongPolling: true,
     ignoreUndefinedProperties: true,
   },
   firebaseConfig.firestoreDatabaseId
@@ -69,13 +69,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Test database connection on startup
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    await getDoc(doc(db, 'test', 'connection'));
     console.log('[OK] Cloud Firestore connected successfully.');
     return true;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes('offline') || msg.includes('unavailable')) {
-      console.info('Cloud Firestore active in resilient offline-first mode. Reconnecting in background...');
+      console.info('Cloud Firestore active in resilient offline-first mode. Operating with local cache.');
     } else {
       console.warn('Firestore connectivity notice:', msg);
     }

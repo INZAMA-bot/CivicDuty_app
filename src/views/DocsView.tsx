@@ -58,6 +58,7 @@ import {
   isPlatformUnlocked,
   unlockPlatform,
 } from '../constants/masterAuth';
+import { StatutoryPipelineCard } from '../components/StatutoryPipelineCard';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
@@ -1562,6 +1563,9 @@ export const DocsView: React.FC = () => {
       {/* ========================================================= */}
       {activeTab === 'architecture' && (
         <div className="space-y-4">
+          {/* Statutory 5-Stage Pipeline · Sovereign Dual Track */}
+          <StatutoryPipelineCard variant="full" />
+
           <div className="p-4 sm:p-5 space-y-3.5 border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] rounded-xl">
             <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2.5">
               <div>

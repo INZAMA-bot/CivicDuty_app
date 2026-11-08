@@ -57,6 +57,7 @@ import { LegalTrustModal } from './components/LegalTrustModal';
 import { GlobalSocialModals } from './components/GlobalSocialModals';
 import { OfflineSyncHUD } from './components/OfflineSyncHUD';
 import { isPlatformUnlocked } from './constants/masterAuth';
+import { ViewType } from './types';
 
 const StudioRightInspector: React.FC = () => {
   const { user, ensureCitizenSession, posts, go, trafficSignalFilter, setTrafficSignalFilter } = useApp();
@@ -244,15 +245,20 @@ const AppContent: React.FC = () => {
       ['gayaza_hs', 'namagunga', 'cafe_javas', 'mak_univ', 'mulago_hosp', 'nakasero_hosp', 'serena_hotel_kla', 'stanbic', 'centenary_bank', 'kotsa_taxi', 'kigo_contractors'].includes(activeUser.dept || '')
   );
 
-  // Platform perimeter guard: unauthorized visitors are strictly contained to splash, docs lock, or cd-ops lock
+  // Platform perimeter guard: administrative & ministerial consoles require master authorization
+  const RESTRICTED_ADMIN_VIEWS: ViewType[] = [
+    'gov_inbox',
+    'gov_reply',
+    'gov_projects',
+    'gov_admin',
+    'ministerial_command',
+    'company_management',
+    'cd_ops',
+    'ps_executive_desk',
+  ];
+
   React.useEffect(() => {
-    if (
-      !isPlatformUnlocked() &&
-      view !== 'splash' &&
-      view !== 'company_management' &&
-      view !== 'cd_ops' &&
-      view !== 'docs'
-    ) {
+    if (!isPlatformUnlocked() && RESTRICTED_ADMIN_VIEWS.includes(view)) {
       go('splash');
     }
   }, [view, go]);

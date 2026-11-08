@@ -33,6 +33,7 @@ interface MediaCardProps {
     duration: string;
     language?: string;
     transcript?: string;
+    audio_url?: string;
   };
   onToast?: (msg: string) => void;
 }
@@ -142,12 +143,15 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
   const mediaVoice = safeMedia.find((m) => m.type === 'voice');
 
   const hasVoice = Boolean(postVoiceNote || mediaVoice);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+
   const effectiveVoice = {
     duration: postVoiceNote?.duration || mediaVoice?.duration || '1:12',
     language: postVoiceNote?.language || 'Vernacular Field Audio',
     transcript:
       postVoiceNote?.transcript ||
       '“Verified citizen field audio testimony attached to this dispatch. Full voice waveform and statutory transcript archived on the public ledger.”',
+    audio_url: postVoiceNote?.audio_url,
     waveform:
       mediaVoice?.waveform || [
         4, 7, 5, 9, 6, 8, 4, 7, 10, 5, 8, 6, 9, 4, 7, 9, 5, 3, 7, 9, 6, 4, 8, 5, 10, 7, 4, 8, 6, 8, 5, 3, 7, 9, 4, 6,
@@ -155,7 +159,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
   };
 
   useEffect(() => {
-    if (!audioState.playing) return;
+    if (!audioState.playing || effectiveVoice.audio_url) return;
     const interval = setInterval(() => {
       setAudioState((prev) => {
         if (prev.progress >= 100) {
@@ -166,13 +170,37 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
       });
     }, 80);
     return () => clearInterval(interval);
-  }, [audioState.playing, audioState.speed]);
+  }, [audioState.playing, audioState.speed, effectiveVoice.audio_url]);
 
   if (images.length === 0 && videos.length === 0 && docs.length === 0 && !hasVoice) {
     return null;
   }
 
   const toggleAudioPlay = () => {
+    if (effectiveVoice.audio_url) {
+      if (!audioElementRef.current) {
+        audioElementRef.current = new Audio(effectiveVoice.audio_url);
+        audioElementRef.current.playbackRate = audioState.speed;
+        audioElementRef.current.ontimeupdate = () => {
+          if (audioElementRef.current && audioElementRef.current.duration) {
+            const p = (audioElementRef.current.currentTime / audioElementRef.current.duration) * 100;
+            setAudioState((prev) => ({ ...prev, progress: p }));
+          }
+        };
+        audioElementRef.current.onended = () => {
+          setAudioState((prev) => ({ ...prev, playing: false, progress: 0 }));
+        };
+      }
+      if (audioState.playing) {
+        audioElementRef.current.pause();
+        setAudioState((prev) => ({ ...prev, playing: false }));
+      } else {
+        audioElementRef.current.play().catch((err) => console.warn('Audio play error:', err));
+        setAudioState((prev) => ({ ...prev, playing: true }));
+      }
+      return;
+    }
+
     setAudioState((prev) => ({
       ...prev,
       playing: !prev.playing,
@@ -183,7 +211,11 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
   const cycleSpeed = () => {
     const speeds = [1, 1.25, 1.5, 2];
     const nextIdx = (speeds.indexOf(audioState.speed) + 1) % speeds.length;
-    setAudioState((prev) => ({ ...prev, speed: speeds[nextIdx] }));
+    const newSpeed = speeds[nextIdx];
+    if (audioElementRef.current) {
+      audioElementRef.current.playbackRate = newSpeed;
+    }
+    setAudioState((prev) => ({ ...prev, speed: newSpeed }));
   };
 
   const currentStageImage = images[activeStageImgIdx] || images[0];
@@ -529,19 +561,19 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
         const activeTranscriptText = getVoiceTranslation(voiceLang, effectiveVoice.transcript);
 
         return (
-          <div className="rounded-xl overflow-hidden border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50/70 dark:bg-indigo-950/30 p-3 sm:p-4 space-y-3 shadow-2xs">
+          <div className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] p-3 sm:p-4 space-y-3">
             {/* Header: Title, Badge, and Speed */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <span className="w-7 h-7 rounded-lg bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 flex items-center justify-center shrink-0">
                   <Volume2 size={14} />
                 </span>
                 <div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-indigo-950 dark:text-indigo-200">
+                    <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                       AUDIO TESTIMONY · {effectiveVoice.language}
                     </span>
-                    <span className="px-1.5 py-0.2 rounded bg-indigo-200/80 dark:bg-indigo-900/60 text-indigo-900 dark:text-indigo-300 text-[9px] font-mono font-bold">
+                    <span className="px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] font-mono font-bold">
                       VERIFIED MIC
                     </span>
                   </div>
@@ -555,23 +587,23 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                 <button
                   type="button"
                   onClick={cycleSpeed}
-                  className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-300 hover:border-indigo-400 cursor-pointer transition-colors"
+                  className="px-2 py-0.5 rounded-md bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 hover:border-slate-400 cursor-pointer transition-colors"
                   title="Change Audio Playback Speed"
                 >
                   {audioState.speed}x Speed
                 </button>
-                <span className="px-2 py-0.5 rounded-md bg-indigo-600/10 border border-indigo-500/30 text-[10px] font-mono font-bold text-indigo-800 dark:text-indigo-300">
+                <span className="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono font-bold text-slate-800 dark:text-slate-200">
                   {effectiveVoice.duration}
                 </span>
               </div>
             </div>
 
             {/* Interactive Waveform & Play Control Row */}
-            <div className="flex items-center gap-3 bg-white dark:bg-slate-900/90 p-2.5 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 shadow-2xs">
+            <div className="flex items-center gap-3 bg-white dark:bg-[#161a22] p-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36]">
               <button
                 type="button"
                 onClick={toggleAudioPlay}
-                className="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-sm transition-colors cursor-pointer"
+                className="w-10 h-10 rounded-xl bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 flex items-center justify-center shrink-0 hover:opacity-90 transition-opacity cursor-pointer"
                 title={audioState.playing ? 'Pause Audio' : 'Play Audio Testimony'}
               >
                 {audioState.playing ? <Pause size={17} /> : <Play size={17} className="ml-0.5" />}
@@ -590,8 +622,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         style={{ height: `${Math.max(18, Math.min(100, h * 10))}%` }}
                         className={`flex-1 rounded-full transition-all cursor-pointer ${
                           isPlayed
-                            ? 'bg-indigo-600 dark:bg-indigo-400'
-                            : 'bg-indigo-200 dark:bg-slate-700 hover:bg-indigo-400'
+                            ? 'bg-slate-800 dark:bg-slate-200'
+                            : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-400'
                         }`}
                         title={`Jump to ${Math.round(pct)}%`}
                       />
@@ -610,12 +642,12 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
 
             {/* Multi-Language Translation & Transcript Suite */}
             {effectiveVoice.transcript && (
-              <div className="rounded-xl bg-white/95 dark:bg-slate-900/95 border border-indigo-200/70 dark:border-indigo-900/50 overflow-hidden shadow-2xs">
+              <div className="rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] overflow-hidden">
                 {/* Translation Control Bar */}
-                <div className="px-3 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between gap-1.5">
+                <div className="px-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-1.5">
                   <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-x-auto scrollbar-none py-0.5">
-                    <Globe size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span className="text-[10px] font-mono font-bold text-indigo-950 dark:text-indigo-200 shrink-0">
+                    <Globe size={12} className="text-slate-500 shrink-0" />
+                    <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0">
                       Translate:
                     </span>
                     {/* Quick Common East African Languages */}
@@ -630,8 +662,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                           }}
                           className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold transition-all cursor-pointer ${
                             voiceLang === code
-                              ? 'bg-indigo-600 text-white shadow-xs'
-                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-100/60 dark:hover:bg-slate-700'
+                              ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                           }`}
                         >
                           {code}
@@ -646,7 +678,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         setVoiceLang(e.target.value as LanguageCode);
                         setShowTranscript(true);
                       }}
-                      className="bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer max-w-[100px] truncate shrink-0"
+                      className="bg-white dark:bg-slate-800 border border-[#e3e6ea] dark:border-[#262b36] rounded px-1.5 py-0.5 text-[9.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer max-w-[100px] truncate shrink-0"
                       title="Select any language translation"
                     >
                       {ALL_LANGUAGES.map((l) => (
@@ -665,7 +697,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                         navigator.clipboard.writeText(activeTranscriptText);
                         onToast?.(`Copied ${voiceLang} transcript to clipboard!`);
                       }}
-                      className="p-1 rounded text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                      className="p-1 rounded text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
                       title="Copy transcript text"
                     >
                       <Copy size={12} />
@@ -674,7 +706,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                     <button
                       type="button"
                       onClick={() => setShowTranscript((prev) => !prev)}
-                      className="text-[9.5px] font-mono font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-0.5 hover:underline cursor-pointer"
+                      className="text-[9.5px] font-mono font-bold text-slate-700 dark:text-slate-300 flex items-center gap-0.5 hover:underline cursor-pointer"
                     >
                       <span>{showTranscript ? 'Hide' : 'Show'}</span>
                       {showTranscript ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -685,8 +717,8 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
                 {/* Transcript Body */}
                 {showTranscript && (
                   <div className="p-3 space-y-1.5 animate-fade-in">
-                    <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 border-b border-indigo-50 dark:border-indigo-950/60 pb-1">
-                      <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold">
+                    <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 border-b border-[#e3e6ea] dark:border-[#262b36] pb-1">
+                      <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-bold">
                         <CheckCircle2 size={10} />
                         <span>{voiceLang === 'EN' ? 'Original Ground Transcript' : `${voiceLang} Multi-Language Translation`}</span>
                       </span>

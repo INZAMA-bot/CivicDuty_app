@@ -546,12 +546,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [view, setView] = useState<ViewType>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.replace('#', '');
-      // Only honor direct deep-links if the platform has been master-authorized
+      // Public citizen routes open to all:
+      if (hash === 'feed') return 'feed';
+      if (hash === 'docs') return 'docs';
+      if (hash.startsWith('track-') || hash.startsWith('post-')) return 'post_detail';
+      // Administrative consoles requiring master key authorization:
       if (isPlatformUnlocked()) {
         if (hash === 'advertising' || hash === 'branding' || hash === 'transit_preview' || hash === 'livery') return 'transit_preview';
-        if (hash === 'feed') return 'feed';
-        if (hash === 'docs') return 'docs';
         if (hash === 'cd_ops' || hash === 'company_management') return 'company_management';
+        if (hash === 'gov_inbox') return 'gov_inbox';
+        if (hash === 'ministerial_command') return 'ministerial_command';
       }
     }
     return 'splash';
@@ -1051,6 +1055,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const [activePost, setActivePost] = useState<Post | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '');
+      if (hash.startsWith('track-') || hash.startsWith('post-')) {
+        const idSlice = hash.replace('track-', '').replace('post-', '').toUpperCase();
+        const found = posts.find(
+          (p) =>
+            p.id.toUpperCase().endsWith(idSlice) ||
+            p.id.toUpperCase() === idSlice ||
+            p.id.slice(-6).toUpperCase() === idSlice
+        );
+        if (found) {
+          setActivePost(found);
+          setView('post_detail');
+        }
+      }
+    }
+  }, [posts]);
   const [activeDept, setActiveDept] = useState<string | null>(null);
   const [activeDeptCountry, setActiveDeptCountry] = useState<CountryCode | null>(null);
   const [guideModalOpen, setGuideModalOpen] = useState<boolean>(false);
