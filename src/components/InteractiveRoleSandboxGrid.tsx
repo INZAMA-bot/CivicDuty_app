@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES, allDepts } from '../data/countries';
 import { getNationalRolloutArrangements } from '../data/tiers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { CountryCode } from '../types';
 import {
   HardHat,
@@ -48,6 +49,7 @@ export const InteractiveRoleSandboxGrid: React.FC<InteractiveRoleSandboxGridProp
     flag: 'UG',
   };
   const rolloutArrangement = getNationalRolloutArrangements(activeCountry);
+  const gov = getCountryGovernanceSchema(activeCountry);
 
   const finish = () => {
     if (onAfterSelect) onAfterSelect();
@@ -139,19 +141,19 @@ export const InteractiveRoleSandboxGrid: React.FC<InteractiveRoleSandboxGridProp
           onClick={() => {
             const depts = allDepts(activeCountry);
             const consumerDept = depts.find((d) => d.lane === 'consumer') || depts[0];
-            const targetId = consumerDept?.id || 'kcca';
+            const targetId = consumerDept?.id || gov.superadminDeptId;
             if (!isEntityClaimed(targetId) && consumerDept) {
               claimEntity({
                 deptId: targetId,
                 country: activeCountry,
                 businessName: consumerDept.name,
-                representativeName: 'Sarah Namukasa (Managing Director)',
+                representativeName: `${gov.utilityAgency.execLeadName} (Managing Director)`,
                 officialEmail: `care@${targetId}.org`,
-                phone: '+256 700 112 233',
+                phone: gov.samplePhone,
                 role: 'Head of Customer Care & Operations',
                 plan: 'district',
                 monthlyFee: 89,
-                customLocation: `Plot 18 Central Avenue, ${countryMeta.name} HQ`,
+                customLocation: `${gov.sampleJurisdictions[0] || countryMeta.name} HQ`,
                 customDescription: consumerDept.full,
               });
             }
@@ -192,7 +194,7 @@ export const InteractiveRoleSandboxGrid: React.FC<InteractiveRoleSandboxGridProp
               name: rolloutArrangement.superadminSubtitle || `${countryMeta.name} National Superadmin`,
               country: activeCountry,
               role: 'platform_admin',
-              dept: 'molg',
+              dept: gov.superadminDeptId,
               dept_label:
                 rolloutArrangement.superadminMinistry || `${countryMeta.name} Ministry of Local Government`,
               scope: activeCountry,
@@ -233,7 +235,7 @@ export const InteractiveRoleSandboxGrid: React.FC<InteractiveRoleSandboxGridProp
               <span className="text-[10px] font-mono font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
                 <Users size={13} /> Line Ministry PS &amp; Minister
               </span>
-              <span className="text-[9.5px] font-mono text-slate-400">PFMA Dual-Mode</span>
+              <span className="text-[9.5px] font-mono text-slate-400">{activeCountry === 'UG' ? 'PFMA Dual-Mode' : 'Statutory Dual-Mode'}</span>
             </div>
             <div className="text-xs font-bold text-slate-900 dark:text-white">
               PS Write Authority vs Minister Read-Only

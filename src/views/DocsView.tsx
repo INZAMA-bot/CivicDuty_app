@@ -59,6 +59,8 @@ import {
   unlockPlatform,
 } from '../constants/masterAuth';
 import { StatutoryPipelineCard } from '../components/StatutoryPipelineCard';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { getCountryPerks } from '../data/countryPerks';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
@@ -112,6 +114,11 @@ export const DocsView: React.FC = () => {
   } | null>(null);
 
   const countryData = getCountryPitch(pitchCountry);
+  const gov = getCountryGovernanceSchema(pitchCountry);
+  const pitchPerks = getCountryPerks(pitchCountry);
+  const isPitchUg = pitchCountry.toUpperCase() === 'UG';
+  const ussdCode = isPitchUg ? '*3030#' : `*3030*${gov.phonePrefix.replace('+', '')}#`;
+  const privacyLaw = isPitchUg ? 'Data Protection & Privacy Act 2019' : `${countryData.name} statutory Data Protection & Privacy laws`;
 
   // Map icons and visuals dynamically for slides
   const baseSlides = countryData.slides.map((s) => {
@@ -693,7 +700,7 @@ export const DocsView: React.FC = () => {
               </div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">4. Frontline Scout Patrol</h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Certified Bodaboda stages and community scouts conducting routine corridor safety and road hazard sweeps.
+                Certified {isPitchUg ? 'Bodaboda stages' : 'Frontline Scout hubs'} and community scouts conducting routine corridor safety and road hazard sweeps.
               </p>
             </div>
           </div>
@@ -720,16 +727,22 @@ export const DocsView: React.FC = () => {
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">10% – 30% Off</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">🚌 Kiira Motors Kayoola EVS Bus Pass</span>
+                  <span className="text-slate-800 dark:text-slate-200">
+                    🚌 {isPitchUg ? 'Kiira Motors Kayoola EVS Bus Pass' : `${pitchPerks.digitalPerks[3]?.brand || 'Public Transit'} Pass`}
+                  </span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">Free 1-Day Pass</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">💧 NWSC Water Bill &amp; Umeme Power</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">15,000 UGX Credit</span>
+                  <span className="text-slate-800 dark:text-slate-200">
+                    💧 {pitchPerks.digitalPerks[1]?.brand || 'Water Utility'} &amp; ⚡ {pitchPerks.digitalPerks[2]?.brand || 'Power Utility'}
+                  </span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">15,000 {gov.currency} Credit</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">📱 MTN / Airtel Mobile Airtime &amp; Data</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">5,000 UGX Bundle</span>
+                  <span className="text-slate-800 dark:text-slate-200">
+                    📱 {pitchPerks.digitalPerks[0]?.brand || 'Mobile Carrier'} Airtime &amp; Data
+                  </span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">5,000 {gov.currency} Bundle</span>
                 </div>
               </div>
             </div>
@@ -750,16 +763,16 @@ export const DocsView: React.FC = () => {
               </p>
               <div className="space-y-1.5 text-xs font-mono">
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">1. Parish Chief Local Vault</span>
-                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Parish Top-3 Champions</span>
+                  <span className="text-slate-800 dark:text-slate-200">1. {gov.tier1Short} Local Vault</span>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">{gov.tier1UnitLabel} Top-3 Champions</span>
                 </div>
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-                  <span className="text-slate-800 dark:text-slate-200">2. Workstation / Stage Vault</span>
+                  <span className="text-slate-800 dark:text-slate-200">2. Workstation / Hub Vault</span>
                   <span className="text-[11px] text-slate-500">15-Peer Auto-Spawn &amp; Tips</span>
                 </div>
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
                   <span className="text-slate-800 dark:text-slate-200">3. Individual Citizen Vault</span>
-                  <span className="text-[11px] text-slate-500">Parish-Locked XP Wallet</span>
+                  <span className="text-[11px] text-slate-500">{gov.tier1UnitLabel}-Locked XP Wallet</span>
                 </div>
                 <div className="p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
                   <span className="text-slate-800 dark:text-slate-200">4. Private Provider Vault</span>
@@ -786,10 +799,10 @@ export const DocsView: React.FC = () => {
               <BookOpen size={13} /> Citizen Rights &amp; Offline Accessibility Standard
             </span>
             <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              Public Citizen Handbook &amp; USSD *3030# Offline Guide
+              Public Citizen Handbook &amp; USSD {ussdCode} Offline Guide
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
-              CivicDuty guarantees that every citizen—whether carrying a modern smartphone or a basic 2G feature phone (Kabiriti)—has equal, sovereign access to report public hazards, track statutory response times, and confirm resolutions.
+              CivicDuty guarantees that every citizen—whether carrying a modern smartphone or a basic 2G feature phone—has equal, sovereign access to report public hazards, track statutory response times, and confirm resolutions in {countryData.name}.
             </p>
           </div>
 
@@ -799,9 +812,9 @@ export const DocsView: React.FC = () => {
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <Lock size={16} />
               </div>
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Zero Plain-Text NIN Storage</h4>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Zero Plain-Text {countryData.idLabel} Storage</h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Under the Data Protection and Privacy Act 2019, your raw National ID Number (NIN) or Passport is never stored in plain text. A cryptographic SHA-256 digest is generated with an anonymized fragment (e.g. <code>#9028</code>).
+                Under {privacyLaw}, your raw {countryData.idLabel} or Passport is never stored in plain text. A cryptographic SHA-256 digest is generated with an anonymized fragment (e.g. <code>#9028</code>).
               </p>
             </div>
 
@@ -821,12 +834,12 @@ export const DocsView: React.FC = () => {
               </div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">Whistleblower Protection</h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Whistleblowers reporting corruption or municipal extortion are shielded under the Whistleblowers Protection Act 2010. Identity masking is irreversible across public feeds.
+                Whistleblowers reporting corruption or municipal extortion are shielded under {gov.ombudsman.whistleblowingAct} with automatic referral to {gov.ombudsman.name} ({gov.ombudsman.shortName}). Identity masking is irreversible across public feeds.
               </p>
             </div>
           </div>
 
-          {/* USSD *3030# Interactive Flow Card */}
+          {/* USSD Interactive Flow Card */}
           <div className="p-5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
             <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
               <div>
@@ -834,7 +847,7 @@ export const DocsView: React.FC = () => {
                   <Smartphone size={13} /> Universal Telecom Ingress
                 </span>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
-                  Offline USSD *3030# Kabiriti Protocol
+                  Offline USSD {ussdCode} Feature Phone Protocol
                 </h4>
               </div>
               <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold">
@@ -845,8 +858,8 @@ export const DocsView: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 font-mono text-xs">
               <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">STEP 1: DIAL</span>
-                <p className="text-slate-900 dark:text-white font-bold">*3030#</p>
-                <p className="text-[10px] text-slate-500">Free call on MTN, Airtel, or Uganda Telecom.</p>
+                <p className="text-slate-900 dark:text-white font-bold">{ussdCode}</p>
+                <p className="text-[10px] text-slate-500">Toll-free USSD session across {countryData.name} mobile carriers.</p>
               </div>
 
               <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
@@ -856,9 +869,9 @@ export const DocsView: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">STEP 3: PARISH DISPATCH</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">STEP 3: {gov.tier1UnitLabel.toUpperCase()} DISPATCH</span>
                 <p className="text-slate-900 dark:text-white font-bold">Auto-Routed</p>
-                <p className="text-[10px] text-slate-500">Telecom cell tower pings closest Parish Chief.</p>
+                <p className="text-[10px] text-slate-500">Telecom cell tower pings closest {gov.tier1Short}.</p>
               </div>
 
               <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
@@ -1167,7 +1180,7 @@ export const DocsView: React.FC = () => {
                     type="tel"
                     value={partnerPhone}
                     onChange={(e) => setPartnerPhone(e.target.value)}
-                    placeholder="+256 / +254 / +250 official contact"
+                    placeholder={`${gov.samplePhone} official contact`}
                     className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-white text-xs rounded-lg p-2.5 font-mono focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -1184,7 +1197,7 @@ export const DocsView: React.FC = () => {
                     <option value="national">Whole-of-Government National Rollout</option>
                     <option value="regional">City / Municipal Council Pilot</option>
                     <option value="utility">Public Utility Integration ({countryData.agenciesUtility.slice(0, 2).join(', ')})</option>
-                    <option value="whistleblower">Anti-Corruption &amp; Whistleblower Pipeline (IGG/Ombudsman)</option>
+                    <option value="whistleblower">Anti-Corruption &amp; Whistleblower Pipeline ({gov.ombudsman.shortName})</option>
                     <option value="briefing">Request Executive Ministerial Briefing</option>
                   </select>
                 </div>
@@ -1262,8 +1275,8 @@ export const DocsView: React.FC = () => {
               </div>
 
               <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-3 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <span className="text-slate-900 dark:text-white font-bold block">Senior Delegate Hotline</span>
-                <span className="text-slate-900 dark:text-white font-bold block">+256 (0) 414 550 100 / +250 788 123 456</span>
+                <span className="text-slate-900 dark:text-white font-bold block">{countryData.name} Delegate Hotline</span>
+                <span className="text-slate-900 dark:text-white font-bold block">{gov.samplePhone} · gov-partnerships@civicduty.org</span>
                 <p className="text-[9.5px] text-slate-500 dark:text-slate-400">Encrypted WhatsApp &amp; telephone liaison for executive scheduling.</p>
               </div>
             </div>
@@ -1524,7 +1537,9 @@ export const DocsView: React.FC = () => {
                     num: '04',
                     title: 'Broadcast Service Advisories & Build Public Trust Score',
                     desc: 'Post verified operational advisories to patrons and maintain SLA resolution speeds to elevate your public institutional trust score.',
-                    detail: 'Complies with statutory supervisory authorities (UNBS, NDA, UCC, BoU, MoES).',
+                    detail: isPitchUg
+                      ? 'Complies with statutory supervisory authorities (UNBS, NDA, UCC, BoU, MoES).'
+                      : `Complies with ${countryData.name} statutory sector regulators and ministries.`,
                     icon: <ShieldCheck size={15} className="text-amber-600 dark:text-amber-400" />,
                   },
                 ].map((s, idx) => (

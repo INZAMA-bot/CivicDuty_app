@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { getCountryTransitSpecs } from '../data/promotionalAds';
+import { buildUniversalShareMetadata, triggerUniversalWebShare } from '../utils/universalShare';
 
 export type GraphicVehicleType =
   | 'bus'
@@ -154,6 +155,25 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
     navigator.clipboard?.writeText(getSocialPostCopy());
     setCopiedSocial(true);
     setTimeout(() => setCopiedSocial(false), 2200);
+  };
+
+  const handleUniversalShare = async () => {
+    const shareMeta = buildUniversalShareMetadata({
+      ad: {
+        title: `${transitSpec.countryName} ${transitSpec.stageTransportName}: Frontline Scouts`,
+        tagline: `${transitSpec.countryName} CivicDuty · Dial ${transitSpec.ussdCode}`,
+        summary: `Localized civic accountability campaign across ${transitSpec.countryName}.`,
+      },
+      transitSpec,
+      pillarKey: effectiveVehicle,
+      socialPostText: getSocialPostCopy(),
+      imageSrc: VEHICLE_JPG_MAP[effectiveVehicle] || transitSpec.scoutPosterSrc,
+    });
+    const outcome = await triggerUniversalWebShare(shareMeta);
+    if (outcome === 'shared' || outcome === 'shared_with_media' || outcome === 'fallback') {
+      setCopiedSocial(true);
+      setTimeout(() => setCopiedSocial(false), 2200);
+    }
   };
 
   // Reusable 3-Signal Checkmark Logo Group matching official TrafficLightLogo SVG
@@ -297,12 +317,12 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 type="button"
-                onClick={handleCopySocial}
+                onClick={handleUniversalShare}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-bold transition cursor-pointer shadow-xs"
-                title="Copy ready-to-publish social media caption"
+                title="Trigger Native Web Share API across Social Media & Ad Networks"
               >
                 {copiedSocial ? <Check size={12} /> : <Share2 size={12} />}
-                <span>{copiedSocial ? 'Caption Copied!' : 'Copy Social Caption'}</span>
+                <span>{copiedSocial ? 'Shared / Copied!' : 'Universal Share'}</span>
               </button>
 
               <button
@@ -1374,11 +1394,21 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={handleCopySocial}
+            onClick={handleUniversalShare}
             className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+            title="Trigger Native Web Share API across Social Media & Ad Networks"
           >
             {copiedSocial ? <Check size={12} /> : <Share2 size={12} />}
-            <span>{copiedSocial ? 'Caption Copied!' : 'Copy Social Media Post'}</span>
+            <span>{copiedSocial ? 'Shared / Copied!' : 'Universal Share'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopySocial}
+            className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-800 dark:text-slate-200 text-[11px] font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <Copy size={12} />
+            <span>Copy Post</span>
           </button>
 
           <button

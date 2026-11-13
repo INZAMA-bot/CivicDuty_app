@@ -4,6 +4,8 @@ import { CdOpsPromotionalAd } from '../types';
 import { getCountryPromotionalAds, getCountryTransitSpecs } from '../data/promotionalAds';
 import { TrafficLightLogo } from './TrafficLightLogo';
 import { KayoolaBusGraphic, GraphicVehicleType } from './KayoolaBusGraphic';
+import { CampaignSharePanel } from './CampaignSharePanel';
+import { buildUniversalShareMetadata, triggerUniversalWebShare } from '../utils/universalShare';
 import {
   Bus,
   Train,
@@ -48,7 +50,8 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [cardDisplayMode, setCardDisplayMode] = useState<'poster' | 'cad'>('poster');
   const [modalTab, setModalTab] = useState<'poster' | 'cad' | 'social'>('poster');
-  const [copied, setCopied] = useState(false);
+  const [sharedFeedback, setSharedFeedback] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [copiedSocial, setCopiedSocial] = useState(false);
 
   const activeUser = user || ensureCitizenSession();
@@ -146,14 +149,46 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
     }
   };
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleOpenSocialAdsModal = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard?.writeText(
-      `${activeAd.title} — ${activeAd.tagline}. Dial ${transitSpec.ussdCode} or visit CivicDuty: https://civicduty.site`
-    );
-    setCopied(true);
-    toast('Copied campaign link to clipboard', 'emerald');
-    setTimeout(() => setCopied(false), 2000);
+    recordAdClick(activeAd.id);
+    setModalTab('social');
+    setDetailsModalOpen(true);
+  };
+
+  const handleUniversalShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSharing) return;
+    recordAdClick(activeAd.id);
+    setIsSharing(true);
+
+    try {
+      const shareMetadata = buildUniversalShareMetadata({
+        ad: activeAd,
+        transitSpec,
+        pillarKey: activeVehicleType,
+        socialPostText: getSocialShareText(),
+        imageSrc: effectiveImageSrc,
+      });
+
+      const outcome = await triggerUniversalWebShare(shareMetadata);
+      if (outcome === 'shared' || outcome === 'shared_with_media') {
+        setSharedFeedback(true);
+        toast(
+          outcome === 'shared_with_media'
+            ? 'Campaign poster & link shared via native share sheet!'
+            : 'Campaign shared via native share sheet!',
+          'emerald'
+        );
+        setTimeout(() => setSharedFeedback(false), 2200);
+      } else if (outcome === 'fallback') {
+        toast('Campaign copy ready — choose Social Platform or Google Ads Pack.', 'emerald');
+        setModalTab('social');
+        setDetailsModalOpen(true);
+      }
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const handleDownloadPoster = (e?: React.MouseEvent) => {
@@ -353,10 +388,68 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
           </div>
         ) : (
           <div
-            onClick={() => setDetailsModalOpen(true)}
-            className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#0e1116] cursor-pointer group relative"
+            onClick={() => {
+              setModalTab('poster');
+              setDetailsModalOpen(true);
+            }}
+            className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#0e1116] cursor-pointer group"
           >
-            <div className="relative aspect-video w-full overflow-hidden bg-slate-950 flex items-center justify-center">
+            {/* Dark Top Frame Bar with CivicDuty · CC Tab & Controls (Zero Overlap on Photo) */}
+            <div className="px-2.5 py-2 bg-[#0e1116] border-b border-white/10 flex items-center justify-between gap-2">
+              <div className="px-2.5 py-1 rounded-lg bg-[#161a22] border border-white/15 flex items-center gap-2 shadow-xs">
+                <svg viewBox="0 0 90 30" className="w-10 h-3 shrink-0" aria-hidden="true">
+                  <circle cx="15" cy="15" r="10" fill="none" stroke="#EF4444" strokeWidth="2.5" />
+                  <circle cx="15" cy="15" r="3" fill="#F87171" />
+                  <circle cx="45" cy="15" r="10" fill="none" stroke="#F59E0B" strokeWidth="2.5" />
+                  <circle cx="45" cy="15" r="3" fill="#FDE047" />
+                  <circle cx="75" cy="15" r="10" fill="#064E3B" stroke="#10B981" strokeWidth="2.5" />
+                  <path d="M 70 15.2 L 73.8 18.8 L 80 12.2" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="text-[10px] font-black text-white tracking-tight">CivicDuty</span>
+                <span className="text-white/30">·</span>
+                <span className="text-[9.5px] font-mono font-bold text-emerald-400">
+                  {transitSpec.countryCode}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleDownloadPoster}
+                  className="p-1.5 rounded-lg bg-[#161a22] hover:bg-white/10 text-white border border-white/15 transition-colors cursor-pointer"
+                  title="Download Poster Image for Social Media"
+                >
+                  <Download size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUniversalShare}
+                  disabled={isSharing}
+                  aria-label="Universal Share"
+                  className="px-2 py-1.5 rounded-lg bg-[#161a22] hover:bg-white/10 text-emerald-400 border border-white/15 text-[10.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-60"
+                  title="Universal Share (Native Web Share API for Social Media & Ad Networks)"
+                >
+                  {sharedFeedback ? <Check size={12} className="text-emerald-400" /> : <Share2 size={12} />}
+                  <span className="hidden sm:inline">{sharedFeedback ? 'Shared' : 'Share'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setModalTab('poster');
+                    setDetailsModalOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#161a22] hover:bg-white/10 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 border border-white/15 transition-colors cursor-pointer"
+                  title="View Full Resolution Poster"
+                >
+                  <Maximize2 size={12} />
+                  <span className="hidden sm:inline">Enlarge</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 100% Unobstructed Campaign Photo Viewport */}
+            <div className="aspect-video w-full overflow-hidden bg-slate-950 flex items-center justify-center">
               <img
                 key={effectiveImageSrc}
                 src={effectiveImageSrc}
@@ -368,64 +461,21 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                   (e.currentTarget as HTMLImageElement).src = transitSpec.scoutPosterSrc;
                 }}
               />
+            </div>
 
-              {/* Compact Single Brand + Jurisdiction Badge */}
-              <div className="absolute top-2.5 left-2.5">
-                <div className="px-2.5 py-1 rounded-lg bg-[#0e1116]/90 backdrop-blur-xs border border-white/15 flex items-center gap-2 shadow-md">
-                  <svg viewBox="0 0 90 30" className="w-10 h-3 shrink-0" aria-hidden="true">
-                    <circle cx="15" cy="15" r="10" fill="none" stroke="#EF4444" strokeWidth="2.5" />
-                    <circle cx="15" cy="15" r="3" fill="#F87171" />
-                    <circle cx="45" cy="15" r="10" fill="none" stroke="#F59E0B" strokeWidth="2.5" />
-                    <circle cx="45" cy="15" r="3" fill="#FDE047" />
-                    <circle cx="75" cy="15" r="10" fill="#064E3B" stroke="#10B981" strokeWidth="2.5" />
-                    <path d="M 70 15.2 L 73.8 18.8 L 80 12.2" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className="text-[10px] font-black text-white tracking-tight">CivicDuty</span>
-                  <span className="text-white/30">·</span>
-                  <span className="text-[9.5px] font-mono font-bold text-emerald-400">
-                    {transitSpec.countryCode}
-                  </span>
+            {/* Dark Bottom Frame Footer Strip (Zero Overlap on Photo) */}
+            <div className="px-3 py-2.5 bg-[#0e1116] border-t border-white/10 flex items-center justify-between gap-2 text-white">
+              <div className="min-w-0">
+                <div className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                  Citizen-Government Interface
+                </div>
+                <div className="text-xs font-semibold truncate text-slate-200">
+                  {activeAd.title}
                 </div>
               </div>
-
-              {/* Minimal Unobtrusive Zoom Hint on Hover */}
-              <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  onClick={handleDownloadPoster}
-                  className="p-1.5 rounded-lg bg-black/75 hover:bg-black text-white border border-white/20 transition-colors shadow-sm cursor-pointer"
-                  title="Download Poster Image for Social Media"
-                >
-                  <Download size={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDetailsModalOpen(true);
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg bg-black/75 hover:bg-black text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 border border-white/20 transition-colors shadow-sm cursor-pointer"
-                  title="View Full Resolution Poster"
-                >
-                  <Maximize2 size={12} />
-                  <span className="hidden sm:inline">Inspect Poster</span>
-                </button>
-              </div>
-
-              {/* Bottom Street Banner Overlay */}
-              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-6 flex items-center justify-between text-white">
-                <div className="min-w-0">
-                  <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
-                    Citizen-Government Interface
-                  </div>
-                  <div className="text-xs font-semibold truncate text-slate-200">
-                    {activeAd.title}
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono font-black px-2 py-1 rounded bg-emerald-600 text-white shadow-xs shrink-0">
-                  DIAL {transitSpec.ussdCode}
-                </span>
-              </div>
+              <span className="text-[10px] font-mono font-black px-2 py-1 rounded bg-emerald-600 text-white shadow-xs shrink-0">
+                DIAL {transitSpec.ussdCode}
+              </span>
             </div>
           </div>
         )}
@@ -461,11 +511,23 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
 
             <button
               type="button"
-              onClick={handleShare}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] transition-colors cursor-pointer"
-              title="Share"
+              onClick={handleUniversalShare}
+              disabled={isSharing}
+              data-testid="universal-share-button"
+              className="px-2.5 py-1.5 rounded-lg text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 bg-emerald-500/10 dark:bg-emerald-500/10 border border-emerald-500/35 hover:border-emerald-500 text-[10.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-60"
+              title="Trigger Native Web Share API across Social Media & Ad Networks"
             >
-              {copied ? <Check size={12} className="text-emerald-500" /> : <Share2 size={12} />}
+              {sharedFeedback ? <Check size={12} className="text-emerald-500" /> : <Share2 size={12} />}
+              <span>{sharedFeedback ? 'Shared!' : 'Universal Share'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenSocialAdsModal}
+              className="px-2.5 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500/50 text-[10.5px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+              title="Open Social Media & Google Ads Campaign Pack"
+            >
+              <span>Ads Pack</span>
             </button>
 
             <button
@@ -569,7 +631,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                   }`}
                 >
                   <Share2 size={12} />
-                  <span>Social Media Copy</span>
+                  <span>Share &amp; Google Ads</span>
                 </button>
               </div>
 
@@ -615,7 +677,15 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setModalTab('social')}
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 hover:border-emerald-500 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Share2 size={12} />
+                      <span>Share &amp; Google Ads</span>
+                    </button>
                     <button
                       type="button"
                       onClick={handleCopySocial}
@@ -716,36 +786,17 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
               )
             )}
 
-            {/* Tab 3: Social Media Copy Ready to Copy & Post */}
+            {/* Tab 3: Cross-Platform Social Media & Google Ads Campaign Pack */}
             {modalTab === 'social' && (
-              <div className="p-4 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold font-mono text-slate-900 dark:text-white">
-                    Ready-to-Post Social Media Caption (X, LinkedIn, WhatsApp &amp; Facebook)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopySocial}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
-                  >
-                    {copiedSocial ? <Check size={13} /> : <Copy size={13} />}
-                    <span>{copiedSocial ? 'Copied to Clipboard!' : 'Copy Post Text'}</span>
-                  </button>
-                </div>
-                <pre className="p-3.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] font-sans text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed select-all">
-                  {getSocialShareText()}
-                </pre>
-                <div className="flex items-center justify-between gap-2 pt-2 text-[10.5px] font-mono text-slate-500">
-                  <span>Includes live USSD code ({transitSpec.ussdCode}), verified link, and targeted hashtags.</span>
-                  <button
-                    type="button"
-                    onClick={handleDownloadPoster}
-                    className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
-                  >
-                    Download accompanying poster image
-                  </button>
-                </div>
-              </div>
+              <CampaignSharePanel
+                ad={activeAd}
+                transitSpec={transitSpec}
+                pillarKey={activeVehicleType}
+                imageSrc={effectiveImageSrc}
+                socialPostText={getSocialShareText()}
+                onDownloadPoster={handleDownloadPoster}
+                onNotify={toast}
+              />
             )}
 
             {/* Proposal / Campaign Objectives & Highlights */}

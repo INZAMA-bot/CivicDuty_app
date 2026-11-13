@@ -47,6 +47,8 @@ import {
   Tag,
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { COUNTRIES } from '../data/countries';
 import { INITIAL_MERCHANT_PRODUCTS } from '../data/merchantLoyaltyData';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
 import { ParishRelocationModal } from '../components/ParishRelocationModal';
@@ -69,6 +71,11 @@ export const ProfileView: React.FC = () => {
   } = useApp();
 
   const activeUser = user || ensureCitizenSession();
+  const activeCountry = (activeUser.country || 'UG').toUpperCase();
+  const countryPerks = getCountryPerks(activeCountry);
+  const gov = getCountryGovernanceSchema(activeCountry);
+  const countryMeta = COUNTRIES[activeCountry];
+  const isUg = activeCountry === 'UG';
   const profile: any = (profiles && profiles[activeUser.id]) || {
     civic_score: 50,
     display_name: activeUser.name || 'Citizen Watchdog',
@@ -117,7 +124,9 @@ export const ProfileView: React.FC = () => {
       icon: Fuel,
       matchCats: ['automotive_motorbikes', 'transport'],
       baseXp: 25,
-      desc: 'Shell, TotalEnergies, bodaboda maintenance & transit vouchers',
+      desc: isUg
+        ? 'Shell, TotalEnergies, bodaboda maintenance & transit vouchers'
+        : `Fuel pump rebates, local transit & commercial rider maintenance vouchers`,
     },
     {
       id: 'groceries_food',
@@ -125,7 +134,9 @@ export const ProfileView: React.FC = () => {
       icon: ShoppingBag,
       matchCats: ['groceries_consumables', 'retail_shops'],
       baseXp: 15,
-      desc: 'Quality Supermarket discounts, artisan bakeries & fresh market staples',
+      desc: isUg
+        ? 'Quality Supermarket discounts, artisan bakeries & fresh market staples'
+        : 'Supermarket discounts, artisan bakeries & fresh market staples',
     },
     {
       id: 'telecom_data',
@@ -133,7 +144,7 @@ export const ProfileView: React.FC = () => {
       icon: Wifi,
       matchCats: ['services_digital_products', 'electronics'],
       baseXp: 20,
-      desc: 'MTN, Airtel & Safaricom 5G data bundles & airtime recharges',
+      desc: `${countryPerks.digitalPerks[0]?.brand || 'National Carrier'} data bundles & airtime recharges`,
     },
     {
       id: 'water_solar',
@@ -171,7 +182,7 @@ export const ProfileView: React.FC = () => {
         title: c.courtesy_voucher!.title,
         brand: c.courtesy_voucher!.brand,
         faceValue: Number(c.courtesy_voucher!.faceValue || 5000),
-        currency: c.courtesy_voucher!.currency || 'UGX',
+        currency: c.courtesy_voucher!.currency || gov.currency,
         note: c.courtesy_voucher!.note || 'Issued in appreciation for verified civic feedback.',
         source: `Official Desk · Dispatch #${p.id.slice(-6).toUpperCase()}`,
         expires: 'Valid 60 Days',
@@ -183,11 +194,11 @@ export const ProfileView: React.FC = () => {
   const defaultCivicPasses = [
     {
       id: 'civic-pass-01',
-      code: `FUEL-${activeUser.country || 'UG'}-7721`,
-      title: 'TotalEnergies / Shell Frontline Fuel Pass',
-      brand: 'TotalEnergies Stations Ltd',
+      code: `FUEL-${activeCountry}-7721`,
+      title: `${countryPerks.digitalPerks[0]?.brand || 'National Energy'} Frontline Fuel Pass`,
+      brand: countryPerks.digitalPerks[0]?.brand || 'National Fuel Partner',
       faceValue: 40000,
-      currency: activeUser.country === 'KE' ? 'KES' : 'UGX',
+      currency: gov.currency,
       note: 'Civic Watchdog Frontline Bounty · Redeemable at any certified pump station.',
       source: 'Civic Watchdog Merit Escrow',
       expires: 'Valid 45 Days',
@@ -196,11 +207,11 @@ export const ProfileView: React.FC = () => {
     },
     {
       id: 'civic-pass-02',
-      code: `DATA-${activeUser.country || 'UG'}-9012`,
-      title: 'MTN / Airtel 10GB Watchdog Data Bundle',
-      brand: 'National Telecom Cooperative',
+      code: `DATA-${activeCountry}-9012`,
+      title: `${countryPerks.digitalPerks[0]?.brand || 'National Telecom'} Watchdog Data Bundle`,
+      brand: `${countryMeta?.name || gov.countryName} Telecom Cooperative`,
       faceValue: 25000,
-      currency: activeUser.country === 'KE' ? 'KES' : 'UGX',
+      currency: gov.currency,
       note: 'Sponsored connectivity for verified on-ground GPS report transmission.',
       source: 'Statutory Telecom CSR Allocation',
       expires: 'Valid 30 Days',
@@ -209,12 +220,12 @@ export const ProfileView: React.FC = () => {
     },
     {
       id: 'civic-pass-03',
-      code: `GROC-${activeUser.country || 'UG'}-5510`,
+      code: `GROC-${activeCountry}-5510`,
       title: 'Fresh Produce & Grocery Community Relief Pack',
-      brand: 'Capital Shoppers / Naivas Groceries',
+      brand: `${countryPerks.countryName} Community Grocery Alliance`,
       faceValue: 30000,
-      currency: activeUser.country === 'KE' ? 'KES' : 'UGX',
-      note: 'Redeemable for fresh farm produce, rice, flour, and pantry staples.',
+      currency: gov.currency,
+      note: 'Redeemable for fresh farm produce, staples, and household essentials.',
       source: 'Neighborhood Trader Alliance',
       expires: 'Valid 90 Days',
       status: 'active',
@@ -226,7 +237,7 @@ export const ProfileView: React.FC = () => {
 
   const handleUpdateParish = (newParish: string, reason: string) => {
     const now = new Date().toISOString().split('T')[0];
-    const prevParish = activeUser.parish || activeUser.parish_ward || 'Bukoto Central Parish';
+    const prevParish = activeUser.parish || activeUser.parish_ward || `${gov.sampleJurisdictions[0] || countryMeta.name} ${gov.tier1UnitLabel}`;
     const newRecord = {
       id: 'move-' + Date.now(),
       fromParish: prevParish,
@@ -248,8 +259,8 @@ export const ProfileView: React.FC = () => {
     } catch {}
   };
 
-  const activeCountry = activeUser.country || 'UG';
-  const countryPerks = getCountryPerks(activeCountry);
+  const prevParishFallback = `${gov.sampleJurisdictions[0] || countryMeta?.name || gov.countryName} ${gov.tier1UnitLabel}`;
+  void prevParishFallback;
 
   const isGov = ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(activeUser.role);
   const isPrivateProvider = Boolean(
@@ -657,7 +668,7 @@ export const ProfileView: React.FC = () => {
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                NIRA National ID (NIN), Foreign Expatriate Permit, and Parish Jurisdiction Setup. Cryptographic salt protects raw PII while securing 1-citizen-1-voice integrity.
+                {countryMeta?.id_label || 'National ID'}, Foreign Expatriate Permit, and {gov.tier1UnitLabel} Jurisdiction Setup. Cryptographic salt protects raw PII while securing 1-citizen-1-voice integrity.
               </p>
             </div>
           </div>
@@ -917,7 +928,7 @@ export const ProfileView: React.FC = () => {
                   <span>Sovereign Citizen Perk &amp; Pass Wallet</span>
                 </div>
                 <div className="text-base sm:text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
-                  {allVouchers.reduce((acc, v) => acc + Number(v.faceValue || 0), 0).toLocaleString()} {activeCountry === 'KE' ? 'KES' : 'UGX'} Available
+                  {allVouchers.reduce((acc, v) => acc + Number(v.faceValue || 0), 0).toLocaleString()} {gov.currency} Available
                 </div>
                 <p className="text-[10.5px] text-slate-600 dark:text-slate-400 mt-0.5">
                   Secured by CivicDuty Sovereign Escrow. Present QR passes directly at cashier counters.
@@ -1310,7 +1321,7 @@ export const ProfileView: React.FC = () => {
             title: product.rewardHeadline || product.title,
             brand: product.merchantName,
             faceValue: product.voucherCost || 20000,
-            currency: product.currency || (activeCountry === 'KE' ? 'KES' : 'UGX'),
+            currency: product.currency || gov.currency,
             note: product.rewardDescription || 'Verified community merchant perk voucher.',
             source: `Certified Merchant · ${product.parish || 'Parish'}`,
             expires: 'Valid 60 Days',

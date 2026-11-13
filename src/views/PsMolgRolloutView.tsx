@@ -47,6 +47,7 @@ import { CountryCode, TeamMember } from '../types';
 import { RolloutSupervisionStructure } from '../components/RolloutSupervisionStructure';
 import { SovereignBatchCommissioning } from '../components/SovereignBatchCommissioning';
 import { getMinistriesForCountry } from '../data/countryMinistries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 export const PsMolgRolloutView: React.FC = () => {
   const {
@@ -108,6 +109,9 @@ export const PsMolgRolloutView: React.FC = () => {
   const [issuedStaffCode, setIssuedStaffCode] = useState<string | null>(null);
 
   const rolloutArrangement = getNationalRolloutArrangements(currentCountry);
+  const gov = getCountryGovernanceSchema(currentCountry);
+  const isUg = currentCountry === 'UG';
+  const ministryCodeSlug = gov.superadminMinistryShort.replace(/[^A-Za-z0-9]/g, '') || 'GOV';
 
   const handleIssueStaffCredential = (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,8 +167,9 @@ export const PsMolgRolloutView: React.FC = () => {
 
   // Dynamic Sovereign Rollout Status Data
   const districtsData = getRolloutNodesForCountry(currentCountry);
+  const availableRegions = ['ALL', ...Array.from(new Set(districtsData.map((d) => d.region).filter(Boolean)))];
 
-  // Permanent Secretaries Inter-Ministerial Council Data (Dynamic for all 100+ countries, excluding MoLG itself)
+  // Permanent Secretaries Inter-Ministerial Council Data (Dynamic for all 100+ countries, excluding national superadmin node itself)
   const ministriesData = getMinistriesForCountry(currentCountry).filter(m => !m.isSuperadmin && m.id !== 'PS-MOLG');
 
   const filteredDistricts = districtsData.filter(d => {
@@ -207,7 +212,7 @@ export const PsMolgRolloutView: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          circularRef: `MoLG/CIRC/${Date.now().toString().slice(-4)}/2026`,
+          circularRef: `${ministryCodeSlug}/CIRC/${Date.now().toString().slice(-4)}/2026`,
           subject: circularSubject,
           body: circularText,
           channels: selectedChannels,
@@ -224,7 +229,10 @@ export const PsMolgRolloutView: React.FC = () => {
             saveCircularNotificationToCloud(rec).catch(() => {});
           });
         }
-        toast(`Ministerial Circular dispatched to ${data.dispatchedCount} Parish Chiefs & CAOs over ${selectedChannels.join(' & ')}.`, 'emerald');
+        toast(
+          `Ministerial Circular dispatched to ${data.dispatchedCount} ${isUg ? 'Parish Chiefs & CAOs' : `${gov.tier1Plural} & ${gov.tier3Plural}`} over ${selectedChannels.join(' & ')}.`,
+          'emerald'
+        );
         setTimeout(() => {
           setBroadcastSuccess(false);
           setCircularSubject('');
@@ -240,7 +248,7 @@ export const PsMolgRolloutView: React.FC = () => {
   };
 
   const handleDispatchInspection = (district: any) => {
-    toast(`MoLG Field Inspection Team dispatched to ${district.name}. Order Ref: MoLG/INSP/${district.id}/2026.`, 'emerald');
+    toast(`${gov.superadminMinistryShort} Field Inspection Team dispatched to ${district.name}. Order Ref: ${ministryCodeSlug}/INSP/${district.id}/2026.`, 'emerald');
   };
 
   const handlePingNode = (district: any) => {
@@ -248,11 +256,11 @@ export const PsMolgRolloutView: React.FC = () => {
   };
 
   const handleIssueSummons = (district: any) => {
-    toast(`Statutory Summons issued to ${district.cao}. 24-Hour Appearance Mandate registered with MoLG Executive Registry.`, 'rose');
+    toast(`Statutory Summons issued to ${district.cao}. 24-Hour Appearance Mandate registered with ${gov.superadminMinistryShort} Executive Registry.`, 'rose');
   };
 
   const handleIssueSanction = (district: any) => {
-    toast(`Executive Sanction Warning logged for ${district.name}. MoFPED DDEG grant clearance flagged.`, 'amber');
+    toast(`Executive Sanction Warning logged for ${district.name}. ${gov.fiscalProgramName} grant clearance flagged.`, 'amber');
   };
 
   const handleIssueCommendation = (district: any) => {
@@ -906,7 +914,7 @@ export const PsMolgRolloutView: React.FC = () => {
           }`}
         >
           <Zap className="w-4 h-4 text-emerald-600" />
-          Sovereign Batch Commissioning (CAOs &amp; Sister PSs)
+          Sovereign Batch Commissioning ({gov.tier3Plural} &amp; Sister Ministries)
         </button>
 
         <button
@@ -981,7 +989,7 @@ export const PsMolgRolloutView: React.FC = () => {
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
-                placeholder="Search District, City, or CAO..."
+                placeholder={`Search ${gov.tier3UnitLabel}, City, or ${gov.tier3Short}...`}
                 value={districtSearch}
                 onChange={(e) => setDistrictSearch(e.target.value)}
                 className="w-full pl-9 pr-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -991,7 +999,7 @@ export const PsMolgRolloutView: React.FC = () => {
             {/* Region Filters */}
             <div className="flex flex-wrap gap-1.5 items-center">
               <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 mr-1">Region:</span>
-              {(['ALL', 'CENTRAL', 'WESTERN', 'EASTERN', 'NORTHERN'] as const).map((r) => (
+              {availableRegions.map((r) => (
                 <button
                   key={r}
                   onClick={() => setSelectedRegion(r)}
@@ -1054,7 +1062,7 @@ export const PsMolgRolloutView: React.FC = () => {
                       className="text-xs font-black px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white transition-all flex items-center gap-1.5 shadow-xs"
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Audit CAO</span>
+                      <span>Audit {gov.tier3Short}</span>
                     </button>
                   </div>
                 </div>
@@ -1064,20 +1072,26 @@ export const PsMolgRolloutView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: INTER-MINISTERIAL PS COUNCIL & PERFORMANCE MATRIX */}
+      {/* TAB 2: INTER-MINISTERIAL LEADERSHIP COUNCIL & PERFORMANCE MATRIX */}
       {activeTab === 'inter_ps' && (
         <div className="space-y-4">
           <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-950 dark:text-emerald-100 leading-relaxed font-semibold">
             <div className="space-y-0.5">
-              <strong className="text-sm font-black text-emerald-950 dark:text-emerald-200 block">Permanent Secretaries Council & Cabinet Delivery Matrix</strong>
-              <span>The Permanent Secretary of Local Government acts as National Superadmin, connecting all sister ministries into a single unified statutory resolution mechanism.</span>
+              <strong className="text-sm font-black text-emerald-950 dark:text-emerald-200 block">
+                {isUg ? 'Permanent Secretaries Council & Cabinet Delivery Matrix' : `Inter-Ministerial Council & Cabinet Delivery Matrix (${gov.countryName})`}
+              </strong>
+              <span>
+                {isUg
+                  ? 'The Permanent Secretary of Local Government acts as National Superadmin, connecting all sister ministries into a single unified statutory resolution mechanism.'
+                  : `${gov.superadminTitle} (${gov.superadminMinistryShort}) acts as National Superadmin, connecting sister ${gov.countryName} ministries into a unified statutory resolution mechanism.`}
+              </span>
             </div>
             <button
               onClick={() => setIsTaskforceModalOpen(true)}
               className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-black rounded-xl text-xs flex items-center gap-1.5 shrink-0 transition-all shadow-xs"
             >
               <Users className="w-4 h-4" />
-              <span>Convene Inter-PS Taskforce</span>
+              <span>Convene Inter-Ministry Taskforce</span>
             </button>
           </div>
 
@@ -1135,7 +1149,7 @@ export const PsMolgRolloutView: React.FC = () => {
 
                   <div className="p-2.5 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <div className="text-[9.5px] font-bold text-slate-500 dark:text-slate-400">Perm Secretary</div>
+                      <div className="text-[9.5px] font-bold text-slate-500 dark:text-slate-400">{isUg ? 'Perm Secretary' : 'Accounting Lead'}</div>
                       <div className="text-[11px] font-black text-slate-900 dark:text-slate-100 truncate">{m.permSecretary}</div>
                     </div>
                     <div>
@@ -1184,7 +1198,9 @@ export const PsMolgRolloutView: React.FC = () => {
               Direct Statutory Circular Broadcast
             </h3>
             <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-              Transmit legally binding executive directives to all 146 Chief Administrative Officers (CAOs), City Town Clerks, and Parish Chiefs with cryptographic read-receipt verification.
+              {isUg
+                ? 'Transmit legally binding executive directives to all 146 Chief Administrative Officers (CAOs), City Town Clerks, and Parish Chiefs with cryptographic read-receipt verification.'
+                : `Transmit legally binding executive directives across ${gov.countryName} to all ${rolloutArrangement.targets.l2l3Target.toLocaleString()} ${gov.tier3Plural} and ${rolloutArrangement.targets.l4Target.toLocaleString()} ${gov.tier1Plural} with cryptographic read-receipt verification.`}
             </p>
           </div>
 
@@ -1194,7 +1210,7 @@ export const PsMolgRolloutView: React.FC = () => {
               type="text"
               value={circularSubject}
               onChange={(e) => setCircularSubject(e.target.value)}
-              placeholder="e.g. MoLG/ADM/104/2026: Mandatory 48-Hour Citizen Service SLA Enforcement"
+              placeholder={`e.g. ${ministryCodeSlug}/ADM/104/2026: Mandatory 48-Hour Citizen Service SLA Enforcement`}
               className="w-full text-xs p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
             />
           </div>
@@ -1241,7 +1257,12 @@ export const PsMolgRolloutView: React.FC = () => {
 
           <div className="flex flex-wrap items-center justify-between pt-2 gap-2">
             <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-              Target Audience: <strong className="text-slate-950 dark:text-white">146 CAOs + 10 City Clerks + 10,595 Parish Chiefs</strong>
+              Target Audience:{' '}
+              <strong className="text-slate-950 dark:text-white">
+                {isUg
+                  ? '146 CAOs + 10 City Clerks + 10,595 Parish Chiefs'
+                  : `${rolloutArrangement.targets.l2l3Target.toLocaleString()} ${gov.tier3Plural} + ${gov.tier2Plural} + ${rolloutArrangement.targets.l4Target.toLocaleString()} ${gov.tier1Plural}`}
+              </strong>
             </div>
 
             <button
@@ -1521,14 +1542,14 @@ export const PsMolgRolloutView: React.FC = () => {
               <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl text-center">
                 <div className="text-[10px] font-bold text-rose-800 dark:text-rose-300">Overdue Red Signals</div>
                 <div className="text-lg font-black text-rose-700 dark:text-rose-400 mt-0.5">{inspectingDistrict.redSignals}</div>
-                <div className="text-[9px] text-rose-600 dark:text-rose-400">Requires PS Directive</div>
+                <div className="text-[9px] text-rose-600 dark:text-rose-400">Requires {gov.superadminTitle} Directive</div>
               </div>
             </div>
 
-            {/* Sub-Counties & Parishes Inspection */}
+            {/* Sub-National Divisions Inspection */}
             <div className="space-y-2">
               <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                Sub-County / Municipal Divisions ({inspectingDistrict.subCounties.length})
+                {gov.tier2UnitLabel} / Municipal Divisions ({inspectingDistrict.subCounties.length})
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {inspectingDistrict.subCounties.map((sc: string, idx: number) => (
@@ -1601,7 +1622,7 @@ export const PsMolgRolloutView: React.FC = () => {
                 className="px-4 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-xs font-black text-white flex items-center gap-1.5 transition-colors"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Open CAO Audit Dossier →</span>
+                <span>Open {gov.tier3Short} Audit Dossier →</span>
               </button>
             </div>
           </div>
@@ -1646,9 +1667,9 @@ export const PsMolgRolloutView: React.FC = () => {
                 <div className="text-[9px] text-emerald-600 dark:text-emerald-400">Target &gt;90%</div>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
-                <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400">PDM Clearance</div>
+                <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{isUg ? 'PDM Clearance' : `${gov.tier1Short} SLA`}</div>
                 <div className="text-lg font-black text-teal-700 dark:text-teal-400 mt-0.5">{auditingDistrict.pdmSaccoClearance}</div>
-                <div className="text-[9px] text-teal-600 dark:text-teal-400">Parish SACCO SLA</div>
+                <div className="text-[9px] text-teal-600 dark:text-teal-400">{isUg ? 'Parish SACCO SLA' : `${gov.tier1UnitLabel} Service SLA`}</div>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
                 <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Citizen CSAT</div>
@@ -1656,7 +1677,7 @@ export const PsMolgRolloutView: React.FC = () => {
                 <div className="text-[9px] text-amber-600 dark:text-amber-400">Audited Feedback</div>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
-                <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400">DDEG Grant Audit</div>
+                <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400">{isUg ? 'DDEG Grant Audit' : 'Fiscal Grant Audit'}</div>
                 <div className="text-xs font-black text-slate-900 dark:text-slate-100 mt-1">{auditingDistrict.ddegCompliance}</div>
                 <div className="text-[9px] text-slate-500">Treasury Verified</div>
               </div>
@@ -1666,17 +1687,17 @@ export const PsMolgRolloutView: React.FC = () => {
             <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
               <div className="font-black text-slate-950 dark:text-white flex items-center gap-1.5">
                 <FileCheck className="w-4 h-4 text-emerald-600" />
-                <span>Statutory Auditor Note to Permanent Secretary</span>
+                <span>Statutory Auditor Note to {gov.superadminTitle}</span>
               </div>
               <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                The Accounting Officer for <strong>{auditingDistrict.name}</strong> maintains an operational resolution speed of <strong>{auditingDistrict.avgResponseHours} hours</strong>, successfully closing {auditingDistrict.casesResolved} out of {auditingDistrict.casesLogged} registered public issues. Total parish node coverage is verified at {auditingDistrict.activeNodes}.
+                The Accounting Officer for <strong>{auditingDistrict.name}</strong> maintains an operational resolution speed of <strong>{auditingDistrict.avgResponseHours} hours</strong>, successfully closing {auditingDistrict.casesResolved} out of {auditingDistrict.casesLogged} registered public issues. Total {gov.tier1UnitLabel.toLowerCase()} node coverage is verified at {auditingDistrict.activeNodes}.
               </p>
             </div>
 
-            {/* Official PS Statutory Actions */}
+            {/* Official Superadmin Statutory Actions */}
             <div className="space-y-2 pt-1">
               <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                Execute Permanent Secretary Statutory Powers
+                Execute {gov.superadminTitle} Statutory Powers
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
@@ -1705,7 +1726,7 @@ export const PsMolgRolloutView: React.FC = () => {
 
             {/* Footer / Export */}
             <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-[10px] mono text-slate-500">Official MoLG Regulatory Desk</span>
+              <span className="text-[10px] mono text-slate-500">Official {gov.superadminMinistryShort} Regulatory Desk</span>
               <button
                 onClick={() => handleExportDossier(auditingDistrict)}
                 className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-black rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
@@ -1731,7 +1752,7 @@ export const PsMolgRolloutView: React.FC = () => {
                 </span>
                 <h3 className="text-lg font-black text-slate-950 dark:text-white">{inspectingMinistry.title}</h3>
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Permanent Secretary: <strong className="text-slate-950 dark:text-white">{inspectingMinistry.permSecretary}</strong>
+                  {isUg ? 'Permanent Secretary' : 'Accounting Lead'}: <strong className="text-slate-950 dark:text-white">{inspectingMinistry.permSecretary}</strong>
                 </p>
               </div>
 
@@ -1808,7 +1829,7 @@ export const PsMolgRolloutView: React.FC = () => {
                 </span>
                 <h3 className="text-lg font-black text-slate-950 dark:text-white">Convene Inter-Ministerial Taskforce</h3>
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Emergency statutory alignment across all 8 Permanent Secretaries.
+                  Emergency statutory alignment across all {ministriesData.length} Sister Ministries ({gov.countryName}).
                 </p>
               </div>
 
@@ -1824,14 +1845,14 @@ export const PsMolgRolloutView: React.FC = () => {
               <label className="font-black text-slate-900 dark:text-white">Taskforce Priority Topic</label>
               <select className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold">
                 <option>Mandatory 48-Hour Cross-Ministry Red Signal Resolution</option>
-                <option>Parish Development Model (PDM) Pillar VII Sacco Fund Clearance</option>
-                <option>District Road Machinery Maintenance & Fuel Telemetry</option>
-                <option>Health Centre IV Essential Drugs Stock-Out Emergency</option>
+                <option>{gov.fiscalProgramName} Fund &amp; Escrow Clearance</option>
+                <option>{gov.tier3UnitLabel} Road Machinery Maintenance &amp; Fuel Telemetry</option>
+                <option>Primary Public Health Facility Essential Medicine Stock Emergency</option>
               </select>
             </div>
 
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-950 dark:text-emerald-200 font-semibold">
-              Broadcast will dispatch immediate executive calendar invites and real-time telemetry links to all 8 Permanent Secretaries with cryptographic confirmation.
+              Broadcast will dispatch immediate executive calendar invites and real-time telemetry links to all {ministriesData.length} Sister Ministries with cryptographic confirmation.
             </div>
 
             <div className="pt-2 flex items-center justify-end gap-2">
@@ -1843,7 +1864,7 @@ export const PsMolgRolloutView: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  toast('Inter-Ministerial Taskforce convened. All 8 Permanent Secretaries notified.', 'emerald');
+                  toast(`Inter-Ministerial Taskforce convened. All ${ministriesData.length} Sister Ministries notified.`, 'emerald');
                   setIsTaskforceModalOpen(false);
                 }}
                 className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-black rounded-xl shadow-xs"
@@ -1970,7 +1991,7 @@ export const PsMolgRolloutView: React.FC = () => {
                     type="text"
                     value={staffUnit}
                     onChange={(e) => setStaffUnit(e.target.value)}
-                    placeholder={`e.g. Central Parish Hub / Ward 4 Desk`}
+                    placeholder={`e.g. ${gov.sampleJurisdictions[0] || rolloutArrangement.lowestOfficerUnit} Desk`}
                     className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-950 dark:text-white focus:outline-emerald-600"
                   />
                 </div>
@@ -1983,7 +2004,7 @@ export const PsMolgRolloutView: React.FC = () => {
                     type="tel"
                     value={staffPhone}
                     onChange={(e) => setStaffPhone(e.target.value)}
-                    placeholder="+256 770 000000"
+                    placeholder={gov.samplePhone}
                     className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-950 dark:text-white focus:outline-emerald-600"
                   />
                 </div>

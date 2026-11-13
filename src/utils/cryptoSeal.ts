@@ -57,38 +57,37 @@ export interface VerificationResult {
   integrityScore: number;
 }
 
-export function verifySovereignSeal(input: string): VerificationResult {
+export function verifySovereignSeal(input: string, issuerName?: string): VerificationResult {
   const clean = input.trim();
+  const upper = clean.toUpperCase();
   const isHash = clean.startsWith('0x') || clean.length === 64 || clean.length === 66;
-  const isTicket = clean.toUpperCase().includes('UG-') || clean.toUpperCase().includes('KLA-') || clean.toUpperCase().includes('TKT-') || clean.toUpperCase().includes('USSD-');
-  const isCircular = clean.toUpperCase().includes('MOLG/') || clean.toUpperCase().includes('CIRCULAR');
+  const isTicket = /^[A-Z]{2,4}-/.test(upper) || upper.includes('TKT-') || upper.includes('USSD-');
+  const isCircular = upper.includes('MOLG/') || upper.includes('MINALOC/') || upper.includes('DEV/') || upper.includes('CIRCULAR');
 
-  if (isTicket) {
-    const ref = clean.toUpperCase();
-    const hash = generateCryptoSealSync(`TICKET:${ref}:UGANDA_NATIONAL_CIVIC_LEDGER`);
+  if (isCircular) {
+    const hash = generateCryptoSealSync(`CIRCULAR:${upper}:STATUTORY_DIRECTIVE`);
     return {
       valid: true,
-      type: 'ticket',
-      referenceId: ref,
-      timestamp: '2026-08-28T09:15:00Z',
+      type: 'circular',
+      referenceId: upper,
+      timestamp: '2026-08-27T14:30:00Z',
       sealHash: hash,
-      issuerAuthority: 'National Civic Ledger Registry & District Local Gov',
-      status: 'Cryptographically Verified · Immutable',
+      issuerAuthority: issuerName || 'Territorial Governance Executive Desk',
+      status: 'Statutory Seal Authenticated',
       integrityScore: 100
     };
   }
 
-  if (isCircular) {
-    const ref = clean.toUpperCase();
-    const hash = generateCryptoSealSync(`CIRCULAR:${ref}:MOLG_STATUTORY_DIRECTIVE`);
+  if (isTicket) {
+    const hash = generateCryptoSealSync(`TICKET:${upper}:NATIONAL_CIVIC_LEDGER`);
     return {
       valid: true,
-      type: 'circular',
-      referenceId: ref,
-      timestamp: '2026-08-27T14:30:00Z',
+      type: 'ticket',
+      referenceId: upper,
+      timestamp: '2026-08-28T09:15:00Z',
       sealHash: hash,
-      issuerAuthority: 'Ministry of Local Government (MoLG) Executive Desk',
-      status: 'Statutory Seal Authenticated',
+      issuerAuthority: issuerName || 'Sovereign Civic Ledger Registry & Local Authority',
+      status: 'Cryptographically Verified · Immutable',
       integrityScore: 100
     };
   }

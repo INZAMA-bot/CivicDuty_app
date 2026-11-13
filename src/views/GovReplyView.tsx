@@ -6,9 +6,19 @@ import { MediaCard } from '../components/MediaCard';
 import { NoteBox } from '../components/NoteBox';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { TicketStatus } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { getCountryPerks } from '../data/countryPerks';
 
 export const GovReplyView: React.FC = () => {
   const { user, activePost, go, addCommentToPost, updatePostStatus, logAudit, addPoints, toast, projects } = useApp();
+
+  const activeCountryCode = (user?.country || activePost?.country || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(activeCountryCode);
+  const countryPerks = getCountryPerks(activeCountryCode);
+  const isUg = activeCountryCode === 'UG';
+  const defaultTelcoBrand = countryPerks.digitalPerks[0]?.brand || 'Telco Partner';
+  const defaultSchoolName = isUg ? 'Gayaza High School' : `${countryPerks.countryName} National Academy`;
+  const defaultDiningName = isUg ? 'Café Javas' : `${countryPerks.countryName} Hospitality Partner`;
 
   const [status, setStatus] = useState<TicketStatus>('received');
   const [replyText, setReplyText] = useState('');
@@ -43,10 +53,10 @@ export const GovReplyView: React.FC = () => {
   );
   const [courtesyTitle, setCourtesyTitle] = useState<string>(
     isSchool
-      ? '10,000 UGX School Scholastic & Stationery Voucher'
+      ? `10,000 ${gov.currency} School Scholastic & Stationery Voucher`
       : isDining
-      ? '15,000 UGX Meal & Refreshment Courtesy Voucher'
-      : 'MTN 1.5GB Civic Data Bundle'
+      ? `15,000 ${gov.currency} Meal & Refreshment Courtesy Voucher`
+      : `${defaultTelcoBrand} 1.5GB Civic Data Bundle`
   );
   const [courtesyValue, setCourtesyValue] = useState<number>(isSchool ? 10000 : isDining ? 15000 : 5000);
   const [courtesyNote, setCourtesyNote] = useState<string>(
@@ -121,8 +131,8 @@ export const GovReplyView: React.FC = () => {
       return { type: 'doc' as const, name: m.name, size: m.size };
     });
 
-    const isKe = user.country === 'KE';
-    const curr = isKe ? 'KES' : user.country === 'NG' ? 'NGN' : 'UGX';
+    const isKe = activeCountryCode === 'KE';
+    const curr = gov.currency;
     const codeSuffix = Math.floor(1000 + Math.random() * 9000);
     const cleanPrefix = (courtesyBrand || user.organization_name || d.name).replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase() || 'CVIC';
     const vCode = `${cleanPrefix}-${courtesyValue >= 1000 ? Math.round(courtesyValue / 1000) + 'K' : courtesyValue}-${codeSuffix}`;
@@ -631,24 +641,24 @@ export const GovReplyView: React.FC = () => {
                   {[
                     ...(isSchool
                       ? [
-                          { title: '10,000 UGX School Scholastic & Stationery Voucher', val: 10000, brand: user?.organization_name || 'Gayaza High School', cat: 'books_stationery' },
-                          { title: '15,000 UGX School Uniform Subsidy Token', val: 15000, brand: user?.organization_name || 'Gayaza High School', cat: 'fashion_apparel' },
-                          { title: '5,000 UGX Canteen Meal / Snack Token', val: 5000, brand: user?.organization_name || 'Gayaza High School', cat: 'groceries_consumables' },
-                          { title: 'MTN 1.5GB Student Research Data Pack', val: 8000, brand: 'MTN Uganda', cat: 'telco_data' },
+                          { title: `10,000 ${gov.currency} School Scholastic & Stationery Voucher`, val: 10000, brand: user?.organization_name || defaultSchoolName, cat: 'books_stationery' },
+                          { title: `15,000 ${gov.currency} School Uniform Subsidy Token`, val: 15000, brand: user?.organization_name || defaultSchoolName, cat: 'fashion_apparel' },
+                          { title: `5,000 ${gov.currency} Canteen Meal / Snack Token`, val: 5000, brand: user?.organization_name || defaultSchoolName, cat: 'groceries_consumables' },
+                          { title: `${defaultTelcoBrand} 1.5GB Student Research Data Pack`, val: 8000, brand: defaultTelcoBrand, cat: 'telco_data' },
                         ]
                       : isDining
                       ? [
-                          { title: '5,000 UGX Café Javas Coffee / Beverage Token', val: 5000, brand: user?.organization_name || 'Café Javas', cat: 'food_dining' },
-                          { title: '15,000 UGX Customer Appreciation Dining Voucher', val: 15000, brand: user?.organization_name || 'Café Javas', cat: 'food_dining' },
-                          { title: '10,000 UGX Bakery & Dessert Coupon', val: 10000, brand: user?.organization_name || 'Café Javas', cat: 'food_dining' },
-                          { title: 'MTN 1.5GB Civic Feedback Data Pack', val: 8000, brand: 'MTN Uganda', cat: 'telco_data' },
+                          { title: `5,000 ${gov.currency} Coffee / Beverage Courtesy Token`, val: 5000, brand: user?.organization_name || defaultDiningName, cat: 'food_dining' },
+                          { title: `15,000 ${gov.currency} Customer Appreciation Dining Voucher`, val: 15000, brand: user?.organization_name || defaultDiningName, cat: 'food_dining' },
+                          { title: `10,000 ${gov.currency} Bakery & Dessert Coupon`, val: 10000, brand: user?.organization_name || defaultDiningName, cat: 'food_dining' },
+                          { title: `${defaultTelcoBrand} 1.5GB Civic Feedback Data Pack`, val: 8000, brand: defaultTelcoBrand, cat: 'telco_data' },
                         ]
-                      : [
-                          { title: '8,000 UGX MTN 1.5GB Civic Data Bundle', val: 8000, brand: 'MTN Uganda', cat: 'telco_data' },
-                          { title: '5,000 UGX NWSC 1,000L Household Water Token', val: 5000, brand: 'NWSC Uganda', cat: 'water_utility' },
-                          { title: '10,000 UGX Umeme Yaka Power Token', val: 10000, brand: 'Umeme Power', cat: 'electricity' },
-                          { title: '5,000 UGX SafeBoda Transit Ride Credit', val: 5000, brand: 'SafeBoda', cat: 'transit_credit' },
-                        ]),
+                      : countryPerks.digitalPerks.slice(0, 4).map((pk, idx) => ({
+                          title: pk.name,
+                          val: [8000, 5000, 10000, 5000][idx % 4],
+                          brand: pk.brand,
+                          cat: pk.id,
+                        }))),
                   ].map((pkg, idx) => (
                     <button
                       key={idx}
@@ -668,7 +678,7 @@ export const GovReplyView: React.FC = () => {
                       <div className="text-[10px] font-mono text-slate-500 flex items-center justify-between mt-0.5">
                         <span>{pkg.brand}</span>
                         <strong className="text-emerald-700 dark:text-emerald-400">
-                          {user.country === 'KE' ? 'KES' : 'UGX'} {pkg.val.toLocaleString()}
+                          {gov.currency} {pkg.val.toLocaleString()}
                         </strong>
                       </div>
                     </button>
@@ -680,7 +690,7 @@ export const GovReplyView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[10px] font-mono uppercase text-slate-500 block mb-1 font-bold">
-                    Custom Voucher Face Value ({user.country === 'KE' ? 'KES' : 'UGX'})
+                    Custom Voucher Face Value ({gov.currency})
                   </label>
                   <input
                     type="number"

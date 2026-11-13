@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { tiersFor } from '../data/tiers';
 import { getCountryPerks } from '../data/countryPerks';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
 import { DeptIcon } from '../components/DeptIcon';
 import { COUNTRIES } from '../data/countries';
@@ -89,6 +90,15 @@ export const GovInboxView: React.FC = () => {
     ministerialDirectives,
     submitDirectiveCompliance,
   } = useApp();
+  const activeCountry = (user?.country || activeDeptCountry || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(activeCountry);
+  const countryPerks = getCountryPerks(activeCountry);
+  const isUg = activeCountry === 'UG';
+  const defaultTelcoBrand = countryPerks.digitalPerks[0]?.brand || 'Telco Partner';
+  const defaultTransitBrand = countryPerks.digitalPerks[3]?.brand || 'Transit Partner';
+  const defaultSchoolName = isUg ? 'Gayaza High School' : `${countryPerks.countryName} National Academy`;
+  const defaultDiningName = isUg ? 'Café Javas' : `${countryPerks.countryName} Hospitality Partner`;
+
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
   const [selectedDupToMerge, setSelectedDupToMerge] = useState<string>('');
   const [showModRequestForm, setShowModRequestForm] = useState(false);
@@ -131,9 +141,9 @@ export const GovInboxView: React.FC = () => {
   const [shiftGrossValue, setShiftGrossValue] = useState<number>(65000);
   const [shiftTransactions, setShiftTransactions] = useState<Array<{ code: string; desc: string; amount: number; time: string; cashier: string }>>([
     { code: 'CJ-LUNCH-15K-9021', desc: '15% Customer Loyalty Lunch Perk', amount: 15000, time: '11:42 AM', cashier: 'Cashier #1 (Counter)' },
-    { code: 'SCH-STATIONERY-10K-08', desc: '10,000 UGX Scholastic Books Token', amount: 10000, time: '12:15 PM', cashier: 'Cashier #1 (Counter)' },
+    { code: 'SCH-STATIONERY-10K-08', desc: 'Scholastic Books & Supplies Token', amount: 10000, time: '12:15 PM', cashier: 'Cashier #1 (Counter)' },
     { code: 'SHOP-30K-BASKET-102', desc: 'Household Essentials Basket', amount: 30000, time: '01:05 PM', cashier: 'Cashier #1 (Counter)' },
-    { code: 'CJ-COFFEE-10K-8821', desc: '10,000 UGX Artisan Brew & Brioche', amount: 10000, time: '02:20 PM', cashier: 'Cashier #1 (Counter)' },
+    { code: 'CJ-COFFEE-10K-8821', desc: 'Artisan Brew & Pastry Loyalty Token', amount: 10000, time: '02:20 PM', cashier: 'Cashier #1 (Counter)' },
   ]);
   const [showZReportModal, setShowZReportModal] = useState<boolean>(false);
   const [zReportData, setZReportData] = useState<any | null>(null);
@@ -143,7 +153,7 @@ export const GovInboxView: React.FC = () => {
 
   // Optional Courtesy Voucher / Resolution Token for Private Provider Desk (Option 2 - Customer Care Loop)
   const [providerAttachCourtesy, setProviderAttachCourtesy] = useState<boolean>(false);
-  const [providerCourtesyTitle, setProviderCourtesyTitle] = useState<string>('5,000 UGX Courtesy Resolution Token');
+  const [providerCourtesyTitle, setProviderCourtesyTitle] = useState<string>(`5,000 ${gov.currency} Courtesy Resolution Token`);
   const [providerCourtesyBrand, setProviderCourtesyBrand] = useState<string>('');
   const [providerCourtesyValue, setProviderCourtesyValue] = useState<number>(5000);
   const [providerCourtesyNote, setProviderCourtesyNote] = useState<string>(
@@ -176,15 +186,15 @@ export const GovInboxView: React.FC = () => {
           body: 'All students and parents are reminded that reporting for Term 1 commences on Monday, 2nd February 2026. Boarding luggage inspection, science laboratory coats, and cleared school fee bank vouchers must be presented at the administrative checkpoint.',
           date: '2026-01-18',
           category: 'academic',
-          officer: user?.name || 'Robinah Kizito (Head Teacher)',
+          officer: user?.name || (isUg ? 'Robinah Kizito (Head Teacher)' : 'Principal / Head of School'),
         },
         {
           id: 'b-02',
           title: 'Senior One Admissions List & Merit Bursary Scholarship Orientation',
-          body: 'The list of admitted Senior One students is now officially gazetted. Parents and guardians are invited for the orientation symposium scheduled for Saturday, 24th January 2026 in the school chapel hall.',
+          body: 'The list of admitted students is now officially gazetted. Parents and guardians are invited for the orientation symposium scheduled for Saturday, 24th January 2026 in the school chapel hall.',
           date: '2026-01-15',
           category: 'calendar',
-          officer: user?.name || 'Robinah Kizito (Head Teacher)',
+          officer: user?.name || (isUg ? 'Robinah Kizito (Head Teacher)' : 'Principal / Head of School'),
         },
       ];
     }
@@ -193,7 +203,9 @@ export const GovInboxView: React.FC = () => {
         {
           id: 'b-01',
           title: 'Artisan Coffee Harvest & Seasonal Gourmet Bakery Menu Announcement',
-          body: 'Our master baristas and pastry chefs have launched the 2026 Bugisu Arabica Single-Origin Brew and Warm Salted Caramel Brioche. Present your CivicDuty 10% voucher code at the cashier counter across all Kampala and Entebbe locations.',
+          body: isUg
+            ? 'Our master baristas and pastry chefs have launched the 2026 Bugisu Arabica Single-Origin Brew and Warm Salted Caramel Brioche. Present your CivicDuty 10% voucher code at the cashier counter across all Kampala and Entebbe locations.'
+            : 'Our master baristas and pastry chefs have launched the 2026 Single-Origin Artisan Brew and Seasonal Pastry Menu. Present your CivicDuty 10% voucher code at the cashier counter across all participating locations.',
           date: '2026-01-17',
           category: 'menu',
           officer: user?.name || 'Customer Experience Lead',
@@ -212,9 +224,6 @@ export const GovInboxView: React.FC = () => {
     ];
   });
 
-  const activeCountry = user?.country || activeDeptCountry || 'UG';
-  const countryPerks = getCountryPerks(activeCountry);
-
   const [dispatchModal, setDispatchModal] = useState<'none' | 'digital' | 'physical'>('none');
   const [recipient, setRecipient] = useState(
     `${countryPerks.sampleCitizens[0]?.name} (${countryPerks.sampleCitizens[0]?.phone}) - ${countryPerks.sampleCitizens[0]?.location}`
@@ -222,8 +231,8 @@ export const GovInboxView: React.FC = () => {
   const [perkType, setPerkType] = useState(countryPerks.digitalPerks[0]?.id || 'data');
   const [perkCode, setPerkCode] = useState(countryPerks.digitalPerks[0]?.code || 'CIVIC-VOUCHER-01');
   const [hqRoom, setHqRoom] = useState(countryPerks.hqRoom);
-  const [officerName, setOfficerName] = useState('Parish Admin Desk Officer');
-  const [prizeType, setPrizeType] = useState('Parish Watchdog Honor Plaque & Solar Lantern');
+  const [officerName, setOfficerName] = useState(`${gov.tier1Short} Admin Officer`);
+  const [prizeType, setPrizeType] = useState(`${gov.tier1UnitLabel} Watchdog Honor Plaque & Civic Kit`);
   const [dispatchSuccess, setDispatchSuccess] = useState<{
     type: 'digital' | 'physical';
     code: string;
@@ -240,6 +249,9 @@ export const GovInboxView: React.FC = () => {
       setPerkType(countryPerks.digitalPerks[0]?.id || 'data');
       setPerkCode(countryPerks.digitalPerks[0]?.code || 'CIVIC-VOUCHER-01');
       setHqRoom(countryPerks.hqRoom);
+      setOfficerName(`${gov.tier1Short} Admin Officer`);
+      setPrizeType(`${gov.tier1UnitLabel} Watchdog Honor Plaque & Civic Kit`);
+      setProviderCourtesyTitle(`5,000 ${gov.currency} Courtesy Resolution Token`);
     }
   }, [activeCountry]);
 
@@ -261,16 +273,16 @@ export const GovInboxView: React.FC = () => {
       const curDept = getDept(user.country, user.dept);
       setProfileOrgName(cr?.businessName || user.organization_name || curDept.name || '');
       setProfileDesc(cr?.customDescription || curDept.full || '');
-      setProfileLocation(cr?.customLocation || curDept.location || 'Wakiso District, Uganda');
-      setProfileHotline(cr?.customHotline || cr?.phone || user.contact_phone || '+256 414 567 401');
+      setProfileLocation(cr?.customLocation || curDept.location || (isUg ? 'Wakiso District, Uganda' : `${gov.sampleJurisdictions[0] || countryPerks.countryName}, ${countryPerks.countryName}`));
+      setProfileHotline(cr?.customHotline || cr?.phone || user.contact_phone || gov.samplePhone);
       setProfileEmail(cr?.officialEmail || 'contact@entity.org');
-      setProfileWebsite(cr?.customWebsite || 'https://gayazahs.sc.ug');
-      setProfileRepName(cr?.representativeName || user.officer_name || user.name || 'Robinah Kizito');
+      setProfileWebsite(cr?.customWebsite || (isUg ? 'https://gayazahs.sc.ug' : 'https://institution.org'));
+      setProfileRepName(cr?.representativeName || user.officer_name || user.name || (isUg ? 'Robinah Kizito' : 'Desk Lead'));
       setProfileRepRole(cr?.role || user.real_title_short || 'Head Teacher & Statutory Administrator');
       setProfileAvatarUrl(cr?.customAvatarUrl || '');
       setProfileSla(String(curDept.sla || 24));
     }
-  }, [user?.dept, user?.organization_name]);
+  }, [user?.dept, user?.organization_name, activeCountry]);
 
   const handleProfileAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -454,13 +466,16 @@ export const GovInboxView: React.FC = () => {
     (user.officer_name?.includes('Kumumanya') ||
       user.real_title_short?.includes('PS') ||
       user.role_label?.includes('Permanent Secretary') ||
+      user.role_label?.includes('Superadmin') ||
+      user.deskCode?.includes('-PS-') ||
+      user.deskCode?.startsWith('PS-') ||
       user.deskCode === 'UG-MOLG-PS-011' ||
       user.deskCode === 'PS-MOLG-2026' ||
       user.deskCode === 'PS-MOLG-ROLLOUT')
   );
 
   // =========================================================================
-  // DEDICATED PRIVATE PROVIDER DESK VIEW (Gayaza High, Namagunga, Café Javas, etc.)
+  // DEDICATED PRIVATE PROVIDER DESK VIEW
   // =========================================================================
   if (isPrivateProvider) {
     const deptProjects = (projects || []).filter(
@@ -475,14 +490,14 @@ export const GovInboxView: React.FC = () => {
       deptId: user.dept || 'kfc_ug',
       brandName: user.organization_name || d.name,
       name: user.branch_name || 'Local Outlet Desk',
-      country: user.country || 'UG',
-      district: user.branch_district || 'Kampala',
-      subcounty: user.branch_subcounty || 'Central Division',
-      parish: user.branch_parish || 'Kamwokya II',
+      country: activeCountry,
+      district: user.branch_district || gov.sampleJurisdictions[0] || countryPerks.countryName,
+      subcounty: user.branch_subcounty || gov.tier2UnitLabel,
+      parish: user.branch_parish || gov.tier1UnitLabel,
       landmark: 'Local Branch Desk',
       accessCode: 'LOCAL-MGR',
       managerName: user.name || 'Branch Manager',
-      managerPhone: user.contact_phone || '+256 700 000 000',
+      managerPhone: user.contact_phone || gov.samplePhone,
       managerEmail: 'branch@provider.com',
       slaHours: 12,
       status: 'active' as const,
@@ -557,17 +572,18 @@ export const GovInboxView: React.FC = () => {
       user.organization_name?.toLowerCase().includes('javas') ||
       user.organization_name?.toLowerCase().includes('hotel');
 
+    const defaultProjLocation = d.location || (isUg ? 'Wakiso District' : `${gov.sampleJurisdictions[0] || countryPerks.countryName}`);
     const sampleFacilityProjects = deptProjects.length > 0 ? deptProjects : isSchool ? [
       {
         id: 'proj-sch-01',
         title: `${user.organization_name || 'School'} STEM Innovation Centre & Robotics Lab`,
         tender_ref: 'TND-2026-STEM-01',
-        contractor: 'Seyani Brothers Civil Engineering Ltd',
-        value_curr: 'UGX',
+        contractor: isUg ? 'Seyani Brothers Civil Engineering Ltd' : 'National Campus Engineering Ltd',
+        value_curr: gov.currency,
         value_amt: 450000000,
         status: 'active',
         progress: 75,
-        location: `${d.location || 'Wakiso District'}`,
+        location: defaultProjLocation,
         start_date: '2025-09-01',
         end_date: '2026-04-30',
         dept: user.dept,
@@ -576,26 +592,26 @@ export const GovInboxView: React.FC = () => {
         id: 'proj-sch-02',
         title: 'Senior Boarding Dormitory Refurbishing & Fire Suppression System',
         tender_ref: 'TND-2026-DORM-02',
-        contractor: 'Kigo Infrastructure Contractors',
-        value_curr: 'UGX',
+        contractor: isUg ? 'Kigo Infrastructure Contractors' : 'Civic Facilities & Safety Contractors',
+        value_curr: gov.currency,
         value_amt: 180000000,
         status: 'active',
         progress: 90,
-        location: `${d.location || 'Wakiso District'}`,
+        location: defaultProjLocation,
         start_date: '2025-11-15',
         end_date: '2026-02-28',
         dept: user.dept,
       },
       {
         id: 'proj-sch-03',
-        title: 'Clean Solar Microgrid & Automated Borehole Water System',
+        title: 'Clean Solar Microgrid & Automated Water Filtration System',
         tender_ref: 'TND-2026-SOLAR-03',
-        contractor: 'Equator Green Utilities Ltd',
-        value_curr: 'UGX',
+        contractor: isUg ? 'Equator Green Utilities Ltd' : 'Green Microgrid Utilities Ltd',
+        value_curr: gov.currency,
         value_amt: 120000000,
         status: 'completed',
         progress: 100,
-        location: `${d.location || 'Wakiso District'}`,
+        location: defaultProjLocation,
         start_date: '2025-06-01',
         end_date: '2025-12-20',
         dept: user.dept,
@@ -605,12 +621,12 @@ export const GovInboxView: React.FC = () => {
         id: 'proj-cj-01',
         title: `${user.organization_name || 'Provider'} Customer Experience & Cold Storage Facility`,
         tender_ref: 'TND-2026-EXP-01',
-        contractor: 'City Build Works Ltd',
-        value_curr: 'UGX',
+        contractor: 'Metro Commercial Build Works Ltd',
+        value_curr: gov.currency,
         value_amt: 320000000,
         status: 'active',
         progress: 85,
-        location: `${d.location || 'Kampala Central'}`,
+        location: d.location || (isUg ? 'Kampala Central' : `${gov.sampleJurisdictions[0] || countryPerks.countryName}`),
         start_date: '2025-08-01',
         end_date: '2026-03-31',
         dept: user.dept,
@@ -651,8 +667,8 @@ export const GovInboxView: React.FC = () => {
                     {user.scope === 'national'
                       ? 'National Tier · Unlimited Seats'
                       : user.scope === 'subcounty'
-                      ? 'Sub-County Tier · Unlimited Seats'
-                      : 'Parish Tier · 2 Seats'}
+                      ? `${gov.tier2UnitLabel} Tier · Unlimited Seats`
+                      : `${gov.tier1UnitLabel} Tier · 2 Seats`}
                   </span>
                 </div>
 
@@ -1154,23 +1170,23 @@ export const GovInboxView: React.FC = () => {
                             {[
                               ...(isSchool
                                 ? [
-                                    { title: '10,000 UGX School Scholastic & Stationery Voucher', val: 10000 },
-                                    { title: '15,000 UGX School Uniform Subsidy Token', val: 15000 },
-                                    { title: '5,000 UGX Canteen Meal / Snack Token', val: 5000 },
-                                    { title: 'MTN 1.5GB Student Research Data Pack', val: 8000 },
+                                    { title: `10,000 ${gov.currency} School Scholastic & Stationery Voucher`, val: 10000 },
+                                    { title: `15,000 ${gov.currency} School Uniform Subsidy Token`, val: 15000 },
+                                    { title: `5,000 ${gov.currency} Canteen Meal / Snack Token`, val: 5000 },
+                                    { title: `${defaultTelcoBrand} 1.5GB Student Research Data Pack`, val: 8000 },
                                   ]
                                 : isRestaurant
                                 ? [
-                                    { title: '5,000 UGX Café Javas Coffee / Beverage Token', val: 5000 },
-                                    { title: '15,000 UGX Customer Appreciation Dining Voucher', val: 15000 },
-                                    { title: '10,000 UGX Bakery & Gourmet Snack Voucher', val: 10000 },
-                                    { title: 'MTN 1.5GB Feedback Data Pack', val: 8000 },
+                                    { title: `5,000 ${gov.currency} ${defaultDiningName} Coffee / Beverage Token`, val: 5000 },
+                                    { title: `15,000 ${gov.currency} Customer Appreciation Dining Voucher`, val: 15000 },
+                                    { title: `10,000 ${gov.currency} Bakery & Gourmet Snack Voucher`, val: 10000 },
+                                    { title: `${defaultTelcoBrand} 1.5GB Feedback Data Pack`, val: 8000 },
                                   ]
                                 : [
-                                    { title: '5,000 UGX Customer Care Resolution Token', val: 5000 },
-                                    { title: '10,000 UGX Verified Patron Courtesy Token', val: 10000 },
-                                    { title: '8,000 UGX MTN 1.5GB Civic Data Bundle', val: 8000 },
-                                    { title: '5,000 UGX SafeBoda Transit Ride Credit', val: 5000 },
+                                    { title: `5,000 ${gov.currency} Customer Care Resolution Token`, val: 5000 },
+                                    { title: `10,000 ${gov.currency} Verified Patron Courtesy Token`, val: 10000 },
+                                    { title: `8,000 ${gov.currency} ${defaultTelcoBrand} 1.5GB Civic Data Bundle`, val: 8000 },
+                                    { title: `5,000 ${gov.currency} ${defaultTransitBrand} Ride Credit`, val: 5000 },
                                   ]),
                             ].map((preset, idx) => (
                               <button
@@ -1189,7 +1205,7 @@ export const GovInboxView: React.FC = () => {
                               >
                                 <div className="font-bold text-[11px] truncate">{preset.title}</div>
                                 <div className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
-                                  UGX {preset.val.toLocaleString()}
+                                  {gov.currency} {preset.val.toLocaleString()}
                                 </div>
                               </button>
                             ))}
@@ -1198,7 +1214,7 @@ export const GovInboxView: React.FC = () => {
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[9.5px] font-mono uppercase text-slate-500 block mb-0.5 font-bold">
-                                Token Value (UGX)
+                                Token Value ({gov.currency})
                               </label>
                               <input
                                 type="number"
@@ -1276,8 +1292,8 @@ export const GovInboxView: React.FC = () => {
                           let courtesyPayload: any = undefined;
 
                           if (providerAttachCourtesy) {
-                            const isKe = user.country === 'KE';
-                            const curr = isKe ? 'KES' : user.country === 'NG' ? 'NGN' : 'UGX';
+                            const isKe = activeCountry === 'KE';
+                            const curr = gov.currency;
                             const codeSuffix = Math.floor(1000 + Math.random() * 9000);
                             const cleanPrefix = (providerCourtesyBrand || user.organization_name || d.name).replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase() || 'CVIC';
                             const vCode = `${cleanPrefix}-${providerCourtesyValue >= 1000 ? Math.round(providerCourtesyValue / 1000) + 'K' : providerCourtesyValue}-${codeSuffix}`;
@@ -1370,7 +1386,9 @@ export const GovInboxView: React.FC = () => {
                       <span className="px-2 py-0.5 rounded font-mono font-bold text-[9px] bg-emerald-600 text-white">Grade A Certified</span>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                      UNBS Food Safety Reg #UNBS-F-9021 · KCCA Public Health Sanitary Permit · 100% Halal Verified Kitchen
+                      {isUg
+                        ? 'UNBS Food Safety Reg #UNBS-F-9021 · KCCA Public Health Sanitary Permit · Verified Kitchen'
+                        : `${countryPerks.countryName} Food Safety Reg #FS-9021 · Municipal Health Sanitary Permit · Verified Hospitality Kitchen`}
                     </p>
                   </div>
                 </div>
@@ -1388,11 +1406,17 @@ export const GovInboxView: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-950 dark:text-white">Ministry of Education &amp; Sports Accreditation</span>
-                      <span className="px-2 py-0.5 rounded font-mono font-bold text-[9px] bg-emerald-600 text-white">UNEB Centre #U0033</span>
+                      <span className="font-bold text-slate-950 dark:text-white">
+                        {isUg ? 'Ministry of Education & Sports Accreditation' : `${countryPerks.countryName} Ministry of Education Accreditation`}
+                      </span>
+                      <span className="px-2 py-0.5 rounded font-mono font-bold text-[9px] bg-emerald-600 text-white">
+                        {isUg ? 'UNEB Centre #U0033' : `${activeCountry}-EDU #0033`}
+                      </span>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                      MoES Statutory School License #MOES-SEC-012 · Canteen, Bookshop &amp; Tuition Subsidy Settlement Terminal
+                      {isUg
+                        ? 'MoES Statutory School License #MOES-SEC-012 · Canteen, Bookshop & Tuition Subsidy Settlement Terminal'
+                        : 'Statutory School License #EDU-SEC-012 · Campus, Bookshop & Tuition Subsidy Settlement Terminal'}
                     </p>
                   </div>
                 </div>
@@ -1446,7 +1470,7 @@ export const GovInboxView: React.FC = () => {
                       type="text"
                       value={posCodeInput}
                       onChange={(e) => setPosCodeInput(e.target.value)}
-                      placeholder="e.g. CJ-LUNCH-10K-9921, SCH-50K-UNIFORM-01, SHOP-1000KSH-UG..."
+                      placeholder={`e.g. CJ-LUNCH-10K-${activeCountry}, SCH-50K-UNIFORM-01, SHOP-PERK-${activeCountry}...`}
                       className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] font-mono font-bold text-xs uppercase text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -1462,7 +1486,7 @@ export const GovInboxView: React.FC = () => {
                       const desc = isTuition
                         ? '10% School Uniform & Tuition Subsidy Credit'
                         : `${user.organization_name || d.name} 15% Customer Loyalty Perk`;
-                      const discountVal = isTuition ? 'UGX 50,000' : 'UGX 15,000 (15% Off)';
+                      const discountVal = isTuition ? `${gov.currency} 50,000` : `${gov.currency} 15,000 (15% Off)`;
                       const valNum = isTuition ? 50000 : code.includes('25K') ? 25000 : code.includes('30K') ? 30000 : 15000;
 
                       setShiftRedeemedCount((prev) => prev + 1);
@@ -1503,7 +1527,7 @@ export const GovInboxView: React.FC = () => {
                   {[
                     isSchool ? 'SCH-TUITION-50K-1092' : 'CJ-COFFEE-10K-8821',
                     isSchool ? 'SCH-UNIFORM-15K-2026' : 'RES-DINING-25K-9912',
-                    'SHOP-1000KSH-2819-UG',
+                    `SHOP-PERK-2819-${activeCountry}`,
                   ].map((sampleCode) => (
                     <button
                       key={sampleCode}
@@ -1585,7 +1609,9 @@ export const GovInboxView: React.FC = () => {
                       grossSales: gross,
                       platformFee: commission,
                       netEscrow: netPayout,
-                      settlementDestination: 'MTN MoMo Merchant Code #901824 / Stanbic Bank Escrow',
+                      settlementDestination: isUg
+                        ? 'MTN MoMo Merchant Code #901824 / Stanbic Bank Escrow'
+                        : `${defaultTelcoBrand} Merchant #901824 / Partner Bank Escrow`,
                       transactions: shiftTransactions,
                     });
                     setShowZReportModal(true);
@@ -1607,21 +1633,21 @@ export const GovInboxView: React.FC = () => {
                 <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
                   <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Gross Sales Value</span>
                   <div className="text-lg font-black font-mono text-slate-900 dark:text-white mt-0.5">
-                    UGX {shiftGrossValue.toLocaleString()}
+                    {gov.currency} {shiftGrossValue.toLocaleString()}
                   </div>
                   <span className="text-[9.5px] text-slate-400 font-mono">Face value redeemed</span>
                 </div>
                 <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
                   <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Platform Fee (2%)</span>
                   <div className="text-lg font-black font-mono text-amber-600 mt-0.5">
-                    UGX {Math.round(shiftGrossValue * 0.02).toLocaleString()}
+                    {gov.currency} {Math.round(shiftGrossValue * 0.02).toLocaleString()}
                   </div>
                   <span className="text-[9.5px] text-slate-400 font-mono">CivicDuty fee</span>
                 </div>
                 <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
                   <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Net Escrow Payout (98%)</span>
                   <div className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                    UGX {Math.round(shiftGrossValue * 0.98).toLocaleString()}
+                    {gov.currency} {Math.round(shiftGrossValue * 0.98).toLocaleString()}
                   </div>
                   <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">100% Guaranteed</span>
                 </div>
@@ -1648,7 +1674,7 @@ export const GovInboxView: React.FC = () => {
                         </span>
                       </div>
                       <span className="font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
-                        +UGX {tx.amount.toLocaleString()}
+                        +{gov.currency} {tx.amount.toLocaleString()}
                       </span>
                     </div>
                   ))}
@@ -1809,7 +1835,7 @@ export const GovInboxView: React.FC = () => {
                           {p.tender_ref || 'CIVIC-FACILITY-01'}
                         </span>
                         <span className="text-xs font-bold font-mono text-slate-900 dark:text-white">
-                          {p.value_curr || 'UGX'} {p.value_amt?.toLocaleString()}
+                          {p.value_curr || gov.currency} {p.value_amt?.toLocaleString()}
                         </span>
                       </div>
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1">{p.title}</h4>
@@ -1868,12 +1894,20 @@ export const GovInboxView: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { name: user.name || 'Robinah Kizito', role: user.role_label || 'Head Teacher & Administrator', badge: 'Owner Admin', email: 'headmistress@institution.ac.ug' },
-                { name: 'Dr. Sarah Namutebi', role: 'Deputy Head & Academic Dean', badge: 'Academic Lead', email: 'academics@institution.ac.ug' },
-                { name: 'Charles Mukasa', role: 'Bursar & Finance Lead', badge: 'Billing & POS Desk', email: 'bursar@institution.ac.ug' },
-                { name: 'Florence Nansubuga', role: 'Head of Customer Relations & Admissions', badge: 'Desk Officer', email: 'admissions@institution.ac.ug' },
-              ].map((member, idx) => (
+              {(isUg
+                ? [
+                    { name: user.name || 'Robinah Kizito', role: user.role_label || 'Head Teacher & Administrator', badge: 'Owner Admin', email: 'headmistress@institution.ac.ug' },
+                    { name: 'Dr. Sarah Namutebi', role: 'Deputy Head & Academic Dean', badge: 'Academic Lead', email: 'academics@institution.ac.ug' },
+                    { name: 'Charles Mukasa', role: 'Bursar & Finance Lead', badge: 'Billing & POS Desk', email: 'bursar@institution.ac.ug' },
+                    { name: 'Florence Nansubuga', role: 'Head of Customer Relations & Admissions', badge: 'Desk Officer', email: 'admissions@institution.ac.ug' },
+                  ]
+                : [
+                    { name: user.name || 'Desk Lead & Administrator', role: user.role_label || 'Executive Lead & Administrator', badge: 'Owner Admin', email: `director@institution.${activeCountry.toLowerCase()}` },
+                    { name: 'Dr. Claire Amani', role: 'Deputy Operations Lead', badge: 'Operations Lead', email: `operations@institution.${activeCountry.toLowerCase()}` },
+                    { name: 'Samuel Osei', role: 'Finance & Settlement Officer', badge: 'Billing & POS Desk', email: `finance@institution.${activeCountry.toLowerCase()}` },
+                    { name: 'Grace Mwangi', role: 'Head of Patron Relations', badge: 'Desk Officer', email: `relations@institution.${activeCountry.toLowerCase()}` },
+                  ]
+              ).map((member, idx) => (
                 <div
                   key={idx}
                   className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-3"
@@ -1930,9 +1964,9 @@ export const GovInboxView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
               {[
-                { rank: 'Top 1 (33.3% Pool)', name: 'Esther Babirye', role: 'Lead Parent & Science Watchdog', reward: 'UGX 100,000 School Voucher' },
-                { rank: 'Top 2 (33.3% Pool)', name: 'Brian Mugisha', role: 'Student Guild Technology Rep', reward: '10GB Telco Data Bundle' },
-                { rank: 'Top 3 (33.3% Pool)', name: 'Patricia Nansubuga', role: 'PTA Campus Maintenance Rep', reward: 'UGX 100,000 School Voucher' },
+                { rank: 'Top 1 (33.3% Pool)', name: countryPerks.sampleCitizens[0]?.name || 'Civic Champion #1', role: `Lead Community Watchdog (${countryPerks.sampleCitizens[0]?.location || gov.tier1UnitLabel})`, reward: `${gov.currency} 100,000 Partner Voucher` },
+                { rank: 'Top 2 (33.3% Pool)', name: countryPerks.sampleCitizens[1]?.name || 'Civic Champion #2', role: `Verified Patron (${countryPerks.sampleCitizens[1]?.location || gov.tier1UnitLabel})`, reward: countryPerks.digitalPerks[0]?.name || '10GB Data Bundle' },
+                { rank: 'Top 3 (33.3% Pool)', name: countryPerks.sampleCitizens[2]?.name || 'Civic Champion #3', role: `Campus / Corridor Liaison (${countryPerks.sampleCitizens[2]?.location || gov.tier1UnitLabel})`, reward: `${gov.currency} 100,000 Partner Voucher` },
               ].map((c, i) => (
                 <div key={i} className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/25 space-y-1.5">
                   <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
@@ -2085,7 +2119,7 @@ export const GovInboxView: React.FC = () => {
                       type="text"
                       value={profileOrgName}
                       onChange={(e) => setProfileOrgName(e.target.value)}
-                      placeholder="e.g. Gayaza High School"
+                      placeholder={`e.g. ${defaultSchoolName}`}
                       className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       required
                     />
@@ -2099,7 +2133,7 @@ export const GovInboxView: React.FC = () => {
                       rows={3}
                       value={profileDesc}
                       onChange={(e) => setProfileDesc(e.target.value)}
-                      placeholder="e.g. Never Give Up · First-class Christian girls boarding secondary school established 1905."
+                      placeholder="e.g. Excellence in public service and transparent customer resolution."
                       className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 resize-none leading-relaxed"
                     />
                   </div>
@@ -2123,7 +2157,7 @@ export const GovInboxView: React.FC = () => {
                       type="text"
                       value={profileLocation}
                       onChange={(e) => setProfileLocation(e.target.value)}
-                      placeholder="e.g. Kasangati Town Council, Gayaza Road, Wakiso District"
+                      placeholder={isUg ? 'e.g. Kasangati Town Council, Gayaza Road, Wakiso District' : `e.g. Central Avenue, ${gov.sampleJurisdictions[0] || countryPerks.countryName}`}
                       className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       required
                     />
@@ -2139,7 +2173,7 @@ export const GovInboxView: React.FC = () => {
                         type="tel"
                         value={profileHotline}
                         onChange={(e) => setProfileHotline(e.target.value)}
-                        placeholder="+256 414 567 401"
+                        placeholder={gov.samplePhone}
                         className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>
@@ -2153,7 +2187,7 @@ export const GovInboxView: React.FC = () => {
                         type="email"
                         value={profileEmail}
                         onChange={(e) => setProfileEmail(e.target.value)}
-                        placeholder="headteacher@gayazahs.sc.ug"
+                        placeholder={`desk@institution.${activeCountry.toLowerCase()}`}
                         className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>
@@ -2168,7 +2202,7 @@ export const GovInboxView: React.FC = () => {
                       type="url"
                       value={profileWebsite}
                       onChange={(e) => setProfileWebsite(e.target.value)}
-                      placeholder="https://gayazahs.sc.ug"
+                      placeholder={isUg ? 'https://gayazahs.sc.ug' : 'https://institution.org'}
                       className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -2192,7 +2226,7 @@ export const GovInboxView: React.FC = () => {
                         type="text"
                         value={profileRepName}
                         onChange={(e) => setProfileRepName(e.target.value)}
-                        placeholder="e.g. Robinah Kizito"
+                        placeholder={isUg ? 'e.g. Robinah Kizito' : 'e.g. Desk Director'}
                         className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>
@@ -2301,15 +2335,15 @@ export const GovInboxView: React.FC = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500">Gross Redeemed Face Value:</span>
-                      <strong className="text-slate-900 dark:text-white">UGX {zReportData.grossSales.toLocaleString()}</strong>
+                      <strong className="text-slate-900 dark:text-white">{gov.currency} {zReportData.grossSales.toLocaleString()}</strong>
                     </div>
                     <div className="flex justify-between text-amber-600 dark:text-amber-400">
                       <span>CivicDuty Platform Fee (2%):</span>
-                      <span>-UGX {zReportData.platformFee.toLocaleString()}</span>
+                      <span>-{gov.currency} {zReportData.platformFee.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between border-t border-dashed border-slate-300 dark:border-slate-700 pt-1.5 text-xs font-black text-emerald-600 dark:text-emerald-400">
                       <span>Net Escrow Disbursement (98%):</span>
-                      <span>UGX {zReportData.netEscrow.toLocaleString()}</span>
+                      <span>{gov.currency} {zReportData.netEscrow.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -2334,7 +2368,7 @@ export const GovInboxView: React.FC = () => {
                           <strong>{t.code}</strong> · {t.desc}
                         </span>
                         <span className="text-emerald-600 font-bold shrink-0">
-                          UGX {t.amount.toLocaleString()}
+                          {gov.currency} {t.amount.toLocaleString()}
                         </span>
                       </div>
                     ))}
@@ -2416,14 +2450,14 @@ export const GovInboxView: React.FC = () => {
                       {user.organization_name || d.name}
                     </h2>
                     <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      {d.location || 'Uganda Network'} · Guaranteed {d.sla || 48}hr Response SLA
+                      {d.location || `${countryPerks.countryName} Network`} · Guaranteed {d.sla || 48}hr Response SLA
                     </p>
                   </div>
 
                   {/* Big QR Code Box */}
                   <div className="p-5 rounded-2xl bg-white border border-slate-200 inline-block shadow-inner">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://civicduty.ug/wall/${d.id}`}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://civicduty.site/wall/${d.id}?c=${activeCountry}`}
                       alt="CivicDuty Official Countertop QR Code"
                       className="w-40 h-40 mx-auto"
                     />
@@ -2539,10 +2573,10 @@ export const GovInboxView: React.FC = () => {
                     {user.scope === 'national'
                       ? 'National ($20/mo · Unlimited Seats)'
                       : user.scope === 'subcounty'
-                      ? 'Sub-County ($5/mo · Unlimited Seats)'
+                      ? `${gov.tier2UnitLabel} ($5/mo · Unlimited Seats)`
                       : user.scope === 'parish'
-                      ? 'Parish (Free · 2 Seats)'
-                      : 'District ($10/mo · Unlimited Seats)'}
+                      ? `${gov.tier1UnitLabel} (Free · 2 Seats)`
+                      : `${gov.tier3UnitLabel} ($10/mo · Unlimited Seats)`}
                   </span>
                 ) : (
                   <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
@@ -2617,7 +2651,7 @@ export const GovInboxView: React.FC = () => {
                   <span className="text-[8.5px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded font-semibold">Locked Merit</span>
                 </div>
                 <p className="text-slate-600 dark:text-slate-400 text-[9.5px] leading-snug">
-                  Award the monthly Top 3 ranked citizens in your Parish, Shop, Contract, or Boda Stage (strictly locked against cherry-picking).
+                  Award the monthly Top 3 ranked citizens in your {gov.tier1UnitLabel}, Shop, Contract, or {isUg ? 'Boda Stage' : 'Scout Hub'} (strictly locked against cherry-picking).
                 </p>
               </div>
               <button
@@ -2735,7 +2769,7 @@ export const GovInboxView: React.FC = () => {
                 <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
                   {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
                     ? `Direct Bilateral Line to CivicDuty CD-Ops (${countryPerks.countryName})`
-                    : `Routed via ${countryPerks.countryName} National Node Head (e.g. PS MoLG) → CivicDuty CD-Ops`}
+                    : `Routed via ${countryPerks.countryName} National Node Head (${gov.superadminTitle} · ${gov.superadminMinistryShort}) → CivicDuty CD-Ops`}
                 </span>
               </div>
               <div className="text-xs font-semibold text-slate-900 dark:text-white mt-0.5">
@@ -2760,7 +2794,7 @@ export const GovInboxView: React.FC = () => {
               <div className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400">
                 {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
                   ? 'As National Superadmin, your modification directive is transmitted directly to CivicDuty Operatives (CD-Ops).'
-                  : `Your request will be sent to the ${countryPerks.countryName} National Node Head (e.g. PS MoLG) for statutory review. Once approved by the National Superadmin, it is forwarded to CivicDuty Operatives (CD-Ops).`}
+                  : `Your request will be sent to the ${countryPerks.countryName} National Node Head (${gov.superadminTitle} · ${gov.superadminMinistryShort}) for statutory review. Once approved by the National Superadmin, it is forwarded to CivicDuty Operatives (CD-Ops).`}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input
@@ -2836,7 +2870,7 @@ export const GovInboxView: React.FC = () => {
                   <span>
                     {user.role === 'platform_admin' || user.hierarchy_level === 'tier5_perm_sec'
                       ? 'Submit Directly to CivicDuty CD-Ops'
-                      : 'Submit to National Node Head (PS MoLG)'}
+                      : `Submit to National Node Head (${gov.superadminTitle})`}
                   </span>
                 </button>
               </div>
@@ -2891,7 +2925,7 @@ export const GovInboxView: React.FC = () => {
                           onClick={() =>
                             endorseModificationForCdOps(
                               req.id,
-                              user.name || 'PS MoLG (National Superadmin)',
+                              user.name || `${gov.superadminTitle} (${gov.superadminMinistryShort})`,
                               'Vetted and endorsed by National Superadmin for CD-Ops deployment.'
                             )
                           }
@@ -3011,7 +3045,7 @@ export const GovInboxView: React.FC = () => {
           <div className="flex items-center gap-2 mt-2 corrupt-banner">
             <Lock className="text-rose-600 dark:text-rose-400" size={14} />
             <p className="text-[10px] mono text-rose-800 dark:text-rose-300 ml-1">
-              {corruptionCount} anti-corruption report{corruptionCount > 1 ? 's' : ''} — referred to IGG
+              {corruptionCount} anti-corruption report{corruptionCount > 1 ? 's' : ''} — referred to {gov.ombudsman.shortName}
             </p>
           </div>
         )}
@@ -3027,7 +3061,7 @@ export const GovInboxView: React.FC = () => {
                 </span>
               </div>
               <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-900 dark:text-purple-300 font-bold border border-purple-400">
-                MoLG Statutory Oversight
+                {gov.superadminMinistryShort} Statutory Oversight
               </span>
             </div>
 
@@ -3513,17 +3547,19 @@ export const GovInboxView: React.FC = () => {
                   <button
                     onClick={() => {
                       if (dispatchModal === 'digital') {
-                        const code = perkCode || 'NWSC-CIVIC-8841';
-                        logAudit('DISPATCH_DIGITAL_PERK', 'ENTITY-DESK', `Dispatched ${perkType === 'data' ? '1GB Data Bundle' : '10% NWSC Discount Voucher'} (${code}) to ${recipient}`);
+                        const selectedPerkObj = countryPerks.digitalPerks.find((pk) => pk.id === perkType) || countryPerks.digitalPerks[0];
+                        const code = perkCode || selectedPerkObj?.code || `CIVIC-${activeCountry}-8841`;
+                        const perkLabel = selectedPerkObj?.name || 'Digital Civic Perk';
+                        logAudit('DISPATCH_DIGITAL_PERK', 'ENTITY-DESK', `Dispatched ${perkLabel} (${code}) to ${recipient}`);
                         toast(`Digital Perk dispatched to ${recipient.split(' ')[0]}!`, 'emerald');
                         setDispatchSuccess({
                           type: 'digital',
                           code,
                           recipient,
-                          details: perkType === 'data' ? '1GB Free Civic Data Bundle credited' : '10% NWSC Utility Water Voucher Code',
+                          details: selectedPerkObj ? `${selectedPerkObj.name} (${selectedPerkObj.brand}) credited` : 'Civic digital perk credited',
                         });
                       } else {
-                        const passCode = `PASS-NKW-${Math.floor(1000 + Math.random() * 9000)}`;
+                        const passCode = `PASS-${activeCountry}-${Math.floor(1000 + Math.random() * 9000)}`;
                         logAudit('ISSUE_HQ_PASS', 'ENTITY-DESK', `Issued HQ Pickup Pass ${passCode} for ${prizeType} to ${recipient}`);
                         toast(`HQ Pickup Pass ${passCode} generated and issued!`, 'emerald');
                         setDispatchSuccess({
@@ -3602,7 +3638,7 @@ export const GovInboxView: React.FC = () => {
                   {[
                     { id: 'in_progress', label: 'In Progress (Active Work)' },
                     { id: 'compliant', label: 'Full Remedial Compliance' },
-                    { id: 'escalated_to_igg', label: 'Escalate to IGG Subpoena' },
+                    { id: 'escalated_to_igg', label: `Escalate to ${gov.ombudsman.shortName} Subpoena` },
                   ].map((s) => (
                     <button
                       key={s.id}

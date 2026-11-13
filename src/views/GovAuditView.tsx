@@ -20,7 +20,8 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
-import { AuditEntry, OfficialQuery } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { AuditEntry, OfficialQuery, CountryCode } from '../types';
 import { OfficialQueryDossierModal } from '../components/OfficialQueryDossierModal';
 import { downloadForensicAuditPdf } from '../services/forensicPdfService';
 
@@ -163,11 +164,12 @@ export const GovAuditView: React.FC = () => {
   const [issuedAuditorToken, setIssuedAuditorToken] = useState<string | null>(null);
   const [copiedAuditorToken, setCopiedAuditorToken] = useState<boolean>(false);
 
-  const countryCode = user?.country || 'UG';
+  const countryCode = (user?.country || 'UG') as CountryCode;
   const countryObj = COUNTRIES[countryCode] || COUNTRIES['UG'];
+  const gov = useMemo(() => getCountryGovernanceSchema(countryCode), [countryCode]);
   const d = getDept(
     countryCode,
-    user?.dept || (countryCode === 'KE' ? 'kplc' : countryCode === 'RW' ? 'reg' : countryCode === 'GH' ? 'ecg' : 'kcca')
+    user?.dept || gov.superadminDeptId || (countryCode === 'KE' ? 'kplc' : countryCode === 'RW' ? 'reg' : countryCode === 'GH' ? 'ecg' : 'kcca')
   );
 
   const auditSpec: AuditSpec = COUNTRY_AUDIT_SPECS[countryCode] || {
@@ -505,9 +507,10 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
               type="button"
               onClick={() => {
                 downloadForensicAuditPdf({
+                  country: countryCode,
                   district: countryCode,
-                  auditorCode: user?.deskCode || 'UG-IGG-9999',
-                  targetEntity: `${countryObj.name} Sovereign Desks & Local Gov Engineering`,
+                  auditorCode: user?.deskCode || `${gov.codePrefix}-${gov.ombudsman.shortName.replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase()}-9999`,
+                  targetEntity: `${countryObj.name} Sovereign Desks & Sub-National Engineering`,
                 });
                 toast('Forensic SHA-256 PDF Audit Dossier exported successfully!', 'emerald');
               }}
@@ -944,7 +947,7 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                   { id: 'pending', label: 'Pending Response' },
                   { id: 'review', label: 'Under Review' },
                   { id: 'resolved', label: 'Resolved' },
-                  { id: 'sanctions', label: 'Sanctions / IGG' },
+                  { id: 'sanctions', label: `Sanctions / ${gov.ombudsman.shortName}` },
                 ].map((f) => (
                   <button
                     key={f.id}
@@ -1063,18 +1066,22 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                 <div className="w-full bg-[#e3e6ea] dark:bg-[#262b36] h-1.5 rounded-full overflow-hidden">
                   <div className="bg-emerald-500 h-full rounded-full" style={{ width: '89.4%' }} />
                 </div>
-                <div className="text-[10.5px] text-slate-500">Parish &amp; Sub-County Field Desks</div>
+                <div className="text-[10.5px] text-slate-500">
+                  {gov.tier1UnitLabel} &amp; {gov.tier2UnitLabel} Desks
+                </div>
               </div>
 
               <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
                 <div className="flex items-center justify-between font-mono">
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">Tier 3 (District CAOs)</span>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    Tier 3 ({gov.tier3Plural})
+                  </span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">93.8% SLA</span>
                 </div>
                 <div className="w-full bg-[#e3e6ea] dark:bg-[#262b36] h-1.5 rounded-full overflow-hidden">
                   <div className="bg-emerald-500 h-full rounded-full" style={{ width: '93.8%' }} />
                 </div>
-                <div className="text-[10.5px] text-slate-500">Chief Administrative Officer Approvals</div>
+                <div className="text-[10.5px] text-slate-500">{gov.tier3Label} Approvals</div>
               </div>
 
               <div className="p-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
@@ -1085,21 +1092,18 @@ Verification Status: IMMUTABLE AUDIT TRAIL VERIFIED (NON-REPUDIATION SECURED)
                 <div className="w-full bg-[#e3e6ea] dark:bg-[#262b36] h-1.5 rounded-full overflow-hidden">
                   <div className="bg-emerald-500 h-full rounded-full" style={{ width: '96.2%' }} />
                 </div>
-                <div className="text-[10.5px] text-slate-500">Permanent Secretaries &amp; Ombudsman</div>
+                <div className="text-[10.5px] text-slate-500">
+                  Accounting Officers &amp; {gov.ombudsman.shortName}
+                </div>
               </div>
             </div>
 
             <div className="p-4 bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
               <h4 className="font-bold text-xs uppercase font-mono text-slate-800 dark:text-slate-200">
-                Top Compliance Desks in Active Jurisdiction
+                Top Compliance Desks in {countryObj.name}
               </h4>
               <div className="space-y-1.5">
-                {[
-                  { name: 'KCCA Engineering & Roads Maintenance', score: '97.4%', count: 48, status: 'Exemplar' },
-                  { name: 'NWSC Rapid Leak Repair Dispatch', score: '96.1%', count: 62, status: 'Exemplar' },
-                  { name: 'Makindye Division Health Inspectorate', score: '92.3%', count: 31, status: 'Compliant' },
-                  { name: 'Nakawa Urban Agriculture & CDO Desk', score: '91.0%', count: 24, status: 'Compliant' },
-                ].map((item, i) => (
+                {gov.auditExemplarDesks.map((item, i) => (
                   <div
                     key={i}
                     className="p-2.5 bg-white dark:bg-[#161a22] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between"

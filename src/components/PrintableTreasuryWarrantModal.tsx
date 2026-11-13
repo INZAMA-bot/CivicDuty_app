@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, X, ShieldCheck, QrCode, CheckCircle2, Landmark, HardHat, FileText, Download } from 'lucide-react';
 import { Project } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 interface PrintableTreasuryWarrantModalProps {
   isOpen: boolean;
@@ -21,7 +22,11 @@ export const PrintableTreasuryWarrantModal: React.FC<PrintableTreasuryWarrantMod
     window.print();
   };
 
-  const currency = voucher.currency || (project.country === 'KE' ? 'KES' : project.country === 'NG' ? 'NGN' : 'UGX');
+  const countryCode = (project.country || voucher.country || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(countryCode);
+  const isUg = countryCode === 'UG';
+
+  const currency = voucher.currency || gov.currency;
   const gross = Number(voucher.grossAmount || 0);
   const whtTax = Number(voucher.whtTaxDeduction || Math.round(gross * 0.06));
   const retention = Number(voucher.retentionEscrowHold || Math.round(gross * 0.05));
@@ -61,13 +66,13 @@ export const PrintableTreasuryWarrantModal: React.FC<PrintableTreasuryWarrantMod
 
         {/* PRINTABLE SLIP CONTAINER */}
         <div className="border-4 border-double border-slate-900 p-6 sm:p-8 space-y-6 font-mono text-xs bg-amber-50/15">
-          {/* Official Republic Header */}
+          {/* Official National Header */}
           <div className="text-center space-y-1 border-b-2 border-slate-900 pb-4">
             <div className="text-[11px] font-black tracking-widest uppercase text-slate-700">
-              THE REPUBLIC OF UGANDA
+              {isUg ? 'THE REPUBLIC OF UGANDA' : gov.countryName.toUpperCase()}
             </div>
             <h2 className="text-base sm:text-lg font-black tracking-tight uppercase text-slate-950">
-              MINISTRY OF FINANCE, PLANNING &amp; ECONOMIC DEVELOPMENT
+              {isUg ? 'MINISTRY OF FINANCE, PLANNING & ECONOMIC DEVELOPMENT' : `${gov.countryName.toUpperCase()} NATIONAL TREASURY & FINANCE`}
             </h2>
             <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">
               Treasury Operations Directorate · Public Infrastructure Escrow Authority
@@ -107,11 +112,11 @@ export const PrintableTreasuryWarrantModal: React.FC<PrintableTreasuryWarrantMod
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between">
               <span className="text-slate-500 uppercase font-bold">Procuring Entity:</span>
-              <span className="font-bold text-slate-900">{project.dept?.toUpperCase() || 'KCCA'} (Directorate of Engineering &amp; Technical Services)</span>
+              <span className="font-bold text-slate-900">{project.dept?.toUpperCase() || gov.tier3Short} (Directorate of Engineering &amp; Technical Services)</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between">
               <span className="text-slate-500 uppercase font-bold">Certified Contractor:</span>
-              <span className="font-bold text-amber-900">{voucher.contractor || project.contractor} (PPDA Reg: #PPDA-2026-ENG-491)</span>
+              <span className="font-bold text-amber-900">{voucher.contractor || project.contractor} ({isUg ? 'PPDA Reg: #PPDA-2026-ENG-491' : `Reg: #${gov.codePrefix}-PROC-2026-491`})</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between">
               <span className="text-slate-500 uppercase font-bold">Milestone Deliverable:</span>
@@ -129,11 +134,11 @@ export const PrintableTreasuryWarrantModal: React.FC<PrintableTreasuryWarrantMod
               <span className="font-bold text-slate-900">{currency} {gross.toLocaleString()}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-slate-200 text-rose-700">
-              <span>Less: 6% Statutory Withholding Tax (URA Tax Remittance):</span>
+              <span>Less: 6% Statutory Withholding Tax ({isUg ? 'URA Tax Remittance' : `${gov.utilityAgency.revenueName} Tax Remittance`}):</span>
               <span className="font-bold">- {currency} {whtTax.toLocaleString()}</span>
             </div>
             <div className="flex justify-between py-1 border-b border-slate-200 text-amber-800">
-              <span>Less: 5% Defects Liability Escrow Hold (Bank of Uganda Project Escrow):</span>
+              <span>Less: 5% Defects Liability Escrow Hold ({isUg ? 'Bank of Uganda Project Escrow' : `${gov.countryName} Sovereign Escrow`}):</span>
               <span className="font-bold">- {currency} {retention.toLocaleString()}</span>
             </div>
             <div className="flex justify-between py-2 text-sm font-black text-emerald-800 pt-2 border-t-2 border-slate-900 bg-emerald-50/50 px-2 rounded">
@@ -168,10 +173,10 @@ export const PrintableTreasuryWarrantModal: React.FC<PrintableTreasuryWarrantMod
             <div className="space-y-1">
               <div>
                 <span className="font-bold text-slate-900">SHA-256 Audit Seal: </span>
-                <span className="font-mono text-teal-800">{voucher.blockchainSeal || 'SEAL-FIDIC-RED-2026-UG-99812A4F98E2'}</span>
+                <span className="font-mono text-teal-800">{voucher.blockchainSeal || `SEAL-FIDIC-${gov.codePrefix}-2026-99812A4F98E2`}</span>
               </div>
               <p className="text-slate-500">
-                This warrant was electronically verified and sealed under Public Finance Management Act (PFMA) Section 34.
+                This warrant was electronically verified and sealed under {gov.fiscalAct}.
               </p>
             </div>
             <div className="shrink-0 p-2 border border-slate-400 rounded-lg bg-white flex flex-col items-center">

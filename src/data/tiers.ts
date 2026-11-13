@@ -1,5 +1,6 @@
 import { CountryCode, GovernanceTier, GovCodeData } from '../types';
 import { TERRITORY, COUNTRIES } from './countries';
+import { getCountryGovernanceSchema } from './countryGovernance';
 
 export const TIERS: Record<string, GovernanceTier[]> = {
   UG: [
@@ -2674,6 +2675,22 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 10824,
     primaryUnitName: 'Wards (Ward Councillors & Desk Officers)',
     tiersDescription: '1 Federal PS → 36 State Commissioners → 774 LGA Chairmen → 8,812 Wards',
+    superadminMinistry: 'Federal Ministry of Special Duties & Intergovernmental Affairs',
+    superadminTitle: 'PS Intergovernmental Superadmin',
+    superadminSubtitle: 'Federal, State & 774 Local Government Areas Command',
+    superadminShort: 'PS Federal LGA',
+    superadminDescription: 'Federal & State Governance Rollout: Orchestrate 36 States + FCT, 774 LGAs, and 8,812 Wards.',
+    superadminDeskButton: 'Open Federal LGA Desk',
+    superadminRefCode: 'FGN-LGA-NG-2026',
+    lowestOfficerTitle: 'Ward Councillor / Community Desk Officer',
+    lowestOfficerUnit: 'Ward Command Unit',
+    lowestOfficerTeamRoles: [
+      { role: 'Ward Community Development Officer (CDO)', description: 'Grassroots mobilization, self-help grants & ward coordination', defaultName: 'Adebayo Kunle' },
+      { role: 'Primary Healthcare (PHC) Focal Person', description: 'Maternal care clinics, vaccine cold-chain & dispensary checks', defaultName: 'Ngozi Okafor' },
+      { role: 'LGA Works & Environmental Health Officer', description: 'Drainage clearance, borehole repairs & sanitation inspection', defaultName: 'Musa Ibrahim' },
+      { role: 'Agricultural Extension Agent', description: 'Fertilizer inputs, cooperative clusters & farmer support', defaultName: 'Chidi Eze' },
+      { role: 'Ward Development Committee Secretary', description: 'Ward project auditing & community town-hall minutes', defaultName: 'Zainab Bello' },
+    ],
     targets: {
       l1Title: 'L1 · Permanent Secretary / Federal Govt',
       l1Target: 1,
@@ -2693,7 +2710,23 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     flag: 'GH',
     totalTargetDesks: 7398,
     primaryUnitName: 'Communities (Assembly Members & Unit Committees)',
-    tiersDescription: '1 Chief Director → 16 Regional Coordinating Directors → 261 DCEs → 6,270 Electoral Areas',
+    tiersDescription: '1 Chief Director → 16 Regional Coordinating Directors → 261 MMDCEs → 6,270 Electoral Areas',
+    superadminMinistry: 'Ministry of Local Government, Decentralisation & Rural Development (MLGDRD)',
+    superadminTitle: 'Chief Director MLGDRD Superadmin',
+    superadminSubtitle: 'Regional Coordinating Councils & 261 MMDAs Command',
+    superadminShort: 'MLGDRD Chief Dir',
+    superadminDescription: 'Decentralized Assembly Rollout: Orchestrate 16 Regions, 261 MMDAs, and 6,270 Electoral Areas.',
+    superadminDeskButton: 'Open MLGDRD Superadmin Desk',
+    superadminRefCode: 'MLGDRD-GH-2026',
+    lowestOfficerTitle: 'Assembly Member / Unit Committee Chair',
+    lowestOfficerUnit: 'Electoral Area Unit',
+    lowestOfficerTeamRoles: [
+      { role: 'Community Development Officer', description: 'Assembly participation, DACF tracking & social welfare', defaultName: 'Mensah Kwame' },
+      { role: 'Environmental Health & Sanitation Inspector', description: 'Market hygiene, waste evacuation & sanitation enforcement', defaultName: 'Boateng Abena' },
+      { role: 'District Agricultural Extension Agent', description: 'Farmer support, extension visits & input distribution', defaultName: 'Osei Yaw' },
+      { role: 'Community Health Nurse Liaison', description: 'CHPS compound readiness & essential drugs reporting', defaultName: 'Appiah Akosua' },
+      { role: 'Unit Committee Works Overseer', description: 'Feeder roads, culverts & community borehole uptime', defaultName: 'Tetteh Kofi' },
+    ],
     targets: {
       l1Title: 'L1 · Chief Director / Local Govt Ministry',
       l1Target: 1,
@@ -2712,18 +2745,34 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     countryName: 'Rwanda',
     flag: 'RW',
     totalTargetDesks: 3025,
-    primaryUnitName: 'Cells (Cell Executive Secretaries)',
-    tiersDescription: '1 MINALOC PS → 5 Governors → 30 Mayors → 416 Sector ES → 2,148 Cell ES',
+    primaryUnitName: 'Cells (Cell Executive Secretaries / Akagari)',
+    tiersDescription: '1 MINALOC PS → 5 Provinces & City of Kigali → 30 Districts → 416 Sectors → 2,148 Cells',
+    superadminMinistry: 'Ministry of Local Government (MINALOC)',
+    superadminTitle: 'PS MINALOC Superadmin',
+    superadminSubtitle: 'National Decentralization, Imihigo & Umurenge / Akagari Command',
+    superadminShort: 'PS MINALOC',
+    superadminDescription: 'Territorial Decentralization & Imihigo Rollout: Orchestrate 5 Provinces, 30 Districts (Uturere), 416 Sectors (Imirenge), and 2,148 Cells (Utugari).',
+    superadminDeskButton: 'Open PS MINALOC Desk',
+    superadminRefCode: 'MINALOC-RW-2026',
+    lowestOfficerTitle: 'Cell Executive Secretary (Akagari ES)',
+    lowestOfficerUnit: 'Akagari (Cell) Office',
+    lowestOfficerTeamRoles: [
+      { role: 'Socio-Economic Development Officer (SEDO)', description: 'Umudugudu welfare, VUP direct support & Cell Imihigo tracking', defaultName: 'Uwimana Claire' },
+      { role: 'Community Health Worker Coordinator (Umujyanama)', description: 'Maternal wellness, nutrition monitoring & clinic referrals', defaultName: 'Ndayishimiye Eric' },
+      { role: 'Sector Agronomist & Vet Liaison', description: 'Terrace protection, crop intensification & livestock extension', defaultName: 'Mugabo Jean' },
+      { role: 'Infrastructure & WASAC Cell Focal', description: 'Rural feeder tracks, public standpipes & drainage maintenance', defaultName: 'Iradukunda Diane' },
+      { role: 'Umurenge SACCO & Citizen Charter Monitor', description: 'Cooperative savings verification & Irembo service turnaround', defaultName: 'Habimana Patrick' },
+    ],
     targets: {
-      l1Title: 'L1 · Permanent Secretary / MINALOC',
+      l1Title: 'L1 · Permanent Secretary / MINALOC HQ',
       l1Target: 1,
-      l2l3Title: 'L2–L3 · Governors, Mayors & Sector Exec. Secretaries',
+      l2l3Title: 'L2–L3 · City of Kigali, 30 District Mayors & 416 Sector ES',
       l2l3Target: 446,
-      l4Title: 'L4 · Cell Executive Secretaries (Primary Local Desk)',
+      l4Title: 'L4 · Cell Executive Secretaries (2,148 Utugari Desks)',
       l4Target: 2148,
       l5Title: 'L5 · REG / WASAC Branch Technicians',
       l5Target: 180,
-      roTitle: 'Read-Only · Ombudsman, Advisory Council & Media',
+      roTitle: 'Read-Only · Office of the Ombudsman, JADF & Media',
       roTarget: 250,
     },
   },
@@ -2732,8 +2781,24 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     countryName: 'Tanzania',
     flag: 'TZ',
     totalTargetDesks: 4867,
-    primaryUnitName: 'Wards (Ward Executive Officers - WEO)',
+    primaryUnitName: 'Wards (Ward Executive Officers - WEO / Kata)',
     tiersDescription: '1 PS TAMISEMI → 31 Regional Commissioners → 184 DEDs → 3,956 Wards',
+    superadminMinistry: 'President’s Office – Regional Administration & Local Government (TAMISEMI)',
+    superadminTitle: 'PS TAMISEMI (Katibu Mkuu)',
+    superadminSubtitle: 'Regional Administration, 184 Councils & Ward Executive Command',
+    superadminShort: 'PS TAMISEMI',
+    superadminDescription: 'Local Authority Rollout: Orchestrate 31 Regions, 184 District & Municipal Councils (DEDs), and 3,956 Wards (Kata).',
+    superadminDeskButton: 'Open PS TAMISEMI Desk',
+    superadminRefCode: 'TAMISEMI-TZ-2026',
+    lowestOfficerTitle: 'Ward Executive Officer (WEO)',
+    lowestOfficerUnit: 'Kata (Ward) Station',
+    lowestOfficerTeamRoles: [
+      { role: 'Community Development Officer (Afisa Maendeleo)', description: 'Ward council empowerment, TASAF & local loans tracking', defaultName: 'Juma Hassan' },
+      { role: 'Ward Health & Sanitation Officer', description: 'Dispensary readiness, clean water & public hygiene', defaultName: 'Neema Mwangi' },
+      { role: 'Ward Agricultural Extension Officer', description: 'Crop inputs, irrigation schemes & livestock checks', defaultName: 'Baraka Emmanuel' },
+      { role: 'Mtaa / Kijiji Executive Liaison', description: 'Street & village assembly notices & rapid escalations', defaultName: 'Amina Salum' },
+      { role: 'Local Revenue & Works Monitor', description: 'Market levies transparency & feeder road upkeep', defaultName: 'Joseph Kweka' },
+    ],
     targets: {
       l1Title: 'L1 · Permanent Secretary / TAMISEMI HQ',
       l1Target: 1,
@@ -2754,6 +2819,22 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 5885,
     primaryUnitName: 'Wards (Ward Councillors & Ward Committees)',
     tiersDescription: '1 DG COGTA → 9 Provincial HoDs → 257 Municipal Managers → 4,468 Wards',
+    superadminMinistry: 'Department of Cooperative Governance & Traditional Affairs (COGTA)',
+    superadminTitle: 'DG COGTA Superadmin',
+    superadminSubtitle: 'Provincial Cooperative Governance & 257 Municipalities Command',
+    superadminShort: 'DG COGTA',
+    superadminDescription: 'Municipal & Batho Pele Rollout: Orchestrate 9 Provinces, 8 Metros, 257 Municipalities, and 4,468 Wards.',
+    superadminDeskButton: 'Open DG COGTA Desk',
+    superadminRefCode: 'COGTA-ZA-2026',
+    lowestOfficerTitle: 'Ward Committee Liaison / Officer',
+    lowestOfficerUnit: 'Municipal Ward Office',
+    lowestOfficerTeamRoles: [
+      { role: 'Ward IDP & Service Delivery Coordinator', description: 'Integrated Development Plan milestones & municipal queries', defaultName: 'Thabo Mokoena' },
+      { role: 'Water & Sanitation Infrastructure Monitor', description: 'Reservoir pressure, sewage spills & metered connections', defaultName: 'Lerato Ndlovu' },
+      { role: 'Community Health & Clinic Liaison', description: 'Primary clinic medicine stocks & ambulance turnaround', defaultName: 'Sipho Khumalo' },
+      { role: 'Electricity & Substation Fault Liaison', description: 'Eskom / municipal grid outage escalation & streetlight audits', defaultName: 'Annelize Van Wyk' },
+      { role: 'Public Safety & Ward Roads Inspector', description: 'Pothole patching SLAs, stormwater drains & signage', defaultName: 'Bongani Zulu' },
+    ],
     targets: {
       l1Title: 'L1 · Director-General / COGTA HQ',
       l1Target: 1,
@@ -2774,6 +2855,15 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 20481,
     primaryUnitName: 'Kebeles (Kebele Administrators)',
     tiersDescription: '1 State Minister → 12 Regional Bureau Heads → 1,068 Woreda Admins → 18,000 Kebeles',
+    superadminMinistry: 'Ministry of Urban & Infrastructure / Peace Regional Coordination',
+    superadminTitle: 'State Minister Superadmin',
+    superadminSubtitle: 'Regional Bureau, Woreda & Kebele Administrative Command',
+    superadminShort: 'State Minister HQ',
+    superadminDescription: 'Federal Woreda & Kebele Rollout across Regions, Chartered Cities, and 18,000 Kebeles.',
+    superadminDeskButton: 'Open Federal Command Desk',
+    superadminRefCode: 'MUI-ET-2026',
+    lowestOfficerTitle: 'Kebele Administrator',
+    lowestOfficerUnit: 'Kebele Administration Office',
     targets: {
       l1Title: 'L1 · State Minister / MoUDC HQ',
       l1Target: 1,
@@ -2794,6 +2884,15 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 6201,
     primaryUnitName: 'Local Units (Sheikha / Village Chiefs)',
     tiersDescription: '1 Ministry Deputy → 27 Governors → 300+ Markaz / City Chiefs → 4,600 Local Units',
+    superadminMinistry: 'Ministry of Local Development (MOLD Egypt)',
+    superadminTitle: 'PS Local Development Superadmin',
+    superadminSubtitle: '27 Governorates, Markaz & Local Municipal Units Command',
+    superadminShort: 'MOLD Egypt HQ',
+    superadminDescription: 'National Governorate Rollout spanning 27 Governorates, 300+ Markaz Centres, and 4,600 Local Units.',
+    superadminDeskButton: 'Open MOLD Egypt Desk',
+    superadminRefCode: 'MOLD-EG-2026',
+    lowestOfficerTitle: 'Local Unit Chief / Sheikha Officer',
+    lowestOfficerUnit: 'Local Municipal Unit',
     targets: {
       l1Title: 'L1 · Deputy Minister / Local Development',
       l1Target: 1,
@@ -2814,6 +2913,15 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 1018,
     primaryUnitName: 'Communes (Maires / Chefs de Commune)',
     tiersDescription: '1 DG CNDT → 14 Gouverneurs → 46 Préfets → 557 Communes',
+    superadminMinistry: 'Ministère des Collectivités Territoriales (CNDT)',
+    superadminTitle: 'DG CNDT Superadmin',
+    superadminSubtitle: '14 Régions, 46 Départements & 557 Communes Command',
+    superadminShort: 'DG CNDT',
+    superadminDescription: 'Déploiement Territorial: 14 Régions, 46 Préfets de Département et 557 Communes.',
+    superadminDeskButton: 'Open DG CNDT Desk',
+    superadminRefCode: 'CNDT-SN-2026',
+    lowestOfficerTitle: 'Maire / Chef de Commune',
+    lowestOfficerUnit: 'Bureau Communal',
     targets: {
       l1Title: 'L1 · Directeur Général / CNDT HQ',
       l1Target: 1,
@@ -2834,6 +2942,15 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 2435,
     primaryUnitName: 'Wards (WDC Committee Chairs)',
     tiersDescription: '1 PS MLGH → 10 Provincial Officers → 116 Town Clerks → 1,858 Wards',
+    superadminMinistry: 'Ministry of Local Government & Rural Development (MLGRD)',
+    superadminTitle: 'PS MLGRD Superadmin',
+    superadminSubtitle: '10 Provinces, 116 Councils & CDF Ward Committees Command',
+    superadminShort: 'PS MLGRD',
+    superadminDescription: 'Decentralization & CDF Rollout: Orchestrate 10 Provinces, 116 Councils, and 1,858 Wards.',
+    superadminDeskButton: 'Open PS MLGRD Desk',
+    superadminRefCode: 'MLGRD-ZM-2026',
+    lowestOfficerTitle: 'Ward Development Committee (WDC) Chair',
+    lowestOfficerUnit: 'Municipal Ward Office',
     targets: {
       l1Title: 'L1 · Permanent Secretary / MLGH HQ',
       l1Target: 1,
@@ -2854,6 +2971,15 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 2461,
     primaryUnitName: 'Wards (Ward Executive Officers)',
     tiersDescription: '1 PS MLGP → 10 Provincial Directors → 92 Council CEOs → 1,958 Wards',
+    superadminMinistry: 'Ministry of Local Government & Public Works (MLGPW)',
+    superadminTitle: 'PS MLGPW Superadmin',
+    superadminSubtitle: '10 Provinces, 92 Local Authorities & 1,958 Wards Command',
+    superadminShort: 'PS MLGPW',
+    superadminDescription: 'Local Authority Rollout: Orchestrate 10 Provinces, 92 Councils, and 1,958 Wards.',
+    superadminDeskButton: 'Open PS MLGPW Desk',
+    superadminRefCode: 'MLGPW-ZW-2026',
+    lowestOfficerTitle: 'Ward Executive Officer',
+    lowestOfficerUnit: 'Ward Local Desk',
     targets: {
       l1Title: 'L1 · Permanent Secretary / MLGP HQ',
       l1Target: 1,
@@ -2874,6 +3000,15 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 46144,
     primaryUnitName: 'Districts (Neighborhood Commissioners)',
     tiersDescription: '1 Cabinet Secretary → 50 State/County Executives → 3,142 City Managers → 35,000 District ANCs',
+    superadminMinistry: 'State Municipal & Intergovernmental Operations Desk',
+    superadminTitle: 'Intergovernmental Secretary Superadmin',
+    superadminSubtitle: 'County Executives, City Managers & Municipal Districts Command',
+    superadminShort: 'Municipal Sec.',
+    superadminDescription: 'Municipal Service & 311 Accountability Rollout across States, Counties, and Cities.',
+    superadminDeskButton: 'Open Municipal Command Desk',
+    superadminRefCode: 'MUNI-US-2026',
+    lowestOfficerTitle: 'Ward Councillor / ANC Commissioner',
+    lowestOfficerUnit: 'Precinct / Neighborhood Unit',
     targets: {
       l1Title: 'L1 · Cabinet Secretary / State Director',
       l1Target: 1,
@@ -2893,9 +3028,18 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     flag: 'GB',
     totalTargetDesks: 11234,
     primaryUnitName: 'Wards (Ward Councillors & Officers)',
-    tiersDescription: '1 PS DLUHC → 333 Council Chief Execs → Parish Clerks → 9,500 Wards',
+    tiersDescription: '1 PS MHCLG → 333 Council Chief Execs → Parish Clerks → 9,500 Wards',
+    superadminMinistry: 'Ministry of Housing, Communities and Local Government (MHCLG)',
+    superadminTitle: 'PS MHCLG Superadmin',
+    superadminSubtitle: 'Whitehall Local Authority & Combined Councils Command',
+    superadminShort: 'PS MHCLG',
+    superadminDescription: 'UK Local Authority & Best Value Duty Rollout across 333 Councils and 9,500 Wards.',
+    superadminDeskButton: 'Open PS MHCLG Desk',
+    superadminRefCode: 'MHCLG-GB-2026',
+    lowestOfficerTitle: 'Ward Officer / Parish Clerk',
+    lowestOfficerUnit: 'Ward & Parish Unit',
     targets: {
-      l1Title: 'L1 · Permanent Secretary / DLUHC HQ',
+      l1Title: 'L1 · Permanent Secretary / MHCLG HQ',
       l1Target: 1,
       l2l3Title: 'L2–L3 · Council Chief Executives & Town Clerks',
       l2l3Target: 333,
@@ -2903,7 +3047,7 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
       l4Target: 9500,
       l5Title: 'L5 · Water & Energy Utility Area Managers',
       l5Target: 800,
-      roTitle: 'Read-Only · Audit Commission, MPs & Ombudsmen',
+      roTitle: 'Read-Only · Local Gov Ombudsman, MPs & NAO',
       roTarget: 600,
     },
   },
@@ -2914,6 +3058,15 @@ export const NATIONAL_ROLLOUTS: Record<string, import('../types').NationalRollou
     totalTargetDesks: 287501,
     primaryUnitName: 'Panchayats / Wards (Gram Panchayat Secretaries)',
     tiersDescription: '1 Ministry Secretary → 36 State DMs → 6,700 BDOs → 255,000 Gram Panchayats',
+    superadminMinistry: 'Ministry of Panchayati Raj & Housing/Urban Affairs',
+    superadminTitle: 'Secretary MoPR Superadmin',
+    superadminSubtitle: 'District Collectorates, BDOs & Gram Panchayats Command',
+    superadminShort: 'Secretary MoPR',
+    superadminDescription: 'National Panchayati Raj & Municipal Rollout across District Magistrates, Blocks, and Gram Panchayats.',
+    superadminDeskButton: 'Open Secretary MoPR Desk',
+    superadminRefCode: 'MOPR-IN-2026',
+    lowestOfficerTitle: 'Gram Panchayat Secretary / Ward Officer',
+    lowestOfficerUnit: 'Gram Panchayat / Ward Unit',
     targets: {
       l1Title: 'L1 · Secretary / Ministry of Panchayati Raj',
       l1Target: 1,
@@ -2970,54 +3123,55 @@ export function getNationalRolloutArrangements(countryCode: string): import('../
   const info = COUNTRIES[code];
   const countryName = info?.name || code;
   const flag = info?.flag || code;
+  const gov = getCountryGovernanceSchema(code);
 
   const base = NATIONAL_ROLLOUTS[code] || {
     countryCode: code,
     countryName,
     flag,
     totalTargetDesks: 1250,
-    primaryUnitName: `${countryName} Grassroots Wards & Municipalities`,
-    tiersDescription: `1 Central Executive Ministry → Regional / Provincial Governors → District Directors → Grassroots Local Units`,
-    superadminMinistry: `${countryName} Ministry of Local Government & Internal Affairs`,
-    superadminTitle: `${countryName} National Superadmin`,
-    superadminSubtitle: 'National Administrative Modernization & Civic Command Center',
-    superadminShort: `${code} Superadmin`,
-    superadminDescription: `National Local Gov Rollout: Orchestrate executive departments, provincial jurisdictions, and grassroots community desks across ${countryName}.`,
-    superadminDeskButton: `Open ${code} Desk`,
+    primaryUnitName: `${gov.tier1Plural}`,
+    tiersDescription: `1 ${gov.superadminMinistryShort} → Regional / ${gov.tier3UnitLabel}s → ${gov.tier2UnitLabel}s → ${gov.tier1UnitLabel}s`,
+    superadminMinistry: gov.superadminMinistry,
+    superadminTitle: gov.superadminTitle,
+    superadminSubtitle: `${countryName} National Administrative Modernization & Civic Command`,
+    superadminShort: gov.superadminMinistryShort,
+    superadminDescription: `National Local Gov Rollout: Orchestrate executive ministries, ${gov.tier3UnitLabel}s, and grassroots ${gov.tier1UnitLabel} desks across ${countryName}.`,
+    superadminDeskButton: `Open ${gov.superadminMinistryShort} Desk`,
     superadminRefCode: `NAT-GOV-${code}-2026`,
-    lowestOfficerTitle: 'Local Administrative Officer / Ward Lead',
-    lowestOfficerUnit: 'Primary Local Node',
+    lowestOfficerTitle: gov.tier1Label,
+    lowestOfficerUnit: gov.tier1UnitLabel,
     lowestOfficerTeamRoles: [
-      { role: 'Community Mobilization & Development Lead', description: 'Citizen engagement, grassroots registry and local project supervision', defaultName: 'Lead Officer' },
-      { role: 'Public Works & Infrastructure Inspector', description: 'Feeder roads, water points and municipal asset maintenance', defaultName: 'Works Inspector' },
+      { role: `${gov.tier1Short} Community Mobilization Lead`, description: `Citizen engagement, local registry and ${gov.tier1UnitLabel} project supervision`, defaultName: 'Lead Officer' },
+      { role: `${gov.tier2Short} Works & Infrastructure Inspector`, description: 'Feeder roads, water points and municipal asset maintenance', defaultName: 'Works Inspector' },
       { role: 'Health & Sanitation Coordinator', description: 'Primary clinic linkages, hygiene compliance and community wellness', defaultName: 'Health Link' },
-      { role: 'Enterprise & Financial Auditor', description: 'Local micro-grant verification, SACCO compliance and audit log', defaultName: 'Compliance Auditor' },
-      { role: 'Civic Watchdog & Community Elders Liaison', description: 'Local community mediation, conflict de-escalation and citizen alerts', defaultName: 'Civic Liaison' },
+      { role: `${gov.fiscalProgramName} Compliance Auditor`, description: 'Local grant verification, cooperative compliance and audit log', defaultName: 'Compliance Auditor' },
+      { role: 'Civic Watchdog & Community Committee Liaison', description: 'Local mediation, conflict de-escalation and citizen alerts', defaultName: 'Civic Liaison' },
     ],
     targets: {
-      l1Title: `L1 · Permanent Secretary / National Ministry HQ`,
+      l1Title: `L1 · ${gov.superadminTitle}`,
       l1Target: 1,
-      l2l3Title: `L2–L3 · Regional Governors & Municipal Mayors`,
+      l2l3Title: `L2–L3 · ${gov.tier3Plural}`,
       l2l3Target: 85,
-      l4Title: `L4 · Local Administrative Officers & Ward Leads`,
+      l4Title: `L4 · ${gov.tier1Plural}`,
       l4Target: 1050,
-      l5Title: `L5 · Utility & Power Infrastructure Directors`,
+      l5Title: `L5 · ${gov.utilityAgency.waterName} & ${gov.utilityAgency.powerName} Directors`,
       l5Target: 80,
-      roTitle: `Read-Only · National Auditors, Parliamentarians & Watchdogs`,
+      roTitle: `Read-Only · ${gov.ombudsman.shortName}, Parliamentarians & Watchdogs`,
       roTarget: 34,
     },
   };
 
   // Provide fallback default superadmin metadata if missing
-  if (!base.superadminMinistry) base.superadminMinistry = `${countryName} Ministry of Local Governance`;
-  if (!base.superadminTitle) base.superadminTitle = `${code} National Superadmin`;
-  if (!base.superadminSubtitle) base.superadminSubtitle = 'National Decentralization & Local Governance Command';
-  if (!base.superadminShort) base.superadminShort = `${code} Admin`;
+  if (!base.superadminMinistry) base.superadminMinistry = gov.superadminMinistry;
+  if (!base.superadminTitle) base.superadminTitle = gov.superadminTitle;
+  if (!base.superadminSubtitle) base.superadminSubtitle = `${countryName} National Decentralization & Local Governance Command`;
+  if (!base.superadminShort) base.superadminShort = gov.superadminMinistryShort;
   if (!base.superadminDescription) base.superadminDescription = `National Local Gov Rollout: Orchestrate ${base.tiersDescription}`;
   if (!base.superadminDeskButton) base.superadminDeskButton = `Open ${base.superadminShort} Desk`;
   if (!base.superadminRefCode) base.superadminRefCode = `GOV-${code}-2026`;
-  if (!base.lowestOfficerTitle) base.lowestOfficerTitle = 'Local Accounting Officer';
-  if (!base.lowestOfficerUnit) base.lowestOfficerUnit = base.primaryUnitName;
+  if (!base.lowestOfficerTitle) base.lowestOfficerTitle = gov.tier1Label;
+  if (!base.lowestOfficerUnit) base.lowestOfficerUnit = gov.tier1UnitLabel;
 
   return base;
 }
@@ -3458,7 +3612,28 @@ export function getJurisdictionDesignations(
     ];
   }
 
-  // Fallback for all other countries: map from rollout.lowestOfficerTeamRoles or presets
+  // Fallback for all other countries: synthesize from CountryGovernanceSchema + rollout.lowestOfficerTeamRoles
+  const gov = getCountryGovernanceSchema(c);
+  if (tier >= 4) {
+    return [
+      { id: 'tier3_exec', label: `+ ${gov.tier3Short}`, title: gov.tier3Label, role: 'node_admin', desc: `${gov.tier3UnitLabel} Accounting Officer`, isUtility: false, category: `${gov.tier3UnitLabel} Leadership` },
+      { id: 'tier2_exec', label: `+ ${gov.tier2Short}`, title: gov.tier2Label, role: 'node_admin', desc: `${gov.tier2UnitLabel} Operational Lead`, isUtility: false, category: `${gov.tier2UnitLabel} Administration` },
+      { id: 'works_dir', label: `+ ${gov.tier3Short} Works & Roads Lead`, title: `${gov.countryName} Public Works & Roads Directorate`, role: 'spokesperson', desc: `${gov.utilityAgency.roadsName} Liaison`, isUtility: false, category: 'Infrastructure' },
+      { id: 'health_dir', label: `+ ${gov.tier3Short} Health Officer`, title: `Director of Public Health Services (${gov.codePrefix})`, role: 'spokesperson', desc: 'Hospitals & Primary Clinics Lead', isUtility: false, category: 'Health Services' },
+      { id: 'ombuds_auditor', label: `+ ${gov.ombudsman.shortName} & Internal Auditor`, title: `${gov.ombudsman.shortName} Compliance & Internal Audit Liaison`, role: 'read_only', desc: `${gov.fiscalGrantName} Oversight`, isUtility: false, category: 'Statutory Oversight' },
+      { id: 'utility_mgr', label: `+ ${gov.utilityAgency.waterName.split('(')[0].trim()} Area Mgr`, title: `Area Utility Manager (${gov.utilityAgency.powerName} / Water)`, role: 'spokesperson', desc: 'Utility Infrastructure Desk', isUtility: true, category: 'Utilities' },
+    ];
+  }
+  if (tier === 2) {
+    return [
+      { id: 'tier1_lead', label: `+ ${gov.tier1Short} (Direct Report)`, title: `${gov.tier1Label} (Direct Report)`, role: 'spokesperson', desc: `${gov.tier1UnitLabel} Frontline Head`, isUtility: false, category: `${gov.tier1UnitLabel} Administration` },
+      { id: 'cdo_lead', label: `+ Community Development Officer`, title: `Community Development & ${gov.fiscalProgramName} Officer`, role: 'spokesperson', desc: 'Community Mobilization & Dispute Lead', isUtility: false, category: 'Community Services' },
+      { id: 'health_insp', label: `+ Sanitation & Health Inspector`, title: `${gov.tier2Short} Public Health & Sanitation Inspector`, role: 'spokesperson', desc: 'Clinic Hygiene & Food Safety', isUtility: false, category: 'Health & Sanitation' },
+      { id: 'works_eng', label: `+ Engineering & Water Officer`, title: `${gov.tier2Short} Works & Maintenance Engineer`, role: 'spokesperson', desc: 'Feeder Roads & Local Water Systems', isUtility: true, category: 'Works & Infrastructure' },
+      { id: 'rev_audit', label: `+ Local Revenue & Grant Officer`, title: `${gov.tier2Short} Revenue & ${gov.fiscalProgramName} Clerk`, role: 'read_only', desc: `${gov.fiscalGrantName} Monitoring`, isUtility: false, category: 'Finance & Revenue' },
+    ];
+  }
+
   const dynamicRoles: StatutoryDesignation[] = (rollout?.lowestOfficerTeamRoles || []).map((r, idx) => ({
     id: `role_${idx}`,
     label: `+ ${r.role}`,

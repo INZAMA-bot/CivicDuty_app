@@ -20,6 +20,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { Project, DefectItem, UserSession, Post } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 interface DefectsLiabilityPanelProps {
   project: Project;
@@ -40,49 +41,91 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
   onOpenLightbox,
   onReleaseRetentionSuccess,
 }) => {
+  const activeCountry = project.country || user?.country || 'UG';
+  const gov = getCountryGovernanceSchema(activeCountry);
+  const treasuryName = activeCountry === 'UG' ? 'Bank of Uganda / Treasury Escrow' : `${gov.countryName} National Treasury Escrow`;
+  const treasuryShort = activeCountry === 'UG' ? 'BoU Project Escrow' : `${gov.codePrefix} Treasury Escrow`;
+
   // Calculate 5% retention escrow fund
   const totalNumeric = parseInt(project.value.replace(/[^0-9]/g, '')) || 920000000;
   const retentionEscrowAmount = Math.round(totalNumeric * 0.05);
-  const currency = project.country === 'KE' ? 'KES' : project.country === 'NG' ? 'NGN' : 'UGX';
+  const currency = gov.currency;
 
   // Days left in 12-month defects liability window
   const dlpDaysRemaining = 284;
 
-  const initialDefectItems: DefectItem[] = [
-    {
-      id: 'def-1',
-      title: 'Bukoto Junction: Silted culvert outlet causing backflow after heavy rain',
-      location: 'Chainage 1+800 (Bukoto Junction)',
-      reportedBy: 'Kisaasi Local Watchdog Committee',
-      reportedAt: '2026-08-14',
-      severity: 'critical',
-      description: 'Runoff and red soil silting up 600mm precast pipe outlet. Standing water pooling on fresh asphalt edge.',
-      photoUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
-      status: 'flagged',
-    },
-    {
-      id: 'def-2',
-      title: 'Longitudinal hairline asphalt edge crack along outer shoulder',
-      location: 'Chainage 2+450 (Near Shell Bukoto)',
-      reportedBy: 'Eng. Kasule Patrick (Corridor Watch)',
-      reportedAt: '2026-08-20',
-      severity: 'medium',
-      description: 'Hairline settlement crack approximately 12m length along edge beam. Requires hot-pour bitumen sealant.',
-      photoUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
-      status: 'flagged',
-    },
-    {
-      id: 'def-3',
-      title: 'Loose solar panel bracket on mast #14 near trading centre',
-      location: 'Chainage 0+750 (Trading Centre)',
-      reportedBy: 'Boda Stage Secretary (Bukoto Central)',
-      reportedAt: '2026-08-22',
-      severity: 'low',
-      description: 'Vibrations loosened top mounting clamp. Light works at night but solar array is tilted away from true azimuth.',
-      photoUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
-      status: 'flagged',
-    },
-  ];
+  const initialDefectItems: DefectItem[] =
+    activeCountry === 'UG'
+      ? [
+          {
+            id: 'def-1',
+            title: 'Bukoto Junction: Silted culvert outlet causing backflow after heavy rain',
+            location: 'Chainage 1+800 (Bukoto Junction)',
+            reportedBy: 'Kisaasi Local Watchdog Committee',
+            reportedAt: '2026-08-14',
+            severity: 'critical',
+            description: 'Runoff and red soil silting up 600mm precast pipe outlet. Standing water pooling on fresh asphalt edge.',
+            photoUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+            status: 'flagged',
+          },
+          {
+            id: 'def-2',
+            title: 'Longitudinal hairline asphalt edge crack along outer shoulder',
+            location: 'Chainage 2+450 (Near Shell Bukoto)',
+            reportedBy: 'Eng. Kasule Patrick (Corridor Watch)',
+            reportedAt: '2026-08-20',
+            severity: 'medium',
+            description: 'Hairline settlement crack approximately 12m length along edge beam. Requires hot-pour bitumen sealant.',
+            photoUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+            status: 'flagged',
+          },
+          {
+            id: 'def-3',
+            title: 'Loose solar panel bracket on mast #14 near trading centre',
+            location: 'Chainage 0+750 (Trading Centre)',
+            reportedBy: 'Boda Stage Secretary (Bukoto Central)',
+            reportedAt: '2026-08-22',
+            severity: 'low',
+            description: 'Vibrations loosened top mounting clamp. Light works at night but solar array is tilted away from true azimuth.',
+            photoUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+            status: 'flagged',
+          },
+        ]
+      : [
+          {
+            id: 'def-1',
+            title: `${project.loc || gov.sampleJurisdictions[0]}: Silted stormwater culvert outlet causing backflow`,
+            location: `Chainage 1+800 (${project.loc || gov.sampleJurisdictions[0]})`,
+            reportedBy: `${gov.tier1UnitLabel} Civic Watch Committee`,
+            reportedAt: '2026-08-14',
+            severity: 'critical',
+            description: 'Stormwater runoff and sediment silting up 600mm precast pipe outlet. Standing water pooling along fresh asphalt edge.',
+            photoUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+            status: 'flagged',
+          },
+          {
+            id: 'def-2',
+            title: 'Longitudinal hairline asphalt edge crack along outer shoulder',
+            location: `Chainage 2+450 (${project.loc || gov.sampleJurisdictions[0]} Corridor)`,
+            reportedBy: 'Civil Works Corridor Watch Scout',
+            reportedAt: '2026-08-20',
+            severity: 'medium',
+            description: 'Hairline settlement crack approximately 12m length along edge beam. Requires hot-pour bitumen sealant.',
+            photoUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+            status: 'flagged',
+          },
+          {
+            id: 'def-3',
+            title: 'Loose solar streetlight bracket on mast #14 near transit hub',
+            location: `Chainage 0+750 (${gov.tier1UnitLabel} Transit Hub)`,
+            reportedBy: 'Frontline Transport Scout',
+            reportedAt: '2026-08-22',
+            severity: 'low',
+            description: 'Vibrations loosened top mounting clamp. Light operates at night but solar array is tilted away from optimal azimuth.',
+            photoUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+            status: 'flagged',
+          },
+        ];
 
   const [defects, setDefects] = useState<DefectItem[]>(() => {
     return project.defects && project.defects.length > 0 ? project.defects : initialDefectItems;
@@ -220,11 +263,11 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
     } catch {
       // Fallback in-client mock
       const warrant = {
-        warrantNumber: 'RET-WNT-UG-' + Math.floor(100000 + Math.random() * 900000),
+        warrantNumber: `RET-WNT-${gov.codePrefix}-` + Math.floor(100000 + Math.random() * 900000),
         retentionAmount: retentionEscrowAmount,
         currency,
         status: 'final_retention_disbursed',
-        sha256Seal: 'FIDIC-CLEAR-UG-' + Date.now().toString(16).toUpperCase(),
+        sha256Seal: `FIDIC-CLEAR-${gov.codePrefix}-` + Date.now().toString(16).toUpperCase(),
       };
       setIsRetentionReleased(true);
       setRetentionWarrant(warrant);
@@ -259,7 +302,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
             Citizen Warranty Watch &amp; 5% Retention Escrow Lock
           </h3>
           <p className="text-[11px] text-slate-600 dark:text-slate-400">
-            During the 12-month post-completion warranty window, 5% of the total contract value remains locked in Bank of Uganda / Treasury Escrow until all citizen-reported defects along the corridor are rectified and cleared by the Supervising Engineer.
+            During the 12-month post-completion warranty window, 5% of the total contract value remains locked in {treasuryName} until all citizen-reported defects along the corridor are rectified and cleared by the Supervising Engineer.
           </p>
         </div>
 
@@ -276,7 +319,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
               </span>
             ) : (
               <span className="text-amber-800 dark:text-amber-300 flex items-center gap-1">
-                <Lock size={11} /> Locked in BoU Project Escrow
+                <Lock size={11} /> Locked in {treasuryShort}
               </span>
             )}
           </div>
@@ -457,7 +500,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
         <div className="flex items-start justify-between flex-wrap gap-2">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-500 block">
-              Final Milestone: PPDA / FIDIC Technical Handover &amp; Retention Release
+              Final Milestone: Public Procurement / FIDIC Technical Handover &amp; Retention Release
             </span>
             <div className="text-sm font-black text-slate-900 dark:text-white">
               Release 5% Retention Escrow ({currency} {retentionEscrowAmount.toLocaleString()})
@@ -479,7 +522,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
                 {clearedCount < defects.length
                   ? `Clear All Defects to Release (${clearedCount}/${defects.length})`
                   : isReleasingRetention
-                  ? 'Authorizing MoFPED Release...'
+                  ? 'Authorizing Treasury Release...'
                   : 'Issue Final Handover & Release Escrow →'}
               </span>
             </button>
@@ -489,7 +532,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
                 <CheckCircle2 size={16} /> 5% Retention Escrow Released &amp; Paid
               </span>
               <span className="text-[9.5px] text-slate-500 font-mono">
-                Warrant: {retentionWarrant?.warrantNumber || 'RET-WNT-UG-991204'}
+                Warrant: {retentionWarrant?.warrantNumber || `RET-WNT-${gov.codePrefix}-991204`}
               </span>
             </div>
           )}

@@ -19,6 +19,7 @@ import {
   Filter
 } from 'lucide-react';
 import { catByID, getDept, slaStatus } from '../utils/helpers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 interface GeospatialSignalMapProps {
   initialRegion?: 'ALL' | 'CENTRAL' | 'WESTERN' | 'EASTERN' | 'NORTHERN';
@@ -55,7 +56,10 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
   compact = false,
   onSelectPost,
 }) => {
-  const { posts, setActivePost, go, theme } = useApp();
+  const { posts, setActivePost, go, theme, user, selectedCountry } = useApp();
+  const activeCountry = (user?.country || selectedCountry || 'UG').toUpperCase();
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
+  const isUg = activeCountry === 'UG';
   const [selectedRegion, setSelectedRegion] = useState<'ALL' | 'CENTRAL' | 'WESTERN' | 'EASTERN' | 'NORTHERN'>(initialRegion);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [activeSignalFilter, setActiveSignalFilter] = useState<'ALL' | 'RED' | 'AMBER' | 'GREEN'>('ALL');
@@ -152,7 +156,7 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
               </span>
             </h3>
             <p className="text-[10px] text-slate-700 dark:text-slate-300 font-medium">
-              Real-time geocoded infrastructure signals across 146 local government jurisdictions.
+              Real-time geocoded infrastructure signals across {isUg ? '146' : gov.tier3Count} {gov.tier3UnitLabel.toLowerCase()} jurisdictions ({gov.countryName}).
             </p>
           </div>
         </div>
@@ -259,53 +263,99 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
           <rect width="500" height="500" fill="#020617" />
           <rect width="500" height="500" fill="url(#gisGrid)" />
 
-          {/* Stylized Uganda Border Contour */}
-          <path
-            d="M 120 70 
-               L 250 80 
-               L 360 110 
-               L 440 140 
-               L 410 240 
-               L 390 280 
-               L 330 330 
-               L 280 340 
-               L 250 380 
-               L 210 390 
-               L 160 460 
-               L 110 430 
-               L 100 330 
-               L 130 270 
-               L 170 230 
-               L 120 180 
-               L 110 100 Z"
-            fill="rgba(16, 185, 129, 0.04)"
-            stroke="rgba(16, 185, 129, 0.35)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
+          {isUg ? (
+            <>
+              {/* Stylized Uganda Border Contour */}
+              <path
+                d="M 120 70 
+                   L 250 80 
+                   L 360 110 
+                   L 440 140 
+                   L 410 240 
+                   L 390 280 
+                   L 330 330 
+                   L 280 340 
+                   L 250 380 
+                   L 210 390 
+                   L 160 460 
+                   L 110 430 
+                   L 100 330 
+                   L 130 270 
+                   L 170 230 
+                   L 120 180 
+                   L 110 100 Z"
+                fill="rgba(16, 185, 129, 0.04)"
+                stroke="rgba(16, 185, 129, 0.35)"
+                strokeWidth="1.5"
+                strokeDasharray="4 4"
+              />
 
-          {/* Major Regional Zones */}
-          <text x="250" y="95" fill="rgba(148, 163, 184, 0.4)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">NORTHERN REGION</text>
-          <text x="380" y="210" fill="rgba(148, 163, 184, 0.4)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">EASTERN</text>
-          <text x="140" y="360" fill="rgba(148, 163, 184, 0.4)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">WESTERN</text>
-          <text x="260" y="270" fill="rgba(16, 185, 129, 0.5)" fontSize="10" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">CENTRAL (KAMPALA)</text>
+              {/* Major Regional Zones */}
+              <text x="250" y="95" fill="rgba(148, 163, 184, 0.4)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">NORTHERN REGION</text>
+              <text x="380" y="210" fill="rgba(148, 163, 184, 0.4)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">EASTERN</text>
+              <text x="140" y="360" fill="rgba(148, 163, 184, 0.4)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">WESTERN</text>
+              <text x="260" y="270" fill="rgba(16, 185, 129, 0.5)" fontSize="10" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">CENTRAL (KAMPALA)</text>
 
-          {/* Lake Victoria Vector Waterbody */}
-          <path
-            d="M 280 340 Q 340 360 380 430 Q 330 460 250 420 Q 240 370 280 340 Z"
-            fill="rgba(6, 182, 212, 0.12)"
-            stroke="rgba(6, 182, 212, 0.4)"
-            strokeWidth="1"
-          />
-          <text x="320" y="400" fill="rgba(6, 182, 212, 0.6)" fontSize="7.5" fontWeight="bold" textAnchor="middle">LAKE VICTORIA</text>
+              {/* Lake Victoria Vector Waterbody */}
+              <path
+                d="M 280 340 Q 340 360 380 430 Q 330 460 250 420 Q 240 370 280 340 Z"
+                fill="rgba(6, 182, 212, 0.12)"
+                stroke="rgba(6, 182, 212, 0.4)"
+                strokeWidth="1"
+              />
+              <text x="320" y="400" fill="rgba(6, 182, 212, 0.6)" fontSize="7.5" fontWeight="bold" textAnchor="middle">LAKE VICTORIA</text>
 
-          {/* District Center Anchor Dots */}
-          {Object.entries(DISTRICT_MAP_COORDS).map(([key, d]) => (
-            <g key={key}>
-              <circle cx={d.x} cy={d.y} r="2.5" fill="#334155" />
-              <text x={d.x} y={d.y + 11} fill="#64748b" fontSize="7" fontWeight="bold" textAnchor="middle">{d.label}</text>
-            </g>
-          ))}
+              {/* District Center Anchor Dots */}
+              {Object.entries(DISTRICT_MAP_COORDS).map(([key, d]) => (
+                <g key={key}>
+                  <circle cx={d.x} cy={d.y} r="2.5" fill="#334155" />
+                  <text x={d.x} y={d.y + 11} fill="#64748b" fontSize="7" fontWeight="bold" textAnchor="middle">{d.label}</text>
+                </g>
+              ))}
+            </>
+          ) : (
+            <>
+              <rect
+                x="60"
+                y="60"
+                width="380"
+                height="380"
+                rx="28"
+                fill="rgba(16, 185, 129, 0.04)"
+                stroke="rgba(16, 185, 129, 0.35)"
+                strokeWidth="1.5"
+                strokeDasharray="6 4"
+              />
+              <text x="250" y="95" fill="rgba(148, 163, 184, 0.45)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">
+                {gov.countryName.toUpperCase()} NORTHERN SECTOR
+              </text>
+              <text x="250" y="255" fill="rgba(16, 185, 129, 0.55)" fontSize="10" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">
+                {(gov.sampleJurisdictions[0] || gov.countryName).toUpperCase()} ({gov.codePrefix})
+              </text>
+              <text x="250" y="415" fill="rgba(148, 163, 184, 0.45)" fontSize="9" fontWeight="900" textAnchor="middle" letterSpacing="0.2em">
+                {gov.tier3Plural.toUpperCase()} TELEMETRY GRID
+              </text>
+              {(gov.sampleJurisdictions || []).slice(0, 6).map((jName, jIdx) => {
+                const coordsList = [
+                  { x: 250, y: 270 },
+                  { x: 165, y: 170 },
+                  { x: 340, y: 175 },
+                  { x: 160, y: 345 },
+                  { x: 345, y: 340 },
+                  { x: 250, y: 140 },
+                ];
+                const pt = coordsList[jIdx % coordsList.length];
+                return (
+                  <g key={jName}>
+                    <circle cx={pt.x} cy={pt.y} r="3" fill="#10b981" opacity="0.7" />
+                    <text x={pt.x} y={pt.y + 12} fill="#94a3b8" fontSize="7.5" fontWeight="bold" textAnchor="middle">
+                      {jName}
+                    </text>
+                  </g>
+                );
+              })}
+            </>
+          )}
 
           {/* HEATMAP DENSITY LAYER (When in Heatmap Mode) */}
           {viewMode === 'HEATMAP' && (
@@ -385,7 +435,7 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
         {/* Live GPS Telemetry Overlay Chip */}
         <div className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-slate-900/90 border border-slate-700 backdrop-blur-md rounded-xl text-[9px] mono text-slate-300 font-bold flex items-center gap-1.5 shadow-md">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>UG-GRID: EPSG:4326 · {pins.length} Live Signals</span>
+          <span>{gov.codePrefix}-GRID: EPSG:4326 · {pins.length} Live Signals</span>
         </div>
 
         {/* Selected Post Popover Preview Card */}

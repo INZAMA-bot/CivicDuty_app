@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { getDept, allDepts, makeCode, copyToClipboard, getPsMinistryInfo } from '../utils/helpers';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { getCountryRolloutConfig } from '../data/nationalRolloutNodes';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   roleTreeFor,
   scopeName,
@@ -90,7 +91,18 @@ function getSupervisoryJurisdiction(
   else if (userHierarchy === 'tier5_perm_sec') tier = 5;
   else {
     const t = (userTitle || '').toLowerCase();
-    if (t.includes('parish chief') || t.includes('town agent') || t.includes('ward admin') || t.includes('ward agent')) {
+    if (
+      t.includes('parish chief') ||
+      t.includes('town agent') ||
+      t.includes('ward admin') ||
+      t.includes('ward agent') ||
+      t.includes('akagari') ||
+      t.includes('cell executive') ||
+      t.includes('mtaa') ||
+      t.includes('village executive') ||
+      t.includes('sarpanch') ||
+      t.includes('gram')
+    ) {
       tier = 1;
     } else if (
       t.includes('sub-county') ||
@@ -98,17 +110,29 @@ function getSupervisoryJurisdiction(
       t.includes('senior assistant secretary') ||
       t.includes('sas') ||
       t.includes('division tc') ||
-      t.includes('division clerk')
+      t.includes('division clerk') ||
+      t.includes('umurenge') ||
+      t.includes('sector executive') ||
+      t.includes('tarafa') ||
+      t.includes('bdo')
     ) {
       tier = 2;
     } else if (
       t.includes('cao') ||
       t.includes('chief administrative officer') ||
       t.includes('city town clerk') ||
-      t.includes('executive director')
+      t.includes('executive director') ||
+      t.includes('akarere') ||
+      t.includes('county secretary') ||
+      t.includes('lga') ||
+      t.includes('mce') ||
+      t.includes('dce') ||
+      t.includes('district executive') ||
+      t.includes('district commissioner') ||
+      t.includes('collector')
     ) {
       tier = 3;
-    } else if (userRole === 'platform_admin' || !userScope || userScope === country || userScope === 'UG') {
+    } else if (userRole === 'platform_admin' || !userScope || userScope.toUpperCase() === country.toUpperCase()) {
       tier = 5;
     } else {
       const d = dists.find((x) => x.id === userScope);
@@ -135,7 +159,7 @@ function getSupervisoryJurisdiction(
   let subcountyObj: any = null;
   let parishObj: any = null;
 
-  if (userScope && userScope !== country && userScope !== 'UG') {
+  if (userScope && userScope.toUpperCase() !== country.toUpperCase()) {
     const directD = dists.find((d) => d.id.toLowerCase() === userScope.toLowerCase());
     if (directD) {
       districtObj = directD;
@@ -246,10 +270,12 @@ export const GovTeamView: React.FC = () => {
   } = useApp();
 
   const country = user?.country || 'UG';
+  const isUg = country === 'UG';
   const countryMeta = COUNTRIES[country] || COUNTRIES.UG;
   const rolloutConfig = useMemo(() => getCountryRolloutConfig(country), [country]);
+  const gov = useMemo(() => getCountryGovernanceSchema(country), [country]);
   const psInfo = useMemo(() => getPsMinistryInfo(user), [user]);
-  const isLinePs = psInfo.isPs && !psInfo.isMoLG;
+  const isLinePs = psInfo.isPs && !psInfo.isMoLG && user?.dept !== gov.superadminDeptId;
   const dists = user ? TERRITORY[user.country] || [] : [];
 
   // Compute exact statutory supervisory context
@@ -265,11 +291,14 @@ export const GovTeamView: React.FC = () => {
 
   const isOmbudsman = Boolean(
     user?.dept === 'igg' ||
+    user?.dept === gov.ombudsman.shortName.toLowerCase() ||
     user?.real_title_short?.toLowerCase().includes('igg') ||
+    user?.real_title_short?.toLowerCase().includes(gov.ombudsman.shortName.toLowerCase()) ||
     user?.real_title_short?.toLowerCase().includes('ombudsman') ||
     user?.role_label?.toLowerCase().includes('ombudsman') ||
     user?.role_label?.toLowerCase().includes('inspector general') ||
-    user?.organization_name?.toLowerCase().includes('inspectorate')
+    user?.organization_name?.toLowerCase().includes('inspectorate') ||
+    user?.organization_name?.toLowerCase().includes('anti-corruption')
   );
 
   const isStatutoryAgency = Boolean(
@@ -277,7 +306,7 @@ export const GovTeamView: React.FC = () => {
       tier === 4 ||
       user?.hierarchy_level === 'tier4_agency' ||
       user?.is_utility ||
-      ['nwsc', 'unra', 'ura', 'nema', 'caa', 'era', 'ucc'].includes(user?.dept || '') ||
+      ['nwsc', 'unra', 'ura', 'nema', 'caa', 'era', 'ucc', gov.utilityAgency.shortName.toLowerCase()].includes(user?.dept || '') ||
       user?.organization_name?.toLowerCase().includes('corporation') ||
       user?.organization_name?.toLowerCase().includes('authority')
     )
@@ -565,7 +594,7 @@ export const GovTeamView: React.FC = () => {
       title: inviteTitle.trim(),
       role: inviteRole,
       scope: finalScope,
-      dept: user.dept || (allDepts(user.country)[0]?.id || 'molg'),
+      dept: user.dept || (allDepts(user.country)[0]?.id || gov.superadminDeptId),
       is_utility: isUtility,
       used: false,
       country: user.country,
@@ -583,7 +612,7 @@ export const GovTeamView: React.FC = () => {
 
     const govData = {
       country: user.country,
-      dept: user.dept || (allDepts(user.country)[0]?.id || 'molg'),
+      dept: user.dept || (allDepts(user.country)[0]?.id || gov.superadminDeptId),
       scope: finalScope,
       role: inviteRole,
       is_utility: isUtility,
@@ -608,12 +637,12 @@ export const GovTeamView: React.FC = () => {
     const dutyStationLabel = chosenDesig?.defaultDutyStation || scopeLabel;
     const legalBasisText =
       tier === 5
-        ? 'Article 174 of the Constitution of the Republic of Uganda & Public Finance Management Act'
+        ? `${gov.constitutionalAuthority} & ${gov.fiscalAct}`
         : tier === 3
-        ? 'Section 64 of the Local Governments Act (Cap. 243)'
+        ? gov.localGovLawTier3
         : tier === 2
-        ? 'Section 69 of the Local Governments Act (Cap. 243)'
-        : 'Section 45 of the Local Governments Act (Cap. 243) & PDM Operational Framework';
+        ? gov.localGovLawTier2
+        : gov.localGovLawTier1;
 
     setIssuedInviteData({
       code,
@@ -795,10 +824,10 @@ export const GovTeamView: React.FC = () => {
                 : isStatutoryAgency || tier === 4
                 ? `Tier 4 · Statutory Corporation & National Operations (${countryMeta.name})`
                 : tier === 3
-                ? `Tier 3: CAO "${districtObj?.name || countryMeta.name} District"`
+                ? `Tier 3: ${gov.tier3Short} "${districtObj?.name || countryMeta.name} ${gov.tier3UnitLabel}"`
                 : tier === 2
-                ? `Tier 2: SAS / Sub-County Accounting Officer "${subcountyObj?.name || 'Sub-County'}"`
-                : `Tier 1: Parish Administrative Officer "${parishObj?.name || 'Parish'}"`}
+                ? `Tier 2: ${gov.tier2Short} / ${gov.tier2UnitLabel} Accounting Officer "${subcountyObj?.name || gov.tier2UnitLabel}"`
+                : `Tier 1: ${gov.tier1Short} Officer "${parishObj?.name || gov.tier1UnitLabel}"`}
             </span>
             <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
               <Lock size={11} />
@@ -812,25 +841,25 @@ export const GovTeamView: React.FC = () => {
               : tier === 5
               ? `${rolloutConfig.superadmin.ministry} (${countryMeta.name}) — National Supervisory Roster`
               : isOmbudsman
-              ? `Inspectorate of Government (IGG) — Ombudsman Chambers & Regional Bureau Roster`
+              ? `${gov.ombudsman.name} (${gov.ombudsman.shortName}) — Ombudsman Chambers & Regional Bureau Roster`
               : isStatutoryAgency || tier === 4
               ? `${d.name} — Corporate Operations & Regional Directorate Roster`
               : tier === 3
-              ? `Tier 3: CAO "${districtObj?.name || 'District'}" — Administration Roster`
+              ? `Tier 3: ${gov.tier3Short} "${districtObj?.name || gov.tier3UnitLabel}" — Administration Roster`
               : tier === 2
-              ? `Tier 2: SAS "${subcountyObj?.name || 'Sub-County'}" — LLG Administration Roster`
-              : `Tier 1: "${parishObj?.name || 'Parish'}" — Grassroots Frontline Command & Village Telemetry`}
+              ? `Tier 2: ${gov.tier2Short} "${subcountyObj?.name || gov.tier2UnitLabel}" — ${gov.tier2UnitLabel} Administration Roster`
+              : `Tier 1: "${parishObj?.name || gov.tier1UnitLabel}" — Grassroots Frontline Command & ${gov.grassrootsUnits.villageLabel} Telemetry`}
           </h1>
 
           <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
             {isLinePs
               ? `Strictly scoped to ${psInfo.ministryName} (${countryMeta.name}). Invite and commission your Cabinet Minister, Ministers of State, Undersecretary, Technical Directors, and Internal Auditors.`
               : isOmbudsman
-              ? `Chapter 13 Constitutional Mandate for elimination of corruption, abuse of office, and public injustice across all MDAs and Local Governments.`
+              ? `${gov.ombudsman.constitutionalBasis}: ${gov.ombudsman.mandateSummary} across all MDAs and Local Governments.`
               : isStatutoryAgency || tier === 4
               ? `National operational asset management, regional network branches, emergency maintenance crews, and commercial service delivery for ${countryMeta.name}.`
               : tier === 1
-              ? `Parish Development Model (PDM) frontline command, PDC secretariat, agricultural extension, and volunteer village chairpersons read-only telemetry.`
+              ? `${gov.fiscalProgramName} frontline command, ${gov.tier1CommitteeName}, extension officers, and volunteer ${gov.grassrootsUnits.villageLabel.toLowerCase()} leaders read-only telemetry.`
               : `Official civil service roster, desk delegation, successor handovers, and supervisory oversight for ${countryMeta.name}.`}
           </p>
         </div>
@@ -859,14 +888,14 @@ export const GovTeamView: React.FC = () => {
               : tier === 5
               ? `National Territorial Oversight (${countryMeta.name})`
               : isOmbudsman
-              ? `Constitutional Oversight Mandate (Articles 223–232)`
+              ? `Constitutional Oversight Mandate (${gov.ombudsman.shortName})`
               : isStatutoryAgency || tier === 4
               ? `Sectoral Statutory Mandate (${d.name})`
               : tier === 3
-              ? `District Accounting Officer (${districtObj?.name || 'District'})`
+              ? `${gov.tier3Label} (${districtObj?.name || gov.tier3UnitLabel})`
               : tier === 2
-              ? `Sub-County Accounting Officer (${subcountyObj?.name || 'Sub-County'})`
-              : `Grassroots Node (${parishObj?.name || 'Parish'})`}
+              ? `${gov.tier2UnitLabel} Accounting Officer (${subcountyObj?.name || gov.tier2UnitLabel})`
+              : `Grassroots Node (${parishObj?.name || gov.tier1UnitLabel})`}
           </span>
         </div>
 
@@ -878,32 +907,32 @@ export const GovTeamView: React.FC = () => {
           )}
           {!isLinePs && tier === 5 && (
             <>
-              As <strong>{rolloutConfig.superadmin.title} ({rolloutConfig.superadmin.name})</strong>, you oversee national territorial decentralization across <strong>{countryMeta.name}</strong> ({rolloutConfig.nodes.length} regional/district nodes), including commissioning of Regional/District Accounting Officers and coordination with {countryMeta.name}&apos;s Sister Ministries.
+              As <strong>{rolloutConfig.superadmin.title} ({rolloutConfig.superadmin.name})</strong>, you oversee national territorial decentralization across <strong>{countryMeta.name}</strong> ({rolloutConfig.nodes.length} {gov.tier3Plural.toLowerCase()} nodes), including commissioning of {gov.tier3Short} Accounting Officers and coordination with {countryMeta.name}&apos;s Sister Ministries.
             </>
           )}
           {isOmbudsman && (
             <>
-              As <strong>Inspector General of Government / Ombudsman</strong>, you exercise supreme constitutional oversight under Articles 223–232 of the Constitution. Your team spans specialized Forensic Investigators, Ombudsman Officers, Leadership Code Compliance Auditors, and 16 Regional Inspectorate Bureaus.
+              As <strong>{gov.ombudsman.headTitle}</strong>, you exercise supreme constitutional oversight under {gov.ombudsman.constitutionalBasis}. Your team spans specialized Forensic Investigators, Ombudsman Officers, Leadership Code Compliance Auditors, and {gov.ombudsman.regionalHubCountLabel}.
             </>
           )}
           {!isOmbudsman && (isStatutoryAgency || tier === 4) && (
             <>
-              Under the <strong>{d.name} Act</strong>, you hold statutory authority for national asset operations, commercial service reliability, and regional network distribution across <strong>{countryMeta.name}</strong>. Your roster covers Executive Directors, Regional Area Managers, and Emergency Rapid Response Crews.
+              Under the <strong>{d.name} Statutory Mandate</strong>, you hold authority for national asset operations, commercial service reliability, and regional network distribution across <strong>{countryMeta.name}</strong>. Your roster covers Executive Directors, Regional Area Managers, and Emergency Rapid Response Crews.
             </>
           )}
           {!isOmbudsman && !isStatutoryAgency && tier === 3 && (
             <>
-              Under the Local Governments Act, the <strong>Chief Administrative Officer (CAO)</strong> is the head of the civil service and accounting officer of <strong>{districtObj?.name}</strong>. Your dashboard and invitation authority are strictly restricted to officers you supervise directly.
+              Under {gov.localGovLawTier3}, the <strong>{gov.tier3Label}</strong> is the head of the civil service and accounting officer of <strong>{districtObj?.name}</strong>. Your dashboard and invitation authority are strictly restricted to officers you supervise directly.
             </>
           )}
           {!isOmbudsman && !isStatutoryAgency && tier === 2 && (
             <>
-              As <strong>Sub-County Accounting Officer</strong> of <strong>{subcountyObj?.name}</strong>, you directly supervise Parish/Ward Chiefs, Community Development Officers, and field extension personnel within your sub-county.
+              As <strong>{gov.tier2Label}</strong> of <strong>{subcountyObj?.name}</strong>, you directly supervise {gov.tier1Plural}, Community Development Officers, and field extension personnel within your {gov.tier2UnitLabel.toLowerCase()}.
             </>
           )}
           {!isOmbudsman && !isStatutoryAgency && tier === 1 && (
             <>
-              As <strong>Parish Chief / Ward Administrator</strong> of <strong>{parishObj?.name}</strong>, you coordinate the frontline grassroots committee, supervising the PDM SACCO focal person, community development officers, and volunteer village chairpersons with read-only telemetry.
+              As <strong>{gov.tier1Label}</strong> of <strong>{parishObj?.name}</strong>, you coordinate the {gov.tier1CommitteeName}, supervising the {gov.fiscalProgramName} focal person, community development officers, and volunteer {gov.grassrootsUnits.villageLabel.toLowerCase()} leaders with read-only telemetry.
             </>
           )}
         </p>
@@ -955,7 +984,7 @@ export const GovTeamView: React.FC = () => {
           ) : isOmbudsman ? (
             <OmbudsmanSupervisionStructure onPrefillManualForm={handlePrefillManual} />
           ) : isStatutoryAgency || tier === 4 ? (
-            <AgencySupervisionStructure deptId={user.dept || 'nwsc'} onPrefillManualForm={handlePrefillManual} />
+            <AgencySupervisionStructure deptId={user.dept || allDepts(country)[0]?.id || gov.superadminDeptId} onPrefillManualForm={handlePrefillManual} />
           ) : tier === 3 ? (
             <DistrictSupervisionStructure districtId={districtObj.id} onPrefillManualForm={handlePrefillManual} />
           ) : tier === 2 ? (
@@ -1112,7 +1141,7 @@ export const GovTeamView: React.FC = () => {
                       type="text"
                       value={inviteName}
                       onChange={(e) => setInviteName(e.target.value)}
-                      placeholder="e.g. Samuel Mukasa"
+                      placeholder={isUg ? 'e.g. Samuel Mukasa' : 'e.g. Officer Full Name'}
                       className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none"
                     />
                   </div>
@@ -1124,11 +1153,11 @@ export const GovTeamView: React.FC = () => {
                       </label>
                       <span className="text-[10px] font-mono text-teal-600 dark:text-teal-400 font-semibold">
                         {tier === 3
-                          ? 'District Statutory Desks'
+                          ? `${gov.tier3UnitLabel} Statutory Desks`
                           : tier === 2
-                          ? 'Sub-County LLG Desks'
+                          ? `${gov.tier2UnitLabel} Desks`
                           : tier === 1
-                          ? 'Parish PDM Desks'
+                          ? `${gov.tier1UnitLabel} Desks`
                           : 'Apex Statutory Desks'}
                       </span>
                     </div>
@@ -1152,10 +1181,10 @@ export const GovTeamView: React.FC = () => {
                       }}
                       placeholder={
                         tier === 3
-                          ? 'e.g. Senior Commercial Officer / Fisheries Officer'
+                          ? 'e.g. Senior Commercial Officer / Technical Director'
                           : tier === 2
-                          ? 'e.g. Parish Chief / Ward Agent / Community Development Officer'
-                          : 'e.g. LC1 Chairperson / VHT Coordinator'
+                          ? `e.g. ${gov.tier1Label} / Community Development Officer`
+                          : `e.g. ${gov.grassrootsUnits.villageLabel} Chairperson / Extension Coordinator`
                       }
                       className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none font-medium"
                     />
@@ -1206,7 +1235,7 @@ export const GovTeamView: React.FC = () => {
                           type="tel"
                           value={invitePhone}
                           onChange={(e) => setInvitePhone(e.target.value)}
-                          placeholder="e.g. +256 772 123456"
+                          placeholder={`e.g. ${gov.samplePhone}`}
                           className="w-full text-xs pl-8 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none"
                         />
                       </div>
@@ -1228,7 +1257,7 @@ export const GovTeamView: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      {/* District Selection */}
+                      {/* Tier 3 Selection */}
                       <select
                         className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white disabled:opacity-75"
                         disabled={tier <= 3}
@@ -1239,15 +1268,15 @@ export const GovTeamView: React.FC = () => {
                           setParish('');
                         }}
                       >
-                        <option value="">Select District…</option>
+                        <option value="">Select {gov.tier3UnitLabel}…</option>
                         {dists.map((x) => (
                           <option key={x.id} value={x.id}>
-                            {x.name} {tier <= 3 && x.id === districtObj.id ? '(Your District)' : ''}
+                            {x.name} {tier <= 3 && x.id === districtObj?.id ? `(Your ${gov.tier3UnitLabel})` : ''}
                           </option>
                         ))}
                       </select>
 
-                      {/* Sub-County Selection */}
+                      {/* Tier 2 Selection */}
                       <select
                         className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white disabled:opacity-75"
                         disabled={tier <= 2 || !district}
@@ -1258,7 +1287,7 @@ export const GovTeamView: React.FC = () => {
                         }}
                       >
                         <option value="">
-                          {tier <= 2 ? subcountyObj?.name || 'Sub-County Jurisdiction' : 'Select Sub-County / Division…'}
+                          {tier <= 2 ? subcountyObj?.name || `${gov.tier2UnitLabel} Jurisdiction` : `Select ${gov.tier2UnitLabel}…`}
                         </option>
                         {subs.map((x) => (
                           <option key={x.id} value={x.id}>
@@ -1267,7 +1296,7 @@ export const GovTeamView: React.FC = () => {
                         ))}
                       </select>
 
-                      {/* Parish Selection */}
+                      {/* Tier 1 Selection */}
                       <select
                         className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white disabled:opacity-75"
                         disabled={tier === 1 || !subcounty}
@@ -1275,7 +1304,7 @@ export const GovTeamView: React.FC = () => {
                         onChange={(e) => setParish(e.target.value)}
                       >
                         <option value="">
-                          {tier === 1 ? parishObj?.name || 'Parish Field Desk' : 'Select Parish / Ward (Optional)…'}
+                          {tier === 1 ? parishObj?.name || `${gov.tier1UnitLabel} Field Desk` : `Select ${gov.tier1UnitLabel} (Optional)…`}
                         </option>
                         {parishes.map((x) => (
                           <option key={x.id} value={x.id}>
@@ -1493,9 +1522,9 @@ export const GovTeamView: React.FC = () => {
                 </span>
                 <h3 className="text-base font-bold text-slate-900 dark:text-amber-200 mt-1">
                   {tier === 3
-                    ? `1-Click Auto-Mint All Sub-Counties in ${districtObj.name}`
+                    ? `1-Click Auto-Mint All ${gov.tier2Plural} in ${districtObj?.name}`
                     : tier === 2
-                    ? `1-Click Auto-Mint All Parishes in ${subcountyObj?.name}`
+                    ? `1-Click Auto-Mint All ${gov.tier1Plural} in ${subcountyObj?.name}`
                     : '1-Click National Node Auto-Mint'}
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
@@ -1507,6 +1536,7 @@ export const GovTeamView: React.FC = () => {
                 <button
                   onClick={() => {
                     const codePrefix = `${user.country.toUpperCase()}-${d.name.replace(/\s+/g, '').toUpperCase().slice(0, 4)}`;
+                    const fallbackDept = allDepts(user.country)[0]?.id || gov.superadminDeptId;
                     let count = 0;
 
                     if (tier === 3) {
@@ -1514,11 +1544,11 @@ export const GovTeamView: React.FC = () => {
                         const scCode = makeCode(codePrefix);
                         addInvite({
                           code: scCode,
-                          name: `Sub-County Chief Desk (${sub.name})`,
-                          title: `Senior Assistant Secretary (SAS), ${sub.name}`,
+                          name: `${gov.tier2Label} (${sub.name})`,
+                          title: `${gov.tier2Label}, ${sub.name}`,
                           role: 'node_admin',
                           scope: sub.id,
-                          dept: user.dept || 'molg',
+                          dept: user.dept || fallbackDept,
                           is_utility: false,
                           used: false,
                           country: user.country,
@@ -1527,17 +1557,17 @@ export const GovTeamView: React.FC = () => {
                         });
                         count++;
                       });
-                      toast(`Minted ${count} codes for all sub-counties in ${districtObj.name}`, 'emerald');
+                      toast(`Minted ${count} codes for all ${gov.tier2Plural.toLowerCase()} in ${districtObj?.name}`, 'emerald');
                     } else if (tier === 2) {
                       parishes.forEach((p) => {
                         const pCode = makeCode(codePrefix);
                         addInvite({
                           code: pCode,
-                          name: `Parish Chief Desk (${p.name})`,
-                          title: `Parish Chief, ${p.name}`,
+                          name: `${gov.tier1Label} Desk (${p.name})`,
+                          title: `${gov.tier1Label}, ${p.name}`,
                           role: 'spokesperson',
                           scope: p.id,
-                          dept: user.dept || 'molg',
+                          dept: user.dept || fallbackDept,
                           is_utility: false,
                           used: false,
                           country: user.country,
@@ -1546,17 +1576,17 @@ export const GovTeamView: React.FC = () => {
                         });
                         count++;
                       });
-                      toast(`Minted ${count} codes for all parishes in ${subcountyObj?.name}`, 'emerald');
+                      toast(`Minted ${count} codes for all ${gov.tier1Plural.toLowerCase()} in ${subcountyObj?.name}`, 'emerald');
                     } else {
                       dists.slice(0, 10).forEach((dist) => {
                         const distCode = makeCode(codePrefix);
                         addInvite({
                           code: distCode,
-                          name: `CAO Desk (${dist.name})`,
-                          title: `Chief Administrative Officer, ${dist.name}`,
+                          name: `${gov.tier3Short} Desk (${dist.name})`,
+                          title: `${gov.tier3Label}, ${dist.name}`,
                           role: 'node_admin',
                           scope: dist.id,
-                          dept: user.dept || 'molg',
+                          dept: user.dept || fallbackDept,
                           is_utility: false,
                           used: false,
                           country: user.country,
@@ -1565,7 +1595,7 @@ export const GovTeamView: React.FC = () => {
                         });
                         count++;
                       });
-                      toast(`Minted ${count} district node codes`, 'emerald');
+                      toast(`Minted ${count} ${gov.tier3UnitLabel.toLowerCase()} node codes`, 'emerald');
                     }
                   }}
                   className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider mono transition-all shadow-sm"
@@ -1648,12 +1678,12 @@ export const GovTeamView: React.FC = () => {
                         scopeNameStr: scopeName(user.country, c.scope),
                         legalBasis:
                           tier === 5
-                            ? 'Article 174 of the Constitution & Public Finance Management Act'
+                            ? `${gov.constitutionalAuthority} & ${gov.fiscalAct}`
                             : tier === 3
-                            ? 'Section 64 of the Local Governments Act (Cap. 243)'
+                            ? gov.localGovLawTier3
                             : tier === 2
-                            ? 'Section 69 of the Local Governments Act (Cap. 243)'
-                            : 'Section 45 of the Local Governments Act (Cap. 243) & PDM Framework',
+                            ? gov.localGovLawTier2
+                            : gov.localGovLawTier1,
                         dutyStation: c.duty_station || scopeName(user.country, c.scope),
                         mandate: c.mandate,
                         role: c.role,
@@ -1781,8 +1811,8 @@ export const GovTeamView: React.FC = () => {
             {filteredTeam.map((m, idx) => {
               const isDirectSubordinate =
                 tier === 5 ||
-                (tier === 3 && m.scope !== 'UG' && m.role !== 'platform_admin') ||
-                (tier === 2 && m.role === 'spokesperson' && m.scope !== districtObj.id);
+                (tier === 3 && m.scope.toUpperCase() !== country.toUpperCase() && m.role !== 'platform_admin') ||
+                (tier === 2 && m.role === 'spokesperson' && m.scope !== districtObj?.id);
 
               return (
                 <div
@@ -1971,7 +2001,7 @@ export const GovTeamView: React.FC = () => {
                   type="text"
                   value={successorName}
                   onChange={(e) => setSuccessorName(e.target.value)}
-                  placeholder="e.g. Grace Achan"
+                  placeholder={isUg ? 'e.g. Grace Achan' : 'e.g. Successor Full Name'}
                   className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-teal-500"
                 />
               </div>
@@ -2007,7 +2037,7 @@ export const GovTeamView: React.FC = () => {
                     type="tel"
                     value={successorPhone}
                     onChange={(e) => setSuccessorPhone(e.target.value)}
-                    placeholder="+256 772 000000"
+                    placeholder={gov.samplePhone}
                     className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-teal-500"
                   />
                 </div>
@@ -2313,13 +2343,13 @@ export const GovTeamView: React.FC = () => {
               <label className="text-[10px] mono uppercase text-slate-500 font-bold block mb-1">
                 Handover Note (Optional)
               </label>
-              <input
-                type="text"
-                value={standDownTarget.note}
-                onChange={(e) => setStandDownTarget({ ...standDownTarget, note: e.target.value })}
-                placeholder={`e.g. Transferred to ${districtObj.name} District HQ`}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-              />
+                <input
+                  type="text"
+                  value={standDownTarget.note}
+                  onChange={(e) => setStandDownTarget({ ...standDownTarget, note: e.target.value })}
+                  placeholder={`e.g. Transferred to ${districtObj?.name || ''} ${gov.tier3UnitLabel} HQ`}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
             </div>
 
             <p className="text-[10px] text-slate-500 leading-relaxed">

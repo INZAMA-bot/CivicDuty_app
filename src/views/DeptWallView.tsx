@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept } from '../utils/helpers';
 import { COUNTRIES } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { 
   ChevronLeft, 
   User, 
@@ -157,39 +158,56 @@ export const DeptWallView: React.FC = () => {
   const isTransport = d.category === 'transport';
   const isHousing = d.category === 'housing';
 
-  const accountingOfficer = did.includes('gayaza') || did === 'gayaza_hs'
-    ? { name: 'Robinah Kizito', role: 'Head Teacher & Academic Administrator', phone: '+256 414 567 401', email: 'headteacher@gayazahs.sc.ug' }
-    : did.includes('namagunga') || did === 'namagunga'
-    ? { name: 'Sr. Mary Grace Akello', role: 'Headmistress & Statutory Principal', phone: '+256 414 892 110', email: 'headmistress@msmnamagunga.ac.ug' }
-    : did.includes('cafe_javas') || did.includes('javas') || did === 'cafe_javas'
-    ? { name: 'Faruq Mandela', role: 'Customer Experience & Operations Lead', phone: '+256 312 000 000', email: 'care@cafejavas.co.ug' }
-    : did.includes('nwsc')
-    ? { name: 'Dr. Eng. Silver Mugisha', role: 'Managing Director & Accounting Officer', phone: '+256 313 315 100', email: 'md@nwsc.co.ug' }
-    : did.includes('mulago')
-    ? { name: 'Dr. Rosemary Byanyima', role: 'Executive Director & Chief Clinical Consultant', phone: '+256 414 554 001', email: 'director@mulago.or.ug' }
-    : did.includes('stanbic')
-    ? { name: 'Anne Juuko', role: 'Chief Executive & Customer Care Lead', phone: '+256 312 224 000', email: 'customercare@stanbic.co.ug' }
-    : did.includes('serena')
-    ? { name: 'Anthony Chege', role: 'General Manager & Resident Director', phone: '+256 414 309 000', email: 'reservations@serenahotels.com' }
-    : did.includes('mak_univ') || did.includes('makerere')
-    ? { name: 'Prof. Barnabas Nawangwe', role: 'Vice Chancellor & Accounting Officer', phone: '+256 414 542 803', email: 'vc@mak.ac.ug' }
+  const deptGov = getCountryGovernanceSchema(country || 'UG');
+  const isDeptUg = (country || 'UG').toUpperCase() === 'UG';
+
+  const accountingOfficer = isDeptUg
+    ? did.includes('gayaza') || did === 'gayaza_hs'
+      ? { name: 'Robinah Kizito', role: 'Head Teacher & Academic Administrator', phone: '+256 414 567 401', email: 'headteacher@gayazahs.sc.ug' }
+      : did.includes('namagunga') || did === 'namagunga'
+      ? { name: 'Sr. Mary Grace Akello', role: 'Headmistress & Statutory Principal', phone: '+256 414 892 110', email: 'headmistress@msmnamagunga.ac.ug' }
+      : did.includes('cafe_javas') || did.includes('javas') || did === 'cafe_javas'
+      ? { name: 'Faruq Mandela', role: 'Customer Experience & Operations Lead', phone: '+256 312 000 000', email: 'care@cafejavas.co.ug' }
+      : did.includes('nwsc')
+      ? { name: 'Dr. Eng. Silver Mugisha', role: 'Managing Director & Accounting Officer', phone: '+256 313 315 100', email: 'md@nwsc.co.ug' }
+      : did.includes('mulago')
+      ? { name: 'Dr. Rosemary Byanyima', role: 'Executive Director & Chief Clinical Consultant', phone: '+256 414 554 001', email: 'director@mulago.or.ug' }
+      : did.includes('stanbic')
+      ? { name: 'Anne Juuko', role: 'Chief Executive & Customer Care Lead', phone: '+256 312 224 000', email: 'customercare@stanbic.co.ug' }
+      : did.includes('serena')
+      ? { name: 'Anthony Chege', role: 'General Manager & Resident Director', phone: '+256 414 309 000', email: 'reservations@serenahotels.com' }
+      : did.includes('mak_univ') || did.includes('makerere')
+      ? { name: 'Prof. Barnabas Nawangwe', role: 'Vice Chancellor & Accounting Officer', phone: '+256 414 542 803', email: 'vc@mak.ac.ug' }
+      : isEducation
+      ? { name: 'Dr. Jane Nabukenya', role: 'Head of Academic Standards & Parent Liaison', phone: '+256 414 123 456', email: 'academics@institution.ac.ug' }
+      : isHealth
+      ? { name: 'Dr. Robert Asaba', role: 'Clinical Director & Patient Quality Ombudsman', phone: '+256 414 789 012', email: 'quality@healthcenter.ug' }
+      : isHospitality
+      ? { name: 'Chef Patrick Mukasa', role: 'Executive Operations & Food Hygiene Director', phone: '+256 700 334 455', email: 'hygiene@dininggroup.com' }
+      : isFinance
+      ? { name: 'Florence Nambatya', role: 'Head of Consumer Protection & Credit Compliance', phone: '+256 312 998 877', email: 'ombudsman@bank.co.ug' }
+      : isTransport
+      ? { name: 'Hajj Sulaiman Ssebaggala', role: 'Fleet Safety Director & Stage Ombudsman', phone: '+256 772 556 677', email: 'safety@transitunion.ug' }
+      : did.includes('kcca')
+      ? { name: 'Eng. David Luyimbazi', role: 'Accounting Officer & Director Engineering', phone: '+256 414 901 000', email: 'engineering@kcca.go.ug' }
+      : did.includes('unra')
+      ? { name: 'Eng. Samuel Muhoozi', role: 'Director Roads & Bridges Maintenance', phone: '+256 312 249 000', email: 'roadmaintenance@unra.go.ug' }
+      : did.includes('umeme')
+      ? { name: 'Selestino Babungi', role: 'Managing Director & Lead Spokesperson', phone: '+256 312 360 000', email: 'customercare@umeme.co.ug' }
+      : { name: 'Chief Administrative Officer (CAO)', role: 'Statutory Accounting Officer', phone: '+256 414 000 111', email: 'cao@district.go.ug' }
     : isEducation
-    ? { name: 'Dr. Jane Nabukenya', role: 'Head of Academic Standards & Parent Liaison', phone: '+256 414 123 456', email: 'academics@institution.ac.ug' }
+    ? { name: `${d.name} Principal`, role: 'Academic Standards & Parent Liaison', phone: deptGov.samplePhone, email: `academics@${deptGov.utilityAgency.execEmailDomain}` }
     : isHealth
-    ? { name: 'Dr. Robert Asaba', role: 'Clinical Director & Patient Quality Ombudsman', phone: '+256 414 789 012', email: 'quality@healthcenter.ug' }
+    ? { name: `${d.name} Medical Director`, role: 'Clinical Quality & Patient Ombudsman', phone: deptGov.samplePhone, email: `quality@${deptGov.utilityAgency.execEmailDomain}` }
     : isHospitality
-    ? { name: 'Chef Patrick Mukasa', role: 'Executive Operations & Food Hygiene Director', phone: '+256 700 334 455', email: 'hygiene@dininggroup.com' }
+    ? { name: `${d.name} Guest Lead`, role: 'Customer Experience & Operations Lead', phone: deptGov.samplePhone, email: `care@${deptGov.utilityAgency.execEmailDomain}` }
     : isFinance
-    ? { name: 'Florence Nambatya', role: 'Head of Consumer Protection & Credit Compliance', phone: '+256 312 998 877', email: 'ombudsman@bank.co.ug' }
+    ? { name: `${d.name} Compliance Desk`, role: 'Consumer Protection & Financial Ombudsman', phone: deptGov.samplePhone, email: `ombudsman@${deptGov.utilityAgency.execEmailDomain}` }
     : isTransport
-    ? { name: 'Hajj Sulaiman Ssebaggala', role: 'Fleet Safety Director & Stage Ombudsman', phone: '+256 772 556 677', email: 'safety@transitunion.ug' }
-    : did.includes('kcca') 
-    ? { name: 'Eng. David Luyimbazi', role: 'Accounting Officer & Director Engineering', phone: '+256 414 901 000', email: 'engineering@kcca.go.ug' }
-    : did.includes('unra')
-    ? { name: 'Eng. Samuel Muhoozi', role: 'Director Roads & Bridges Maintenance', phone: '+256 312 249 000', email: 'roadmaintenance@unra.go.ug' }
-    : did.includes('umeme')
-    ? { name: 'Selestino Babungi', role: 'Managing Director & Lead Spokesperson', phone: '+256 312 360 000', email: 'customercare@umeme.co.ug' }
-    : { name: 'Chief Administrative Officer (CAO)', role: 'Statutory Accounting Officer', phone: '+256 414 000 111', email: 'cao@district.go.ug' };
+    ? { name: `${d.name} Safety Director`, role: 'Fleet Operations & Transit Ombudsman', phone: deptGov.samplePhone, email: `safety@${deptGov.utilityAgency.execEmailDomain}` }
+    : isConsumer
+    ? { name: `${d.name} Service Lead`, role: 'Head of Customer Care & Compliance', phone: deptGov.samplePhone, email: `care@${deptGov.utilityAgency.execEmailDomain}` }
+    : { name: `${deptGov.tier3Short} (${deptGov.sampleJurisdictions[0] || deptGov.countryName})`, role: 'Statutory Accounting Officer', phone: deptGov.samplePhone, email: `desk@${deptGov.utilityAgency.execEmailDomain}` };
 
   // Edit Wall Modal Form State
   const [editBusinessName, setEditBusinessName] = useState('');

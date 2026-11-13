@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight, Search, Check, Globe, X, Compass, Lock, Shie
 import { CountryCode, IdentityDocumentType } from '../types';
 import { COUNTRIES } from '../data/countries';
 import { useApp } from '../context/AppContext';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 interface CountrySelectorProps {
   value?: CountryCode;
@@ -536,7 +537,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
                     <strong className="text-slate-900 dark:text-white">
                       {user?.scope_label || user?.scope} · {COUNTRIES[user?.country || 'UG']?.name} ({user?.country})
                     </strong>
-                    . Every Minister, Permanent Secretary, CAO, Sub-County Chief, Parish Chief, and Technical Officer has <strong>zero access</strong> to another jurisdiction or country without signing out and authenticating with that country&apos;s <strong>Official Access Code</strong> or <strong>Citizen Identification Documents</strong>.
+                    . Every Minister, {getCountryGovernanceSchema(user?.country || 'UG').superadminTitle}, {getCountryGovernanceSchema(user?.country || 'UG').tier3Short}, {getCountryGovernanceSchema(user?.country || 'UG').tier2Short}, {getCountryGovernanceSchema(user?.country || 'UG').tier1Short}, and Technical Officer has <strong>zero access</strong> to another jurisdiction or country without signing out and authenticating with that country&apos;s <strong>Official Access Code</strong> or <strong>Citizen Identification Documents</strong>.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">

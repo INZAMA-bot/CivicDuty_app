@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode, RoleType } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { getNationalRolloutArrangements } from '../data/tiers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   getRolloutNodesForCountry,
   getSisterMinistriesForCountry,
@@ -43,6 +44,7 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
   const activeCountry: CountryCode = country || user?.country || 'UG';
   const countryObj = COUNTRIES[activeCountry] || { name: activeCountry, flag: activeCountry };
   const rollout = getNationalRolloutArrangements(activeCountry);
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
 
   const districtNodes = useMemo(() => getRolloutNodesForCountry(activeCountry), [activeCountry]);
   const sisterMinistries = useMemo(() => getSisterMinistriesForCountry(activeCountry), [activeCountry]);
@@ -54,6 +56,12 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
   const [selectedMinistryIds, setSelectedMinistryIds] = useState<string[]>(() =>
     sisterMinistries.map(m => m.id)
   );
+
+  useEffect(() => {
+    setSelectedDistrictIds(districtNodes.map(d => d.id));
+    setSelectedMinistryIds(sisterMinistries.map(m => m.id));
+    setMintedResults(null);
+  }, [districtNodes, sisterMinistries]);
 
   // Search & Filter
   const [districtSearch, setDistrictSearch] = useState('');
@@ -125,23 +133,23 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
       legalBasis: string;
     }[] = [];
 
-    // 1. Mint CAO Accounting Officers
+    // 1. Mint Tier 3 Accounting Officers
     targetDistricts.forEach((d) => {
       const codeClean = d.id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-      const code = `CAO-${codeClean}-2026`;
-      const title = `${rollout.targets.l2l3Title.split('/')[0]} Accounting Officer / CAO`;
-      const legalBasis = `Section 64, Local Governments Act (Cap. 243) & PFMA Section 45`;
+      const code = `${gov.codePrefix}-${codeClean}-2026`;
+      const title = `${gov.tier3Label}`;
+      const legalBasis = `${gov.localGovLawTier3} & ${gov.fiscalAct}`;
 
       // Register in AppContext via mintGovAccessCode
       mintGovAccessCode(code, {
         country: activeCountry,
-        dept: 'molg',
+        dept: gov.superadminDeptId,
         scope: d.id,
         role: 'node_admin',
         is_utility: false,
         is_admin: true,
         role_label: `${title} (${d.name})`,
-        real_title_short: title,
+        real_title_short: gov.tier3Short,
         hierarchy_level: 'tier3_district_cao',
         escalation_rank: 3,
         officer_name: d.cao,
@@ -155,7 +163,7 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
         title,
         role: 'node_admin',
         scope: d.id,
-        dept: 'molg',
+        dept: gov.superadminDeptId,
         is_utility: false,
         used: false,
         country: activeCountry,
@@ -174,11 +182,11 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
       });
     });
 
-    // 2. Mint Sister Line Ministry Permanent Secretaries
+    // 2. Mint Sister Line Ministry Permanent Secretaries / Accounting Heads
     targetMinistries.forEach((m) => {
       const code = m.code;
       const title = m.title;
-      const legalBasis = `Article 174 of the Constitution & National Public Finance Management Act`;
+      const legalBasis = `${gov.constitutionalAuthority} & ${gov.fiscalAct}`;
 
       mintGovAccessCode(code, {
         country: activeCountry,
@@ -228,7 +236,7 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
     logAudit(
       'sovereign_batch_minting_executed',
       activeCountry,
-      `PS MoLG executed sovereign batch commissioning: Minted ${targetDistricts.length} CAOs and ${targetMinistries.length} Sister PS credentials.`
+      `${gov.superadminTitle} executed sovereign batch commissioning: Minted ${targetDistricts.length} ${gov.tier3Plural} and ${targetMinistries.length} Sister Ministry credentials.`
     );
 
     toast(
@@ -240,26 +248,25 @@ export const SovereignBatchCommissioning: React.FC<SovereignBatchCommissioningPr
   const handleCopyCabinetGazette = () => {
     if (!mintedResults) return;
 
-    const memoText = `REPUBLIC OF ${countryObj.name.toUpperCase()}
-OFFICE OF THE PERMANENT SECRETARY
-MINISTRY OF LOCAL GOVERNMENT / NATIONAL SUPERADMIN GATEWAY
-OFFICIAL STATUTORY CABINET TRANSMITTAL GAZETTE
+    const memoText = `REPUBLIC / NATION OF ${countryObj.name.toUpperCase()}
+${gov.superadminMinistry.toUpperCase()}
+NATIONAL SUPERADMIN GATEWAY — OFFICIAL STATUTORY TRANSMITTAL GAZETTE
 
 Date of Statutory Issuance: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
-Issuing Authority: Ben Kumumanya, Permanent Secretary (PS MoLG)
-Statutory Jurisdiction: National Local Government Cascade (${activeCountry})
-Reference: Cap. 243 / Public Finance Management Mandate 2026
+Issuing Authority: ${gov.superadminHolder}, ${gov.superadminTitle} (${gov.superadminMinistryShort})
+Statutory Jurisdiction: National Sub-National Cascade (${activeCountry})
+Reference: ${gov.localGovLawTier3} / ${gov.fiscalAct}
 
 SUBJECT: NOTIFICATION OF SOVEREIGN CIVIC DUTY ACCESS CODES & DELEGATED STATUTORY ROLES
 
 1. MANDATE & AUTHORITY:
-Pursuant to Article 174 of the Constitution and Section 64 of the Local Governments Act, the designated Accounting Officers and Sister Ministry Permanent Secretaries are hereby issued unique sovereign cryptographic gateway credentials to authenticate and manage their respective supervisory desks on the Civic Duty National Resolution Gateway.
+Pursuant to ${gov.constitutionalAuthority} and ${gov.localGovLawTier3}, the designated ${gov.tier3Plural} and Sister Line Ministry Accounting Officers are hereby issued unique sovereign cryptographic gateway credentials to authenticate and manage their respective supervisory desks on the Civic Duty National Resolution Gateway.
 
 2. REGISTER OF COMMISSIONED SOVEREIGN OFFICERS:
 ${mintedResults.items
   .map(
     (item, index) =>
-      `[${index + 1}] ${item.type === 'CAO' ? 'SUB-SOVEREIGN CAO' : 'SISTER PERMANENT SECRETARY'}
+      `[${index + 1}] ${item.type === 'CAO' ? `SUB-SOVEREIGN ${gov.tier3Short.toUpperCase()}` : 'SISTER LINE MINISTRY'}
 Officer: ${item.name}
 Designation: ${item.title}
 Duty Station: ${item.station}
@@ -270,12 +277,12 @@ Authentication URL: https://civicduty.gov.${activeCountry.toLowerCase()}/gov-log
   .join('\n\n')}
 
 3. STATUTORY INSTRUCTIONS:
-(a) Accounting Officers (CAOs) must immediately log in and activate subordinate Senior Assistant Secretaries (Sub-County Chiefs) within their statutory boundaries.
+(a) Accounting Officers (${gov.tier3Plural}) must immediately log in and activate subordinate ${gov.tier2Plural} within their statutory boundaries.
 (b) Sister Ministries must harmonize sectoral field assets to satisfy the 48-hour SLA for citizen public works and medical escalations.
 (c) This gazette is officially entered into the national immutable audit registry.
 
 BY ORDER OF:
-Permanent Secretary, Ministry of Local Government (National Superadmin)`;
+${gov.superadminHolder} · ${gov.superadminTitle} (${gov.superadminMinistry})`;
 
     navigator.clipboard.writeText(memoText);
     setCopiedMemo(true);
@@ -316,7 +323,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
           <div className="space-y-0.5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] mono font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                Sovereign Batch Authority · PS MoLG Superadmin
+                Sovereign Batch Authority · {gov.superadminTitle} ({gov.superadminMinistryShort})
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] mono font-bold bg-[#f1f3f4] dark:bg-[#1e232d] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36]">
                 {activeCountry} · {countryObj.name}
@@ -326,7 +333,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
               Sovereign Batch Commissioning Gateway
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium max-w-2xl leading-relaxed">
-              As Permanent Secretary / National Superadmin, your constitutional prerogative is batch minting credentials for all Sub-Sovereign District Accounting Officers (CAOs) and Sister Line Ministry Permanent Secretaries.
+              As {gov.superadminTitle} / National Superadmin, your constitutional prerogative is batch minting credentials for all Sub-Sovereign {gov.tier3Plural} and Sister Line Ministry Accounting Heads.
             </p>
           </div>
         </div>
@@ -348,7 +355,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
           Statutory Separation of Administrative Powers
         </div>
         <p className="text-xs text-emerald-900/90 dark:text-emerald-200/90 font-medium">
-          Under Section 64 of the Local Governments Act and Article 174 of the Constitution, individual grassroots appointments (Sub-County Chiefs, Parish Chiefs, Village Staff) are statutorily reserved for their respective District Accounting Officers. The Superadmin executes horizontal cabinet sync and vertical district delegation.
+          Under {gov.localGovLawTier3} and {gov.constitutionalAuthority}, individual grassroots appointments ({gov.tier2Plural}, {gov.tier1Plural}, Field Staff) are statutorily reserved for their respective {gov.tier3Plural}. The National Superadmin executes horizontal cabinet sync and vertical territorial delegation.
         </p>
       </div>
 
@@ -373,7 +380,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            District CAOs Only ({districtNodes.length})
+            {gov.tier3Plural} ({districtNodes.length})
           </button>
           <button
             onClick={() => setActiveCategory('sister_ps')}
@@ -383,7 +390,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Sister Permanent Secretaries ({sisterMinistries.length})
+            Sister Line Ministries ({sisterMinistries.length})
           </button>
         </div>
 
@@ -399,14 +406,14 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
 
       {/* SELECTION GRID */}
       <div className="space-y-4">
-        {/* CAOs Section */}
+        {/* Tier 3 Section */}
         {(activeCategory === 'both' || activeCategory === 'caos') && (
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Building2 size={16} className="text-emerald-700 dark:text-emerald-400" />
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                  Sub-Sovereign Accounting Officers (CAOs &amp; City Clerks) — {selectedDistrictIds.length}/{districtNodes.length} Selected
+                  Sub-Sovereign Accounting Officers ({gov.tier3Plural} &amp; {gov.tier3MetroBadge}) — {selectedDistrictIds.length}/{districtNodes.length} Selected
                 </h4>
               </div>
 
@@ -414,7 +421,7 @@ Permanent Secretary, Ministry of Local Government (National Superadmin)`;
                 onClick={toggleAllDistricts}
                 className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1"
               >
-                {selectedDistrictIds.length === districtNodes.length ? 'Deselect All' : 'Select All CAOs'}
+                {selectedDistrictIds.length === districtNodes.length ? 'Deselect All' : `Select All ${gov.tier3Plural}`}
               </button>
             </div>
 

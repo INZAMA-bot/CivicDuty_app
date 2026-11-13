@@ -3,6 +3,7 @@ import { Post, LanguageCode } from '../types';
 import { useApp } from '../context/AppContext';
 import { ALL_LANGUAGES } from '../data/translations';
 import { catByID, getDept, getPostGrassroots, pathStr, slaStatus, srcLabel, stripDecorativeEmojis } from '../utils/helpers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { MediaCard } from '../components/MediaCard';
 import { QrCodeModal } from './QrCodeModal';
 import { RichCivicText } from './RichCivicText';
@@ -114,7 +115,11 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const [showLadderModal, setShowLadderModal] = useState<boolean>(false);
   const [showDossierModal, setShowDossierModal] = useState<boolean>(false);
   const [witnessObservation, setWitnessObservation] = useState<string>('');
-  const [witnessRole, setWitnessRole] = useState<string>('Bodaboda Rider / Cyclist');
+  const [witnessRole, setWitnessRole] = useState<string>(
+    (post?.country || user?.country || 'UG').toUpperCase() === 'UG'
+      ? 'Bodaboda Rider / Cyclist'
+      : 'Road Scout / Commercial Rider'
+  );
   const [witnessAnon, setWitnessAnon] = useState<boolean>(false);
 
   // 72-Hour Citizen Ratification Loop inline states
@@ -150,12 +155,21 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const hoursLeft = Math.max(0, slaLimit - hrsElapsed);
   const currentTier = post.escalation_tier || (hrsElapsed > 144 ? 'tier4_ministry' : hrsElapsed > 96 ? 'tier3_district_cao' : hrsElapsed > 48 ? 'tier2_subcounty' : 'tier1_parish');
 
-  const statutoryTiers = [
-    { id: 'tier1_parish', level: 1, title: 'Parish Chief & Ward Committee', officer: 'Parish Chief / Local CDO', window: '0h – 48h' },
-    { id: 'tier2_subcounty', level: 2, title: 'Sub-County Senior Assistant Town Clerk', officer: 'Sub-County Chief / Municipal Town Clerk', window: '48h – 96h' },
-    { id: 'tier3_district_cao', level: 3, title: 'District Chief Administrative Officer (CAO)', officer: 'Accounting Officer & LCV Executive', window: '96h – 144h' },
-    { id: 'tier4_ministry', level: 4, title: 'Permanent Secretary & Inspectorate (IGG)', officer: 'Permanent Secretary MoLG / Line Ministry', window: '144h+ Statutory Escalation' },
-  ];
+  const postGov = getCountryGovernanceSchema((post.country || user?.country || 'UG').toUpperCase());
+  const isPostUg = (post.country || user?.country || 'UG').toUpperCase() === 'UG';
+  const statutoryTiers = isPostUg
+    ? [
+        { id: 'tier1_parish', level: 1, title: 'Parish Chief & Ward Committee', officer: 'Parish Chief / Local CDO', window: '0h – 48h' },
+        { id: 'tier2_subcounty', level: 2, title: 'Sub-County Senior Assistant Town Clerk', officer: 'Sub-County Chief / Municipal Town Clerk', window: '48h – 96h' },
+        { id: 'tier3_district_cao', level: 3, title: 'District Chief Administrative Officer (CAO)', officer: 'Accounting Officer & LCV Executive', window: '96h – 144h' },
+        { id: 'tier4_ministry', level: 4, title: 'Permanent Secretary & Inspectorate (IGG)', officer: 'Permanent Secretary MoLG / Line Ministry', window: '144h+ Statutory Escalation' },
+      ]
+    : [
+        { id: 'tier1_parish', level: 1, title: `${postGov.tier1Label} & ${postGov.tier1CommitteeName}`, officer: postGov.tier1Short, window: '0h – 48h' },
+        { id: 'tier2_subcounty', level: 2, title: postGov.tier2Label, officer: postGov.tier2Short, window: '48h – 96h' },
+        { id: 'tier3_district_cao', level: 3, title: postGov.tier3Label, officer: `${postGov.tier3Short} & Local Executive`, window: '96h – 144h' },
+        { id: 'tier4_ministry', level: 4, title: `${postGov.superadminTitle} & ${postGov.ombudsman.shortName}`, officer: `${postGov.superadminMinistryShort} / ${postGov.ombudsman.shortName}`, window: '144h+ Statutory Escalation' },
+      ];
 
   // Sovereign 3-Signal Classification:
   // Red: Issue / Whistleblower / Pending / Overdue

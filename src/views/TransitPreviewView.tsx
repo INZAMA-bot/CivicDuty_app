@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { KayoolaBusGraphic } from '../components/KayoolaBusGraphic';
+import { CampaignSharePanel } from '../components/CampaignSharePanel';
 import { CountrySelector } from '../components/CountrySelector';
 import { getCountryTransitSpecs, getCountryPromotionalAds } from '../data/promotionalAds';
+import { buildUniversalShareMetadata, triggerUniversalWebShare } from '../utils/universalShare';
 import {
   ArrowLeft,
   Download,
@@ -32,6 +34,7 @@ import {
   Printer,
   FileText,
   HelpCircle,
+  Share2,
 } from 'lucide-react';
 
 interface CampaignMediaItem {
@@ -48,7 +51,7 @@ interface CampaignMediaItem {
 }
 
 export const TransitPreviewView: React.FC = () => {
-  const { go, selectedCountry, user } = useApp();
+  const { go, selectedCountry, user, toast } = useApp();
   const activeCountry = selectedCountry || user?.country || 'UG';
   const isUganda = activeCountry === 'UG';
   const transitSpec = getCountryTransitSpecs(activeCountry);
@@ -108,6 +111,27 @@ export const TransitPreviewView: React.FC = () => {
     : CAMPAIGN_MEDIA.filter(item => item.category === selectedCategory);
 
   const activeMedia = filteredMedia[activeMediaIndex] || filteredMedia[0] || CAMPAIGN_MEDIA[0];
+
+  const handleHeroUniversalShare = async () => {
+    const shareMeta = buildUniversalShareMetadata({
+      ad: activeMedia,
+      transitSpec,
+      pillarKey: activeMedia.category,
+      socialPostText: `${activeMedia.title} — ${activeMedia.tagline}\n\n${activeMedia.summary}\n\nAccess via ${transitSpec.ussdCode} · #CivicDuty #SpeakServeBeHeard #${transitSpec.countryName.replace(/\s+/g, '')} #FrontlineScouts`,
+      imageSrc: activeMedia.imageSrc,
+    });
+    const outcome = await triggerUniversalWebShare(shareMeta);
+    if (outcome === 'shared' || outcome === 'shared_with_media') {
+      toast(
+        outcome === 'shared_with_media'
+          ? 'Campaign poster & link shared via native Web Share API!'
+          : 'Campaign shared via native Web Share API!',
+        'emerald'
+      );
+    } else if (outcome === 'fallback') {
+      toast('Campaign copy copied — choose Social Platform or Google Ads Pack below.', 'emerald');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-slate-100 flex flex-col transition-colors pb-20">
@@ -223,9 +247,62 @@ export const TransitPreviewView: React.FC = () => {
         {/* Main Media Showcase (When not in pure strategy view) */}
         {selectedCategory !== 'strategy' && (
           <div className="space-y-4">
-            {/* Primary Featured Image Display - Clean Unobstructed High-Resolution View */}
-            <div className="rounded-xl overflow-hidden bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] relative group">
-              <div className="aspect-video w-full bg-slate-950 relative overflow-hidden flex items-center justify-center">
+            {/* Primary Featured Image Display - Top Frame Bar + 100% Unobstructed Image */}
+            <div className="rounded-xl overflow-hidden bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] group">
+              {/* Dark Top Frame Bar (Zero Overlap on Photo) */}
+              <div className="px-3 py-2 bg-[#0e1116] border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="px-2.5 py-1 rounded-lg bg-[#161a22] border border-white/15 flex items-center gap-2 shrink-0">
+                    <svg viewBox="0 0 90 30" className="w-10 h-3 shrink-0" aria-hidden="true">
+                      <circle cx="15" cy="15" r="10" fill="none" stroke="#EF4444" strokeWidth="2.5" />
+                      <circle cx="15" cy="15" r="3" fill="#F87171" />
+                      <circle cx="45" cy="15" r="10" fill="none" stroke="#F59E0B" strokeWidth="2.5" />
+                      <circle cx="45" cy="15" r="3" fill="#FDE047" />
+                      <circle cx="75" cy="15" r="10" fill="#064E3B" stroke="#10B981" strokeWidth="2.5" />
+                      <path d="M 70 15.2 L 73.8 18.8 L 80 12.2" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-[10px] font-black text-white tracking-tight">CivicDuty</span>
+                    <span className="text-white/30">·</span>
+                    <span className="text-[9.5px] font-mono font-bold text-emerald-400">
+                      {transitSpec.countryCode}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold text-slate-300 truncate hidden sm:inline">
+                    {activeMedia.categoryLabel}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleHeroUniversalShare}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#161a22] hover:bg-white/10 text-emerald-400 border border-white/15 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer"
+                    title="Trigger Native Web Share API across Social Media & Ad Networks"
+                  >
+                    <Share2 size={12} />
+                    <span className="hidden sm:inline">Universal Share</span>
+                  </button>
+                  <a
+                    href={activeMedia.imageSrc}
+                    download={`civicduty-${activeMedia.category}-${transitSpec.countryCode.toLowerCase()}-campaign-poster.jpg`}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#161a22] hover:bg-white/10 text-white border border-white/15 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer"
+                    title="Download Poster Image for Social Media"
+                  >
+                    <Download size={12} />
+                    <span className="hidden sm:inline">Download</span>
+                  </a>
+                  <button
+                    onClick={() => setLightboxItem(activeMedia)}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#161a22] hover:bg-white/10 text-white border border-white/15 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer"
+                    title="Expand to Fullscreen Lightbox"
+                  >
+                    <Maximize2 size={12} />
+                    <span className="hidden sm:inline">Enlarge</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="aspect-video w-full bg-slate-950 overflow-hidden flex items-center justify-center">
                 <img
                   src={activeMedia.imageSrc}
                   alt={activeMedia.title}
@@ -235,38 +312,6 @@ export const TransitPreviewView: React.FC = () => {
                     (e.currentTarget as HTMLImageElement).src = transitSpec.scoutPosterSrc;
                   }}
                 />
-
-                {/* Minimal Top Badges & Quick Action Controls */}
-                <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
-                  <div className="flex items-center gap-1.5">
-                    <span className="px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-emerald-500/40 text-emerald-300 text-[9.5px] font-semibold uppercase font-mono">
-                      {activeMedia.categoryLabel}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/20 text-white text-[9.5px] font-mono hidden sm:inline">
-                      {activeMedia.specs}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <a
-                      href={activeMedia.imageSrc}
-                      download={`civicduty-${activeMedia.category}-campaign-poster.jpg`}
-                      className="px-2.5 py-1.5 rounded-lg bg-black/80 backdrop-blur-md hover:bg-black text-white border border-white/20 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer shadow-sm"
-                      title="Download Poster Image for Social Media"
-                    >
-                      <Download size={12} />
-                      <span className="hidden sm:inline">Download</span>
-                    </a>
-                    <button
-                      onClick={() => setLightboxItem(activeMedia)}
-                      className="px-2.5 py-1.5 rounded-lg bg-black/80 backdrop-blur-md hover:bg-black text-white border border-white/20 transition-colors flex items-center gap-1.5 text-[11px] font-mono font-semibold cursor-pointer shadow-sm"
-                      title="Expand to Fullscreen Lightbox"
-                    >
-                      <Maximize2 size={12} />
-                      <span className="hidden sm:inline">Inspect Full-Res</span>
-                    </button>
-                  </div>
-                </div>
               </div>
 
               {/* Title, Tagline, Third-Party Platform Transparency Bar & Description */}
@@ -308,6 +353,38 @@ export const TransitPreviewView: React.FC = () => {
                       <span>{highlight}</span>
                     </div>
                   ))}
+                </div>
+
+                {/* All Social Platforms + Google Ads Sharing Hub for Active Ad */}
+                <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36]">
+                  <CampaignSharePanel
+                    ad={{
+                      id: activeMedia.id,
+                      title: activeMedia.title,
+                      category: activeMedia.category as any,
+                      categoryLabel: activeMedia.categoryLabel,
+                      imageSrc: activeMedia.imageSrc,
+                      summary: activeMedia.summary,
+                      specs: activeMedia.specs,
+                      tagline: activeMedia.tagline,
+                      callToAction: activeMedia.callToAction,
+                      highlights: activeMedia.highlights,
+                    }}
+                    transitSpec={transitSpec}
+                    pillarKey={activeMedia.category}
+                    imageSrc={activeMedia.imageSrc}
+                    socialPostText={`${activeMedia.title} — ${activeMedia.tagline}\n\n${activeMedia.summary}\n\nAccess via ${transitSpec.ussdCode} or ${typeof window !== 'undefined' ? window.location.origin : 'https://civicduty.site'}\n#CivicDuty #SpeakServeBeHeard #${transitSpec.countryName.replace(/\s+/g, '')} #FrontlineScouts`}
+                    onDownloadPoster={() => {
+                      const link = document.createElement('a');
+                      link.href = activeMedia.imageSrc;
+                      link.download = `civicduty-${activeMedia.category}-${transitSpec.countryCode.toLowerCase()}-campaign-poster.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      toast('Downloaded campaign poster image!', 'emerald');
+                    }}
+                    onNotify={toast}
+                  />
                 </div>
               </div>
             </div>
@@ -452,7 +529,17 @@ export const TransitPreviewView: React.FC = () => {
             <div className="space-y-4">
               {/* Poster Layout Header & Visual Mockup Card */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                <div className="lg:col-span-5 rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-black relative group">
+                <div className="lg:col-span-5 rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#0e1116] group">
+                  <div className="px-2.5 py-1.5 bg-[#0e1116] border-b border-white/10 flex items-center justify-between gap-2">
+                    <div className="px-2 py-0.5 rounded bg-[#161a22] border border-white/15 flex items-center gap-1.5">
+                      <span className="text-[9.5px] font-black text-white">CivicDuty</span>
+                      <span className="text-white/30">·</span>
+                      <span className="text-[9px] font-mono font-bold text-emerald-400">{transitSpec.countryCode}</span>
+                    </div>
+                    <span className="text-[9px] font-semibold font-mono text-emerald-300 truncate">
+                      {isUganda ? 'Official Stage Poster' : `${transitSpec.countryCode} Frontline Poster`}
+                    </span>
+                  </div>
                   <img
                     key={isUganda ? 'ug-boda-poster' : transitSpec.scoutPosterSrc}
                     src={isUganda ? '/campaign/boda_poster_ad_1790426299023.jpg?v=20261113' : transitSpec.scoutPosterSrc}
@@ -463,9 +550,6 @@ export const TransitPreviewView: React.FC = () => {
                       (e.currentTarget as HTMLImageElement).src = transitSpec.scoutPosterSrc;
                     }}
                   />
-                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md border border-emerald-400/40 text-emerald-300 text-[9px] font-semibold font-mono">
-                    {isUganda ? 'Official Stage Poster Preview' : `${transitSpec.countryCode} Frontline Poster Preview`}
-                  </div>
                   <div className="p-3 bg-[#f8f9fa] dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between text-[10px] font-mono">
                     <span className="text-slate-600 dark:text-slate-300">
                       {isUganda ? 'Format: A1 / A2 Stage Display' : 'Format: Street Kiosk & Noticeboard'}

@@ -1,5 +1,7 @@
 import { CountryCode, Department, Post, TicketCategory } from '../types';
 import { DEPARTMENTS, TERRITORY, COUNTRIES } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { getMinistriesForCountry } from '../data/countryMinistries';
 export { escalationFor } from '../data/tiers';
 
 export const CATEGORIES: { id: TicketCategory; label: string; color: string; special?: boolean }[] = [
@@ -134,32 +136,52 @@ function toTitleCase(str: string): string {
 }
 
 export function getPostGrassroots(country: CountryCode, p: Post) {
+  const gov = getCountryGovernanceSchema(country);
   const t = p.territory;
   const dist = TERRITORY[country]?.find((x) => x.id === t?.district || x.name === t?.district);
-  const rawDistrict = dist?.name || t?.district || (country === 'UG' ? 'Kampala' : 'National');
+  const rawDistrict = dist?.name || t?.district || (country === 'UG' ? 'Kampala' : gov.sampleJurisdictions[0] || gov.countryName);
   const cleanDistrict = toTitleCase(rawDistrict.replace(/district$/i, '').trim());
-  const districtName = cleanDistrict ? `${cleanDistrict} District` : 'National District';
+  const districtName = country === 'UG'
+    ? (cleanDistrict ? `${cleanDistrict} District` : 'National District')
+    : (rawDistrict.toLowerCase().includes(gov.grassrootsUnits.tier3Suffix.toLowerCase())
+        ? toTitleCase(rawDistrict)
+        : cleanDistrict ? `${cleanDistrict} (${gov.grassrootsUnits.tier3Suffix})` : `${gov.countryName}`);
 
   const sc = dist?.children?.find((x) => x.id === (t?.ward || t?.subcounty) || x.name === (t?.ward || t?.subcounty));
   const rawWard = p.ward || t?.ward || sc?.name || t?.subcounty || '';
-  const cleanSubcounty = toTitleCase(
-    rawWard
-      .replace(/Division$/i, 'Subcounty')
-      .replace(/Sub-County$/i, 'Subcounty')
-      .replace(/Ward$/i, 'Subcounty')
-      .trim()
-  );
-  const subcountyName = cleanSubcounty
-    ? (cleanSubcounty.toLowerCase().includes('subcounty') ? cleanSubcounty : `${cleanSubcounty} Subcounty`)
-    : 'Local Subcounty';
+
+  let subcountyName: string;
+  if (country === 'UG') {
+    const cleanSubcounty = toTitleCase(
+      rawWard
+        .replace(/Division$/i, 'Subcounty')
+        .replace(/Sub-County$/i, 'Subcounty')
+        .replace(/Ward$/i, 'Subcounty')
+        .trim()
+    );
+    subcountyName = cleanSubcounty
+      ? (cleanSubcounty.toLowerCase().includes('subcounty') ? cleanSubcounty : `${cleanSubcounty} Subcounty`)
+      : 'Local Subcounty';
+  } else {
+    const cleaned = toTitleCase(rawWard.trim());
+    subcountyName = cleaned || `Local ${gov.grassrootsUnits.tier2Suffix}`;
+  }
 
   const parishNode = sc?.children?.find((x) => x.id === t?.parish || x.name === t?.parish);
   const rawParish = p.parish || parishNode?.name || t?.parish || '';
-  const cleanParish = toTitleCase(rawParish.replace(/parish$/i, '').trim());
-  const parishName = cleanParish ? `${cleanParish} Parish` : 'Local Parish';
+  let parishName: string;
+  if (country === 'UG') {
+    const cleanParish = toTitleCase(rawParish.replace(/parish$/i, '').trim());
+    parishName = cleanParish ? `${cleanParish} Parish` : 'Local Parish';
+  } else {
+    const cleaned = toTitleCase(rawParish.trim());
+    parishName = cleaned
+      ? (cleaned.toLowerCase().includes(gov.grassrootsUnits.tier1Suffix.toLowerCase()) ? cleaned : `${cleaned} ${gov.grassrootsUnits.tier1Suffix}`)
+      : `Local ${gov.grassrootsUnits.tier1Suffix}`;
+  }
 
   const rawGrassroot = p.grassroot || p.village || p.cell || t?.village || t?.cell || t?.grassroot || '';
-  const grassrootName = toTitleCase(rawGrassroot || `${cleanParish || 'Local'} Cell`);
+  const grassrootName = toTitleCase(rawGrassroot || `${gov.grassrootsUnits.villageLabel}`);
 
   const dateline = `${parishName} · ${subcountyName} · ${districtName}`;
 
@@ -247,6 +269,11 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
     return { isPs: false, isMoLG: false, ministryId: null, ministryName: null, shortTitle: null, officerTitle: null };
   }
 
+  const countryCode = ((user.country || 'UG') as string).toUpperCase() as CountryCode;
+  const isUganda = countryCode === 'UG';
+  const gov = getCountryGovernanceSchema(countryCode);
+  const countryMinistries = getMinistriesForCountry(countryCode);
+
   const rawTitle = (user.real_title_short || user.role_label || user.title || user.scope || '').toUpperCase();
   const rawDept = (user.dept || '').toLowerCase();
   const rawName = (user.name || user.officer_name || '').toUpperCase();
@@ -271,210 +298,198 @@ export function getPsMinistryInfo(user: any): PsMinistryInfo {
     rawTitle.includes('SECRETARY —') ||
     rawTitle.includes('CHIEF DIRECTOR') ||
     rawTitle.includes('UNDERSECRETARY') ||
+    rawTitle.includes('CABINET SECRETARY') ||
     rawCode.startsWith('PS-');
 
   if (!isPs) {
     return { isPs: false, isMoLG: false, ministryId: null, ministryName: null, shortTitle: null, officerTitle: null };
   }
 
-  // 1. Strict Jurisdictional Isolation: Ministers (Cabinet & State) are political executives (Arts 111 & 117), NOT Superadmin.
-  // When a Minister logs in (e.g. Balaam MIN-MOLG-UG-2026, Nameere STM-MOLG-UG-2026, Katumba MIN-MOWT-UG-2026),
-  // they receive their dedicated ministerial desk (ps_executive_desk), completely separate from the Superadmin (PS MoLG).
-  if (isMinister) {
-    const isUganda = user.country === 'UG';
-    const isMoLGMinister = rawTitle.includes('LOCAL GOV') || rawDept === 'molg' || rawCode.includes('MOLG');
-    const isMoWTMinister = rawTitle.includes('WORKS') || rawTitle.includes('TRANSPORT') || rawDept === 'mowt' || rawDept === 'works' || rawCode.includes('MOWT');
-    const isMoFPEDMinister = rawTitle.includes('FINANCE') || rawDept === 'mofped' || rawCode.includes('MOFPED');
-    const isMoHMinister = rawTitle.includes('HEALTH') || rawDept === 'moh' || rawDept === 'moh_ug' || rawCode.includes('MOH');
+  // Helper to match a sector ministry in the user's own country first
+  const findCountryMinistry = (keywords: string[], sectorMatch?: string) =>
+    countryMinistries.find((m) =>
+      (sectorMatch && m.sector === sectorMatch) ||
+      keywords.some((k) => m.title.toUpperCase().includes(k) || m.shortTitle.toUpperCase().includes(k) || m.id.toUpperCase().includes(k))
+    );
 
-    const minId = isMoLGMinister ? 'PS-MOLG' : isMoWTMinister ? 'PS-MOWT' : isMoFPEDMinister ? 'PS-MOFPED' : isMoHMinister ? 'PS-MOH' : 'PS-MOWT';
-    const minName = isMoLGMinister
-      ? 'Ministry of Local Government'
-      : isMoWTMinister
-      ? 'Ministry of Works & Transport'
-      : isMoFPEDMinister
-      ? 'Ministry of Finance, Planning & Economic Dev'
-      : isMoHMinister
-      ? 'Ministry of Health'
-      : 'Line Ministry Portfolio';
+  // 1. Strict Jurisdictional Isolation: Ministers (Cabinet & State) are political executives, NOT Superadmin.
+  if (isMinister) {
+    const isTerritorialMinister =
+      rawTitle.includes('LOCAL GOV') ||
+      rawTitle.includes('DEVOLUTION') ||
+      rawTitle.includes('MINALOC') ||
+      rawTitle.includes('TAMISEMI') ||
+      rawTitle.includes('COGTA') ||
+      rawDept === 'molg' ||
+      rawDept === gov.superadminDeptId ||
+      rawCode.includes('MOLG') ||
+      rawCode.includes('MINALOC');
+    const isWorksMinister = rawTitle.includes('WORKS') || rawTitle.includes('TRANSPORT') || rawTitle.includes('ROADS') || rawTitle.includes('INFRASTRUCTURE') || rawDept === 'mowt' || rawDept === 'works' || rawDept === 'mininfra' || rawCode.includes('MOWT');
+    const isFinanceMinister = rawTitle.includes('FINANCE') || rawTitle.includes('TREASURY') || rawDept === 'mofped' || rawDept === 'minecofin' || rawCode.includes('MOFPED');
+    const isHealthMinister = rawTitle.includes('HEALTH') || rawDept === 'moh' || rawDept === 'moh_ug' || rawDept === 'moh_rw' || rawCode.includes('MOH');
+
+    const matchedProfile = isTerritorialMinister
+      ? findCountryMinistry(['LOCAL GOV', 'MINALOC', 'DEVOLUTION', 'TAMISEMI', 'COGTA', 'SUPERADMIN'], 'GOVERNANCE')
+      : isWorksMinister
+      ? findCountryMinistry(['WORKS', 'INFRASTRUCTURE', 'ROADS', 'TRANSPORT'], 'INFRASTRUCTURE')
+      : isFinanceMinister
+      ? findCountryMinistry(['FINANCE', 'TREASURY', 'MINECOFIN'], 'FISCAL')
+      : isHealthMinister
+      ? findCountryMinistry(['HEALTH'], 'HEALTH')
+      : countryMinistries[0];
+
+    const minId = matchedProfile?.id || (isTerritorialMinister ? `PS-${gov.superadminMinistryShort.toUpperCase()}` : `PS-${countryCode}-SECTOR`);
+    const minName = matchedProfile?.title || (isTerritorialMinister ? gov.superadminMinistry : `${gov.countryName} Line Ministry Portfolio`);
+    const shortTitle = matchedProfile?.shortTitle || (isTerritorialMinister ? gov.superadminMinistryShort : 'Ministry');
 
     return {
       isPs: true,
-      isMoLG: false, // Strict: NOT superadmin; separate ministerial desk following MIN-MOWT-UG-2026 standard
+      isMoLG: false,
       ministryId: minId,
       ministryName: minName,
-      shortTitle: isMoLGMinister ? 'MoLG' : isMoWTMinister ? 'MoWT' : isMoFPEDMinister ? 'MoFPED' : isMoHMinister ? 'MoH' : 'Ministry',
-      officerTitle: user.real_title_short || user.role_label || 'Cabinet Minister (Executive Oversight)',
-      cabinetMinisterTitle: user.officer_name || (isMoLGMinister ? 'Hon. Balaam Barugahara Ateenyi' : 'Cabinet Minister'),
-      stateMinisterTitles: isMoLGMinister && isUganda ? ['Hon. Justine Nameere (Minister of State for Local Government)'] : [],
-      mandateSummary: 'Apex Ministerial Political Leadership & Strategic Policy Oversight pursuant to Constitution Arts. 111 & 117 and PFMA Section 45.',
+      shortTitle,
+      officerTitle: user.real_title_short || user.role_label || `Cabinet Minister (${gov.countryName})`,
+      cabinetMinisterTitle: user.officer_name || (isTerritorialMinister ? gov.cabinetMinisterName : `Cabinet Minister — ${minName}`),
+      stateMinisterTitles: isTerritorialMinister
+        ? (isUganda ? ['Hon. Justine Nameere (Minister of State for Local Government)'] : [gov.stateMinisterName])
+        : [],
+      mandateSummary: `Apex Ministerial Political Leadership & Strategic Policy Oversight pursuant to ${gov.cabinetMandateCitation}.`,
     };
   }
 
-  // 2. National Territorial Superadmin is strictly and exclusively restricted to the Permanent Secretary (Accounting Officer) of MoLG
+  // 2. National Territorial Superadmin (Accounting Officer of territorial ministry)
   const isTerritorialSuperadmin =
     Boolean(user.is_superadmin) ||
     rawCode === 'UG-MOLG-PS-011' ||
     rawCode === 'PS-MOLG-2026' ||
     rawCode === 'PS-MOLG-ROLLOUT' ||
+    rawCode.includes('MINALOC') ||
+    rawCode.includes('DEVOLUTION') ||
+    rawCode.includes('SUPERADMIN') ||
     rawName.includes('KUMUMANYA') ||
     (rawCode.startsWith('PS-MOLG') && !isMinister);
 
   if (isTerritorialSuperadmin) {
-    const isUganda = user.country === 'UG';
     return {
       isPs: true,
       isMoLG: true,
-      ministryId: 'PS-MOLG',
-      ministryName: user.dept && user.dept.length > 4 ? user.dept : 'Ministry of Local Government & Territorial Administration',
-      shortTitle: 'Territorial Superadmin',
-      officerTitle: user.real_title_short || user.role_label || 'Permanent Secretary (National Superadmin)',
-      cabinetMinisterTitle: isUganda ? 'Hon. Balaam Barugahara Ateenyi (Cabinet Minister)' : 'Cabinet Minister for Local Government & Territorial Administration',
-      stateMinisterTitles: isUganda 
+      ministryId: isUganda ? 'PS-MOLG' : `PS-${countryCode}-${gov.superadminMinistryShort.toUpperCase().replace(/[^A-Z0-9]/g, '')}`,
+      ministryName: user.dept && user.dept.length > 4 && (isUganda || !user.dept.includes('MoLG')) ? user.dept : gov.superadminMinistry,
+      shortTitle: isUganda ? 'Territorial Superadmin' : gov.superadminMinistryShort,
+      officerTitle: user.real_title_short || user.role_label || gov.superadminTitle,
+      cabinetMinisterTitle: gov.cabinetMinisterName,
+      stateMinisterTitles: isUganda
         ? ['Hon. Justine Nameere (Minister of State for Local Government)', 'Hon. Victoria Rusoke Businge (State Minister)']
-        : ['Minister of State for Local Government', 'Minister of State for Urban Development'],
-      mandateSummary: 'National Territorial Superadmin & Statutory Accounting Officer (PFMA S.45) — Sole administrative authority over nationwide local government nodes, PDM funds, and statutory accounting officers.',
+        : [gov.stateMinisterName],
+      mandateSummary: `National Territorial Superadmin & Statutory Accounting Officer (${gov.fiscalAct}) — Sole administrative authority over nationwide ${gov.tier3UnitLabel}s, ${gov.fiscalProgramName}, and ${gov.tier1Plural}.`,
     };
   }
 
-  // 2. Detect specific sector Line Ministries
-  if (rawTitle.includes('WORKS') || rawTitle.includes('TRANSPORT') || rawTitle.includes('ROADS') || rawTitle.includes('INFRASTRUCTURE') || rawDept === 'works' || rawDept === 'mowt') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MOWT',
-      ministryName: 'Ministry of Works & Transport',
-      shortTitle: 'MoWT',
-      officerTitle: user.real_title_short || 'PS Works & Transport',
-      cabinetMinisterTitle: 'Cabinet Minister of Works & Transport',
-      stateMinisterTitles: ['Minister of State for Works (National Roads & Bridges)', 'Minister of State for Transport (Rail, Aviation & Public Transit)'],
-      mandateSummary: 'Accounting Officer & Administrative Head of the Ministry of Works & Transport. Supervises trunk roads, bridges, railway revitalization, public transit concessions, and engineering contractors.',
-    };
-  }
+  // 3. Sector Line Ministries matched against active country
+  const sectorChecks: Array<{ match: boolean; sector: string; keywords: string[]; fallbackId: string; fallbackShort: string; fallbackName: string }> = [
+    {
+      match: rawTitle.includes('WORKS') || rawTitle.includes('TRANSPORT') || rawTitle.includes('ROADS') || rawTitle.includes('INFRASTRUCTURE') || rawDept === 'works' || rawDept === 'mowt' || rawDept === 'mininfra',
+      sector: 'INFRASTRUCTURE',
+      keywords: ['WORKS', 'INFRASTRUCTURE', 'ROADS', 'TRANSPORT'],
+      fallbackId: isUganda ? 'PS-MOWT' : `PS-${countryCode}-WORKS`,
+      fallbackShort: isUganda ? 'MoWT' : 'Infrastructure',
+      fallbackName: `${gov.countryName} Ministry of Works & Infrastructure`,
+    },
+    {
+      match: rawTitle.includes('FINANCE') || rawTitle.includes('TREASURY') || rawTitle.includes('MOFPED') || rawTitle.includes('MINECOFIN') || rawTitle.includes('ECONOMIC') || rawDept === 'mofped' || rawDept === 'finance' || rawDept === 'minecofin',
+      sector: 'FISCAL',
+      keywords: ['FINANCE', 'TREASURY', 'MINECOFIN', 'MOFPED'],
+      fallbackId: isUganda ? 'PS-MOFPED' : `PS-${countryCode}-FINANCE`,
+      fallbackShort: isUganda ? 'MoFPED' : 'Finance & Treasury',
+      fallbackName: `${gov.countryName} Ministry of Finance & National Treasury`,
+    },
+    {
+      match: rawTitle.includes('HEALTH') || rawTitle.includes('MEDICAL') || rawDept === 'health' || rawDept === 'moh',
+      sector: 'HEALTH',
+      keywords: ['HEALTH'],
+      fallbackId: isUganda ? 'PS-MOH' : `PS-${countryCode}-HEALTH`,
+      fallbackShort: isUganda ? 'MoH' : 'Health',
+      fallbackName: `${gov.countryName} Ministry of Health`,
+    },
+    {
+      match: rawTitle.includes('EDUCATION') || rawTitle.includes('SPORTS') || rawTitle.includes('SCHOOL') || rawDept === 'education' || rawDept === 'moes' || rawDept === 'mineduc',
+      sector: 'EDUCATION',
+      keywords: ['EDUCATION'],
+      fallbackId: isUganda ? 'PS-MOES' : `PS-${countryCode}-EDUCATION`,
+      fallbackShort: isUganda ? 'MoES' : 'Education',
+      fallbackName: `${gov.countryName} Ministry of Education`,
+    },
+    {
+      match: rawTitle.includes('WATER') || rawTitle.includes('ENVIRONMENT') || rawTitle.includes('SANITATION') || rawDept === 'water' || rawDept === 'mowe' || rawDept === 'nwsc',
+      sector: 'WATER_ENVIRONMENT',
+      keywords: ['WATER', 'ENVIRONMENT'],
+      fallbackId: isUganda ? 'PS-MOWE' : `PS-${countryCode}-WATER`,
+      fallbackShort: isUganda ? 'MoWE' : 'Water & Environment',
+      fallbackName: `${gov.countryName} Ministry of Water & Environment`,
+    },
+    {
+      match: rawTitle.includes('ICT') || rawTitle.includes('DIGITAL') || rawTitle.includes('COMMUNICATION') || rawDept === 'ict' || rawDept === 'moict' || rawDept === 'minict',
+      sector: 'ICT_DIGITAL',
+      keywords: ['ICT', 'DIGITAL', 'MINICT'],
+      fallbackId: isUganda ? 'PS-MOICT' : `PS-${countryCode}-ICT`,
+      fallbackShort: isUganda ? 'MoICT' : 'Digital / ICT',
+      fallbackName: `${gov.countryName} Ministry of ICT & Digital Economy`,
+    },
+    {
+      match: rawTitle.includes('ENERGY') || rawTitle.includes('MINERAL') || rawTitle.includes('POWER') || rawTitle.includes('ELECTRIC') || rawDept === 'energy' || rawDept === 'memd',
+      sector: 'ENERGY',
+      keywords: ['ENERGY', 'POWER'],
+      fallbackId: isUganda ? 'PS-MEMD' : `PS-${countryCode}-ENERGY`,
+      fallbackShort: isUganda ? 'MEMD' : 'Energy',
+      fallbackName: `${gov.countryName} Ministry of Energy & Power`,
+    },
+    {
+      match: rawTitle.includes('AGRICULTURE') || rawTitle.includes('FISHERIES') || rawTitle.includes('LIVESTOCK') || rawDept === 'agriculture' || rawDept === 'maif' || rawDept === 'minagri',
+      sector: 'AGRICULTURE',
+      keywords: ['AGRICULTURE', 'MINAGRI', 'MAAIF'],
+      fallbackId: isUganda ? 'PS-MAAIF' : `PS-${countryCode}-AGRI`,
+      fallbackShort: isUganda ? 'MAAIF' : 'Agriculture',
+      fallbackName: `${gov.countryName} Ministry of Agriculture & Rural Development`,
+    },
+    {
+      match: rawTitle.includes('OPM') || rawTitle.includes('PRIME MINISTER') || rawTitle.includes('CABINET') || rawTitle.includes('PRIMATURE'),
+      sector: 'CABINET_DELIVERY',
+      keywords: ['PRIME MINISTER', 'CABINET', 'PRIMATURE', 'OPM'],
+      fallbackId: isUganda ? 'PS-OPM' : `PS-${countryCode}-CABINET`,
+      fallbackShort: isUganda ? 'OPM' : 'Cabinet Delivery',
+      fallbackName: `${gov.countryName} Cabinet Office / Delivery Unit`,
+    },
+  ];
 
-  if (rawTitle.includes('FINANCE') || rawTitle.includes('TREASURY') || rawTitle.includes('MOFPED') || rawTitle.includes('ECONOMIC') || rawDept === 'mofped' || rawDept === 'finance') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MOFPED',
-      ministryName: 'Ministry of Finance, Planning & Economic Development',
-      shortTitle: 'MoFPED',
-      officerTitle: user.real_title_short || 'PS Finance / Secretary to the Treasury',
-      cabinetMinisterTitle: 'Cabinet Minister of Finance, Planning & Economic Development',
-      stateMinisterTitles: ['Minister of State for Finance (General Duties)', 'Minister of State for Planning', 'Minister of State for Investment & Privatization'],
-      mandateSummary: 'Chief Accounting Officer & Secretary to the Treasury. Controls quarterly budget releases, IFMS treasury warrants, capex milestone audits, and fiscal compliance.',
-    };
-  }
-
-  if (rawTitle.includes('HEALTH') || rawTitle.includes('MEDICAL') || rawDept === 'health' || rawDept === 'moh') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MOH',
-      ministryName: 'Ministry of Health',
-      shortTitle: 'MoH',
-      officerTitle: user.real_title_short || 'PS Health',
-      cabinetMinisterTitle: 'Cabinet Minister of Health',
-      stateMinisterTitles: ['Minister of State for Health (General Duties)', 'Minister of State for Primary Health Care'],
-      mandateSummary: 'Accounting Officer for the National Health System. Oversees national & regional referral hospitals, essential medicine supply chains (NMS), and public health emergency response.',
-    };
-  }
-
-  if (rawTitle.includes('EDUCATION') || rawTitle.includes('SPORTS') || rawTitle.includes('SCHOOL') || rawDept === 'education' || rawDept === 'moes') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MOES',
-      ministryName: 'Ministry of Education & Sports',
-      shortTitle: 'MoES',
-      officerTitle: user.real_title_short || 'PS Education & Sports',
-      cabinetMinisterTitle: 'Cabinet Minister of Education & Sports',
-      stateMinisterTitles: ['Minister of State for Higher Education & TVET', 'Minister of State for Primary Education', 'Minister of State for Sports'],
-      mandateSummary: 'Accounting Officer for National Education. Supervises primary, secondary, TVET, and university infrastructure, capitation grants, and teacher deployment.',
-    };
-  }
-
-  if (rawTitle.includes('WATER') || rawTitle.includes('ENVIRONMENT') || rawTitle.includes('SANITATION') || rawDept === 'water' || rawDept === 'mowe' || rawDept === 'nwsc') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MOWE',
-      ministryName: 'Ministry of Water & Environment',
-      shortTitle: 'MoWE',
-      officerTitle: user.real_title_short || 'PS Water & Environment',
-      cabinetMinisterTitle: 'Cabinet Minister of Water & Environment',
-      stateMinisterTitles: ['Minister of State for Water', 'Minister of State for Environment & Forestry'],
-      mandateSummary: 'Accounting Officer for Water & Environmental Resources. Supervises National Water utilities (NWSC), piped water schemes, wetlands protection, and sanitation SLAs.',
-    };
-  }
-
-  if (rawTitle.includes('ICT') || rawTitle.includes('DIGITAL') || rawTitle.includes('COMMUNICATION') || rawDept === 'ict' || rawDept === 'moict') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MOICT',
-      ministryName: 'Ministry of ICT & National Guidance',
-      shortTitle: 'MoICT',
-      officerTitle: user.real_title_short || 'PS ICT & National Guidance',
-      cabinetMinisterTitle: 'Cabinet Minister of ICT & National Guidance',
-      stateMinisterTitles: ['Minister of State for ICT', 'Minister of State for National Guidance'],
-      mandateSummary: 'Accounting Officer for Digital Infrastructure & e-Government. Oversees national backbone fiber (NITA), telecom compliance, and digital identity integration.',
-    };
-  }
-
-  if (rawTitle.includes('ENERGY') || rawTitle.includes('MINERAL') || rawTitle.includes('POWER') || rawTitle.includes('ELECTRIC') || rawDept === 'energy' || rawDept === 'memd') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MEMD',
-      ministryName: 'Ministry of Energy & Mineral Development',
-      shortTitle: 'MEMD',
-      officerTitle: user.real_title_short || 'PS Energy & Minerals',
-      cabinetMinisterTitle: 'Cabinet Minister of Energy & Mineral Development',
-      stateMinisterTitles: ['Minister of State for Energy (Grid & Rural Electrification)', 'Minister of State for Minerals'],
-      mandateSummary: 'Accounting Officer for National Power Grid, Rural Electrification, Petroleum Supply, and Mineral Development.',
-    };
-  }
-
-  if (rawTitle.includes('AGRICULTURE') || rawTitle.includes('FISHERIES') || rawTitle.includes('LIVESTOCK') || rawDept === 'agriculture' || rawDept === 'maif') {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-MAAIF',
-      ministryName: 'Ministry of Agriculture, Animal Industry & Fisheries',
-      shortTitle: 'MAAIF',
-      officerTitle: user.real_title_short || 'PS Agriculture (MAAIF)',
-      cabinetMinisterTitle: 'Cabinet Minister of Agriculture, Animal Industry & Fisheries',
-      stateMinisterTitles: ['Minister of State for Agriculture', 'Minister of State for Animal Industry', 'Minister of State for Fisheries'],
-      mandateSummary: 'Accounting Officer for Agricultural Extension, Parish Input Distribution, Irrigation Schemes, and Veterinary Quarantine.',
-    };
-  }
-
-  if (rawTitle.includes('OPM') || rawTitle.includes('PRIME MINISTER') || rawTitle.includes('CABINET')) {
-    return {
-      isPs: true,
-      isMoLG: false,
-      ministryId: 'PS-OPM',
-      ministryName: 'Office of the Prime Minister',
-      shortTitle: 'OPM',
-      officerTitle: user.real_title_short || 'PS Office of the Prime Minister',
-      cabinetMinisterTitle: 'Prime Minister & Leader of Government Business',
-      stateMinisterTitles: ['Minister for General Duties (OPM)', 'Minister for Relief, Disaster Preparedness & Refugees'],
-      mandateSummary: 'Coordinates cross-ministerial service delivery, national disaster response, and cabinet policy execution.',
-    };
+  for (const sc of sectorChecks) {
+    if (sc.match) {
+      const profile = findCountryMinistry(sc.keywords, sc.sector);
+      const minName = profile?.title || sc.fallbackName;
+      return {
+        isPs: true,
+        isMoLG: false,
+        ministryId: profile?.id || sc.fallbackId,
+        ministryName: minName,
+        shortTitle: profile?.shortTitle || sc.fallbackShort,
+        officerTitle: user.real_title_short || profile?.roleTitle || `PS ${sc.fallbackShort}`,
+        cabinetMinisterTitle: `Cabinet Minister — ${minName}`,
+        stateMinisterTitles: [`Deputy / State Minister — ${profile?.shortTitle || sc.fallbackShort}`],
+        mandateSummary: profile?.mandate || `Chief Accounting Officer & Administrative Head of ${minName} (${gov.fiscalAct}).`,
+      };
+    }
   }
 
   // Fallback for any other Sector Line Ministry PS across 100+ countries
-  const derivedMinistryName = user.dept && user.dept.length > 3 ? user.dept : (user.real_title_short || user.role_label || 'Sector Line Ministry');
+  const derivedMinistryName = user.dept && user.dept.length > 3 ? user.dept : (user.real_title_short || user.role_label || `${gov.countryName} Sector Line Ministry`);
   return {
     isPs: true,
     isMoLG: false,
-    ministryId: 'PS-LINE-MINISTRY',
+    ministryId: `PS-${countryCode}-LINE-MINISTRY`,
     ministryName: derivedMinistryName,
-    shortTitle: user.real_title_short || 'Line PS',
+    shortTitle: user.real_title_short || `${countryCode} Line PS`,
     officerTitle: user.real_title_short || user.role_label || 'Permanent Secretary',
     cabinetMinisterTitle: `Cabinet Minister — ${derivedMinistryName}`,
     stateMinisterTitles: [`Deputy / State Minister — ${derivedMinistryName}`],
-    mandateSummary: `Chief Accounting Officer & Administrative Head of ${derivedMinistryName}. Strictly scoped to this ministry's sector mandate, directorates, and ministerial cabinet.`,
+    mandateSummary: `Chief Accounting Officer & Administrative Head of ${derivedMinistryName}. Strictly scoped to ${gov.countryName}'s sector mandate and ${gov.fiscalAct}.`,
   };
 }

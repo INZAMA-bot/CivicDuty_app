@@ -45,6 +45,7 @@ import {
 } from '../data/initialData';
 import { INITIAL_OFFICIAL_QUERIES } from '../data/initialQueries';
 import { GOV_CODES, resolveTitle, tiersFor, scopeName } from '../data/tiers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { allDepts, getDept, COUNTRIES, DEPARTMENTS } from '../data/countries';
 import { addScoreToProfile } from '../utils/score';
 import { makeCode, sanitizePostEmojis } from '../utils/helpers';
@@ -60,6 +61,7 @@ import {
   saveOfficialQueryToCloud,
   saveAuditEntryToCloud,
   updatePostCompilationInCloud,
+  updateDossierSubmissionLikesInCloud,
   deletePostFromCloud,
   savePromotionalAdToCloud,
   deletePromotionalAdFromCloud,
@@ -70,6 +72,7 @@ import {
   subscribeToTownHallsFromCloud,
   purgeCountryTestPostsInCloud,
 } from '../services/firestoreSync';
+import { getRankedDossierSubmissions } from '../utils/dossierEngine';
 import {
   trackVisitorInteraction,
   saveCloudCountryLaunchStatus,
@@ -101,6 +104,8 @@ interface AppContextType {
   teamMembers: TeamMember[];
   supportsMap: Record<string, Record<string, boolean>>; // userId -> { postId: true }
   downvotesMap: Record<string, Record<string, boolean>>; // userId -> { postId: true }
+  dossierLikesMap: Record<string, Record<string, boolean>>; // userId -> { "postId::submissionId": true }
+  toggleDossierSubmissionLike: (postId: string, submissionId: string) => void;
   nudgeCounts: Record<string, number>; // deptId -> count
   nudgeEntity: (deptId: string) => void;
   
@@ -970,6 +975,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const [dossierLikesMap, setDossierLikesMap] = useState<Record<string, Record<string, boolean>>>(() => {
+    try {
+      const saved = localStorage.getItem('cd_dossier_likes');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const [nudgeCounts, setNudgeCounts] = useState<Record<string, number>>(() => {
     try {
       const saved = localStorage.getItem('cd_nudge_counts');
@@ -1517,6 +1531,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     try {
+      localStorage.setItem('cd_dossier_likes', JSON.stringify(dossierLikesMap));
+    } catch {}
+  }, [dossierLikesMap]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem('cd_nudge_counts', JSON.stringify(nudgeCounts));
     } catch {}
   }, [nudgeCounts]);
@@ -1762,13 +1782,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     const targetQuery = officialQueries.find((q) => q.id === queryId);
+    const targetCountry = (targetQuery?.country || user?.country || 'UG').toUpperCase();
+    const targetGov = getCountryGovernanceSchema(targetCountry);
     const ref = targetQuery?.queryRef || queryId;
     const verdictLabel =
       det.verdict === 'resolved_exonerated'
         ? 'Exonerated / Resolved'
         : det.verdict === 'remedial_directive'
         ? 'Remedial Directive Issued'
-        : 'Escalated to Anti-Corruption Body (IGG/SHACU)';
+        : `Escalated to Anti-Corruption Body (${targetGov.ombudsman.shortName})`;
 
     logAudit(
       'official_query_determined',
@@ -1799,12 +1821,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     psActionRequired: string;
     iggActionRequired: string;
   }): MinisterialDirective => {
-    const actCountry = user?.country || 'UG';
+    const actCountry = (user?.country || 'UG').toUpperCase();
+    const gov = getCountryGovernanceSchema(actCountry);
+    const deptShort = gov.superadminDeptId.toUpperCase();
     const randomCode = Math.floor(100 + Math.random() * 900);
-    const directiveRef = `DIR-MOLG-${data.mandateType === 'cabinet_minister_policy' ? 'CABINET' : 'STATE'}-${new Date().getFullYear()}/${randomCode}`;
+    const directiveRef = `DIR-${deptShort}-${data.mandateType === 'cabinet_minister_policy' ? 'CABINET' : 'STATE'}-${new Date().getFullYear()}/${randomCode}`;
     const fakeSeal = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
 
-    // Automatically generate statutory query in PS MoLG and IGG queues
+    // Automatically generate statutory query in national Superadmin and Ombudsman queues
     const queryCategory: OfficialQueryCategory =
       data.directiveType === 'anti_extortion_taskforce'
         ? 'anti_graft_taskforce'
@@ -1816,18 +1840,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `oq-mdir-${Date.now()}-${randomCode}`,
       queryRef: `QRY-MIN-${actCountry}-${new Date().getFullYear()}-${randomCode}`,
       country: actCountry,
-      dept: 'molg',
+      dept: gov.superadminDeptId,
       issuerName: data.ministerName,
-      issuerTitle: `${data.ministerTitle} (Art. ${data.mandateType === 'cabinet_minister_policy' ? '111' : '117'})`,
+      issuerTitle: `${data.ministerTitle} (${gov.cabinetMandateCitation})`,
       issuerRole: 'platform_admin',
       issuerRank: 5,
       targetUnit: data.targetJurisdiction,
       targetScope: data.targetScope,
-      targetOfficer: `Accounting Officer / CAO (${data.targetJurisdiction})`,
+      targetOfficer: `${gov.tier3Short} (${data.targetJurisdiction})`,
       targetTitle: 'Supervising Accounting Officer',
       category: queryCategory,
       subject: `[MINISTERIAL DIRECTIVE ${directiveRef}] ${data.subject}`,
-      grounds: `Constitutional Political Directive pursuant to Arts 111 & 117 of Uganda Constitution. Action: ${data.executiveInstructions}. Required from PS MoLG: ${data.psActionRequired}. Escalated to IGG: ${data.iggActionRequired}`,
+      grounds: `Constitutional Political Directive pursuant to ${gov.cabinetMandateCitation}. Action: ${data.executiveInstructions}. Required from ${gov.superadminTitle}: ${data.psActionRequired}. Escalated to ${gov.ombudsman.shortName}: ${data.iggActionRequired}`,
       evidenceDetails: `Direct Ministerial Directive ${directiveRef} issued by ${data.ministerName}. Tamper-proof Audit Seal: ${fakeSeal.slice(0, 16)}...`,
       deadlineHours: 48,
       deadlineTimestamp: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
@@ -1864,12 +1888,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit(
       'ministerial_directive_issued',
       directiveRef,
-      `POLITICAL DIRECTIVE ${directiveRef} issued by ${data.ministerName} (${data.ministerTitle}) targeting ${data.targetJurisdiction}. Instructions: ${data.executiveInstructions.slice(0, 100)}... Statutory query auto-dispatched to PS MoLG and IGG.`,
+      `POLITICAL DIRECTIVE ${directiveRef} issued by ${data.ministerName} (${data.ministerTitle}) targeting ${data.targetJurisdiction}. Instructions: ${data.executiveInstructions.slice(0, 100)}... Statutory query auto-dispatched to ${gov.superadminTitle} and ${gov.ombudsman.shortName}.`,
       actCountry,
-      'molg'
+      gov.superadminDeptId
     );
 
-    toast(`Ministerial Directive ${directiveRef} promulgated. Dispatched to PS MoLG & IGG queues!`, 'emerald');
+    toast(`Ministerial Directive ${directiveRef} promulgated. Dispatched to ${gov.superadminMinistryShort} & ${gov.ombudsman.shortName} queues!`, 'emerald');
     return newDirective;
   };
 
@@ -1879,20 +1903,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     const directive = ministerialDirectives.find((d) => d.id === directiveId);
+    const dirCountry = (directive?.country || user?.country || 'UG').toUpperCase();
+    const gov = getCountryGovernanceSchema(dirCountry);
     const ref = directive?.directiveRef || directiveId;
 
     logAudit(
       'ps_directive_action',
       ref,
-      `PS MoLG (Accounting Officer Vote 011) executed administrative action on ${ref}: [${warrantHold ? 'WARRANT & ACCOUNT HOLD ISSUED' : 'ACKNOWLEDGED & ASSIGNED TO CAO'}]. PS Notes: ${psNotes}`,
-      directive?.country || 'UG',
-      'molg'
+      `${gov.superadminTitle} (${gov.superadminMinistryShort}) executed administrative action on ${ref}: [${warrantHold ? 'WARRANT & ACCOUNT HOLD ISSUED' : `ACKNOWLEDGED & ASSIGNED TO ${gov.tier3Short.toUpperCase()}`}]. Notes: ${psNotes}`,
+      dirCountry,
+      gov.superadminDeptId
     );
 
     toast(
       warrantHold
-        ? `PS MoLG Warrant Freeze instituted on ${ref} pursuant to PFMA Section 45.`
-        : `PS MoLG acknowledged ministerial directive ${ref} for administrative inspection.`,
+        ? `${gov.superadminMinistryShort} Warrant Freeze instituted on ${ref} pursuant to ${gov.fiscalAct}.`
+        : `${gov.superadminMinistryShort} acknowledged ministerial directive ${ref} for administrative inspection.`,
       'emerald'
     );
   };
@@ -1963,8 +1989,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     policyFocus: string;
     notes?: string;
   }): EnrolledSectorMinister => {
-    const actCountry = user?.country || 'UG';
-    const deskCode = `UG-${data.ministryKey.toUpperCase()}-${data.rank === 'cabinet_minister' ? 'CABINET' : 'STATE'}-MIN`;
+    const actCountry = (user?.country || 'UG').toUpperCase();
+    const gov = getCountryGovernanceSchema(actCountry);
+    const deskCode = `${actCountry}-${data.ministryKey.toUpperCase()}-${data.rank === 'cabinet_minister' ? 'CABINET' : 'STATE'}-MIN`;
     const newMinister: EnrolledSectorMinister = {
       id: `esm-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
       ministryKey: data.ministryKey,
@@ -1974,7 +2001,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       rank: data.rank,
       deskCode,
       status: 'active',
-      invitedBy: user?.officer_name || user?.name || 'Ben Kumumanya (PS MoLG)',
+      invitedBy: user?.officer_name || user?.name || `${gov.superadminHolder} (${gov.superadminMinistryShort})`,
       invitedAt: new Date().toISOString(),
       statutoryScope: data.statutoryScope,
       policyFocus: data.policyFocus,
@@ -1988,7 +2015,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       scope: actCountry,
       role: 'platform_admin',
       is_utility: false,
-      role_label: `${data.ministerName}, ${data.portfolio} (${data.rank === 'cabinet_minister' ? 'Cabinet Minister · Art. 111' : 'Minister of State · Art. 117'})`,
+      role_label: `${data.ministerName}, ${data.portfolio} (${gov.cabinetMandateCitation})`,
       real_title_short: `${data.rank === 'cabinet_minister' ? 'Minister' : 'State Minister'} ${data.ministerName.split(' ').slice(-1)[0]}`,
       hierarchy_level: 'tier5_perm_sec',
       escalation_rank: 5,
@@ -2000,7 +2027,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit(
       'ps_ministerial_enrollment',
       deskCode,
-      `PS MoLG / Accounting Officer enrolled new sector minister: ${data.ministerName} (${data.portfolio}) with credential code ${deskCode}. Scope: ${data.statutoryScope}`,
+      `${gov.superadminTitle} enrolled new sector minister: ${data.ministerName} (${data.portfolio}) with credential code ${deskCode}. Scope: ${data.statutoryScope}`,
       actCountry,
       data.ministryKey
     );
@@ -3557,6 +3584,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return true;
     }
     // Ministers (Cabinet & State) standard: open ps_executive_desk matching MIN-MOWT-UG-2026 standard
+    const codeCountry = (data.country || 'UG').toUpperCase();
+    const codeGov = getCountryGovernanceSchema(codeCountry);
     if (
       cleanCode.startsWith('MIN-') ||
       cleanCode.startsWith('STM-') ||
@@ -3565,15 +3594,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cleanCode.endsWith('-CABINET-MIN') ||
       cleanCode.endsWith('-STATE-MIN')
     ) {
-      const minScope = data.scope && data.scope.startsWith('PS-') ? data.scope : `PS-${(data.dept || 'MOWT').toUpperCase()}`;
+      const minScope = data.scope && data.scope.startsWith('PS-') ? data.scope : `PS-${(data.dept || codeGov.superadminDeptId).toUpperCase()}`;
       setSelectedMinistryId(minScope);
-      toast(`Apex Ministerial Desk Mounted: ${data.officer_name || data.real_title_short} (Arts 111 & 117 · Strict Jurisdictional Isolation)`, 'emerald');
+      toast(`Apex Ministerial Desk Mounted: ${data.officer_name || data.real_title_short} (${codeGov.cabinetMandateCitation} · Strict Jurisdictional Isolation)`, 'emerald');
       go('ps_executive_desk');
       return true;
     }
-    // Only PS MoLG is Superadmin
+    // National Superadmin Desk
     if (cleanCode === 'UG-MOLG-PS-011' || cleanCode === 'PS-MOLG-2026' || cleanCode === 'PS-MOLG-ROLLOUT') {
-      toast(`PS MoLG National Superadmin & Accounting Officer Desk mounted (${data.officer_name || 'Ben Kumumanya'}).`, 'emerald');
+      toast(`${codeGov.superadminTitle} (${codeGov.superadminMinistryShort}) mounted (${data.officer_name || codeGov.superadminHolder}).`, 'emerald');
       go('ps_molg_rollout');
       return true;
     }
@@ -3585,8 +3614,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       go('ps_executive_desk');
       return true;
     }
-    if (cleanCode === 'UG-IGG-9999') {
-      toast(`IGG Ombudsman Portal mounted (${data.officer_name || 'Beti Kamya Turwomwe'}).`, 'rose' as any);
+    if (cleanCode === 'UG-IGG-9999' || cleanCode.endsWith('-IGG-9999')) {
+      toast(`${codeGov.ombudsman.shortName} Ombudsman Portal mounted (${data.officer_name || codeGov.ombudsman.headName}).`, 'rose' as any);
       go('gov_audit');
       return true;
     }
@@ -3660,6 +3689,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...witnessReport,
       id: `wr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       created_at: new Date().toISOString(),
+      likes: witnessReport.likes ?? 1,
     };
 
     const targetBefore = posts.find((p) => p.id === targetPostId);
@@ -3750,6 +3780,92 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         postObj.country,
         postObj.dept
       );
+    }
+  };
+
+  const toggleDossierSubmissionLike = (postId: string, submissionId: string) => {
+    const actor = user || ensureCitizenSession();
+    const userId = actor.id || 'usr-public-viewer';
+    const key = `${postId}::${submissionId}`;
+    const alreadyLiked = Boolean(dossierLikesMap[userId]?.[key]);
+    const targetPost = posts.find((p) => p.id === postId);
+    if (!targetPost) return;
+
+    const prevRanked = getRankedDossierSubmissions(targetPost);
+    const prevLeaderId = prevRanked[0]?.id || 'lead';
+
+    // Materialize deterministic baselines onto each item before incrementing/decrementing
+    const baselineMap = new Map(prevRanked.map((item) => [item.id, item.likes]));
+    const prevLeadLikes =
+      typeof targetPost.lead_likes === 'number'
+        ? targetPost.lead_likes
+        : baselineMap.get('lead') ?? 12;
+
+    const nextLeadLikes =
+      submissionId === 'lead'
+        ? Math.max(0, prevLeadLikes + (alreadyLiked ? -1 : 1))
+        : prevLeadLikes;
+
+    const nextCompiledReports = (targetPost.compiled_reports || []).map((wr) => {
+      const baseLikes =
+        typeof wr.likes === 'number' ? wr.likes : baselineMap.get(wr.id) ?? 6;
+      if (wr.id === submissionId) {
+        return { ...wr, likes: Math.max(0, baseLikes + (alreadyLiked ? -1 : 1)) };
+      }
+      return { ...wr, likes: baseLikes };
+    });
+
+    const draftUpdatedPost: Post = {
+      ...targetPost,
+      lead_likes: nextLeadLikes,
+      compiled_reports: nextCompiledReports,
+    };
+
+    const nextRanked = getRankedDossierSubmissions(draftUpdatedPost);
+    const nextLeader = nextRanked[0];
+    const nextLeaderId = nextLeader?.id || 'lead';
+    const updatedPost: Post = {
+      ...draftUpdatedPost,
+      featured_submission_id: nextLeaderId,
+    };
+
+    setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
+    if (activePost?.id === postId) {
+      setActivePost(updatedPost);
+    }
+
+    setDossierLikesMap((prev) => {
+      const userMap = { ...(prev[userId] || {}) };
+      if (alreadyLiked) {
+        delete userMap[key];
+      } else {
+        userMap[key] = true;
+      }
+      return { ...prev, [userId]: userMap };
+    });
+
+    updateDossierSubmissionLikesInCloud(
+      postId,
+      nextLeadLikes,
+      nextCompiledReports,
+      nextLeaderId,
+      updatedPost
+    ).catch(console.error);
+
+    if (!alreadyLiked) {
+      if (actor.role === 'citizen') {
+        addPoints(userId, 2, '+2pts · Liked dossier submission');
+      }
+      if (nextLeaderId !== prevLeaderId && nextLeader) {
+        toast(
+          `New Frontpage Main Story! ${nextLeader.rankLabel} (${nextLeader.likes} likes) is now featured.`,
+          'emerald'
+        );
+      } else {
+        toast('Submission liked (+1)', 'emerald');
+      }
+    } else {
+      toast('Submission like removed', 'amber');
     }
   };
 
@@ -4539,6 +4655,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         upvotePost,
         downvotePost,
         downvotesMap,
+        dossierLikesMap,
+        toggleDossierSubmissionLike,
         nudgeCounts,
         nudgeEntity,
         addCommentToPost,

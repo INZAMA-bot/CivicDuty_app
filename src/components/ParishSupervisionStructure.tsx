@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode, RoleType, Invite, TeamMember, OfficialQuery } from '../types';
 import { TERRITORY } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { OfficialQueryDispatchModal } from './OfficialQueryDispatchModal';
 import { OfficialQueryDossierModal } from './OfficialQueryDossierModal';
 import {
@@ -85,7 +86,8 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
   } | null>(null);
   const [selectedDossierQuery, setSelectedDossierQuery] = useState<OfficialQuery | null>(null);
 
-  const country = user?.country || 'UG';
+  const country = (user?.country || 'UG') as CountryCode;
+  const gov = useMemo(() => getCountryGovernanceSchema(country), [country]);
   const districts = TERRITORY[country] || [];
 
   let currentDistrict = districts.find((d) => d.id.toLowerCase() === districtId.toLowerCase());
@@ -118,91 +120,175 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
 
   const parishScopeId = currentParish?.id || 'parish';
 
-  // Village & Grassroots Coordination Desks
+  // Grassroots & Village/Ward Coordination Desks (authentic UG defaults ONLY for UG)
   const villageDesksTemplate = useMemo(
-    () => [
-      {
-        id: `${parishScopeId}-pdc-sec`,
-        roleTitle: 'Parish Development Committee (PDC) Secretary',
-        mandate: 'Administrative records, citizen petitions register, baraza proceedings, and civil registry.',
-        role: 'spokesperson' as RoleType,
-        isUtility: false,
-        isVolunteer: false,
-        defaultName: 'Ronald Mugisha',
-        defaultPhone: '+256 772 314 901',
-      },
-      {
-        id: `${parishScopeId}-pdm`,
-        roleTitle: 'PDM SACCO Enterprise & Funds Focal Person',
-        mandate: 'Pillar 3 Financial Inclusion: Enterprise vetting, revolving fund tracking, and PRMS record updates.',
-        role: 'spokesperson' as RoleType,
-        isUtility: false,
-        isVolunteer: false,
-        defaultName: 'Florence Kisakye',
-        defaultPhone: '+256 782 554 112',
-      },
-      {
-        id: `${parishScopeId}-cdo`,
-        roleTitle: 'Community Development Officer (CDO) Assistant',
-        mandate: 'Vulnerable household profiling, SAGE grants monitoring, and grassroots social welfare.',
-        role: 'spokesperson' as RoleType,
-        isUtility: false,
-        isVolunteer: false,
-        defaultName: 'Joan Nantume',
-        defaultPhone: '+256 701 445 220',
-      },
-      {
-        id: `${parishScopeId}-agric`,
-        roleTitle: 'Parish Agricultural & Extension Officer',
-        mandate: 'Pest outbreak inspections, subsidized fertilizer delivery, veterinary alerts, and seed verification.',
-        role: 'spokesperson' as RoleType,
-        isUtility: false,
-        isVolunteer: false,
-        defaultName: 'Dr. Edward Byaruhanga',
-        defaultPhone: '+256 774 889 003',
-      },
-      {
-        id: `${parishScopeId}-lc1`,
-        roleTitle: 'LC1 Village Chairpersons Council Liaison',
-        mandate: 'Primary community mobilization, village baraza notices, and local dispute records. Volunteer elected leadership.',
-        role: 'read_only' as RoleType,
-        isUtility: false,
-        isVolunteer: true,
-        defaultName: 'Hajji Musa Ssekandi (Kagugube Zone)',
-        defaultPhone: '+256 772 809 114',
-      },
-      {
-        id: `${parishScopeId}-vht`,
-        roleTitle: 'Village Health Team (VHT) Coordinator',
-        mandate: 'Household sanitation tracking, immunization mobilizations, and village emergency clinic referrals.',
-        role: 'read_only' as RoleType,
-        isUtility: false,
-        isVolunteer: true,
-        defaultName: 'Harriet Akello',
-        defaultPhone: '+256 703 129 881',
-      },
-      {
-        id: `${parishScopeId}-water`,
-        roleTitle: 'Parish Water & Feeder Road Monitor',
-        mandate: 'Community borehole maintenance, water point sanitation, feeder road drainage, and pump mechanics.',
-        role: 'spokesperson' as RoleType,
-        isUtility: true,
-        isVolunteer: false,
-        defaultName: 'Patrick Ouma',
-        defaultPhone: '+256 779 660 412',
-      },
-      {
-        id: `${parishScopeId}-youth-women`,
-        roleTitle: 'Parish Youth & Women Council Representative',
-        mandate: 'Special interest group mobilization, affirmative action monitoring, and youth enterprise support.',
-        role: 'read_only' as RoleType,
-        isUtility: false,
-        isVolunteer: true,
-        defaultName: 'Prossy Nalwanga',
-        defaultPhone: '+256 754 991 223',
-      },
-    ],
-    [parishScopeId]
+    () =>
+      country === 'UG'
+        ? [
+            {
+              id: `${parishScopeId}-pdc-sec`,
+              roleTitle: 'Parish Development Committee (PDC) Secretary',
+              mandate: 'Administrative records, citizen petitions register, baraza proceedings, and civil registry.',
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: 'Ronald Mugisha',
+              defaultPhone: '+256 772 314 901',
+            },
+            {
+              id: `${parishScopeId}-pdm`,
+              roleTitle: 'PDM SACCO Enterprise & Funds Focal Person',
+              mandate: 'Pillar 3 Financial Inclusion: Enterprise vetting, revolving fund tracking, and PRMS record updates.',
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: 'Florence Kisakye',
+              defaultPhone: '+256 782 554 112',
+            },
+            {
+              id: `${parishScopeId}-cdo`,
+              roleTitle: 'Community Development Officer (CDO) Assistant',
+              mandate: 'Vulnerable household profiling, SAGE grants monitoring, and grassroots social welfare.',
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: 'Joan Nantume',
+              defaultPhone: '+256 701 445 220',
+            },
+            {
+              id: `${parishScopeId}-agric`,
+              roleTitle: 'Parish Agricultural & Extension Officer',
+              mandate: 'Pest outbreak inspections, subsidized fertilizer delivery, veterinary alerts, and seed verification.',
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: 'Dr. Edward Byaruhanga',
+              defaultPhone: '+256 774 889 003',
+            },
+            {
+              id: `${parishScopeId}-lc1`,
+              roleTitle: 'LC1 Village Chairpersons Council Liaison',
+              mandate: 'Primary community mobilization, village baraza notices, and local dispute records. Volunteer elected leadership.',
+              role: 'read_only' as RoleType,
+              isUtility: false,
+              isVolunteer: true,
+              defaultName: 'Hajji Musa Ssekandi (Kagugube Zone)',
+              defaultPhone: '+256 772 809 114',
+            },
+            {
+              id: `${parishScopeId}-vht`,
+              roleTitle: 'Village Health Team (VHT) Coordinator',
+              mandate: 'Household sanitation tracking, immunization mobilizations, and village emergency clinic referrals.',
+              role: 'read_only' as RoleType,
+              isUtility: false,
+              isVolunteer: true,
+              defaultName: 'Harriet Akello',
+              defaultPhone: '+256 703 129 881',
+            },
+            {
+              id: `${parishScopeId}-water`,
+              roleTitle: 'Parish Water & Feeder Road Monitor',
+              mandate: 'Community borehole maintenance, water point sanitation, feeder road drainage, and pump mechanics.',
+              role: 'spokesperson' as RoleType,
+              isUtility: true,
+              isVolunteer: false,
+              defaultName: 'Patrick Ouma',
+              defaultPhone: '+256 779 660 412',
+            },
+            {
+              id: `${parishScopeId}-youth-women`,
+              roleTitle: 'Parish Youth & Women Council Representative',
+              mandate: 'Special interest group mobilization, affirmative action monitoring, and youth enterprise support.',
+              role: 'read_only' as RoleType,
+              isUtility: false,
+              isVolunteer: true,
+              defaultName: 'Prossy Nalwanga',
+              defaultPhone: '+256 754 991 223',
+            },
+          ]
+        : [
+            {
+              id: `${parishScopeId}-pdc-sec`,
+              roleTitle: `${gov.tier1CommitteeName} Secretary`,
+              mandate: 'Administrative records, citizen petitions register, community council proceedings, and civil registry.',
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: '',
+              defaultPhone: '',
+            },
+            {
+              id: `${parishScopeId}-pdm`,
+              roleTitle: `${gov.fiscalProgramName} Focal Person`,
+              mandate: `Local development fund vetting, community enterprise tracking, and ${gov.fiscalProgramName} compliance records.`,
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: '',
+              defaultPhone: '',
+            },
+            {
+              id: `${parishScopeId}-cdo`,
+              roleTitle: `${gov.tier1UnitLabel} Social Development Officer`,
+              mandate: 'Vulnerable household profiling, social protection monitoring, and grassroots welfare coordination.',
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: '',
+              defaultPhone: '',
+            },
+            {
+              id: `${parishScopeId}-agric`,
+              roleTitle: `${gov.tier1UnitLabel} Agriculture & Extension Officer`,
+              mandate: 'Pest outbreak inspections, input verification, veterinary alerts, and local cooperative support.',
+              role: 'spokesperson' as RoleType,
+              isUtility: false,
+              isVolunteer: false,
+              defaultName: '',
+              defaultPhone: '',
+            },
+            {
+              id: `${parishScopeId}-lc1`,
+              roleTitle: `${gov.grassrootsUnits.villageLabel} Council Liaison`,
+              mandate: 'Primary community mobilization, neighborhood forum notices, and local dispute records. Volunteer liaison.',
+              role: 'read_only' as RoleType,
+              isUtility: false,
+              isVolunteer: true,
+              defaultName: '',
+              defaultPhone: '',
+            },
+            {
+              id: `${parishScopeId}-vht`,
+              roleTitle: 'Community Health Worker Coordinator',
+              mandate: 'Household sanitation tracking, immunization mobilizations, and local clinic emergency referrals.',
+              role: 'read_only' as RoleType,
+              isUtility: false,
+              isVolunteer: true,
+              defaultName: '',
+              defaultPhone: '',
+            },
+            {
+              id: `${parishScopeId}-water`,
+              roleTitle: `${gov.tier1UnitLabel} Water & Local Roads Monitor`,
+              mandate: 'Local water point maintenance, sanitation compliance, feeder road drainage, and utility alerts.',
+              role: 'spokesperson' as RoleType,
+              isUtility: true,
+              isVolunteer: false,
+              defaultName: '',
+              defaultPhone: '',
+            },
+            {
+              id: `${parishScopeId}-youth-women`,
+              roleTitle: `${gov.tier1UnitLabel} Youth & Women Representative`,
+              mandate: 'Special interest group mobilization, inclusive development monitoring, and youth enterprise support.',
+              role: 'read_only' as RoleType,
+              isUtility: false,
+              isVolunteer: true,
+              defaultName: '',
+              defaultPhone: '',
+            },
+          ],
+    [parishScopeId, country, gov]
   );
 
   // Map to Telemetry Status (Operational, Pending, Vacant)
@@ -232,7 +318,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
           title: template.roleTitle,
           scope: parishScopeId,
           role: template.role,
-          dept: user?.dept || 'kcca',
+          dept: user?.dept || gov.superadminDeptId,
           active: true,
           joined: '2026-01-05',
           contact_phone: template.defaultPhone,
@@ -303,9 +389,9 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
       return;
     }
 
-    const cleanDept = user?.dept || 'molg';
+    const cleanDept = user?.dept || gov.superadminDeptId;
     const randomHex = Math.floor(1000 + Math.random() * 9000);
-    const code = `UG-${cleanDept.toUpperCase()}-${randomHex}`;
+    const code = `${gov.codePrefix}-${cleanDept.toUpperCase()}-${randomHex}`;
 
     const newInvite: Invite = {
       code,
@@ -319,7 +405,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
       country,
       duty_station: inviteModal.stationName,
       contact_phone: officerPhone.trim() || undefined,
-      invited_by: user?.officer_name || user?.name || 'Parish Chief / Town Agent',
+      invited_by: user?.officer_name || user?.name || gov.tier1Label,
       invited_at: new Date().toISOString(),
       hierarchy_level: 'tier1_parish',
       escalation_rank: 1,
@@ -376,24 +462,24 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-                Tier 1 — Parish Frontline Unit
+                Tier 1 — {gov.tier1UnitLabel} Frontline Unit
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                {currentParish?.name || 'Parish Command'}
+                {currentParish?.name || `${gov.tier1UnitLabel} Command`}
               </span>
             </div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">
-              Parish Frontline Command &amp; Village Telemetry
+              {gov.tier1UnitLabel} Frontline Command &amp; Community Telemetry
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl leading-relaxed">
-              As Parish Chief / Town Agent, you serve as administrative head of {currentParish?.name} and Secretary to the Parish Development Committee (PDC). You coordinate LC1 Village Chairpersons, VHTs, and PDM SACCO mobilizers.
+              As {gov.tier1Label}, you serve as administrative head of {currentParish?.name} and Secretary to the {gov.tier1CommitteeName}. You coordinate {gov.grassrootsUnits.villageLabel} liaisons, health workers, and {gov.fiscalProgramName} mobilizers.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
           <div className="text-right hidden sm:block">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supervising LLG</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Supervising {gov.tier2UnitLabel}</div>
             <div className="text-sm font-bold text-teal-600 dark:text-teal-400">{currentSubcounty?.name}</div>
           </div>
         </div>
@@ -538,7 +624,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                   onClick={() =>
                     handleOpenInviteModal(
                       template.id,
-                      currentParish?.name || 'Parish',
+                      currentParish?.name || gov.tier1UnitLabel,
                       template.roleTitle,
                       template.role
                     )
@@ -564,7 +650,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                   <button
                     type="button"
                     onClick={() => {
-                      const memo = `PARISH ADMINISTRATIVE NOTICE\nOffice: Parish Chief / Town Agent, ${currentParish?.name}\nTo: ${pendingInvite.name} (${pendingInvite.title})\nAccess Code: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                      const memo = `${gov.tier1UnitLabel.toUpperCase()} ADMINISTRATIVE NOTICE\nOffice: ${gov.tier1Label}, ${currentParish?.name}\nTo: ${pendingInvite.name} (${pendingInvite.title})\nAccess Code: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                       navigator.clipboard.writeText(memo);
                       toast(`Copied dispatch memo for ${pendingInvite.title}!`, 'emerald');
                     }}
@@ -617,7 +703,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
           <div>
             <span className="font-bold text-slate-900 dark:text-white">Reporting Chain: </span>
             <span className="text-slate-600 dark:text-slate-300">
-              Senior Assistant Secretary ({currentSubcounty?.name}) &rarr; Chief Administrative Officer ({currentDistrict?.name}) &rarr; PS MoLG.
+              {gov.tier2Short} ({currentSubcounty?.name}) &rarr; {gov.tier3Short} ({currentDistrict?.name}) &rarr; {gov.superadminTitle} ({gov.superadminMinistryShort}).
             </span>
           </div>
         </div>
@@ -673,30 +759,30 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                   autoFocus
                   value={officerName}
                   onChange={(e) => setOfficerName(e.target.value)}
-                  placeholder="e.g. Sarah Namubiru (Type Legal Name)"
+                  placeholder={`e.g. ${country === 'UG' ? 'Sarah Namubiru' : `${gov.tier1Short} Coordinator`} (Type Legal Name)`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
-              {/* 1-Click Direct Report Presets for Parish */}
+              {/* 1-Click Direct Report Presets */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] mono text-slate-500 uppercase tracking-wider font-bold">
-                    1-Click Direct Report Presets (Parish Chief)
+                    1-Click Direct Report Presets ({gov.tier1Short})
                   </span>
                   <span className="text-[9px] mono text-teal-600 dark:text-teal-400 font-bold">Station Specific</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {[
-                    { id: 'lc1', label: 'LC1 Village Chairperson', title: 'LC1 Village Chairperson Liaison', role: 'spokesperson' as RoleType },
-                    { id: 'vht', label: 'Village Health Team (VHT)', title: 'Village Health Team (VHT) Coordinator', role: 'spokesperson' as RoleType },
-                    { id: 'pdm', label: 'PDM SACCO Mobilizer', title: 'PDM SACCO Enterprise Mobilizer', role: 'spokesperson' as RoleType },
-                    { id: 'youth', label: 'Youth & Women Rep', title: 'Parish Youth & Women Council Representative', role: 'spokesperson' as RoleType },
-                    { id: 'water', label: 'Water Committee Sec', title: 'Parish Water User Committee Secretary', role: 'spokesperson' as RoleType },
+                    { id: 'lc1', label: `${gov.grassrootsUnits.villageLabel} Liaison`, title: `${gov.grassrootsUnits.villageLabel} Council Liaison`, role: 'spokesperson' as RoleType },
+                    { id: 'vht', label: country === 'UG' ? 'Village Health Team (VHT)' : 'Community Health Coordinator', title: country === 'UG' ? 'Village Health Team (VHT) Coordinator' : 'Community Health Worker Coordinator', role: 'spokesperson' as RoleType },
+                    { id: 'pdm', label: `${gov.fiscalProgramName} Mobilizer`, title: `${gov.fiscalProgramName} Enterprise Mobilizer`, role: 'spokesperson' as RoleType },
+                    { id: 'youth', label: 'Youth & Women Rep', title: `${gov.tier1UnitLabel} Youth & Women Council Representative`, role: 'spokesperson' as RoleType },
+                    { id: 'water', label: 'Water Committee Sec', title: `${gov.tier1UnitLabel} Water User Committee Secretary`, role: 'spokesperson' as RoleType },
                     { id: 'others', label: '+ Others (specify)', title: '', role: 'spokesperson' as RoleType },
                   ].map((preset) => {
                     const isSelected = preset.id === 'others'
-                      ? officerTitle !== '' && !['LC1 Village Chairperson Liaison', 'Village Health Team (VHT) Coordinator', 'PDM SACCO Enterprise Mobilizer', 'Parish Youth & Women Council Representative', 'Parish Water User Committee Secretary'].includes(officerTitle)
+                      ? officerTitle !== '' && ![`${gov.grassrootsUnits.villageLabel} Council Liaison`, country === 'UG' ? 'Village Health Team (VHT) Coordinator' : 'Community Health Worker Coordinator', `${gov.fiscalProgramName} Enterprise Mobilizer`, `${gov.tier1UnitLabel} Youth & Women Council Representative`, `${gov.tier1UnitLabel} Water User Committee Secretary`].includes(officerTitle)
                       : officerTitle === preset.title;
                     return (
                       <button
@@ -735,7 +821,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                     Official Designation / Title <span className="text-rose-500">*</span>
                   </label>
                   <span className="text-[10px] font-mono text-teal-600 dark:text-teal-400 font-semibold">
-                    Parish Grassroots Desks
+                    {gov.tier1UnitLabel} Grassroots Desks
                   </span>
                 </div>
                 <input
@@ -745,7 +831,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                   required
                   value={officerTitle}
                   onChange={(e) => setOfficerTitle(e.target.value)}
-                  placeholder="e.g. LC1 Village Chairperson Liaison / VHT Coordinator"
+                  placeholder={`e.g. ${gov.grassrootsUnits.villageLabel} Liaison / Community Coordinator`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -762,7 +848,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
                   type="tel"
                   value={officerPhone}
                   onChange={(e) => setOfficerPhone(e.target.value)}
-                  placeholder="e.g. +256 772 000 000"
+                  placeholder={`e.g. ${gov.samplePhone}`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
                 />
               </div>
@@ -791,7 +877,7 @@ export const ParishSupervisionStructure: React.FC<ParishSupervisionStructureProp
       {/* Official Query Dispatch Modal */}
       {dispatchModalTarget && (
         <OfficialQueryDispatchModal
-          target={dispatchModalTarget}
+          initialTarget={dispatchModalTarget}
           onClose={() => setDispatchModalTarget(null)}
           onSuccess={(query) => {
             setDispatchModalTarget(null);

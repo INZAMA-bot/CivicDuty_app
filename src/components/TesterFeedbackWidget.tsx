@@ -262,12 +262,22 @@ export const TesterFeedbackWidget: React.FC<TesterFeedbackWidgetProps> = ({ isSp
                     />
                   </div>
 
-                  <div>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="tester-feedback-contact"
+                      className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400 block"
+                    >
+                      Reply Contact (Optional)
+                    </label>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                      Optional: include your @handle or email if you want a reply.
+                    </p>
                     <input
+                      id="tester-feedback-contact"
                       type="text"
                       value={contact}
                       onChange={(e) => setContact(e.target.value)}
-                      placeholder="Optional @handle or email if you want a reply"
+                      placeholder="@handle or email@example.com"
                       className="w-full min-h-[40px] px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
                     />
                   </div>

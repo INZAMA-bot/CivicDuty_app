@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { timeAgo } from '../utils/helpers';
 import { COUNTRIES } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { ModalPortal } from './ModalPortal';
 
 interface OfficialQueryDossierModalProps {
@@ -35,6 +36,7 @@ export const OfficialQueryDossierModal: React.FC<OfficialQueryDossierModalProps>
   const { user, toast, respondToOfficialQuery, determineOfficialQuery } = useApp();
   const countryCode = query.country || user?.country || 'UG';
   const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: countryCode };
+  const gov = getCountryGovernanceSchema(countryCode);
 
   // Response form state
   const [showResponseForm, setShowResponseForm] = useState(false);
@@ -59,7 +61,7 @@ export const OfficialQueryDossierModal: React.FC<OfficialQueryDossierModalProps>
   const handleCopyMemo = () => {
     const memo = `
 ================================================================================
-REPUBLIC OF ${countryObj.name.toUpperCase()} · LOCAL GOVERNMENT SERVICE COMMISSION
+${gov.countryName.toUpperCase()} · ${gov.superadminMinistry.toUpperCase()}
 OFFICIAL SUPERVISORY ADMINISTRATIVE QUERY
 Ref: ${query.queryRef}
 Date of Dispatch: ${new Date(query.issuedAt).toUTCString()}
@@ -77,10 +79,10 @@ TELEMETRY & EVIDENTIARY CITATION:
 ${query.evidenceDetails || 'Continuous automated audit telemetry recorded by CivicDuty platform.'}
 
 STATUTORY DIRECTIVE:
-Under the provisions of the Public Service Standing Orders and Local Governments Act, 
+Under the provisions of ${gov.localGovLawTier3} and ${gov.fiscalAct}, 
 you are hereby required to tender a written explanation in defense within ${query.deadlineHours} HOURS 
 of receipt of this notice, failing which administrative interdiction and referral to the 
-Inspectorate of Government (IGG) / Ethics & Anti-Corruption Commission shall proceed without further notice.
+${gov.ombudsman.name} (${gov.ombudsman.shortName}) shall proceed without further notice.
 
 ISSUED BY AUTHORITY:
 ${query.issuerName}
@@ -97,12 +99,12 @@ Cryptographic Audit Hash: SHA256-CD-${countryCode}-${query.queryRef.slice(-6)}
     setRespOfficerName(query.targetOfficer);
     setRespOfficerTitle(query.targetTitle);
     setRespJustification(
-      `Operational delays were caused by sudden severe localized drainage blockages and unverified National Identification Numbers (NIN) from 14 beneficiary files which required manual physical verification with the Parish Development Committee.`
+      `Operational delays were caused by sudden severe localized drainage blockages and unverified Citizen ID files from 14 beneficiary records which required manual physical verification with the ${gov.tier1CommitteeName}.`
     );
     setRespActionTaken(
       `Conducted field inspection at 08:30 AM. Rectified 12 out of 14 records, dispatched emergency maintenance team to clear primary culverts, and cleared 6 overdue citizen tickets on CivicDuty live ledger.`
     );
-    setRespAttachmentNote(`Field Inspection Sheet Ref: FIS-${query.country}-2026-09 signed by LC1 Chairperson.`);
+    setRespAttachmentNote(`Field Inspection Sheet Ref: FIS-${query.country}-2026-09 signed by ${gov.grassrootsUnits.villageLabel}.`);
     toast('Pre-filled sample defense statement for testing', 'teal');
   };
 
@@ -167,7 +169,7 @@ Cryptographic Audit Hash: SHA256-CD-${countryCode}-${query.queryRef.slice(-6)}
       case 'escalated_igg':
         return (
           <span className="px-2.5 py-1 rounded-xl bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 text-[10px] font-black uppercase flex items-center gap-1">
-            <ShieldAlert size={12} /> Escalated to IGG / Interdicted
+            <ShieldAlert size={12} /> Escalated to {gov.ombudsman.shortName} / Interdicted
           </span>
         );
     }
@@ -468,7 +470,7 @@ Cryptographic Audit Hash: SHA256-CD-${countryCode}-${query.queryRef.slice(-6)}
                   {[
                     { id: 'resolved_exonerated', label: 'Exonerate & Resolve', desc: 'Defense accepted; no negligence.' },
                     { id: 'remedial_directive', label: 'Remedial Directive', desc: '14-day close watch mandated.' },
-                    { id: 'escalated_igg', label: 'Escalate to IGG', desc: 'Referral for interdiction.' },
+                    { id: 'escalated_igg', label: `Escalate to ${gov.ombudsman.shortName}`, desc: 'Referral for interdiction.' },
                   ].map((v) => (
                     <button
                       type="button"

@@ -1,6 +1,7 @@
 import { CountryCode } from '../types';
 import { COUNTRIES } from './countries';
 import { getNationalRolloutArrangements } from './tiers';
+import { getCountryGovernanceSchema } from './countryGovernance';
 
 export type MinistrySector =
   | 'GOVERNANCE'
@@ -560,6 +561,160 @@ export const BESPOKE_MINISTRIES: Record<string, MinistryProfile[]> = {
       uniqueFeatureBadge: 'EXECUTIVE SCORECARD',
       uniqueFeatureDesc: 'Evaluates statutory performance contracts for all Cabinet Secretaries and Principal Secretaries with automatic public delivery rankings.'
     }
+  ],
+
+  RW: [
+    {
+      id: 'PS-RW-MINALOC',
+      code: 'PS-RW-MINALOC-2026',
+      title: 'Ministry of Local Government (MINALOC)',
+      shortTitle: 'MINALOC',
+      permSecretary: 'Permanent Secretary (MINALOC Rwanda)',
+      roleTitle: 'Permanent Secretary & Territorial Superadmin',
+      sector: 'GOVERNANCE',
+      country: 'RW',
+      statutoryAct: 'Law N° 05/2018 Governing Administrative Entities & National Decentralization Policy (Imihigo)',
+      mandate: 'National Decentralization across City of Kigali, 4 Provinces, 30 Districts (Uturere), 416 Sectors (Imirenge) & 2,148 Cells (Utugari).',
+      slaScore: '96.5%',
+      macroSpeedHours: 16.0,
+      cabinetDeliveryIndex: 97.4,
+      activeCases: 640,
+      resolvedCases: 618,
+      interAgencyCollabScore: '99%',
+      risk: 'Low',
+      color: 'emerald',
+      icon: 'Building2',
+      isSuperadmin: true,
+      uniqueFeatureName: 'Imihigo Decentralization Command & District Mayor Batch Commissioning',
+      uniqueFeatureBadge: 'TERRITORIAL SUPERADMIN',
+      uniqueFeatureDesc: 'Issues statutory access credentials for City of Kigali, 30 District Mayors, 416 Sector ES, and 2,148 Cell ES with real-time Imihigo contract telemetry.'
+    },
+    {
+      id: 'PS-RW-MINECOFIN',
+      code: 'PS-RW-MINECOFIN-2026',
+      title: 'Ministry of Finance and Economic Planning (MINECOFIN)',
+      shortTitle: 'MINECOFIN',
+      permSecretary: 'Permanent Secretary & Secretary to the Treasury (MINECOFIN)',
+      roleTitle: 'Permanent Secretary Finance & Treasury',
+      sector: 'FISCAL',
+      country: 'RW',
+      statutoryAct: 'Organic Law on State Finances and Property & RPPA Procurement Code',
+      mandate: 'National IFMIS Releases, District Imihigo Block Grants, Umurenge SACCO Oversight & Auditor General Query Resolution.',
+      slaScore: '96.9%',
+      macroSpeedHours: 15.4,
+      cabinetDeliveryIndex: 97.8,
+      activeCases: 320,
+      resolvedCases: 310,
+      interAgencyCollabScore: '99%',
+      risk: 'Low',
+      color: 'amber',
+      icon: 'Landmark',
+      uniqueFeatureName: 'Imihigo Block Grant Telemetry & IFMIS Capex Audit',
+      uniqueFeatureBadge: 'FISCAL ACCOUNTABILITY',
+      uniqueFeatureDesc: 'Links district citizen service backlogs directly with LODA/MINECOFIN earmarked transfers and RPPA procurement compliance.',
+      fiscalGrants: [
+        { district: 'City of Kigali (Gasabo/Kicukiro/Nyarugenge)', quarterAllocation: 'RWF 8.4B', amountDisbursed: 'RWF 8.4B', unspentBalance: 'RWF 620M', unresolvedComplaints: 9, auditFlag: 'NORMAL', lastAuditDate: '2026-09-28' },
+        { district: 'Musanze District', quarterAllocation: 'RWF 3.2B', amountDisbursed: 'RWF 3.2B', unspentBalance: 'RWF 280M', unresolvedComplaints: 6, auditFlag: 'NORMAL', lastAuditDate: '2026-09-26' },
+        { district: 'Huye District', quarterAllocation: 'RWF 2.9B', amountDisbursed: 'RWF 2.9B', unspentBalance: 'RWF 310M', unresolvedComplaints: 7, auditFlag: 'NORMAL', lastAuditDate: '2026-09-27' },
+        { district: 'Rubavu District', quarterAllocation: 'RWF 3.4B', amountDisbursed: 'RWF 3.4B', unspentBalance: 'RWF 490M', unresolvedComplaints: 14, auditFlag: 'UNDER_REVIEW', lastAuditDate: '2026-09-25' },
+      ]
+    },
+    {
+      id: 'PS-RW-MININFRA',
+      code: 'PS-RW-MININFRA-2026',
+      title: 'Ministry of Infrastructure (MININFRA)',
+      shortTitle: 'MININFRA',
+      permSecretary: 'Permanent Secretary (MININFRA)',
+      roleTitle: 'Permanent Secretary Infrastructure',
+      sector: 'INFRASTRUCTURE',
+      country: 'RW',
+      statutoryAct: 'National Transport, Energy & Water Utility Laws (RTDA / REG / WASAC)',
+      mandate: 'RTDA National & District Roads, WASAC Water Treatment Telemetry, REG Power Substation Restoration & Secondary Cities Master Plans.',
+      slaScore: '94.8%',
+      macroSpeedHours: 18.2,
+      cabinetDeliveryIndex: 95.6,
+      activeCases: 510,
+      resolvedCases: 483,
+      interAgencyCollabScore: '97%',
+      risk: 'Low',
+      color: 'rose',
+      icon: 'Truck',
+      uniqueFeatureName: 'RTDA Feeder Road & WASAC / REG Outage Telemetry',
+      uniqueFeatureBadge: 'INFRASTRUCTURE TELEMETRY',
+      uniqueFeatureDesc: 'Coordinates real-time dispatch across City of Kigali drainage works, RTDA bridges, WASAC water mains, and REG feeder transformers.'
+    },
+    {
+      id: 'PS-RW-MOH',
+      code: 'PS-RW-MOH-2026',
+      title: 'Ministry of Health (MoH Rwanda)',
+      shortTitle: 'MoH (RW)',
+      permSecretary: 'Permanent Secretary (Ministry of Health Rwanda)',
+      roleTitle: 'Permanent Secretary Health',
+      sector: 'HEALTH',
+      country: 'RW',
+      statutoryAct: 'Law Regulating Health Services & Mutuelle de Santé (CBHI) Charter',
+      mandate: 'Referral & District Hospitals, Health Centres (Imirenge), RMS Medical Supply Chain & Community Health Workers (CHWs).',
+      slaScore: '95.9%',
+      macroSpeedHours: 17.0,
+      cabinetDeliveryIndex: 96.8,
+      activeCases: 410,
+      resolvedCases: 393,
+      interAgencyCollabScore: '98%',
+      risk: 'Low',
+      color: 'emerald',
+      icon: 'Activity',
+      uniqueFeatureName: 'RMS Supply Chain & Mutuelle Clinic Readiness Audit',
+      uniqueFeatureBadge: 'HEALTHCARE AUDIT',
+      uniqueFeatureDesc: 'Tracks Rwanda Medical Supply (RMS) essential drug availability across all 30 District Hospitals and Sector Health Centres.'
+    },
+    {
+      id: 'PS-RW-MINICT',
+      code: 'PS-RW-MINICT-2026',
+      title: 'Ministry of ICT and Innovation (MINICT)',
+      shortTitle: 'MINICT',
+      permSecretary: 'Permanent Secretary (MINICT)',
+      roleTitle: 'Permanent Secretary ICT & Digital Transformation',
+      sector: 'ICT_DIGITAL',
+      country: 'RW',
+      statutoryAct: 'Rwanda ICT & Data Protection Law (N° 058/2021)',
+      mandate: 'Irembo Citizen Portal Integration, RURA Carrier QoS, RISA Smart District Nodes & Rural Broadband Access.',
+      slaScore: '97.4%',
+      macroSpeedHours: 14.0,
+      cabinetDeliveryIndex: 98.1,
+      activeCases: 240,
+      resolvedCases: 234,
+      interAgencyCollabScore: '99%',
+      risk: 'Low',
+      color: 'teal',
+      icon: 'Radio',
+      uniqueFeatureName: 'Irembo SLA & RURA Carrier Quality Telemetry',
+      uniqueFeatureBadge: 'DIGITAL CONNECTIVITY',
+      uniqueFeatureDesc: 'Syncs offline USSD escalations with Irembo civil registry requests and monitors district digital service desk turnaround.'
+    },
+    {
+      id: 'PS-RW-PRIMATURE',
+      code: 'PS-RW-PRIMATURE-2026',
+      title: 'Office of the Prime Minister (Primature Delivery Unit)',
+      shortTitle: 'Primature',
+      permSecretary: 'Cabinet Secretary (Primature Rwanda)',
+      roleTitle: 'Head of Government Delivery & Cabinet Coordination',
+      sector: 'CABINET_DELIVERY',
+      country: 'RW',
+      statutoryAct: 'Constitution of Rwanda Cabinet Accountability & Imihigo Evaluation Framework',
+      mandate: 'National Imihigo League Table, Cross-Ministerial SLA Enforcement & Umushyikirano Commitments Tracking.',
+      slaScore: '96.2%',
+      macroSpeedHours: 17.2,
+      cabinetDeliveryIndex: 96.9,
+      activeCases: 390,
+      resolvedCases: 375,
+      interAgencyCollabScore: '98%',
+      risk: 'Low',
+      color: 'slate',
+      icon: 'ShieldCheck',
+      uniqueFeatureName: 'National Imihigo Ministerial & District Scorecard',
+      uniqueFeatureBadge: 'IMIHIGO SCORECARD',
+      uniqueFeatureDesc: 'Ranks line ministries and all 30 Districts on citizen resolution turnaround and annual Imihigo target achievement.'
+    }
   ]
 };
 
@@ -578,9 +733,10 @@ export function getMinistriesForCountry(countryCode: string): MinistryProfile[] 
   const countryInfo = COUNTRIES[code];
   const countryName = countryInfo?.name || code;
   const rollout = getNationalRolloutArrangements(code);
+  const gov = getCountryGovernanceSchema(code);
 
-  const superadminTitle = rollout.superadminTitle || `${countryName} National Superadmin`;
-  const superadminMinistry = rollout.superadminMinistry || `${countryName} Ministry of Local Governance & Territorial Administration`;
+  const superadminTitle = rollout.superadminTitle || gov.superadminTitle;
+  const superadminMinistry = rollout.superadminMinistry || gov.superadminMinistry;
   const superadminCode = `PS-${code}-SUPERADMIN-2026`;
 
   return [
@@ -588,12 +744,12 @@ export function getMinistriesForCountry(countryCode: string): MinistryProfile[] 
       id: `PS-${code}-SUPERADMIN`,
       code: superadminCode,
       title: superadminMinistry,
-      shortTitle: 'Local Governance',
-      permSecretary: `Statutory Head of Local Government (${code})`,
+      shortTitle: gov.superadminMinistryShort,
+      permSecretary: `${gov.superadminHolder}`,
       roleTitle: superadminTitle,
       sector: 'GOVERNANCE',
       country: code as CountryCode,
-      statutoryAct: `${countryName} Local Government & Decentralized Administration Act`,
+      statutoryAct: gov.constitutionalAuthority,
       mandate: `Territorial Rollout Command, ${rollout.tiersDescription}, Batch Minting of statutory accounting codes & Cadre Supervision.`,
       slaScore: '92.5%',
       macroSpeedHours: 25.0,
@@ -618,7 +774,7 @@ export function getMinistriesForCountry(countryCode: string): MinistryProfile[] 
       roleTitle: 'Permanent Secretary / Director-General of Treasury',
       sector: 'FISCAL',
       country: code as CountryCode,
-      statutoryAct: `${countryName} Public Finance & Fiscal Responsibility Act`,
+      statutoryAct: gov.fiscalAct,
       mandate: 'National Budget Disbursals, Local Revenue Mobilization, Equalization Grants & Capital Expenditure Verification.',
       slaScore: '94.2%',
       macroSpeedHours: 20.1,

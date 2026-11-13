@@ -64,6 +64,7 @@ import { generateCryptoSealSync } from '../utils/cryptoSeal';
 import { QrCodeModal } from '../components/QrCodeModal';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { StatutoryPipelineCard } from '../components/StatutoryPipelineCard';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 export const PostDetailView: React.FC = () => {
   const {
@@ -105,7 +106,7 @@ export const PostDetailView: React.FC = () => {
   const [showCompileDrawer, setShowCompileDrawer] = useState(false);
   const [showMergeDrawer, setShowMergeDrawer] = useState(false);
   const [witnessBody, setWitnessBody] = useState('');
-  const [witnessProfession, setWitnessProfession] = useState('Bodaboda Rider / Cyclist');
+  const [witnessProfession, setWitnessProfession] = useState('Road Scout / Commercial Rider');
   const [witnessAnon, setWitnessAnon] = useState(false);
   const [selectedDupId, setSelectedDupId] = useState('');
 
@@ -209,15 +210,18 @@ export const PostDetailView: React.FC = () => {
   const isReadOnly = user?.role === 'read_only';
   const isSupported = user && p ? !!supportsMap[user.id]?.[p.id] : false;
 
+  const postCountryCode = (p?.country || user?.country || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(postCountryCode);
+  const isUgPost = postCountryCode === 'UG';
   const cryptoSeal = p?.crypto_seal_hash || (p ? generateCryptoSealSync(`TICKET:${p.id}:${p.title}`) : '');
 
   // Dynamic Budget Estimation if not present
   const budget = p?.budget_allocation || {
-    source: isCorrupt ? 'IGG Special Recovery Track' : 'MoFPED DDEG Capital Grant #2026/88',
+    source: isCorrupt ? `${gov.ombudsman.shortName} Special Recovery Track` : `${gov.fiscalGrantName} #2026/88`,
     allocated_amount: p?.category === 'pothole' ? 45000000 : p?.category === 'water' ? 28000000 : p?.category === 'health' ? 62000000 : 15000000,
     spent_amount: p?.status === 'resolved' ? (p?.category === 'pothole' ? 42500000 : 25000000) : 8500000,
-    currency: 'UGX',
-    contractor_name: isConsumer ? 'Private Utility Franchise' : 'District Works Department / Local SACCO',
+    currency: gov.currency,
+    contractor_name: isConsumer ? 'Private Utility Franchise' : `${gov.tier3UnitLabel} Works Department / ${gov.fiscalProgramName}`,
     milestone_progress: p?.status === 'resolved' ? 100 : p?.status === 'investigating' ? 45 : 15,
   };
 
@@ -311,32 +315,32 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
     {
       id: 'tier1_parish',
       level: 1,
-      title: 'Parish Chief & Ward Committee',
-      officer: 'Parish Chief / Local CDO',
+      title: gov.tier1Label,
+      officer: `${gov.tier1Short} / Local Liaison`,
       window: '0h – 48h',
       slaHours: 48,
     },
     {
       id: 'tier2_subcounty',
       level: 2,
-      title: 'Sub-County Senior Assistant Town Clerk',
-      officer: 'Sub-County Chief / Municipal Town Clerk',
+      title: gov.tier2Label,
+      officer: `${gov.tier2Short} / Technical Officer`,
       window: '48h – 96h',
       slaHours: 96,
     },
     {
       id: 'tier3_district_cao',
       level: 3,
-      title: 'District Chief Administrative Officer (CAO)',
-      officer: 'Accounting Officer & LCV Executive',
+      title: gov.tier3Label,
+      officer: `${gov.tier3Short} / Accounting Officer`,
       window: '96h – 144h',
       slaHours: 144,
     },
     {
       id: 'tier4_ministry',
       level: 4,
-      title: 'Permanent Secretary & Inspectorate (IGG)',
-      officer: 'Permanent Secretary MoLG / Line Ministry',
+      title: `${gov.superadminTitle} & ${gov.ombudsman.shortName}`,
+      officer: `${gov.superadminTitle} (${gov.superadminMinistryShort}) / Line Ministry`,
       window: '144h+ Statutory Escalation',
       slaHours: 192,
     },
@@ -759,7 +763,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
               <Lock size={16} />
             </div>
             <p className="text-xs text-rose-950 dark:text-rose-200 font-black">
-              Anti-Corruption Report — Auto-referred to Inspectorate of Government (IGG)
+              Anti-Corruption Report — Auto-referred to {gov.ombudsman.name} ({gov.ombudsman.shortName})
             </p>
           </div>
           <p className="text-[10.5px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
@@ -1155,7 +1159,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                   {p.author_profession.toLowerCase().includes('boda') && (
                     <Bike size={13} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400" />
                   )}
-                  <span>{p.author_profession.toLowerCase().includes('boda') ? 'Bodaboda Frontline Road Scout' : p.author_profession}</span>
+                  <span>{p.author_profession.toLowerCase().includes('boda') ? (isUgPost ? 'Bodaboda Frontline Road Scout' : 'Frontline Mobility Road Scout') : p.author_profession}</span>
                 </span>
               </div>
             )}
@@ -1228,7 +1232,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                 </span>
                 <span className={compiledCount >= 5 ? 'text-rose-600 dark:text-rose-400 font-black' : 'text-indigo-700 dark:text-indigo-300 font-black'}>
                   {compiledCount >= 5
-                    ? 'Threshold Reached — Auto-Escalated to CAO / Executive Desk'
+                    ? `Threshold Reached — Auto-Escalated to ${gov.tier3Short} / Executive Desk`
                     : `${5 - compiledCount} more witness report${5 - compiledCount > 1 ? 's' : ''} to trigger automatic Tier-3 escalation`}
                 </span>
               </div>
@@ -1268,12 +1272,14 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                       onChange={(e) => setWitnessProfession(e.target.value)}
                       className="w-full text-xs font-bold bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2"
                     >
-                      <option value="Bodaboda Rider / Cyclist">Bodaboda Rider / Road Scout</option>
-                      <option value="Taxi / Matatu / Commercial Driver">Commercial Transit Driver</option>
-                      <option value="Market Vendor / Local Trader">Market Vendor / Shop Owner</option>
-                      <option value="Healthcare Worker / VHT">Healthcare Worker / VHT</option>
+                      <option value="Road Scout / Commercial Rider">{isUgPost ? 'Bodaboda Rider / Road Scout' : 'Delivery Rider / Road Scout'}</option>
+                      <option value="Commercial Transit Driver">Commercial Transit Driver</option>
+                      <option value="Market Vendor / Shop Owner">Market Vendor / Shop Owner</option>
+                      <option value={isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health'}>
+                        {isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health'}
+                      </option>
                       <option value="Teacher / School Administrator">Teacher / School Admin</option>
-                      <option value="Community Resident">Local Parish Resident</option>
+                      <option value={`Local ${gov.tier1UnitLabel} Resident`}>Local {gov.tier1UnitLabel} Resident</option>
                     </select>
                   </div>
                   <div className="flex flex-col justify-end">
@@ -1611,7 +1617,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                 <TrendingUp size={13} className="text-emerald-600 dark:text-emerald-400" />
                 <span>Statutory 4-Tier Escalation Ladder</span>
               </span>
-              <span className="text-[9px] mono text-slate-600 dark:text-slate-400 font-bold">Local Gov Act Cap 243</span>
+              <span className="text-[9px] mono text-slate-600 dark:text-slate-400 font-bold">{gov.localGovLawTier3}</span>
             </div>
 
             <div className="space-y-2">
@@ -1908,7 +1914,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                     File Dispute & Re-Open Report
                   </h5>
                   <p className="text-[10px] text-slate-700 dark:text-slate-300 font-medium">
-                    Explain why the resolution is incomplete, defective, or incorrect. This will immediately revert the ticket to Overdue status and escalate to the CAO.
+                    Explain why the resolution is incomplete, defective, or incorrect. This will immediately revert the ticket to Overdue status and escalate to the {gov.tier3Short}.
                   </p>
                   <textarea
                     rows={3}
@@ -2573,7 +2579,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
         isOpen={rewardModalOpen}
         onClose={() => setRewardModalOpen(false)}
         targetCitizenName={selectedRewardTarget.name || p.citizen_name}
-        targetCitizenPhone={selectedRewardTarget.phone || '+256 778 277 900'}
+        targetCitizenPhone={selectedRewardTarget.phone || gov.samplePhone}
         postId={p.id}
         commentId={selectedRewardTarget.commentId}
         entityName={user?.dept_label || d.name}

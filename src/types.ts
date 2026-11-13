@@ -342,11 +342,13 @@ export interface CompiledWitnessReport {
   citizen_name: string;
   author_profession?: string;
   anonymous: boolean;
+  title?: string;
   body: string;
   gps?: { lat: string; lng: string } | null;
   media?: MediaItem[];
   created_at: string;
   source: 'web' | 'sms' | 'ussd';
+  likes?: number;
 }
 
 export interface Post {
@@ -401,6 +403,8 @@ export interface Post {
   };
   compiled_reports?: CompiledWitnessReport[];
   compiled_count?: number;
+  lead_likes?: number;
+  featured_submission_id?: string;
   is_master_dossier?: boolean;
   merged_from_ids?: string[];
   is_demo?: boolean;

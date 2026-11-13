@@ -24,6 +24,8 @@
         "upvotes": { "type": "number" },
         "crypto_seal_hash": { "type": "string", "maxLength": 128 },
         "compiled_count": { "type": "number" },
+        "lead_likes": { "type": "number" },
+        "featured_submission_id": { "type": "string", "maxLength": 128 },
         "is_master_dossier": { "type": "boolean" },
         "is_demo": { "type": "boolean" },
         "demo_highlight": { "type": "string", "maxLength": 256 }

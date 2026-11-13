@@ -754,7 +754,9 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
                   </div>
                   <h5 className="text-xs font-bold text-slate-900 dark:text-white">Batch CSV Deposit</h5>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Contractors upload spreadsheets with MTN 2GB data bundles, NWSC water bill tokens, or Umeme Yaka electricity units earmarked from statutory CSR budgets.
+                    {(user?.country || selectedCountry || 'UG') === 'UG'
+                      ? 'Contractors upload spreadsheets with MTN 2GB data bundles, NWSC water bill tokens, or Umeme Yaka electricity units earmarked from statutory CSR budgets.'
+                      : 'Contractors upload spreadsheets with local mobile data bundles, municipal water bill tokens, or prepaid electricity units earmarked from statutory CSR budgets.'}
                   </p>
                 </div>
 

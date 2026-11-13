@@ -31,6 +31,7 @@ import {
   GovFeedbackMessage,
 } from '../data/partnerships';
 import { COUNTRIES } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { CountryCode } from '../types';
 import { CdOpsBilateralResponseModal } from '../components/cdops/CdOpsBilateralResponseModal';
 import { CdOpsNewDirectiveModal } from '../components/cdops/CdOpsNewDirectiveModal';
@@ -223,7 +224,7 @@ export const CompanyManagementView: React.FC = () => {
           </div>
 
           <div className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] p-3 rounded-lg text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-            <strong>Sovereign Protocol:</strong> CivicDuty Operatives (CD-Ops) interact exclusively with each country&apos;s <strong>National Superadmin / Node Head</strong> (e.g., Uganda PS MoLG). Accounting Officer modification requests are vetted by their National Node Head prior to CD-Ops execution.
+            <strong>Sovereign Protocol:</strong> CivicDuty Operatives (CD-Ops) interact exclusively with each country&apos;s <strong>National Superadmin / Node Head</strong> (e.g., Permanent Secretary / Ministerial Command). Local Accounting Officer modification requests are vetted by their country&apos;s National Node Head prior to CD-Ops execution.
           </div>
 
           <form onSubmit={handleUnlock} className="space-y-3 pt-1">
@@ -538,7 +539,7 @@ export const CompanyManagementView: React.FC = () => {
                   National Node Head Bilateral Desk (Direct Line: Country Superadmin ↔ CD-Ops)
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed">
-                  Accounting Officers (CAOs, Town Clerks, SAS, Sector Engineers) submit app modification requests to their country&apos;s <strong>National Node Head</strong> (e.g., Uganda PS MoLG). The National Node Head either rejects the request locally or endorses it to <strong>CivicDuty Operatives (CD-Ops)</strong>. CD-Ops only interacts with vetted National Superadmin directives.
+                  Local &amp; Regional Accounting Officers submit app modification requests to their country&apos;s <strong>National Node Head</strong> (Permanent Secretary / National Superadmin). The National Node Head either rejects the request locally or endorses it to <strong>CivicDuty Operatives (CD-Ops)</strong>. CD-Ops only interacts with vetted National Superadmin directives.
                 </p>
               </div>
 
@@ -583,7 +584,10 @@ export const CompanyManagementView: React.FC = () => {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {pendingNationalVettingList.map((req) => (
+                    {pendingNationalVettingList.map((req) => {
+                      const reqGov = getCountryGovernanceSchema(req.countryCode);
+                      const fallbackSuperadmin = `${reqGov.superadminTitle} (${reqGov.superadminMinistryShort})`;
+                      return (
                       <div
                         key={req.id}
                         className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
@@ -596,7 +600,7 @@ export const CompanyManagementView: React.FC = () => {
                             Requested by Accounting Officer: {req.senderOfficer} ({req.senderTitle} · {req.senderMinistry})
                           </div>
                           <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
-                            Awaiting Vetting by: {req.nationalSuperadminTitle || 'National Node Head (PS MoLG)'}
+                            Awaiting Vetting by: {req.nationalSuperadminTitle || `National Node Head (${fallbackSuperadmin})`}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -605,32 +609,33 @@ export const CompanyManagementView: React.FC = () => {
                             onClick={() =>
                               rejectModificationBySuperadmin(
                                 req.id,
-                                req.nationalSuperadminTitle || 'PS MoLG (National Superadmin)',
+                                req.nationalSuperadminTitle || `${fallbackSuperadmin} (National Superadmin)`,
                                 'Rejected at National Node Head level — covered by standard statutory template.'
                               )
                             }
                             className="px-2.5 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10.5px] font-mono font-semibold flex items-center gap-1 cursor-pointer"
                           >
                             <XCircle size={12} />
-                            <span>Simulate PS Reject</span>
+                            <span>Simulate Node Reject</span>
                           </button>
                           <button
                             type="button"
                             onClick={() =>
                               endorseModificationForCdOps(
                                 req.id,
-                                req.nationalSuperadminTitle || 'PS MoLG (National Superadmin)',
+                                req.nationalSuperadminTitle || `${fallbackSuperadmin} (National Superadmin)`,
                                 'Approved by National Node Head and escalated to CivicDuty CD-Ops.'
                               )
                             }
                             className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 cursor-pointer"
                           >
                             <CheckCircle2 size={12} />
-                            <span>Simulate PS Endorse → CD-Ops</span>
+                            <span>Simulate Node Endorse → CD-Ops</span>
                           </button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -695,7 +700,7 @@ export const CompanyManagementView: React.FC = () => {
                 {statutoryDirectiveCount}
               </span>
               <span className="text-[10px] font-mono text-slate-500 block mt-0.5">
-                PFMA / Cabinet Level
+                Statutory / Cabinet Level
               </span>
             </div>
           </div>
@@ -938,25 +943,25 @@ export const CompanyManagementView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
               <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-3.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <span className="text-slate-500 block font-semibold">Uganda Telecom USSD Gateway</span>
+                <span className="text-slate-500 block font-semibold">Multi-Nation Telecom USSD Gateway</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                  *3030# (MTN &amp; Airtel UG)
+                  *3030# / *141# (Africa &amp; Global Carriers)
                 </span>
                 <div className="text-[10.5px] text-slate-600 dark:text-slate-400 space-y-0.5 pt-1">
                   <div>· Session Capacity: 10,000 concurrent sessions</div>
                   <div>· Response latency: 120ms round-trip</div>
-                  <div>· Failover node: Entebbe Tier-3 Datacenter</div>
+                  <div>· Failover node: Multi-region Tier-3 Edge Clusters</div>
                 </div>
               </div>
               <div className="bg-[#f8f9fa] dark:bg-[#0e1116] p-3.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                <span className="text-slate-500 block font-semibold">NIRA Identity Bridge</span>
+                <span className="text-slate-500 block font-semibold">Sovereign National Identity Bridges</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                  National ID API Verification
+                  NIDA · NIRA · Huduma · NIN · eIDAS APIs
                 </span>
                 <div className="text-[10.5px] text-slate-600 dark:text-slate-400 space-y-0.5 pt-1">
                   <div>· SHA-256 Zero-Knowledge Citizen Tokenization</div>
                   <div>· Fraud prevention score: 99.8% accurate</div>
-                  <div>· Direct connection to NIRA Kampala Gateway</div>
+                  <div>· Per-country statutory registry isolation</div>
                 </div>
               </div>
             </div>

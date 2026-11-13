@@ -20,6 +20,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { savePerkVoucherToCloud } from '../services/firestoreSync';
 
 interface RewardModalProps {
@@ -37,8 +38,8 @@ interface RewardModalProps {
 export const RewardModal: React.FC<RewardModalProps> = ({
   isOpen,
   onClose,
-  targetCitizenName = 'Inzama Robin',
-  targetCitizenPhone = '+256 778 277 900 / +256 748 338 796',
+  targetCitizenName,
+  targetCitizenPhone,
   postId,
   commentId,
   contractorName,
@@ -49,6 +50,11 @@ export const RewardModal: React.FC<RewardModalProps> = ({
 
   const country = user?.country || activeDeptCountry || 'UG';
   const countryPerks = getCountryPerks(country);
+  const gov = getCountryGovernanceSchema(country);
+
+  const resolvedTargetName = targetCitizenName || (country === 'UG' ? 'Inzama Robin' : 'Verified Citizen Scout');
+  const resolvedTargetPhone =
+    targetCitizenPhone || (country === 'UG' ? '+256 778 277 900 / +256 748 338 796' : gov.samplePhone);
 
   const [issuerType, setIssuerType] = useState<'individual_vault' | 'entity' | 'contractor'>(
     contractorName
@@ -57,11 +63,13 @@ export const RewardModal: React.FC<RewardModalProps> = ({
       ? 'entity'
       : 'individual_vault'
   );
-  const [customContractor, setCustomContractor] = useState(contractorName || 'Seyani Brothers Construction Ltd');
+  const [customContractor, setCustomContractor] = useState(
+    contractorName || (country === 'UG' ? 'Seyani Brothers Construction Ltd' : `${gov.countryName} Civil Works Ltd`)
+  );
   const [customEntity, setCustomEntity] = useState(entityName || user?.dept_label || 'National Civic Authority');
   const [citizenPatronName, setCitizenPatronName] = useState(user?.name || 'Verified Citizen Patron');
 
-  const [recipient, setRecipient] = useState(`${targetCitizenName} (${targetCitizenPhone})`);
+  const [recipient, setRecipient] = useState(`${resolvedTargetName} (${resolvedTargetPhone})`);
   const [selectedPerkId, setSelectedPerkId] = useState(countryPerks.digitalPerks[0]?.id || 'data');
   const [note, setNote] = useState(
     contextTitle
@@ -103,10 +111,8 @@ export const RewardModal: React.FC<RewardModalProps> = ({
   }, [country]);
 
   useEffect(() => {
-    if (targetCitizenName) {
-      setRecipient(`${targetCitizenName} (${targetCitizenPhone || 'Verified Citizen'})`);
-    }
-  }, [targetCitizenName, targetCitizenPhone]);
+    setRecipient(`${resolvedTargetName} (${resolvedTargetPhone || 'Verified Citizen'})`);
+  }, [resolvedTargetName, resolvedTargetPhone]);
 
   useEffect(() => {
     if (contractorName) {
@@ -149,8 +155,8 @@ export const RewardModal: React.FC<RewardModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brand: currentPerk.brand,
-          recipientName: targetCitizenName,
-          recipientContact: targetCitizenPhone,
+          recipientName: resolvedTargetName,
+          recipientContact: resolvedTargetPhone,
           dispatchedBy: issuerLabel,
           note: note.trim(),
         }),
@@ -208,7 +214,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
       `${issuerLabel} awarded ${currentPerk.name} voucher (${finalCode})${fromEscrow ? ' [DRAWN FROM PRE-FUNDED VAULT]' : ''} to ${recipient} for wall engagement.`
     );
 
-    toast(`${currentPerk.name} awarded to ${targetCitizenName}.`, 'emerald');
+    toast(`${currentPerk.name} awarded to ${resolvedTargetName}.`, 'emerald');
 
     setIsSubmitting(false);
     setSuccessData({
@@ -320,7 +326,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                     type="text"
                     value={citizenPatronName}
                     onChange={(e) => setCitizenPatronName(e.target.value)}
-                    placeholder="e.g. Inzama Robin (Citizen Patron)"
+                    placeholder={`e.g. ${country === 'UG' ? 'Inzama Robin' : 'Verified Citizen Patron'}`}
                     className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-medium"
                     required
                   />
@@ -332,7 +338,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                     type="text"
                     value={customContractor}
                     onChange={(e) => setCustomContractor(e.target.value)}
-                    placeholder="e.g. Seyani Brothers Construction Ltd"
+                    placeholder={`e.g. ${country === 'UG' ? 'Seyani Brothers Construction Ltd' : `${gov.countryName} Civil Works Ltd`}`}
                     className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:border-amber-600 font-medium"
                     required
                   />
@@ -344,7 +350,7 @@ export const RewardModal: React.FC<RewardModalProps> = ({
                     type="text"
                     value={customEntity}
                     onChange={(e) => setCustomEntity(e.target.value)}
-                    placeholder="e.g. Quality Supermarket / KCCA / NWSC"
+                    placeholder={`e.g. ${gov.utilityAgency.waterName} / ${gov.tier3Short}`}
                     className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:border-teal-500 font-medium"
                     required
                   />

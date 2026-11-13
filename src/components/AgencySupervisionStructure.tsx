@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { RoleType, TeamMember, Invite } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   Building2,
   Users,
@@ -39,35 +40,53 @@ export const AgencySupervisionStructure: React.FC<AgencySupervisionStructureProp
   deptId = 'nwsc',
   onPrefillManualForm,
 }) => {
-  const { user, teamMembers, invites, addInvite, toast, mintGovAccessCode } = useApp();
+  const { user, addInvite, toast, mintGovAccessCode } = useApp();
+  const activeCountry = (user?.country || 'UG').toUpperCase();
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
 
-  const isNwsc = deptId.toLowerCase().includes('nwsc') || deptId.toLowerCase().includes('water');
-  const isUnra = deptId.toLowerCase().includes('unra') || deptId.toLowerCase().includes('road');
-  const isUra = deptId.toLowerCase().includes('ura') || deptId.toLowerCase().includes('revenue');
+  const isNwsc = deptId.toLowerCase().includes('nwsc') || deptId.toLowerCase().includes('water') || deptId.toLowerCase().includes('wasac');
+  const isUnra = deptId.toLowerCase().includes('unra') || deptId.toLowerCase().includes('road') || deptId.toLowerCase().includes('rtda') || deptId.toLowerCase().includes('kenha');
+  const isUra = deptId.toLowerCase().includes('ura') || deptId.toLowerCase().includes('revenue') || deptId.toLowerCase().includes('rra') || deptId.toLowerCase().includes('kra');
 
   const agencyName = isNwsc
-    ? 'National Water and Sewerage Corporation (NWSC)'
+    ? gov.utilityAgency.waterName
     : isUnra
-    ? 'Uganda National Roads Authority (UNRA)'
+    ? gov.utilityAgency.roadsName
     : isUra
-    ? 'Uganda Revenue Authority (URA)'
-    : 'National Statutory Agency & Public Utility';
+    ? gov.utilityAgency.revenueName
+    : `${gov.countryName} National Statutory Agency & Public Utility`;
 
   const mandateText = isNwsc
-    ? 'National Water & Sewerage Corporation Act (Cap 317) — Autonomous statutory corporation providing water and sewerage services on a commercial basis.'
+    ? `${gov.utilityAgency.waterAct} — Statutory water & sanitation authority delivering commercial utility infrastructure.`
     : isUnra
-    ? 'Uganda National Roads Authority Act 2006 — Autonomous management, operation, and maintenance of the national roads network.'
+    ? `${gov.utilityAgency.roadsAct} — Autonomous management, construction oversight, and rapid repair of the national road network.`
     : isUra
-    ? 'Uganda Revenue Authority Act (Cap 196) — Central agency responsible for tax assessment, collection, and customs enforcement.'
-    : 'Statutory Body Operating Under Parliamentary Charter & Commercial Self-Sustenance Mandate.';
+    ? `${gov.utilityAgency.revenueAct} — Central public revenue authority overseeing statutory tax & levy transparency.`
+    : `Statutory Body Operating Under ${gov.countryName} Parliamentary Charter & Commercial Self-Sustenance Mandate.`;
+
+  const regionalNetworks = useMemo(
+    () =>
+      gov.utilityAgency.regions.map((r) => ({
+        ...r,
+        branches: r.branches.map((b) => ({
+          ...b,
+          leakCrewLeader: `${b.crewLead} (Crew Lead)`,
+          treatmentPlant: b.facility,
+        })),
+      })),
+    [gov]
+  );
 
   const [activeTab, setActiveTab] = useState<'executive' | 'regional' | 'emergency'>('regional');
-  const [selectedRegionId, setSelectedRegionId] = useState<string>('kla-metro');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRegionId, setSelectedRegionId] = useState<string>(gov.utilityAgency.regions[0]?.id || '');
+
+  useEffect(() => {
+    setSelectedRegionId(gov.utilityAgency.regions[0]?.id || '');
+  }, [activeCountry, gov]);
 
   // Corporate Executive Directorate Template
   const executiveRoster = useMemo(() => {
-    if (isNwsc) {
+    if (isNwsc && activeCountry === 'UG') {
       return [
         {
           id: 'exec-md',
@@ -121,199 +140,64 @@ export const AgencySupervisionStructure: React.FC<AgencySupervisionStructureProp
         },
       ];
     }
-    // Generic Agency Exec
+    const domain = gov.utilityAgency.execEmailDomain;
     return [
       {
         id: 'exec-ed',
-        title: 'Executive Director / Managing Director',
-        name: 'Executive Director (Agency Head)',
+        title: `Managing Director / Chief Executive (${gov.codePrefix})`,
+        name: gov.utilityAgency.execLeadName,
         role: 'node_admin' as RoleType,
-        division: 'Executive Chambers',
-        email: 'director@agency.go.ug',
-        phone: '+256 414 000 100',
+        division: 'Executive Directorate & Board Secretariat',
+        email: `md@${domain}`,
+        phone: gov.samplePhone,
         status: 'confirmed',
       },
       {
         id: 'exec-ops',
         title: 'Director of Field Operations & Infrastructure',
-        name: 'Director of Operations',
+        name: `Director of Engineering Operations (${gov.countryName})`,
         role: 'node_admin' as RoleType,
-        division: 'National Infrastructure Directorate',
-        email: 'operations@agency.go.ug',
-        phone: '+256 414 000 102',
+        division: 'National Infrastructure & Rapid Dispatch Directorate',
+        email: `operations@${domain}`,
+        phone: `${gov.phonePrefix} 200 100`,
         status: 'confirmed',
       },
       {
         id: 'exec-legal',
-        title: 'Director Legal & Corporate Affairs',
-        name: 'Chief Legal Counsel',
+        title: 'Corporation Secretary & Chief Audit Executive',
+        name: 'Chief Legal & SLA Compliance Officer',
         role: 'spokesperson' as RoleType,
-        division: 'Corporate Governance',
-        email: 'legal@agency.go.ug',
-        phone: '+256 414 000 105',
+        division: 'Corporate Governance & SLA Assurance',
+        email: `compliance@${domain}`,
+        phone: `${gov.phonePrefix} 200 105`,
         status: 'confirmed',
       },
     ];
-  }, [isNwsc]);
-
-  // Regional Operational Areas
-  const regionalNetworks = useMemo(() => {
-    return [
-      {
-        id: 'kla-metro',
-        name: 'Kampala Water Metro Directorate',
-        head: 'Eng. Mahmood Lutaaya (Director KW)',
-        coverage: 'Kampala Central, Nakawa, Kawempe, Makindye, Rubaga, Entebbe, Mukono',
-        branches: [
-          {
-            id: 'br-nakasero',
-            name: 'Nakasero / CBD Branch',
-            manager: 'Eng. Paul Kibirige',
-            phone: '+256 772 100 201',
-            leakCrewLeader: 'Joseph Katamba (Crew Lead)',
-            treatmentPlant: 'Ggaba I, II & III Water Works',
-            activeTickets: 5,
-            slaScore: '96%',
-          },
-          {
-            id: 'br-nakawa',
-            name: 'Nakawa & Bugolobi Branch',
-            manager: 'Eng. Sarah Nanteza',
-            phone: '+256 772 100 202',
-            leakCrewLeader: 'David Okot (Crew Lead)',
-            treatmentPlant: 'Bugolobi Wastewater Treatment Plant',
-            activeTickets: 8,
-            slaScore: '92%',
-          },
-          {
-            id: 'br-bwaise',
-            name: 'Kawempe & Bwaise Branch',
-            manager: 'Eng. Moses Mugabi',
-            phone: '+256 772 100 203',
-            leakCrewLeader: 'Sulaiman Walusimbi (Crew Lead)',
-            treatmentPlant: 'Bwaise Booster Pumping Station',
-            activeTickets: 12,
-            slaScore: '88%',
-          },
-        ],
-      },
-      {
-        id: 'central-reg',
-        name: 'Central & Lake Victoria Region',
-        head: 'Eng. Ronald Kisakye (Regional Manager)',
-        coverage: 'Wakiso, Luwero, Mpigi, Mubende, Mityana',
-        branches: [
-          {
-            id: 'br-entebbe',
-            name: 'Entebbe International Area Office',
-            manager: 'Eng. Dennis Ouma',
-            phone: '+256 772 100 204',
-            leakCrewLeader: 'Sam Byaruhanga (Crew Lead)',
-            treatmentPlant: 'Nakiwogo Intake Facility',
-            activeTickets: 3,
-            slaScore: '97%',
-          },
-          {
-            id: 'br-mukono',
-            name: 'Mukono Industrial Corridor Area',
-            manager: 'Eng. Harriet Namugga',
-            phone: '+256 772 100 205',
-            leakCrewLeader: 'Francis Mwebaze (Crew Lead)',
-            treatmentPlant: 'Katosi Water Treatment Complex',
-            activeTickets: 6,
-            slaScore: '94%',
-          },
-        ],
-      },
-      {
-        id: 'eastern-reg',
-        name: 'Eastern Industrial & Nile Region',
-        head: 'Eng. Agnes Akello (Regional Manager)',
-        coverage: 'Jinja, Iganga, Mbale, Tororo, Busia, Soroti',
-        branches: [
-          {
-            id: 'br-jinja',
-            name: 'Jinja Nile Source Area',
-            manager: 'Eng. Andrew Nabeta',
-            phone: '+256 772 100 206',
-            leakCrewLeader: 'Isaac Wafula (Crew Lead)',
-            treatmentPlant: 'Masese Water Works',
-            activeTickets: 4,
-            slaScore: '95%',
-          },
-          {
-            id: 'br-mbale',
-            name: 'Mbale Mount Elgon Area',
-            manager: 'Eng. Timothy Masaba',
-            phone: '+256 772 100 207',
-            leakCrewLeader: 'Peter Wanyama (Crew Lead)',
-            treatmentPlant: 'Manafwa Gravity Flow System',
-            activeTickets: 7,
-            slaScore: '91%',
-          },
-        ],
-      },
-      {
-        id: 'western-reg',
-        name: 'Western & Albertine Corridor',
-        head: 'Eng. Herbert Tumusiime (Regional Manager)',
-        coverage: 'Mbarara, Fort Portal, Kasese, Kabale, Masaka, Hoima',
-        branches: [
-          {
-            id: 'br-mbarara',
-            name: 'Mbarara Rwizi Area Office',
-            manager: 'Eng. Joy Komugisha',
-            phone: '+256 772 100 208',
-            leakCrewLeader: 'Charles Asiimwe (Crew Lead)',
-            treatmentPlant: 'Ruharo Treatment Plant (River Rwizi)',
-            activeTickets: 5,
-            slaScore: '93%',
-          },
-        ],
-      },
-      {
-        id: 'northern-reg',
-        name: 'Northern & West Nile Region',
-        head: 'Eng. Geoffrey Odong (Regional Manager)',
-        coverage: 'Gulu, Arua, Lira, Kitgum, Nebbi',
-        branches: [
-          {
-            id: 'br-gulu',
-            name: 'Gulu Municipal Area Office',
-            manager: 'Eng. Christine Aryemo',
-            phone: '+256 772 100 209',
-            leakCrewLeader: 'Julius Ocitti (Crew Lead)',
-            treatmentPlant: 'Oyitino Dam & Treatment Facility',
-            activeTickets: 6,
-            slaScore: '90%',
-          },
-        ],
-      },
-    ];
-  }, []);
+  }, [isNwsc, activeCountry, gov]);
 
   const currentRegion = regionalNetworks.find((r) => r.id === selectedRegionId) || regionalNetworks[0];
 
   const handleIssueCredential = (branch: any, roleName: string) => {
-    const code = `UG-NWSC-${Math.floor(1000 + Math.random() * 9000)}`;
+    const cleanAgencyCode = agencyName.split('(')[1]?.replace(/\W/g, '').slice(0, 5).toUpperCase() || deptId.toUpperCase().slice(0, 5);
+    const code = `${gov.codePrefix}-${cleanAgencyCode}-${Math.floor(1000 + Math.random() * 9000)}`;
     const newInvite: Invite = {
       code,
       name: branch.manager,
       title: `${branch.name} — ${roleName}`,
       role: 'node_admin',
       scope: branch.id,
-      dept: deptId || 'nwsc',
+      dept: deptId || 'utility',
       is_utility: true,
       used: false,
-      country: user?.country || 'UG',
+      country: activeCountry,
       duty_station: branch.name,
       contact_phone: branch.phone,
     };
     addInvite(newInvite);
 
     mintGovAccessCode(code, {
-      country: user?.country || 'UG',
-      dept: deptId || 'nwsc',
+      country: activeCountry,
+      dept: deptId || 'utility',
       scope: branch.id,
       role: 'node_admin',
       is_utility: true,
@@ -541,29 +425,17 @@ export const AgencySupervisionStructure: React.FC<AgencySupervisionStructureProp
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
-            <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={11} /> Crew Unit #01 · Nakasero CBD
+            {(regionalNetworks[0]?.branches || []).map((br, idx) => (
+              <div key={br.id} className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 size={11} /> Crew Unit #0{idx + 1} · {br.name}
+                </div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white">{br.leakCrewLeader}</div>
+                <div className="text-[10px] text-slate-500 font-mono">
+                  Unit Reg: {gov.utilityAgency.vehiclePrefix}-0{4 + idx}12-W · 4 Technicians
+                </div>
               </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white">Joseph Katamba (Lead)</div>
-              <div className="text-[10px] text-slate-500 font-mono">Truck Reg: UG-0412-W · 4 Technicians</div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={11} /> Crew Unit #02 · Nakawa Industrial
-              </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white">David Okot (Lead)</div>
-              <div className="text-[10px] text-slate-500 font-mono">Truck Reg: UG-0819-W · 4 Technicians</div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={11} /> Crew Unit #03 · Kawempe Booster
-              </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white">Sulaiman Walusimbi (Lead)</div>
-              <div className="text-[10px] text-slate-500 font-mono">Truck Reg: UG-1120-W · 4 Technicians</div>
-            </div>
+            ))}
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode, RoleType, Invite, TeamMember } from '../types';
 import { TERRITORY, COUNTRIES } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { ExecutiveTierAnalytics } from './ExecutiveTierAnalytics';
 import {
   Building2,
@@ -88,7 +89,8 @@ export const SubcountySupervisionStructure: React.FC<SubcountySupervisionStructu
   const [officerRole, setOfficerRole] = useState<RoleType>('spokesperson');
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  const country = user?.country || 'UG';
+  const country = (user?.country || 'UG') as CountryCode;
+  const gov = useMemo(() => getCountryGovernanceSchema(country), [country]);
   const districts = TERRITORY[country] || [];
 
   // Locate current district & subcounty
@@ -117,13 +119,13 @@ export const SubcountySupervisionStructure: React.FC<SubcountySupervisionStructu
 
   // Copy Transmittal Memo
   const handleCopyMemo = (parishName: string, inviteCode?: string, officerNameText?: string, titleText?: string) => {
-    const memo = `OFFICIAL STATUTORY DISPATCH — SUB-COUNTY CHIEF (SAS)
-Office: Senior Assistant Secretary (SAS), ${currentSubcounty?.name}
-To: ${officerNameText || 'Designated Officer'} (${titleText || 'Parish Chief / Town Agent Desk'}), ${parishName}
-Authority: Section 69, Local Governments Act (Cap. 243)
+    const memo = `OFFICIAL STATUTORY DISPATCH — ${gov.tier2Short.toUpperCase()}
+Office: ${gov.tier2Label}, ${currentSubcounty?.name}
+To: ${officerNameText || 'Designated Officer'} (${titleText || gov.tier1Label}), ${parishName}
+Authority: ${gov.localGovLawTier2}
 ${inviteCode ? `Gateway Access Key: ${inviteCode}\n` : ''}
 Mandate:
-You are hereby deployed to command this frontline statutory desk. Maintain continuous vigilance, process community civic tickets, monitor PDM SACCO revolving fund ledgers, and uphold the statutory 24-hour SLA standard. Authenticate at the government portal using your sovereign access key.`;
+You are hereby deployed to command this frontline statutory desk. Maintain continuous vigilance, process community civic tickets, monitor ${gov.fiscalProgramName} ledgers, and uphold the statutory 24-hour SLA standard. Authenticate at the government portal using your sovereign access key.`;
 
     navigator.clipboard.writeText(memo);
     setCopiedId(parishName);
@@ -131,51 +133,54 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
     setTimeout(() => setCopiedId(null), 3000);
   };
 
-  // 14 Statutory Desks / Field Technical Roster for Sub-County Operations
-  const fieldStaffTemplates = [
-    {
-      id: `${currentSubcounty?.id || 'sub'}-cdo`,
-      scopeKey: `${currentSubcounty?.id || 'sub'}-cdo`,
-      roleTitle: 'Community Development Officer (CDO)',
-      duty: 'Mobilizes women, youth, elderly and special interest groups; mediates community disputes and supervises PDM pillar 5.',
-      role: 'spokesperson' as RoleType,
-    },
-    {
-      id: `${currentSubcounty?.id || 'sub'}-agric`,
-      scopeKey: `${currentSubcounty?.id || 'sub'}-agric`,
-      roleTitle: 'Sub-County Agricultural & Vet Extension Officer',
-      duty: 'Inspects farmer enterprises, veterinary disease control, and PDM Pillar 1 agricultural inputs.',
-      role: 'spokesperson' as RoleType,
-    },
-    {
-      id: `${currentSubcounty?.id || 'sub'}-health`,
-      scopeKey: `${currentSubcounty?.id || 'sub'}-health`,
-      roleTitle: 'Sub-County Health Inspector',
-      duty: 'Conducts sanitation inspections, water source hygiene checks, and market food safety audits.',
-      role: 'spokesperson' as RoleType,
-    },
-    {
-      id: `${currentSubcounty?.id || 'sub'}-pdm`,
-      scopeKey: `${currentSubcounty?.id || 'sub'}-pdm`,
-      roleTitle: 'Parish Development Model (PDM) SACCO Clerk',
-      duty: 'Captures and monitors revolving fund disbursements and citizen financial inclusion records.',
-      role: 'spokesperson' as RoleType,
-    },
-    {
-      id: `${currentSubcounty?.id || 'sub'}-rev`,
-      scopeKey: `${currentSubcounty?.id || 'sub'}-rev`,
-      roleTitle: 'Sub-County Revenue & Accounts Assistant',
-      duty: 'Local revenue collection, trading license assessments, and sub-county petty cash records.',
-      role: 'read_only' as RoleType,
-    },
-    {
-      id: `${currentSubcounty?.id || 'sub'}-tech-custom`,
-      scopeKey: `${currentSubcounty?.id || 'sub'}-tech-custom`,
-      roleTitle: '+ Others (Specify Technical Desk)',
-      duty: 'Appoint any other specialized sub-county post such as Physical Planner, Sub-County Engineer, or Commercial Assistant.',
-      role: 'spokesperson' as RoleType,
-    },
-  ];
+  // Statutory Desks / Field Technical Roster for Tier 2 Operations
+  const fieldStaffTemplates = useMemo(
+    () => [
+      {
+        id: `${currentSubcounty?.id || 'sub'}-cdo`,
+        scopeKey: `${currentSubcounty?.id || 'sub'}-cdo`,
+        roleTitle: 'Community Development Officer (CDO)',
+        duty: `Mobilizes women, youth, elderly and special interest groups; mediates community disputes and supervises ${gov.fiscalProgramName} social mobilization.`,
+        role: 'spokesperson' as RoleType,
+      },
+      {
+        id: `${currentSubcounty?.id || 'sub'}-agric`,
+        scopeKey: `${currentSubcounty?.id || 'sub'}-agric`,
+        roleTitle: `${gov.tier2UnitLabel} Agricultural & Vet Extension Officer`,
+        duty: `Inspects farmer enterprises, veterinary disease control, and ${gov.fiscalProgramName} agricultural inputs.`,
+        role: 'spokesperson' as RoleType,
+      },
+      {
+        id: `${currentSubcounty?.id || 'sub'}-health`,
+        scopeKey: `${currentSubcounty?.id || 'sub'}-health`,
+        roleTitle: `${gov.tier2UnitLabel} Health Inspector`,
+        duty: 'Conducts sanitation inspections, water source hygiene checks, and market food safety audits.',
+        role: 'spokesperson' as RoleType,
+      },
+      {
+        id: `${currentSubcounty?.id || 'sub'}-pdm`,
+        scopeKey: `${currentSubcounty?.id || 'sub'}-pdm`,
+        roleTitle: `${gov.fiscalProgramName} Compliance Clerk`,
+        duty: 'Captures and monitors community development disbursements and citizen financial inclusion records.',
+        role: 'spokesperson' as RoleType,
+      },
+      {
+        id: `${currentSubcounty?.id || 'sub'}-rev`,
+        scopeKey: `${currentSubcounty?.id || 'sub'}-rev`,
+        roleTitle: `${gov.tier2UnitLabel} Revenue & Accounts Assistant`,
+        duty: `Local revenue collection, trading license assessments, and ${gov.tier2UnitLabel.toLowerCase()} petty cash records.`,
+        role: 'read_only' as RoleType,
+      },
+      {
+        id: `${currentSubcounty?.id || 'sub'}-tech-custom`,
+        scopeKey: `${currentSubcounty?.id || 'sub'}-tech-custom`,
+        roleTitle: '+ Others (Specify Technical Desk)',
+        duty: `Appoint any other specialized ${gov.tier2UnitLabel.toLowerCase()} post such as Physical Planner, Civil Engineer, or Commercial Assistant.`,
+        role: 'spokesperson' as RoleType,
+      },
+    ],
+    [currentSubcounty?.id, gov]
+  );
 
   // Derive Parish Desk Telemetry (Active vs. Pending vs. Vacant)
   const parishOfficers = useMemo(() => {
@@ -310,9 +315,9 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
       return;
     }
 
-    const cleanDept = user?.dept || 'kcca';
+    const cleanDept = user?.dept || gov.superadminDeptId;
     const randomHex = Math.floor(1000 + Math.random() * 9000);
-    const code = `UG-${cleanDept.toUpperCase()}-${randomHex}`;
+    const code = `${gov.codePrefix}-${cleanDept.toUpperCase()}-${randomHex}`;
 
     const newInvite: Invite = {
       code,
@@ -326,7 +331,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
       country,
       duty_station: inviteModal.stationName,
       contact_phone: officerPhone.trim() || undefined,
-      invited_by: user?.officer_name || user?.name || 'Senior Assistant Secretary (SAS)',
+      invited_by: user?.officer_name || user?.name || gov.tier2Label,
       invited_at: new Date().toISOString(),
       hierarchy_level: inviteModal.isFieldDesk ? 'tier2_subcounty' : 'tier1_parish',
       escalation_rank: inviteModal.isFieldDesk ? 2 : 1,
@@ -381,7 +386,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
     standDownTeamMember(
       memberId,
       'Administrative Reorganization / Transfer',
-      `Stood down by Sub-County Chief on ${new Date().toLocaleDateString('en-GB')}`
+      `Stood down by ${gov.tier2Short} on ${new Date().toLocaleDateString('en-GB')}`
     );
     toast(`Official ${memberName} stood down. ${stationNameStr} desk is now VACANT for new appointment.`, 'amber');
   };
@@ -397,17 +402,17 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-                Tier 2 — Sub-County Local Government
+                Tier 2 — {gov.tier2UnitLabel} Local Government
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                {currentSubcounty?.name || 'Sub-County Headquarters'}
+                {currentSubcounty?.name || `${gov.tier2UnitLabel} Headquarters`}
               </span>
             </div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">
-              Production Parish Command &amp; Station Telemetry
+              Production {gov.tier1UnitLabel} Command &amp; Station Telemetry
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl leading-relaxed">
-              Statutory invite-first supervision under Section 69, Local Governments Act (Cap. 243). A desk node head invites first; once accepted, the official enlists into the active section for continuous supervision. Vacant section strictly lists unfilled stations.
+              Statutory invite-first supervision under {gov.localGovLawTier2}. A desk node head invites first; once accepted, the official enlists into the active section for continuous supervision. Vacant section strictly lists unfilled stations.
             </p>
           </div>
         </div>
@@ -456,7 +461,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
           }`}
         >
           <MapPin size={14} />
-          Parish Command &amp; Stations ({parishes.length})
+          {gov.tier1UnitLabel} Command &amp; Stations ({parishes.length})
         </button>
 
         <button
@@ -468,7 +473,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
           }`}
         >
           <Users size={14} />
-          Sub-County Field Operations ({fieldStaffTemplates.length})
+          {gov.tier2UnitLabel} Field Operations ({fieldStaffTemplates.length})
         </button>
 
         <button
@@ -492,7 +497,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
           }`}
         >
           <Shield size={14} />
-          Supervising CAO Chain of Command
+          Supervising {gov.tier3Short} Chain of Command
         </button>
       </div>
 
@@ -508,7 +513,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter Parishes, Wards or Appointees..."
+                  placeholder={`Filter ${gov.tier1Plural} or Appointees...`}
                   className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
               </div>
@@ -624,7 +629,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
               <div className="flex items-center gap-2">
                 <UserCheck size={15} className="shrink-0 text-emerald-600" />
                 <span>
-                  <strong>Active Section:</strong> Officially accepted and sworn parish chiefs, easily supervisable by the Sub-County Accounting Officer (SAS) with real-time 24h SLA and PDM telemetry.
+                  <strong>Active Section:</strong> Officially accepted and sworn {gov.tier1Short} officers, easily supervisable by the {gov.tier2Label} with real-time 24h SLA and {gov.fiscalProgramName} telemetry.
                 </span>
               </div>
             </div>
@@ -664,7 +669,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          Tier 1 (Parish)
+                          Tier 1 ({gov.tier1UnitLabel})
                         </span>
                         {status === 'operational' ? (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
@@ -684,7 +689,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
 
                     <div className="text-xs mb-2">
                       <span className="font-semibold text-teal-700 dark:text-teal-400">
-                        Parish Chief / Town Agent Desk
+                        {gov.tier1Label} Desk
                       </span>
                     </div>
 
@@ -707,7 +712,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                           </div>
                           <div className="text-[10px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                             <CheckCircle2 size={10} />
-                            <span>Supervised: 24h SLA Active &bull; PDM SACCO Verified</span>
+                            <span>Supervised: 24h SLA Active &bull; {gov.fiscalProgramName} Verified</span>
                           </div>
                         </div>
                       ) : status === 'pending' && pendingInvite ? (
@@ -739,7 +744,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                     </div>
 
                     <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
-                      <span>PDM SACCO Unit</span>
+                      <span>{gov.fiscalProgramName} Unit</span>
                       <span>24h Community SLA</span>
                     </div>
                   </div>
@@ -752,8 +757,8 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                         onClick={() =>
                           handleOpenInviteModal(
                             parish.id,
-                            `${parish.name} Parish`,
-                            `Parish Chief, ${parish.name}`,
+                            `${parish.name} ${gov.tier1UnitLabel}`,
+                            `${gov.tier1Short}, ${parish.name}`,
                             'spokesperson',
                             false
                           )
@@ -828,7 +833,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
-                    <th className="py-2.5 px-3">Parish / Ward</th>
+                    <th className="py-2.5 px-3">{gov.tier1UnitLabel}</th>
                     <th className="py-2.5 px-3">Statutory Desk</th>
                     <th className="py-2.5 px-3">Official Appointee</th>
                     <th className="py-2.5 px-3">Status</th>
@@ -847,7 +852,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                         <div className="text-[10px] text-slate-400 font-mono">{parish.id}</div>
                       </td>
                       <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">
-                        Parish Chief / Town Agent
+                        {gov.tier1Short}
                       </td>
                       <td className="py-2.5 px-3">
                         {status === 'operational' && activeOfficer ? (
@@ -890,11 +895,11 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                       <td className="py-2.5 px-3 text-[11px] text-slate-600 dark:text-slate-300">
                         {status === 'operational' ? (
                           <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-                            <CheckCircle2 size={11} /> 24h SLA Active &bull; PDM Verified
+                            <CheckCircle2 size={11} /> 24h SLA Active &bull; {gov.fiscalProgramName} Verified
                           </span>
                         ) : status === 'pending' ? (
                           <span className="text-amber-600 dark:text-amber-400 font-mono">
-                            Dispatched by SAS &bull; Pending Gateway Login
+                            Dispatched by {gov.tier2Short} &bull; Pending Gateway Login
                           </span>
                         ) : (
                           <span className="text-slate-400 italic">No telemetry until appointed</span>
@@ -908,8 +913,8 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                               onClick={() =>
                                 handleOpenInviteModal(
                                   parish.id,
-                                  `${parish.name} Parish`,
-                                  `Parish Chief, ${parish.name}`,
+                                  `${parish.name} ${gov.tier1UnitLabel}`,
+                                  `${gov.tier1Short}, ${parish.name}`,
                                   'spokesperson',
                                   false
                                 )
@@ -1149,25 +1154,25 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Supervising Authority</div>
             <div className="text-base font-bold text-slate-900 dark:text-white">
-              Chief Administrative Officer (CAO)
+              {gov.tier3Label}
             </div>
             <div className="text-xs text-teal-600 dark:text-teal-400 font-medium">
-              {currentDistrict?.name} District Administration
+              {currentDistrict?.name} {gov.tier3UnitLabel} Administration
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              As Sub-County Chief, you report directly to the Chief Administrative Officer (CAO) under Section 64 &amp; 69 of the Local Governments Act. Unresolved LLG tickets escalate automatically to the CAO.
+              As {gov.tier2Short}, you report directly to the {gov.tier3Label} under {gov.localGovLawTier2}. Unresolved {gov.tier2UnitLabel.toLowerCase()} tickets escalate automatically to the {gov.tier3Short}.
             </p>
           </div>
 
           <div className="p-4 rounded-xl border border-teal-100 dark:border-teal-900/40 bg-teal-50/50 dark:bg-teal-950/20 space-y-2">
             <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
-              Sub-County Operational Authority
+              {gov.tier2UnitLabel} Operational Authority
             </div>
             <div className="text-base font-bold text-slate-900 dark:text-white">
               {currentSubcounty?.name}
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Your administrative mandate is strictly confined to {currentSubcounty?.name} and its {parishes.length} parishes. You cannot issue access codes for officers in other sub-counties or higher district headquarters.
+              Your administrative mandate is strictly confined to {currentSubcounty?.name} and its {parishes.length} {gov.tier1Plural.toLowerCase()}. You cannot issue access codes for officers in other {gov.tier2Plural.toLowerCase()} or higher {gov.tier3UnitLabel.toLowerCase()} headquarters.
             </p>
           </div>
         </div>
@@ -1217,7 +1222,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                 <input
                   type="text"
                   disabled
-                  value={`${inviteModal.stationName} (${inviteModal.isFieldDesk ? 'Tier 2 Field Desk' : 'Tier 1 Parish Desk'})`}
+                  value={`${inviteModal.stationName} (${inviteModal.isFieldDesk ? `Tier 2 Field Desk` : `Tier 1 ${gov.tier1UnitLabel} Desk`})`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono"
                 />
               </div>
@@ -1233,7 +1238,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                   autoFocus
                   value={officerName}
                   onChange={(e) => setOfficerName(e.target.value)}
-                  placeholder="e.g. Wasswa Michael (Type Officer's Real Legal Name)"
+                  placeholder={`e.g. ${country === 'UG' ? 'Wasswa Michael' : `${gov.tier1Short} Appointee`} (Type Officer's Real Legal Name)`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -1241,26 +1246,26 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                 </span>
               </div>
 
-              {/* 1-Click Direct Report Presets (SAS Central Division) Station Specific */}
+              {/* 1-Click Direct Report Presets */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] mono text-slate-500 uppercase tracking-wider font-bold">
-                    1-Click Direct Report Presets ({user?.real_title_short || 'SAS Central Division'})
+                    1-Click Direct Report Presets ({user?.real_title_short || gov.tier2Short})
                   </span>
                   <span className="text-[9px] mono text-teal-600 dark:text-teal-400 font-bold">Station Specific</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {[
-                    { id: 'parish_chief', label: 'Parish Chief / Ward Agent (Direct Report)', title: 'Parish Chief / Ward Agent (Direct Report)', role: 'spokesperson' as RoleType },
+                    { id: 'parish_chief', label: `${gov.tier1Short} (Direct Report)`, title: `${gov.tier1Short} (Direct Report)`, role: 'spokesperson' as RoleType },
                     { id: 'cdo', label: 'Community Development Officer (CDO)', title: 'Community Development Officer (CDO)', role: 'spokesperson' as RoleType },
                     { id: 'agric', label: 'Agric / Veterinary Extension Lead', title: 'Agric / Veterinary Extension Lead', role: 'spokesperson' as RoleType },
-                    { id: 'health_insp', label: 'Sub-County Health Inspector', title: 'Sub-County Health Inspector', role: 'spokesperson' as RoleType },
-                    { id: 'pdm_clerk', label: 'PDM SACCO Data Clerk', title: 'PDM SACCO Data Clerk', role: 'spokesperson' as RoleType },
-                    { id: 'sub_revenue', label: 'Sub-County Revenue Collector', title: 'Sub-County Revenue Collector', role: 'read_only' as RoleType },
+                    { id: 'health_insp', label: `${gov.tier2UnitLabel} Health Inspector`, title: `${gov.tier2UnitLabel} Health Inspector`, role: 'spokesperson' as RoleType },
+                    { id: 'pdm_clerk', label: `${gov.fiscalProgramName} Data Clerk`, title: `${gov.fiscalProgramName} Data Clerk`, role: 'spokesperson' as RoleType },
+                    { id: 'sub_revenue', label: `${gov.tier2UnitLabel} Revenue Collector`, title: `${gov.tier2UnitLabel} Revenue Collector`, role: 'read_only' as RoleType },
                     { id: 'others', label: '+ Others (specify)', title: '', role: 'spokesperson' as RoleType },
                   ].map((preset) => {
                     const isSelected = preset.id === 'others'
-                      ? officerTitle !== '' && !['Parish Chief / Ward Agent (Direct Report)', 'Community Development Officer (CDO)', 'Agric / Veterinary Extension Lead', 'Sub-County Health Inspector', 'PDM SACCO Data Clerk', 'Sub-County Revenue Collector'].includes(officerTitle)
+                      ? officerTitle !== '' && ![`${gov.tier1Short} (Direct Report)`, 'Community Development Officer (CDO)', 'Agric / Veterinary Extension Lead', `${gov.tier2UnitLabel} Health Inspector`, `${gov.fiscalProgramName} Data Clerk`, `${gov.tier2UnitLabel} Revenue Collector`].includes(officerTitle)
                       : officerTitle === preset.title;
                     return (
                       <button
@@ -1300,7 +1305,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                     Official Designation / Title <span className="text-rose-500">*</span>
                   </label>
                   <span className="text-[10px] font-mono text-teal-600 dark:text-teal-400 font-semibold">
-                    Sub-County LLG Desks
+                    {gov.tier2UnitLabel} Local Desks
                   </span>
                 </div>
                 <input
@@ -1310,7 +1315,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                   required
                   value={officerTitle}
                   onChange={(e) => setOfficerTitle(e.target.value)}
-                  placeholder="e.g. Parish Chief / Ward Agent / Community Development Officer"
+                  placeholder={`e.g. ${gov.tier1Short} / Community Development Officer`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -1327,7 +1332,7 @@ You are hereby deployed to command this frontline statutory desk. Maintain conti
                   type="tel"
                   value={officerPhone}
                   onChange={(e) => setOfficerPhone(e.target.value)}
-                  placeholder="e.g. +256 772 000 000"
+                  placeholder={`e.g. ${gov.samplePhone}`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
                 />
               </div>

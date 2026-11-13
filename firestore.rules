@@ -68,8 +68,12 @@ service cloud.firestore {
           // Action: Upvote or Downvote
           incoming().diff(existing()).affectedKeys().hasOnly(['upvotes']) ||
           incoming().diff(existing()).affectedKeys().hasOnly(['downvotes']) ||
-          // Action: Compile witness reports & co-sign Master Dossier
-          incoming().diff(existing()).affectedKeys().hasOnly(['compiled_reports', 'compiled_count', 'upvotes', 'escalated', 'is_master_dossier', 'merged_from_ids']) ||
+          // Action: Compile witness reports, co-sign, & engage with Master Dossier submissions
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['compiled_reports', 'compiled_count', 'upvotes', 'escalated', 'is_master_dossier', 'merged_from_ids', 'lead_likes', 'featured_submission_id']) &&
+            (!('lead_likes' in incoming()) || (incoming().lead_likes is number && incoming().lead_likes >= 0)) &&
+            (!('featured_submission_id' in incoming()) || (incoming().featured_submission_id is string && incoming().featured_submission_id.size() <= 128))
+          ) ||
           // Action: Status update by official or citizen resolution feedback
           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'gov_status', 'comments', 'citizen_satisfied'])
         ))

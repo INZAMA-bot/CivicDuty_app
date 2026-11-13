@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { OfficialQueryCategory, OfficialQuery } from '../types';
 import { ShieldAlert, Send, X, Clock, AlertTriangle, Scale, FileText, CheckCircle2 } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
+import { getCountryGovernanceSchema, CountryGovernanceSchema } from '../data/countryGovernance';
 import { ModalPortal } from './ModalPortal';
 
 interface OfficialQueryDispatchModalProps {
@@ -19,21 +20,23 @@ interface OfficialQueryDispatchModalProps {
   onSuccess?: (query: OfficialQuery) => void;
 }
 
-const CATEGORY_PRESETS: Record<OfficialQueryCategory, { label: string; defaultSubject: string; defaultGrounds: string }> = {
+const buildCategoryPresets = (
+  gov: CountryGovernanceSchema
+): Record<OfficialQueryCategory, { label: string; defaultSubject: string; defaultGrounds: string }> => ({
   sla_breach: {
     label: 'Statutory SLA Breach (>48h Turnaround)',
     defaultSubject: 'Failure to Comply with Statutory 48-Hour Grievance Resolution Window',
     defaultGrounds: 'Official supervisory telemetry indicates critical citizen reports have remained unresolved beyond the statutory service level threshold without administrative justification or formal extension request.',
   },
   pdm_irregularity: {
-    label: 'PDM SACCO Ledger & Beneficiary Irregularity',
-    defaultSubject: 'Irregularity in Parish Development Model Revolving Fund Vetting & Disbursement',
-    defaultGrounds: 'Discrepancies reported in household verification rosters or delayed clearance of SACCO beneficiary disbursements contrary to national PDM financial operating guidelines.',
+    label: `${gov.fiscalProgramName} & Beneficiary Irregularity`,
+    defaultSubject: `Irregularity in ${gov.fiscalProgramName} Vetting & Disbursement`,
+    defaultGrounds: `Discrepancies reported in household verification rosters or delayed clearance of beneficiary disbursements contrary to ${gov.countryName} statutory operating guidelines.`,
   },
   unattended_reports: {
     label: 'Unattended High-Severity Civic Petitions',
-    defaultSubject: 'Persistent Unaddressed Public Health and Infrastructure Dispatches',
-    defaultGrounds: 'Repeated citizen notifications regarding urgent municipal/sub-county infrastructure disruptions remain unacknowledged, resulting in avoidable community hardship.',
+    defaultSubject: `Persistent Unaddressed Public Health and ${gov.tier2UnitLabel} Dispatches`,
+    defaultGrounds: `Repeated citizen notifications regarding urgent municipal/${gov.tier2UnitLabel.toLowerCase()} infrastructure disruptions remain unacknowledged, resulting in avoidable community hardship.`,
   },
   desk_abandonment: {
     label: 'Officer Absenteeism & Desk Abandonment',
@@ -51,21 +54,21 @@ const CATEGORY_PRESETS: Record<OfficialQueryCategory, { label: string; defaultSu
     defaultGrounds: 'Formal inquiry into overall supervisory lagging, incomplete field inspection logs, and non-submission of periodic local governance returns.',
   },
   ministerial_directive: {
-    label: 'Apex Ministerial Policy Directive (Arts 111 & 117)',
+    label: `Apex Ministerial Policy Directive (${gov.cabinetMandateCitation})`,
     defaultSubject: 'Compliance with Cabinet Ministerial Statutory Policy Directive',
-    defaultGrounds: 'Promulgated directive from the Minister of Local Government commanding immediate policy compliance, municipal enforcement review, or council tenure directives.',
+    defaultGrounds: `Promulgated directive from the ${gov.superadminMinistry} commanding immediate policy compliance, municipal enforcement review, or council tenure directives.`,
   },
   anti_graft_taskforce: {
     label: 'Anti-Extortion Taskforce Referral',
     defaultSubject: 'Ministerial Rapid Taskforce Inquiry on Municipal Extortion & Unlawful Levies',
-    defaultGrounds: 'Executive taskforce investigation initiated into illegal market cartels, unauthorized boda-boda stage receipts, and extortion syndicates.',
+    defaultGrounds: 'Executive taskforce investigation initiated into illegal market cartels, unauthorized transit stage receipts, and extortion syndicates.',
   },
   field_audit_inquiry: {
-    label: 'Grassroots Field Vigilance & PDM Sacco Audit',
-    defaultSubject: 'Surprise Field Inspection Inquiry on PDM Seed Capital & Town Agent Books',
-    defaultGrounds: 'Unannounced inspection identified discrepancies in PDM Sacco disbursement books, missing beneficiary records, or bribery of public development funds.',
+    label: `Grassroots Field Vigilance & ${gov.fiscalProgramName} Audit`,
+    defaultSubject: `Surprise Field Inspection Inquiry on ${gov.fiscalProgramName} & ${gov.tier1Short} Books`,
+    defaultGrounds: `Unannounced inspection identified discrepancies in ${gov.fiscalProgramName} disbursement books, missing beneficiary records, or misappropriation of public development funds.`,
   },
-};
+});
 
 export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProps> = ({
   initialTarget,
@@ -75,6 +78,8 @@ export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProp
   const { user, issueOfficialQuery } = useApp();
   const countryCode = user?.country || 'UG';
   const countryObj = COUNTRIES[countryCode] || { name: countryCode, flag: countryCode };
+  const gov = getCountryGovernanceSchema(countryCode);
+  const CATEGORY_PRESETS = buildCategoryPresets(gov);
 
   const [category, setCategory] = useState<OfficialQueryCategory>('sla_breach');
   const [targetUnit, setTargetUnit] = useState(initialTarget?.unitName || '');
@@ -197,7 +202,7 @@ export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProp
                 required
                 value={targetUnit}
                 onChange={(e) => setTargetUnit(e.target.value)}
-                placeholder="e.g. Makindye Division - Kibuye II Parish"
+                placeholder={`e.g. ${gov.sampleJurisdictions[0] || gov.tier1UnitLabel}`}
                 className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-700 font-medium text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-rose-500"
               />
             </div>
@@ -211,7 +216,7 @@ export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProp
                 required
                 value={targetOfficer}
                 onChange={(e) => setTargetOfficer(e.target.value)}
-                placeholder="e.g. Parish Chief / SAS John Kato"
+                placeholder={`e.g. ${gov.tier1Short} / ${gov.tier2Short}`}
                 className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-700 font-medium text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-rose-500"
               />
             </div>
@@ -266,7 +271,7 @@ export const OfficialQueryDispatchModal: React.FC<OfficialQueryDispatchModalProp
                 Statutory Response Window:
               </span>
               <span className="text-[10px] text-slate-500">
-                Failure to respond triggers automatic escalation to Anti-Corruption Body (IGG/SHACU)
+                Failure to respond triggers automatic escalation to {gov.ombudsman.name} ({gov.ombudsman.shortName})
               </span>
             </div>
             <div className="flex items-center gap-1.5">

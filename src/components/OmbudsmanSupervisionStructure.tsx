@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { RoleType, TeamMember, Invite } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   Shield,
   Scale,
@@ -41,219 +42,102 @@ interface OmbudsmanSupervisionStructureProps {
 export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructureProps> = ({
   onPrefillManualForm,
 }) => {
-  const { user, toast, mintGovAccessCode, addInvite, logAudit } = useApp();
+  const { user, toast, mintGovAccessCode, addInvite } = useApp();
+  const activeCountry = (user?.country || 'UG').toUpperCase();
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
 
   const [activeTab, setActiveTab] = useState<'directorates' | 'regional' | 'whistleblower' | 'freeze'>('directorates');
-  const [selectedBureauId, setSelectedBureauId] = useState<string>('bur-kampala');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBureauId, setSelectedBureauId] = useState<string>('');
 
-  // Executive Chambers Roster
-  const executiveChambers = useMemo(
-    () => [
-      {
-        id: 'igg-apex',
-        title: 'Inspector General of Government (IGG)',
-        name: 'Hon. Beti Kamya Turwomwe',
-        mandate: 'Constitutional Head of the Inspectorate of Government (Chapter 13 Ombudsman). Supreme investigatory and prosecutorial power.',
-        email: 'igg@igg.go.ug',
-        phone: '+256 414 344 219',
-        division: 'Executive Chambers',
-      },
-      {
-        id: 'digg-anti-corruption',
-        title: 'Deputy Inspector General of Government (Anti-Corruption)',
-        name: 'Anne Twinomugisha Muhairwe',
-        mandate: 'Supervises Directorate of Anti-Corruption, Special Investigations, and Asset Recovery Unit.',
-        email: 'digg.corruption@igg.go.ug',
-        phone: '+256 414 344 220',
-        division: 'Special Investigations Wing',
-      },
-      {
-        id: 'digg-ombudsman',
-        title: 'Deputy Inspector General of Government (Ombudsman Affairs)',
-        name: 'Dr. Patricia Achan Okiria',
-        mandate: 'Supervises Directorate of Ombudsman Affairs, Citizen Grievance Redress, and Administrative Justice.',
-        email: 'digg.ombudsman@igg.go.ug',
-        phone: '+256 414 344 221',
-        division: 'Ombudsman & Grievance Wing',
-      },
-      {
-        id: 'sec-inspectorate',
-        title: 'Secretary to the Inspectorate of Government',
-        name: 'Mrs. Rose Kafeero',
-        mandate: 'Accounting Officer of the Inspectorate, responsible for national bureau logistics, warrants, and personnel.',
-        email: 'secretary@igg.go.ug',
-        phone: '+256 414 344 225',
-        division: 'Administration & Finance Directorate',
-      },
-    ],
-    []
-  );
+  const executiveChambers = useMemo(() => gov.ombudsman.executives, [gov]);
 
-  // 3 Core Constitutional Directorates
+  // 3 Core Constitutional Directorates tailored to the country's Ombudsman
   const directorates = useMemo(
     () => [
       {
         id: 'dir-ombudsman',
-        name: 'Directorate of Ombudsman Affairs',
+        name: 'Directorate of Ombudsman Affairs & Administrative Justice',
         lead: 'Director of Ombudsman Inquiries',
-        focus: 'Administrative injustice, unfair dismissal, delayed pensions, abuse of office, and public service standing orders compliance.',
-        activeInquiries: 247,
-        resolvedThisMonth: 68,
+        focus: `Administrative injustice, service delivery delays, abuse of office, and statutory compliance across ${gov.countryName}.`,
+        activeInquiries: activeCountry === 'UG' ? 247 : 128,
+        resolvedThisMonth: activeCountry === 'UG' ? 68 : 49,
         powers: [
           'Hear citizen petitions against public bodies',
-          'Summon accounting officers for mediation',
-          'Enforce remedy recommendations under Article 225',
+          `Summon ${gov.tier3Short}s & accounting officers for mediation`,
+          `Enforce remedy orders under ${gov.ombudsman.shortName} mandate`,
         ],
       },
       {
         id: 'dir-corruption',
         name: 'Directorate of Anti-Corruption & Special Investigations',
         lead: 'Director of Forensic Audits & Special Investigations',
-        focus: 'Public procurement fraud, ghost payrolls, capex embezzlement, syndicate kickbacks, and asset tracking & forfeiture.',
-        activeInquiries: 184,
-        resolvedThisMonth: 32,
+        focus: `Public procurement fraud, payroll anomalies, capex embezzlement, and public asset recovery (${gov.fiscalAct}).`,
+        activeInquiries: activeCountry === 'UG' ? 184 : 96,
+        resolvedThisMonth: activeCountry === 'UG' ? 32 : 24,
         powers: [
-          'Execute search warrants and seize financial records',
-          'Order lifestyle audits on suspected public officers',
-          'Refer for direct trial at the Anti-Corruption Court',
+          'Execute audit warrants and inspect procurement records',
+          'Order forensic audits on stalled capex disbursements',
+          'Refer substantiated dockets to anti-corruption prosecution',
         ],
       },
       {
         id: 'dir-leadership',
-        name: 'Directorate of Leadership Code Compliance',
-        lead: 'Director of Leadership Code',
-        focus: 'Annual declaration of income, assets and liabilities by all public leaders, conflict of interest, and illicit enrichment prosecution.',
-        activeInquiries: 512,
-        resolvedThisMonth: 114,
+        name: 'Directorate of Ethics, Wealth Declaration & Integrity Code',
+        lead: 'Director of Leadership Code Compliance',
+        focus: `Periodic declaration of income, assets and liabilities by public leaders and whistleblower protection (${gov.ombudsman.whistleblowingAct}).`,
+        activeInquiries: activeCountry === 'UG' ? 512 : 210,
+        resolvedThisMonth: activeCountry === 'UG' ? 114 : 64,
         powers: [
-          'Verify bi-annual leader wealth declarations',
-          'Investigate undeclared offshore or domestic properties',
-          'Recommend dismissal of non-compliant public officers',
+          'Verify mandatory public leader integrity declarations',
+          'Audit conflict-of-interest disclosures in tenders',
+          'Recommend statutory sanctions for non-compliant officials',
         ],
       },
     ],
-    []
+    [gov, activeCountry]
   );
 
-  // 16 Regional Ombudsman Bureaus Across Uganda
   const regionalBureaus = useMemo(
-    () => [
-      {
-        id: 'bur-kampala',
-        name: 'Kampala Metropolitan Regional Bureau',
-        location: 'Jubilee Insurance Centre, Parliament Avenue, Kampala',
-        officer: 'Mr. David Makumbi (Senior Regional Inspector)',
-        phone: '+256 414 259 788',
-        districtsCovered: 'Kampala, Wakiso, Mukono, Mpigi',
-        activeCases: 89,
-        status: 'high_priority',
-      },
-      {
-        id: 'bur-gulu',
-        name: 'Gulu Regional Ombudsman Bureau',
-        location: 'Plot 17, Airfield Road, Gulu City',
-        officer: 'Ms. Grace Atim (Senior Regional Inspector)',
-        phone: '+256 471 432 021',
-        districtsCovered: 'Gulu, Kitgum, Pader, Omoro, Nwoya, Amuru',
-        activeCases: 42,
-        status: 'active',
-      },
-      {
-        id: 'bur-arua',
-        name: 'Arua Regional Ombudsman Bureau',
-        location: 'Plot 3, Weatherhead Park Lane, Arua City',
-        officer: 'Mr. Ronald Anguyo (Senior Regional Inspector)',
-        phone: '+256 476 420 119',
-        districtsCovered: 'Arua, Nebbi, Zombo, Maracha, Koboko, Yumbe, Moyo',
-        activeCases: 38,
-        status: 'active',
-      },
-      {
-        id: 'bur-jinja',
-        name: 'Jinja Regional Ombudsman Bureau',
-        location: 'Plot 35, Bell Avenue West, Jinja City',
-        officer: 'Mr. Isaac Baliddawa (Senior Regional Inspector)',
-        phone: '+256 434 122 890',
-        districtsCovered: 'Jinja, Iganga, Kamuli, Mayuge, Bugiri',
-        activeCases: 35,
-        status: 'active',
-      },
-      {
-        id: 'bur-mbarara',
-        name: 'Mbarara Regional Ombudsman Bureau',
-        location: 'Plot 1, High Street, Mbarara City',
-        officer: 'Mr. Hillary Katusiime (Senior Regional Inspector)',
-        phone: '+256 485 421 002',
-        districtsCovered: 'Mbarara, Ntungamo, Bushenyi, Sheema, Isingiro, Kiruhura',
-        activeCases: 47,
-        status: 'active',
-      },
-      {
-        id: 'bur-mbale',
-        name: 'Mbale Regional Ombudsman Bureau',
-        location: 'Plot 19, Masaba Avenue, Mbale City',
-        officer: 'Mr. Timothy Wanjusi (Senior Regional Inspector)',
-        phone: '+256 454 433 210',
-        districtsCovered: 'Mbale, Tororo, Sironko, Manafwa, Bududa, Kapchorwa',
-        activeCases: 31,
-        status: 'active',
-      },
-      {
-        id: 'bur-fortportal',
-        name: 'Fort Portal Regional Ombudsman Bureau',
-        location: 'Plot 8, Ruhandika Street, Fort Portal City',
-        officer: 'Ms. Brenda Kemigisa (Senior Regional Inspector)',
-        phone: '+256 483 422 150',
-        districtsCovered: 'Kabarole, Kasese, Bundibugyo, Kyenjojo, Bunyangabu',
-        activeCases: 29,
-        status: 'active',
-      },
-      {
-        id: 'bur-soroti',
-        name: 'Soroti Regional Ombudsman Bureau',
-        location: 'Plot 14, Gweri Road, Soroti City',
-        officer: 'Mr. Peter Echegu (Senior Regional Inspector)',
-        phone: '+256 454 461 405',
-        districtsCovered: 'Soroti, Kumi, Katakwi, Serere, Kaberamaido, Ngora',
-        activeCases: 26,
-        status: 'active',
-      },
-    ],
-    []
+    () =>
+      gov.ombudsman.bureaus.map((b) => ({
+        ...b,
+        districtsCovered: b.coverage,
+      })),
+    [gov]
   );
 
   const selectedBureau = regionalBureaus.find((b) => b.id === selectedBureauId) || regionalBureaus[0];
 
   const handleIssueOmbudsmanCode = (targetName: string, roleTitle: string, bureauName: string) => {
-    const code = `UG-IGG-${Math.floor(1000 + Math.random() * 9000)}`;
+    const ombudsPrefix = gov.ombudsman.shortName.replace(/[^A-Z0-9]/gi, '').slice(0, 4).toUpperCase() || 'OMB';
+    const code = `${gov.codePrefix}-${ombudsPrefix}-${Math.floor(1000 + Math.random() * 9000)}`;
     const newInvite: Invite = {
       code,
       name: targetName,
       title: `${roleTitle} (${bureauName})`,
       role: 'node_admin',
       scope: bureauName,
-      dept: 'igg',
+      dept: ombudsPrefix.toLowerCase(),
       is_utility: false,
       used: false,
-      country: user?.country || 'UG',
+      country: activeCountry,
       duty_station: bureauName,
     };
     addInvite(newInvite);
 
     mintGovAccessCode(code, {
-      country: user?.country || 'UG',
-      dept: 'igg',
+      country: activeCountry,
+      dept: ombudsPrefix.toLowerCase(),
       scope: bureauName,
       role: 'node_admin',
       is_utility: false,
-      role_label: `Ombudsman Investigator (${bureauName})`,
+      role_label: `${gov.ombudsman.shortName} Investigator (${bureauName})`,
       real_title_short: roleTitle,
       officer_name: targetName,
       hierarchy_level: 'tier4_agency',
     });
 
-    toast(`Ombudsman warrant & access code ${code} issued for ${targetName}`, 'emerald');
+    toast(`${gov.ombudsman.shortName} warrant & access code ${code} issued for ${targetName}`, 'emerald');
   };
 
   return (
@@ -267,15 +151,15 @@ export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructu
                 <Scale size={11} className="text-emerald-400" /> Tier 4 · Constitutional Oversight
               </span>
               <span className="text-[10px] font-mono text-emerald-300/80">
-                Chapter 13 Ombudsman of the Republic of Uganda
+                {gov.ombudsman.constitutionalBasis}
               </span>
             </div>
             <h2 className="text-lg sm:text-2xl font-bold tracking-tight flex items-center gap-2">
               <Shield className="text-emerald-400 shrink-0" size={22} />
-              <span>Inspectorate of Government (IGG) — National Ombudsman Chambers</span>
+              <span>{gov.ombudsman.name} — Ombudsman Chambers ({gov.countryName})</span>
             </h2>
             <p className="text-xs text-emerald-100/80 leading-relaxed max-w-3xl">
-              Under Articles 223–232 of the Constitution and the Inspectorate of Government Act, the IGG possesses independent jurisdiction to eliminate corruption, redress administrative injustice, and enforce the Leadership Code of Conduct across all Ministries, Departments, Agencies, and Local Governments.
+              {gov.ombudsman.mandateSummary}
             </p>
           </div>
 
@@ -283,7 +167,7 @@ export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructu
             <div className="p-3 rounded-xl bg-emerald-900/40 border border-emerald-600/40 text-right">
               <div className="text-[10px] font-mono text-emerald-300 uppercase">Ombudsman Authority</div>
               <div className="text-base font-black text-white font-mono">SUPREME AUDIT</div>
-              <div className="text-[9.5px] text-emerald-300/80">16 Regional Bureaus Active</div>
+              <div className="text-[9.5px] text-emerald-300/80">{gov.ombudsman.regionalHubCountLabel}</div>
             </div>
           </div>
         </div>
@@ -313,7 +197,7 @@ export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructu
             }`}
           >
             <MapPin size={13} />
-            <span>16 Regional Ombudsman Bureaus</span>
+            <span>Regional Bureaus ({regionalBureaus.length})</span>
           </button>
 
           <button
@@ -429,12 +313,12 @@ export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructu
         </div>
       )}
 
-      {/* View: 16 Regional Bureaus */}
+      {/* View: Regional Bureaus */}
       {activeTab === 'regional' && (
         <div className="space-y-4">
           <div className="p-3 bg-slate-100 dark:bg-slate-800/60 rounded-xl text-xs text-slate-600 dark:text-slate-300 flex items-center justify-between flex-wrap gap-2">
             <span>
-              <strong>Decentralized Ombudsman Network:</strong> 16 Regional Inspectorates ensure citizens in all 146 districts can access the IGG without travelling to Kampala.
+              <strong>Decentralized Ombudsman Network:</strong> {gov.ombudsman.regionalNetworkLabel}
             </span>
             <span className="font-mono text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400">
               {regionalBureaus.length} Regional Hubs Loaded
@@ -464,13 +348,13 @@ export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructu
                       <Phone size={10} /> {bur.phone}
                     </div>
                     <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono mt-1">
-                      Districts: {bur.districtsCovered}
+                      Coverage: {bur.districtsCovered}
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-mono text-slate-500">Chapter 13 Warrant</span>
+                  <span className="text-[10px] font-mono text-slate-500">{gov.ombudsman.shortName} Warrant</span>
                   <button
                     type="button"
                     onClick={() => handleIssueOmbudsmanCode(bur.officer.split('(')[0].trim(), 'Regional Inspector', bur.name)}
@@ -495,40 +379,29 @@ export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructu
               <span>Cryptographically Shielded Whistleblower Protection Pipeline</span>
             </div>
             <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
-              Whistleblowers Protection Act 2010
+              {gov.ombudsman.whistleblowingAct}
             </span>
           </div>
 
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-            Whistleblower disclosures filed via CivicDuty are automatically stripped of IP addresses, device identifiers, and geo-metadata before reaching this docket. Submissions are hashed with SHA-256 for evidentiary preservation.
+            Whistleblower disclosures filed via CivicDuty in {gov.countryName} are automatically stripped of IP addresses, device identifiers, and geo-metadata before reaching {gov.ombudsman.shortName}. Submissions are hashed with SHA-256 for evidentiary preservation.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
-            <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="flex items-center justify-between text-[10px] font-mono">
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold">WB-2026-0812 · High Confidence</span>
-                <span className="text-slate-500">2h ago</span>
+            {gov.ombudsman.whistleblowerSamples.map((wb) => (
+              <div key={wb.ref} className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">{wb.ref} · {wb.tag}</span>
+                  <span className="text-slate-500">{wb.time}</span>
+                </div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                  {wb.title}
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                  Evidence: {wb.evidence}
+                </p>
               </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white">
-                Ghost Teachers on Local Government Payroll (Tororo District)
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                Evidence: Bank disbursement vouchers matching 14 deceased teachers still drawing monthly UPE salaries.
-              </p>
-            </div>
-
-            <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 space-y-1">
-              <div className="flex items-center justify-between text-[10px] font-mono">
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold">WB-2026-0809 · Urgent Capex</span>
-                <span className="text-slate-500">Yesterday</span>
-              </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white">
-                Culvert Substitution on Feeder Road Contract (Mbale Municipal)
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                Evidence: Unreinforced corrugated pipe installed instead of approved 900mm reinforced concrete box culverts.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       )}
@@ -539,15 +412,15 @@ export const OmbudsmanSupervisionStructure: React.FC<OmbudsmanSupervisionStructu
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2 text-rose-800 dark:text-rose-400 font-bold text-xs uppercase font-mono tracking-wider">
               <AlertOctagon size={15} />
-              <span>Section 12 Statutory Notice to Produce &amp; Project Interdiction</span>
+              <span>Statutory Notice to Produce &amp; Project Interdiction</span>
             </div>
             <span className="text-[10px] font-mono text-rose-700 dark:text-rose-300 font-bold">
-              Binding Article 230 Constitutional Powers
+              {gov.ombudsman.constitutionalBasis}
             </span>
           </div>
 
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-            The IGG may issue a binding directive to any Accounting Officer, Bank, or Municipal Council to freeze disbursement on a flagged contract or interdict an officer under active criminal inquiry.
+            {gov.ombudsman.name} may issue a binding directive to any {gov.countryName} Accounting Officer, Bank, or {gov.tier3UnitLabel} to freeze disbursement on a flagged contract or interdict an officer under active inquiry.
           </p>
 
           <div className="p-3 rounded-lg bg-white dark:bg-[#161a22] border border-rose-200 dark:border-rose-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">

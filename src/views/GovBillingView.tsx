@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { getDept } from '../utils/helpers';
 import { COUNTRIES } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { NoteBox } from '../components/NoteBox';
+import { CountryCode } from '../types';
 import {
   CreditCard,
   CheckCircle,
@@ -36,13 +38,20 @@ import { saveGatewayTransactionToCloud } from '../services/firestoreSync';
 export const GovBillingView: React.FC = () => {
   const { user, invoices, recordInvoicePayment, go, toast } = useApp();
 
+  const activeCountry = (user?.country || 'UG') as CountryCode;
+  const isUg = activeCountry === 'UG';
+  const gov = getCountryGovernanceSchema(activeCountry);
+  const countryCurrency = COUNTRIES[activeCountry]?.currency || gov.currency || 'USD';
+
   const [activeTab, setActiveTab] = useState<'status' | 'invoices' | 'pay' | 'integrations' | 'uganda_wealth'>('status');
-  const [payMethod, setPayMethod] = useState<'momo' | 'airtel' | 'paypack' | 'flutterwave' | 'stripe'>('paypack');
-  const [currency, setCurrency] = useState<'USD' | 'UGX' | 'KES' | 'NGN' | 'GHS' | 'RWF' | 'ZAR'>('RWF');
+  const [payMethod, setPayMethod] = useState<'momo' | 'airtel' | 'paypack' | 'flutterwave' | 'stripe'>(
+    activeCountry === 'RW' ? 'paypack' : isUg ? 'momo' : 'stripe'
+  );
+  const [currency, setCurrency] = useState<string>(countryCurrency);
   const [customAmount, setCustomAmount] = useState<string>('1500000');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
-  const [momoPhone, setMomoPhone] = useState('+256778277900');
-  const [payerEmail, setPayerEmail] = useState('treasury@gov.ug');
+  const [momoPhone, setMomoPhone] = useState(gov.samplePhone || '');
+  const [payerEmail, setPayerEmail] = useState(`treasury@${activeCountry.toLowerCase()}.gov`);
   const [cardNumber, setCardNumber] = useState('4111 2222 3333 4444');
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvv, setCardCvv] = useState('890');
@@ -50,6 +59,12 @@ export const GovBillingView: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [verifiedTx, setVerifiedTx] = useState<any | null>(null);
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrency(countryCurrency);
+    setMomoPhone(gov.samplePhone || '');
+    setPayerEmail(`treasury@${activeCountry.toLowerCase()}.gov`);
+  }, [activeCountry, countryCurrency, gov.samplePhone]);
 
   useEffect(() => {
     if (!user || !['node_admin', 'platform_admin'].includes(user.role)) {
@@ -61,7 +76,7 @@ export const GovBillingView: React.FC = () => {
     return null;
   }
 
-  const d = getDept(user.country, user.dept || 'kcca');
+  const d = getDept(user.country, user.dept || gov.superadminDeptId || 'molg');
   const myInvoices = invoices.filter(
     (inv) =>
       (!inv.country || inv.country === user.country) &&
@@ -87,7 +102,7 @@ export const GovBillingView: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entityId: user.dept || 'kcca',
+          entityId: user.dept || gov.superadminDeptId || 'gov',
           entityName: d.name,
           invoiceId: inv ? inv.id : 'INV-ADHOC-' + Math.floor(1000 + Math.random() * 9000),
           amount: amountVal,
@@ -159,7 +174,7 @@ export const GovBillingView: React.FC = () => {
           ['invoices', `Invoices (${myInvoices.length})`],
           ['pay', 'Payment Rails & Terminal'],
           ['integrations', 'GitHub & API Guide'],
-          ['uganda_wealth', '[UG] Uganda Registration & Wealth Engine'],
+          ['uganda_wealth', isUg ? '[UG] Uganda Registration & Wealth Engine' : `[${activeCountry}] ${gov.countryName} Launch & Revenue Engine`],
         ].map(([t, l]) => (
           <button
             key={t}
@@ -200,17 +215,17 @@ export const GovBillingView: React.FC = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Parish Coverage</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">{gov.tier1Short} Coverage</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-black">Free ($0 / mo)</span>
                 <span className="text-[10px] text-slate-500 block mt-0.5">Up to 2 Staff Seats</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Sub-County Tier</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">{gov.tier2Short} Tier</span>
                 <span className="text-slate-900 dark:text-white font-black">$5 / mo ($50/yr)</span>
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">Unlimited Staff Seats</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">District Tier</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">{gov.tier3UnitLabel} Tier</span>
                 <span className="text-slate-900 dark:text-white font-black">$10 / mo ($100/yr)</span>
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">Unlimited Staff Seats</span>
               </div>
@@ -225,7 +240,7 @@ export const GovBillingView: React.FC = () => {
           <NoteBox
             tone="emerald"
             title="Public Service Delivery Guarantee"
-            text="Citizen reporting, disciplinary dockets, and supervisory telemetry are never throttled during reconciliation cycles under national Public Finance Management regulations."
+            text={`Citizen reporting, disciplinary dockets, and supervisory telemetry are never throttled during reconciliation cycles under ${gov.countryName} fiscal management regulations.`}
           />
         </div>
       )}
@@ -429,7 +444,7 @@ export const GovBillingView: React.FC = () => {
                   type="text"
                   value={momoPhone}
                   onChange={(e) => setMomoPhone(e.target.value)}
-                  placeholder={payMethod === 'paypack' ? '+250788123456' : '+256778277900'}
+                  placeholder={gov.samplePhone || '+250788123456'}
                   className="w-full text-xs font-mono p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
                 />
               </div>
@@ -627,237 +642,340 @@ export const GovBillingView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 5: UGANDA REGISTRATION, LAUNCH & WEALTH ENGINE */}
+      {/* TAB 5: SOVEREIGN REGISTRATION, LAUNCH & WEALTH ENGINE */}
       {activeTab === 'uganda_wealth' && (
-        <div className="space-y-6">
-          {/* Executive Banner */}
-          <div className="bg-amber-50/70 dark:bg-slate-900 border border-amber-500/30 rounded-3xl p-6 relative overflow-hidden">
-            <div className="flex items-start justify-between relative z-10">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider">
-                  <ShieldCheck size={14} />
-                  <span>Uganda Corporate Registration &amp; Wealth Architecture</span>
+        isUg ? (
+          <div className="space-y-6">
+            {/* Executive Banner */}
+            <div className="bg-amber-50/70 dark:bg-slate-900 border border-amber-500/30 rounded-3xl p-6 relative overflow-hidden">
+              <div className="flex items-start justify-between relative z-10">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider">
+                    <ShieldCheck size={14} />
+                    <span>Uganda Corporate Registration &amp; Wealth Architecture</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                    From Local Startup to Sovereign Tech Monopoly
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+                    The definitive playbook to incorporate <strong>CivicDuty Technologies Uganda Ltd</strong> at URSB, activate enterprise mobile money rails (MTN MoMo, Airtel, Flutterwave), execute a zero-budget grassroots launch, and construct an enduring multi-million-dollar wealth engine.
+                  </p>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                  From Local Startup to Sovereign Tech Monopoly
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-                  The definitive playbook to incorporate <strong>CivicDuty Technologies Uganda Ltd</strong> at URSB, activate enterprise mobile money rails (MTN MoMo, Airtel, Flutterwave), execute a zero-budget grassroots launch, and construct an enduring multi-million-dollar wealth engine.
-                </p>
-              </div>
-              <div className="hidden sm:flex p-3 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                <Landmark size={32} />
-              </div>
-            </div>
-          </div>
-
-          {/* 1. URSB Registration Roadmap */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
-              <Building2 size={20} className="text-amber-500" />
-              <span>1. URSB &amp; Legal Incorporation Checklist (Kampala, Uganda)</span>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Registering CivicDuty as a <strong>Private Limited Liability Company (Ltd by Shares)</strong> gives you the legal mandate to enter government SaaS contracts, partner with telecom giants, and open corporate merchant lines without any fintech deposit licenses.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 1: Name Reservation</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">Fee: UGX 25,000</span>
+                <div className="hidden sm:flex p-3 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <Landmark size={32} />
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Visit the <strong>URSB Business Registration System (brs.ursb.go.ug)</strong>. Reserve <code>CivicDuty Technologies Limited</code> or <code>CivicDuty Digital Governance Ltd</code>. Approval takes 2 to 4 hours.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 2: Articles &amp; Memorandum</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">Standard Model Articles</span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Select core business objects: <em>Software publishing, civic data processing, digital governance platforms, IT communications, and software escrow intermediary services</em>. Total registration &amp; stamp duty: approx UGX 260,000.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 3: URA Corporate TIN</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-400">Zero Cost (Instant)</span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Upon URSB Certificate generation, the company is automatically assigned an enterprise Tax Identification Number (TIN) on <strong>ura.go.ug</strong>. This qualifies you for public procurement bidding (PPDA).
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 4: NDPO Data Protection</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400">NITA-U / NDPO Registered</span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Register with the <strong>National Data Protection Office (dataprotection.go.ug)</strong> under the Data Protection &amp; Privacy Act 2019. This gives municipal leaders 100% confidence to store citizen records in CivicDuty.
-                </p>
               </div>
             </div>
 
-            {/* Bank and MoMo setup */}
-            <div className="p-4 rounded-2xl bg-slate-950 text-slate-100 space-y-3 mt-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-black uppercase tracking-wider text-amber-400">Step 5: Corporate Banking &amp; MoMo Corporate Lines</div>
-                <span className="text-[11px] text-slate-400">Stanbic / Centenary / Absa</span>
+            {/* 1. URSB Registration Roadmap */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
+                <Building2 size={20} className="text-amber-500" />
+                <span>1. URSB &amp; Legal Incorporation Checklist (Kampala, Uganda)</span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Take your URSB Certificate of Incorporation, Memorandum, URA TIN, and National IDs to open a corporate UGX + USD account. With the bank account active, immediately register on <strong>Flutterwave Uganda (flutterwave.com)</strong> and <strong>MTN MoMo Developer Portal (momodeveloper.mtn.com)</strong> for instant C2B mobile money settlement straight to your account.
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Registering CivicDuty as a <strong>Private Limited Liability Company (Ltd by Shares)</strong> gives you the legal mandate to enter government SaaS contracts, partner with telecom giants, and open corporate merchant lines without any fintech deposit licenses.
               </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 1: Name Reservation</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">Fee: UGX 25,000</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Visit the <strong>URSB Business Registration System (brs.ursb.go.ug)</strong>. Reserve <code>CivicDuty Technologies Limited</code> or <code>CivicDuty Digital Governance Ltd</code>. Approval takes 2 to 4 hours.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 2: Articles &amp; Memorandum</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">Standard Model Articles</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Select core business objects: <em>Software publishing, civic data processing, digital governance platforms, IT communications, and software escrow intermediary services</em>. Total registration &amp; stamp duty: approx UGX 260,000.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 3: URA Corporate TIN</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-400">Zero Cost (Instant)</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Upon URSB Certificate generation, the company is automatically assigned an enterprise Tax Identification Number (TIN) on <strong>ura.go.ug</strong>. This qualifies you for public procurement bidding (PPDA).
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">Step 4: NDPO Data Protection</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400">NITA-U / NDPO Registered</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Register with the <strong>National Data Protection Office (dataprotection.go.ug)</strong> under the Data Protection &amp; Privacy Act 2019. This gives municipal leaders 100% confidence to store citizen records in CivicDuty.
+                  </p>
+                </div>
+              </div>
+
+              {/* Bank and MoMo setup */}
+              <div className="p-4 rounded-2xl bg-slate-950 text-slate-100 space-y-3 mt-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-black uppercase tracking-wider text-amber-400">Step 5: Corporate Banking &amp; MoMo Corporate Lines</div>
+                  <span className="text-[11px] text-slate-400">Stanbic / Centenary / Absa</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Take your URSB Certificate of Incorporation, Memorandum, URA TIN, and National IDs to open a corporate UGX + USD account. With the bank account active, immediately register on <strong>Flutterwave Uganda (flutterwave.com)</strong> and <strong>MTN MoMo Developer Portal (momodeveloper.mtn.com)</strong> for instant C2B mobile money settlement straight to your account.
+                </p>
+              </div>
+            </div>
+
+            {/* 2. Marketing & User Attraction Engine */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
+                <Target size={20} className="text-emerald-500" />
+                <span>2. Grassroots Marketing &amp; Viral User Attraction Engine</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                How do we get 100,000+ Ugandan citizens actively using CivicDuty without spending millions on billboards? By hooking into existing everyday frustrations and grassroots networks:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/60 space-y-2">
+                  <div className="font-black text-xs text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                    Campaign 1: The &quot;Fix My Pothole&quot; Viral Challenge
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Launch on Twitter/X, TikTok, and WhatsApp: <em>&quot;Snap the pothole, tag your division mayor, watch the 72-hour SLA clock tick live on CivicDuty.&quot;</em> Citizens love seeing public officials held accountable with real-time countdown clocks.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/60 space-y-2">
+                  <div className="font-black text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                    Campaign 2: Morning Radio Talkshow Blitz
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Call into morning talk shows (CBS Kiriza Oba Gana, Capital FM The Capital Gang, KFM D&apos;Mighty Breakfast, Radio Simba). Whenever a citizen laments water shortages or broken streetlights, announce: <em>&quot;Log it on CivicDuty right now; your MP and Town Clerk get notified on their desk in 3 seconds.&quot;</em>
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200/80 dark:border-teal-800/60 space-y-2">
+                  <div className="font-black text-xs text-teal-800 dark:text-teal-300 uppercase tracking-wider">
+                    Campaign 3: The Bodaboda Scout Network
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Partner with Boda stage chairpersons across Kampala, Entebbe, and Jinja. Boda riders traverse every alley daily. Reward verified road hazards with UGX 1,000 airtime vouchers via the CivicDuty <strong>Perk Vault</strong>. You gain the most accurate road condition map in Uganda for pennies.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-800/60 space-y-2">
+                  <div className="font-black text-xs text-purple-800 dark:text-purple-300 uppercase tracking-wider">
+                    Campaign 4: The Municipal Leaderboard of Fame &amp; Shame
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Publish a monthly <strong>Uganda Municipal Service Delivery Index</strong> in national press (New Vision, Daily Monitor). Rank Kampala Central, Nakawa, Kira, and Makindye on ticket resolution speeds. Mayors and Town Clerks will compete publicly to look competent.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Wealth Creation Blueprint */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
+                <TrendingUp size={20} className="text-amber-500" />
+                <span>3. The Wealth Creation Masterclass: Building a Multimillion-Dollar Tech Enterprise</span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Charities beg for grants; category-defining tech companies build sovereign monopolies with recurring subscription cashflow. Here is how CivicDuty creates lasting, generational wealth for you as the founder:
+              </p>
+
+              <div className="space-y-3 pt-2">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
+                    <Landmark size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                        Revenue Stream A: Municipal &amp; Government B2G SaaS
+                      </span>
+                      <span className="text-xs font-mono font-black text-amber-600 dark:text-amber-400">UGX 4.38 Billion / Year</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Uganda has 146 districts, 10 city authorities, and 31 municipalities. Licensing CivicDuty at an average annual fee of <strong>UGX 30,000,000 (~$8,100)</strong> per authority for the supervisory intelligence dashboard yields over <strong>$1.18 Million USD (UGX 4.38B)</strong> in annual recurring revenue (ARR) in Uganda alone.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+                    <Briefcase size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                        Revenue Stream B: Corporate ESG &amp; CSR Escrow Clearing Fee
+                      </span>
+                      <span className="text-xs font-mono font-black text-emerald-600 dark:text-emerald-400">8% to 15% Platform Take-Rate</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Multinationals (MTN, Airtel, Stanbic, Nile Breweries, TotalEnergies) spend billions annually on CSR clean-ups and environmental campaigns with zero verification. Through CivicDuty&apos;s <strong>Perk Vault Escrow</strong>, they deposit CSR funds; when citizens verify clean-up actions with GPS photos, CivicDuty clears the payout and collects a 10% escrow fee.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
+                  <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-500 shrink-0">
+                    <Layers size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                        Revenue Stream C: Geospatial Infrastructure &amp; Mobility Intelligence
+                      </span>
+                      <span className="text-xs font-mono font-black text-teal-600 dark:text-teal-400">High-Margin Enterprise API</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Logistics giants (SafeBoda, Jumia, DHL), insurance companies, and real estate developers desperately need real-time data on flooded roads, road quality, and municipal utilities. Licensing CivicDuty&apos;s real-time anonymized hazard API provides hands-off, 90%+ gross margin software income.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
+                    <Globe size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                        Revenue Stream D: Pan-African Sovereign Scaling
+                      </span>
+                      <span className="text-xs font-mono font-black text-purple-600 dark:text-purple-400">10 African Nations = $12M+ ARR</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                      Once proven in Uganda, duplicate the exact same desk framework to Kenya (47 County Governments), Rwanda (30 Districts), Ghana (261 MMDAs), and Nigeria (774 LGAs). The software architecture is already multi-currency and multi-jurisdiction.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Founder Wealth Mentorship Principles */}
+              <div className="p-5 rounded-2xl bg-slate-900 text-slate-200 space-y-3 mt-4 border border-amber-500/30">
+                <div className="flex items-center gap-2 text-amber-400 font-black text-xs uppercase tracking-wider">
+                  <Lightbulb size={16} />
+                  <span>Founder Wealth Mentorship Principles</span>
+                </div>
+                <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside leading-relaxed">
+                  <li><strong>Protect Your Equity:</strong> Never give away equity to &quot;advisors&quot; or early investors before you have cash-paying customers. CivicDuty is already built and live—your leverage is at an all-time high.</li>
+                  <li><strong>Cashflow Over Vanity:</strong> Do not burn money on fancy offices in Kololo or Nakasero. Keep your burn rate near zero while locking in your first 3 local government pilots.</li>
+                  <li><strong>The Enterprise Flywheel:</strong> Free for citizens to build an irresistible public userbase; premium enterprise subscriptions for government and corporate sponsors to harvest cashflow.</li>
+                </ul>
+              </div>
             </div>
           </div>
-
-          {/* 2. Marketing & User Attraction Engine */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
-              <Target size={20} className="text-emerald-500" />
-              <span>2. Grassroots Marketing &amp; Viral User Attraction Engine</span>
+        ) : (
+          <div className="space-y-6">
+            {/* Country-Adaptive Incorporation & Launch Banner */}
+            <div className="bg-amber-50/70 dark:bg-slate-900 border border-amber-500/30 rounded-3xl p-6 relative overflow-hidden">
+              <div className="flex items-start justify-between relative z-10">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-black uppercase tracking-wider">
+                    <ShieldCheck size={14} />
+                    <span>{gov.countryName} Sovereign Incorporation &amp; Launch Playbook</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                    CivicDuty {gov.countryName} Rollout &amp; Sovereign SaaS Architecture
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+                    Jurisdiction-specific operational roadmap to establish <strong>CivicDuty Technologies ({gov.countryName})</strong>, clear local statutory payment and data-protection gates in <strong>{countryCurrency}</strong>, and scale B2G civic accountability across {gov.billingContext.authorityCountDesc}.
+                  </p>
+                </div>
+                <div className="hidden sm:flex p-3 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  <Landmark size={32} />
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              How do we get 100,000+ Ugandan citizens actively using CivicDuty without spending millions on billboards? By hooking into existing everyday frustrations and grassroots networks:
-            </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/60 space-y-2">
-                <div className="font-black text-xs text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-                  Campaign 1: The &quot;Fix My Pothole&quot; Viral Challenge
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Launch on Twitter/X, TikTok, and WhatsApp: <em>&quot;Snap the pothole, tag your division mayor, watch the 72-hour SLA clock tick live on CivicDuty.&quot;</em> Citizens love seeing public officials held accountable with real-time countdown clocks.
-                </p>
+            {/* 1. Localized Corporate & Regulatory Readiness */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
+                <Building2 size={20} className="text-amber-500" />
+                <span>1. Local Entity Registration &amp; Telecom Compliance ({gov.countryName})</span>
               </div>
-
-              <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/60 space-y-2">
-                <div className="font-black text-xs text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-                  Campaign 2: Morning Radio Talkshow Blitz
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                  <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider block">
+                    Corporate Registry &amp; Tax ID
+                  </span>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Register local subsidiary entity in {gov.countryName} to unlock domestic B2G procurement contracts with {gov.superadminMinistry} and {gov.tier3Plural}.
+                  </p>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Call into morning talk shows (CBS Kiriza Oba Gana, Capital FM The Capital Gang, KFM D&apos;Mighty Breakfast, Radio Simba). Whenever a citizen laments water shortages or broken streetlights, announce: <em>&quot;Log it on CivicDuty right now; your MP and Town Clerk get notified on their desk in 3 seconds.&quot;</em>
-                </p>
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1.5">
+                  <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider block">
+                    Settlement &amp; USSD Shortcode Clearing
+                  </span>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Activate local settlement in <strong>{countryCurrency}</strong> with domestic corporate banking, mobile money / instant rails, and *3030# carrier termination in {gov.countryName}.
+                  </p>
+                </div>
               </div>
+            </div>
 
-              <div className="p-4 rounded-2xl bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200/80 dark:border-teal-800/60 space-y-2">
-                <div className="font-black text-xs text-teal-800 dark:text-teal-300 uppercase tracking-wider">
-                  Campaign 3: The Bodaboda Scout Network
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Partner with Boda stage chairpersons across Kampala, Entebbe, and Jinja. Boda riders traverse every alley daily. Reward verified road hazards with UGX 1,000 airtime vouchers via the CivicDuty <strong>Perk Vault</strong>. You gain the most accurate road condition map in Uganda for pennies.
-                </p>
+            {/* 2. Civic Traction Channels */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
+                <Target size={20} className="text-emerald-500" />
+                <span>2. Localized Citizen Acquisition Channels ({gov.countryName})</span>
               </div>
-
-              <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-800/60 space-y-2">
-                <div className="font-black text-xs text-purple-800 dark:text-purple-300 uppercase tracking-wider">
-                  Campaign 4: The Municipal Leaderboard of Fame &amp; Shame
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/60 space-y-1.5">
+                  <div className="font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                    Frontline Scout Transit Network
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300">
+                    Onboard <strong>{gov.billingContext.scoutNetworkLabel}</strong> with {gov.billingContext.scoutRewardSample} via the CivicDuty Perk Vault.
+                  </p>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Publish a monthly <strong>Uganda Municipal Service Delivery Index</strong> in national press (New Vision, Daily Monitor). Rank Kampala Central, Nakawa, Kira, and Makindye on ticket resolution speeds. Mayors and Town Clerks will compete publicly to look competent.
+                <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/60 space-y-1.5">
+                  <div className="font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                    National Media &amp; League Indexes
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300">
+                    Syndicate SLA resolution leaderboards across <strong>{gov.billingContext.mediaChannels}</strong> and publish monthly league tables via <strong>{gov.billingContext.indexPressNames}</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Revenue Streams */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-3 shadow-sm">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
+                <TrendingUp size={20} className="text-amber-500" />
+                <span>3. Sovereign Revenue Model ({gov.countryName} · {countryCurrency})</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                    B2G SaaS Licensing ({gov.billingContext.authorityCountDesc})
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Standard authority license: <strong>{gov.billingContext.annualFeeFormatted}</strong> · Projected scale: <strong>{gov.billingContext.annualArrTotalFormatted}</strong>.
+                  </p>
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-1">
+                <div className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                  Enterprise ESG Escrow &amp; Mobility API
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Corporate sponsors (<strong>{gov.billingContext.corporateSponsors}</strong>) fund verified citizen action perks (8–15% clearing fee), while fleet partners (<strong>{gov.billingContext.mobilityPartners}</strong>) subscribe to real-time infrastructure hazard telemetry.
                 </p>
               </div>
             </div>
           </div>
-
-          {/* 3. Wealth Creation Blueprint */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-base uppercase tracking-wider">
-              <TrendingUp size={20} className="text-amber-500" />
-              <span>3. The Wealth Creation Masterclass: Building a Multimillion-Dollar Tech Enterprise</span>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Charities beg for grants; category-defining tech companies build sovereign monopolies with recurring subscription cashflow. Here is how CivicDuty creates lasting, generational wealth for you as the founder:
-            </p>
-
-            <div className="space-y-3 pt-2">
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
-                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
-                  <Landmark size={20} />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                      Revenue Stream A: Municipal &amp; Government B2G SaaS
-                    </span>
-                    <span className="text-xs font-mono font-black text-amber-600 dark:text-amber-400">UGX 4.38 Billion / Year</span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Uganda has 146 districts, 10 city authorities, and 31 municipalities. Licensing CivicDuty at an average annual fee of <strong>UGX 30,000,000 (~$8,100)</strong> per authority for the supervisory intelligence dashboard yields over <strong>$1.18 Million USD (UGX 4.38B)</strong> in annual recurring revenue (ARR) in Uganda alone.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
-                  <Briefcase size={20} />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                      Revenue Stream B: Corporate ESG &amp; CSR Escrow Clearing Fee
-                    </span>
-                    <span className="text-xs font-mono font-black text-emerald-600 dark:text-emerald-400">8% to 15% Platform Take-Rate</span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Multinationals (MTN, Airtel, Stanbic, Nile Breweries, TotalEnergies) spend billions annually on CSR clean-ups and environmental campaigns with zero verification. Through CivicDuty&apos;s <strong>Perk Vault Escrow</strong>, they deposit CSR funds; when citizens verify clean-up actions with GPS photos, CivicDuty clears the payout and collects a 10% escrow fee.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
-                <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-500 shrink-0">
-                  <Layers size={20} />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                      Revenue Stream C: Geospatial Infrastructure &amp; Mobility Intelligence
-                    </span>
-                    <span className="text-xs font-mono font-black text-teal-600 dark:text-teal-400">High-Margin Enterprise API</span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Logistics giants (SafeBoda, Jumia, DHL), insurance companies, and real estate developers desperately need real-time data on flooded roads, road quality, and municipal utilities. Licensing CivicDuty&apos;s real-time anonymized hazard API provides hands-off, 90%+ gross margin software income.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-start gap-4">
-                <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
-                  <Globe size={20} />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-black text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-                      Revenue Stream D: Pan-African Sovereign Scaling
-                    </span>
-                    <span className="text-xs font-mono font-black text-purple-600 dark:text-purple-400">10 African Nations = $12M+ ARR</span>
-                  </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Once proven in Uganda, duplicate the exact same desk framework to Kenya (47 County Governments), Rwanda (30 Districts), Ghana (261 MMDAs), and Nigeria (774 LGAs). The software architecture is already multi-currency and multi-jurisdiction.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Founder Wealth Mentorship Principles */}
-            <div className="p-5 rounded-2xl bg-slate-900 text-slate-200 space-y-3 mt-4 border border-amber-500/30">
-              <div className="flex items-center gap-2 text-amber-400 font-black text-xs uppercase tracking-wider">
-                <Lightbulb size={16} />
-                <span>Founder Wealth Mentorship Principles</span>
-              </div>
-              <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside leading-relaxed">
-                <li><strong>Protect Your Equity:</strong> Never give away equity to &quot;advisors&quot; or early investors before you have cash-paying customers. CivicDuty is already built and live—your leverage is at an all-time high.</li>
-                <li><strong>Cashflow Over Vanity:</strong> Do not burn money on fancy offices in Kololo or Nakasero. Keep your burn rate near zero while locking in your first 3 local government pilots.</li>
-                <li><strong>The Enterprise Flywheel:</strong> Free for citizens to build an irresistible public userbase; premium enterprise subscriptions for government and corporate sponsors to harvest cashflow.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        )
       )}
     </div>
   );

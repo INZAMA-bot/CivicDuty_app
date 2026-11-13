@@ -6,6 +6,7 @@ import { getRolloutNodesForCountry, getSisterMinistriesForCountry } from '../dat
 import { getMinistriesForCountry } from '../data/countryMinistries';
 import { CountryCode } from '../types';
 import { getPsMinistryInfo } from '../utils/helpers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   ChevronRight,
   Building2,
@@ -59,6 +60,7 @@ export const GovAdminView: React.FC = () => {
   // Strictly lock to the official's commissioned country
   const activeCountry = (user?.country || 'UG') as CountryCode;
   const countryMeta = COUNTRIES[activeCountry] || COUNTRIES.UG;
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
 
   const rolloutArrangement = useMemo(
     () => getNationalRolloutArrangements(activeCountry),
@@ -86,7 +88,9 @@ export const GovAdminView: React.FC = () => {
     rolloutArrangement.superadminSubtitle || user?.name || `National Accounting Officer (${countryMeta.name})`;
 
   const psInfo = useMemo(() => getPsMinistryInfo(user), [user]);
-  const isLinePs = psInfo.isPs && !psInfo.isMoLG;
+  const isSuperadminDept =
+    psInfo.isMoLG || user?.dept?.toLowerCase() === gov.superadminDeptId.toLowerCase();
+  const isLinePs = psInfo.isPs && !isSuperadminDept;
 
   // Match Line Ministry metadata for activeCountry
   const matchedMinistry = useMemo(() => {
@@ -263,7 +267,7 @@ export const GovAdminView: React.FC = () => {
       title: inviteRole,
       role: assignedRole,
       scope: isLinePs ? psInfo.ministryId || 'MINISTRY' : activeCountry,
-      dept: isLinePs ? psInfo.ministryId || 'ministry' : 'molg',
+      dept: isLinePs ? psInfo.ministryId || 'ministry' : gov.superadminDeptId || 'molg',
       is_utility: false,
       used: false,
       country: activeCountry,
@@ -274,7 +278,7 @@ export const GovAdminView: React.FC = () => {
 
     mintGovAccessCode(generatedCode, {
       country: activeCountry,
-      dept: isLinePs ? psInfo.ministryId?.toLowerCase() || 'mowt' : 'molg',
+      dept: isLinePs ? psInfo.ministryId?.toLowerCase() || 'sector' : gov.superadminDeptId || 'molg',
       scope: isLinePs ? psInfo.ministryId || activeCountry : activeCountry,
       scope_label: isLinePs ? psInfo.ministryName || 'Line Ministry' : superadminMinistryName,
       role: assignedRole,
@@ -361,7 +365,8 @@ export const GovAdminView: React.FC = () => {
 
   const isNationalSuperadmin =
     user?.role === 'platform_admin' ||
-    psInfo.isMoLG ||
+    Boolean(user?.is_superadmin) ||
+    isSuperadminDept ||
     user?.dept === 'molg';
 
   // If any non-Superadmin Accounting Officer (e.g. Line Ministry PS, CAO, Town Clerk, Subcounty Chief, Parish Chief)
@@ -650,9 +655,9 @@ export const GovAdminView: React.FC = () => {
                   value={inviteAccessMode}
                   onChange={(e) => setInviteAccessMode(e.target.value as 'read_only' | 'policy_advisory')}
                   className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  title="Under the Public Finance Management Act (PFMA), the PS sets the Minister's operational warrant scope"
+                  title={`Under ${gov.fiscalAct}, the Accounting Officer sets the Minister's operational warrant scope`}
                 >
-                  <option value="read_only">Read-Only Executive Oversight (PFMA Default)</option>
+                  <option value="read_only">Read-Only Executive Oversight (Statutory Default)</option>
                   <option value="policy_advisory">Read-Only Accounting + Policy Advisory</option>
                 </select>
                 <div className="flex flex-1 gap-2">

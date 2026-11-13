@@ -58,12 +58,16 @@ function buildPostPayload(post: Post) {
       citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
       author_profession: (r.author_profession || '').slice(0, 128),
       anonymous: Boolean(r.anonymous),
+      title: (r.title || '').slice(0, 200),
       body: (r.body || '').slice(0, 2000),
       gps: r.gps || null,
       created_at: r.created_at,
       source: r.source || 'web',
+      likes: Number(r.likes || 0),
     })),
     compiled_count: Number(post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1)),
+    lead_likes: Number(post.lead_likes || 0),
+    featured_submission_id: (post.featured_submission_id || 'lead').slice(0, 128),
     escalated: Boolean(post.escalated),
     is_master_dossier: Boolean(post.is_master_dossier),
     is_test_post: Boolean(post.is_test_post),
@@ -457,16 +461,72 @@ export async function updatePostCompilationInCloud(
         citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
         author_profession: (r.author_profession || '').slice(0, 128),
         anonymous: Boolean(r.anonymous),
+        title: (r.title || '').slice(0, 200),
         body: (r.body || '').slice(0, 2000),
         gps: r.gps || null,
         created_at: r.created_at,
         source: r.source || 'web',
+        likes: Number(r.likes || 0),
       })),
       compiled_count: Number(compiledCount),
       upvotes: Number(upvotes),
       escalated: Boolean(escalated),
       is_master_dossier: true,
       merged_from_ids: mergedFromIds.slice(0, 50),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+/**
+ * Updates Master Dossier per-submission likes and active featured submission ID in Cloud Firestore.
+ */
+export async function updateDossierSubmissionLikesInCloud(
+  postId: string,
+  leadLikes: number,
+  compiledReports: CompiledWitnessReport[],
+  featuredSubmissionId: string,
+  fullPost?: Post
+): Promise<void> {
+  const path = `posts/${postId}`;
+  try {
+    const docRef = doc(db, 'posts', postId);
+    const snap = await getDoc(docRef);
+    const sanitizedReports = compiledReports.slice(0, 50).map((r) => ({
+      id: r.id,
+      citizen_id: r.citizen_id,
+      citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
+      author_profession: (r.author_profession || '').slice(0, 128),
+      anonymous: Boolean(r.anonymous),
+      title: (r.title || '').slice(0, 200),
+      body: (r.body || '').slice(0, 2000),
+      gps: r.gps || null,
+      created_at: r.created_at,
+      source: r.source || 'web',
+      likes: Number(r.likes || 0),
+    }));
+
+    if (!snap.exists()) {
+      const seed = fullPost || INITIAL_POSTS.find((p) => p.id === postId);
+      if (seed) {
+        await setDoc(
+          docRef,
+          buildPostPayload({
+            ...seed,
+            lead_likes: Number(leadLikes),
+            compiled_reports: sanitizedReports,
+            featured_submission_id: featuredSubmissionId,
+          })
+        );
+      }
+      return;
+    }
+
+    await updateDoc(docRef, {
+      lead_likes: Number(leadLikes),
+      compiled_reports: sanitizedReports,
+      featured_submission_id: (featuredSubmissionId || 'lead').slice(0, 128),
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);

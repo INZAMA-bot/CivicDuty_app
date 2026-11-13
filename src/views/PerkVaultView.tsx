@@ -23,6 +23,7 @@ import {
 } from '../data/countryCurrency';
 import { VoucherPassModal } from '../components/VoucherPassModal';
 import { VoucherScannerModal } from '../components/VoucherScannerModal';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   ArrowLeft,
   Upload,
@@ -278,7 +279,6 @@ export function getLowestUnitVaultMeta(countryCode: string) {
         desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Barangay Captain.',
       };
     case 'UG':
-    default:
       return {
         unitName: 'Parish',
         unitPlural: 'Parishes',
@@ -288,6 +288,18 @@ export function getLowestUnitVaultMeta(countryCode: string) {
         officerTitle: 'Parish Chief',
         desc: 'Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via Parish Chief.',
       };
+    default: {
+      const gov = getCountryGovernanceSchema(countryCode || 'UG');
+      return {
+        unitName: gov.tier1UnitLabel,
+        unitPlural: gov.tier1Plural,
+        vaultTitle: `1. ${gov.tier1UnitLabel} Vault`,
+        subtitle: `Monthly ${gov.tier1UnitLabel} Top-3`,
+        badge: `Monthly · ${gov.tier1Short}`,
+        officerTitle: gov.tier1Short,
+        desc: `Open to all community sponsors. Evaluates verified residents all month and disburses to the Top 3 via ${gov.tier1Short}.`,
+      };
+    }
   }
 }
 
@@ -6221,6 +6233,7 @@ ${selectedCountry}-TRN-9005,${perkProfile.transitBrand},transit_credit,${transit
         activeBranchId={user?.branch_id}
         activeBranchParish={user?.branch_parish}
         activeDeptName={currentVaultJurisdictionMeta.jurisdictionLabel}
+        activeCountry={selectedCountry}
       />
     </div>
   );

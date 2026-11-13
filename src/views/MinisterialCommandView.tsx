@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { ViewType, MinisterialDirective } from '../types';
+import { ViewType, MinisterialDirective, CountryCode } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -37,6 +38,7 @@ import { downloadForensicAuditPdf } from '../services/forensicPdfService';
 export const MinisterialCommandView: React.FC = () => {
   const {
     user,
+    selectedCountry,
     go,
     toast,
     logAudit,
@@ -47,20 +49,53 @@ export const MinisterialCommandView: React.FC = () => {
     directLoginWithGovCode,
   } = useApp();
 
-  // Active Minister Profile selection (defaulting to Hon. Balaam or active logged-in minister)
-  const isNameere = user?.officer_name?.includes('Nameere') || user?.deskCode === 'UG-MOLG-STATE-MIN';
-  const [selectedMinister, setSelectedMinister] = useState<'balaam' | 'nameere'>(isNameere ? 'nameere' : 'balaam');
+  const activeCountry = (user?.country || selectedCountry || 'UG') as CountryCode;
+  const isUg = activeCountry === 'UG';
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
+
+  // Active Minister Profile selection
+  const isStateMinDefault =
+    Boolean(user?.officer_name?.includes('Nameere')) ||
+    user?.deskCode?.includes('STATE-MIN') ||
+    user?.scope === 'STATE-MIN';
+  const [selectedMinister, setSelectedMinister] = useState<'cabinet' | 'state'>(
+    isStateMinDefault ? 'state' : 'cabinet'
+  );
 
   const [activeTab, setActiveTab] = useState<'taskforce' | 'directives' | 'cabinet_roster' | 'whistleblower' | 'constitution'>('taskforce');
 
   // Fast taskforce dispatch form
-  const [targetDistrict, setTargetDistrict] = useState('Wakiso District');
+  const [targetDistrict, setTargetDistrict] = useState(
+    gov.sampleJurisdictions[0] || `${gov.countryName} Capital Authority`
+  );
   const [directiveCategory, setDirectiveCategory] = useState<MinisterialDirective['directiveType']>('anti_extortion_taskforce');
   const [directiveSubject, setDirectiveSubject] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [psRequirement, setPsRequirement] = useState('Freeze unauthorized municipal sub-account and demand financial books within 48 hours.');
-  const [iggRequirement, setIggRequirement] = useState('Issue Section 19 statutory subpoena to ringleaders and interdict implicated Town Agents.');
+  const [psRequirement, setPsRequirement] = useState(
+    isUg
+      ? 'Freeze unauthorized municipal sub-account and demand financial books within 48 hours.'
+      : `Freeze unauthorized ${gov.tier3UnitLabel.toLowerCase()} sub-account under ${gov.fiscalAct} and demand financial books within 48 hours.`
+  );
+  const [iggRequirement, setIggRequirement] = useState(
+    isUg
+      ? 'Issue Section 19 statutory subpoena to ringleaders and interdict implicated Town Agents.'
+      : `Issue statutory subpoena via ${gov.ombudsman.shortName} and interdict implicated ${gov.tier1Short} officers.`
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setTargetDistrict(gov.sampleJurisdictions[0] || `${gov.countryName} Capital Authority`);
+    setPsRequirement(
+      isUg
+        ? 'Freeze unauthorized municipal sub-account and demand financial books within 48 hours.'
+        : `Freeze unauthorized ${gov.tier3UnitLabel.toLowerCase()} sub-account under ${gov.fiscalAct} and demand financial books within 48 hours.`
+    );
+    setIggRequirement(
+      isUg
+        ? 'Issue Section 19 statutory subpoena to ringleaders and interdict implicated Town Agents.'
+        : `Issue statutory subpoena via ${gov.ombudsman.shortName} and interdict implicated ${gov.tier1Short} officers.`
+    );
+  }, [activeCountry, isUg, gov]);
 
   // Search and filter for directives
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,35 +105,44 @@ export const MinisterialCommandView: React.FC = () => {
   const [guardrailModalOpen, setGuardrailModalOpen] = useState(false);
   const [guardrailActionName, setGuardrailActionName] = useState('');
 
+  const cabinetDeskCode = isUg
+    ? 'UG-MOLG-CABINET-MIN'
+    : `${gov.codePrefix}-${gov.superadminDeptId.toUpperCase()}-CABINET-MIN`;
+  const stateDeskCode = isUg
+    ? 'UG-MOLG-STATE-MIN'
+    : `${gov.codePrefix}-${gov.superadminDeptId.toUpperCase()}-STATE-MIN`;
+
   const ministerInfo = useMemo(() => {
-    if (selectedMinister === 'balaam') {
+    if (selectedMinister === 'cabinet') {
       return {
-        name: 'Hon. Balaam Barugahara Ateenyi',
-        title: 'Cabinet Minister of Local Government',
-        code: 'UG-MOLG-CABINET-MIN',
+        name: gov.cabinetMinisterName,
+        title: `Cabinet Minister — ${gov.superadminMinistry}`,
+        code: cabinetDeskCode,
         mandateType: 'cabinet_minister_policy' as const,
-        term: '26 May 2026 – Present (Cabinet Reshuffle)',
+        term: isUg ? '26 May 2026 – Present (Cabinet Reshuffle)' : `Active Executive Mandate (${gov.countryName})`,
         roleLabel: 'Apex Political Command & Anti-Corruption Oversight',
-        mandateSummary:
-          'Fearless eradication of extortion cartels across all 135+ Local Governments, illegal market stall fees, and unauthorized boda-boda levies. Direct coordination with Frontline Scouts and Cabinet.',
+        mandateSummary: isUg
+          ? 'Fearless eradication of extortion cartels across all 146 districts & 11 cities, illegal market stall fees, and unauthorized boda-boda levies. Direct coordination with Frontline Scouts and Cabinet.'
+          : `Executive policy oversight eliminating illegal levies and extortion across all ${gov.tier3Plural.toLowerCase()} and ${gov.tier1Plural.toLowerCase()} in ${gov.countryName}. Direct coordination with Frontline Scouts and Cabinet.`,
         badgeColor: 'bg-emerald-600 text-white',
         borderTheme: 'border-emerald-500/50',
       };
     } else {
       return {
-        name: 'Hon. Justine Nameere',
-        title: 'Minister of State for Local Government',
-        code: 'UG-MOLG-STATE-MIN',
+        name: gov.stateMinisterName,
+        title: `Minister of State / Deputy Minister — ${gov.superadminMinistry}`,
+        code: stateDeskCode,
         mandateType: 'state_minister_grassroots' as const,
-        term: '26 May 2026 – Present (Cabinet Reshuffle)',
-        roleLabel: 'Grassroots Vigilance & PDM Integrity Ombudsman',
-        mandateSummary:
-          'Unannounced spot-checks on Sub-County Town Agents, Parish Chiefs, and PDM Sacco disbursement books to catch ghost beneficiaries, extortion rings, and stolen youth seed capital.',
+        term: isUg ? '26 May 2026 – Present (Cabinet Reshuffle)' : `Active Executive Mandate (${gov.countryName})`,
+        roleLabel: `Grassroots Vigilance & ${gov.fiscalProgramName} Integrity Ombudsman`,
+        mandateSummary: isUg
+          ? 'Unannounced spot-checks on Sub-County Town Agents, Parish Chiefs, and PDM Sacco disbursement books to catch ghost beneficiaries, extortion rings, and stolen youth seed capital.'
+          : `Unannounced spot-checks on ${gov.tier2Plural}, ${gov.tier1Plural}, and ${gov.fiscalProgramName} disbursement ledgers across ${gov.countryName} to eliminate ghost beneficiaries and extortion rings.`,
         badgeColor: 'bg-purple-600 text-white',
         borderTheme: 'border-purple-500/50',
       };
     }
-  }, [selectedMinister]);
+  }, [selectedMinister, gov, isUg, cabinetDeskCode, stateDeskCode]);
 
   const handleDispatchDirective = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,11 +161,9 @@ export const MinisterialCommandView: React.FC = () => {
         directiveType: directiveCategory,
         targetScope: 'district',
         targetJurisdiction: targetDistrict,
-        statutoryBasis:
-          selectedMinister === 'balaam'
-            ? 'Constitution of Uganda Arts 111 & 117 / Presidential Anti-Graft Directive 2026'
-            : 'Constitution Art. 117 / Local Governments Act Statutory Oversight',
-        executiveInstructions: instructions || `Immediate field inspection and political inquiry into reported irregularities in ${targetDistrict}.`,
+        statutoryBasis: gov.cabinetMandateCitation,
+        executiveInstructions:
+          instructions || `Immediate field inspection and political inquiry into reported irregularities in ${targetDistrict}.`,
         psActionRequired: psRequirement,
         iggActionRequired: iggRequirement,
       });
@@ -160,20 +202,22 @@ export const MinisterialCommandView: React.FC = () => {
             <div className="flex items-center gap-2.5 flex-wrap">
               <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black uppercase tracking-wider border border-emerald-500/40 flex items-center gap-1.5">
                 <Scale className="w-3.5 h-3.5 text-emerald-400" />
-                Apex Political Command · Republic of Uganda
+                Apex Political Command · {gov.countryName}
               </span>
               <span className="text-xs font-mono text-emerald-300/80 bg-slate-900/60 px-2.5 py-0.5 rounded-md border border-slate-700">
-                Constitution Articles 111 &amp; 117
+                {gov.constitutionalAuthority}
               </span>
-              <span className="text-xs font-mono text-amber-300/90 bg-amber-950/40 px-2.5 py-0.5 rounded-md border border-amber-600/30">
-                May 26, 2026 Cabinet Reshuffle Mandate
-              </span>
+              {isUg && (
+                <span className="text-xs font-mono text-amber-300/90 bg-amber-950/40 px-2.5 py-0.5 rounded-md border border-amber-600/30">
+                  May 26, 2026 Cabinet Reshuffle Mandate
+                </span>
+              )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
               <span>Cabinet Ministerial Command &amp; Anti-Graft Oversight</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-3xl leading-relaxed">
-              Executive political command of the Ministry of Local Government. Formulate policy, institute rapid anti-extortion taskforces, protect Parish Development Model (PDM) tranches, and escalate statutory queries directly to the Permanent Secretary (Accounting Officer) and Inspectorate of Government (IGG).
+              Executive political command of the {gov.superadminMinistry}. Formulate policy, institute rapid anti-extortion taskforces, protect {gov.fiscalProgramName} tranches, and escalate statutory queries directly to {gov.superadminTitle} and {gov.ombudsman.name}.
             </p>
           </div>
 
@@ -182,18 +226,18 @@ export const MinisterialCommandView: React.FC = () => {
             <button
               onClick={() => go('ps_molg_rollout')}
               className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-600 transition-colors shadow-sm"
-              title="View Permanent Secretary Accounting Officer Desk"
+              title="View National Territorial Accounting Officer Desk"
             >
               <Building2 className="w-4 h-4 text-emerald-400" />
-              <span>PS MoLG Desk (Vote 011)</span>
+              <span>{gov.superadminMinistryShort} Desk ({gov.superadminVoteLabel})</span>
             </button>
             <button
               onClick={() => go('gov_audit')}
               className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900/60 text-rose-200 text-xs font-bold border border-rose-800/60 transition-colors shadow-sm"
-              title="Open Inspector General of Government Portal"
+              title={`Open ${gov.ombudsman.name} Portal`}
             >
               <ShieldAlert className="w-4 h-4 text-rose-400" />
-              <span>IGG Portal (Beti Kamya)</span>
+              <span>{gov.ombudsman.shortName} Portal ({gov.ombudsman.headName})</span>
             </button>
           </div>
         </div>
@@ -204,32 +248,32 @@ export const MinisterialCommandView: React.FC = () => {
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Minister:</span>
             <button
               onClick={() => {
-                setSelectedMinister('balaam');
-                directLoginWithGovCode('UG-MOLG-CABINET-MIN');
+                setSelectedMinister('cabinet');
+                if (isUg) directLoginWithGovCode('UG-MOLG-CABINET-MIN');
               }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
-                selectedMinister === 'balaam'
+                selectedMinister === 'cabinet'
                   ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400/50'
                   : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700'
               }`}
             >
               <div className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-              <span>Hon. Balaam Barugahara (Cabinet Minister)</span>
+              <span>{gov.cabinetMinisterName} (Cabinet Minister)</span>
             </button>
 
             <button
               onClick={() => {
-                setSelectedMinister('nameere');
-                directLoginWithGovCode('UG-MOLG-STATE-MIN');
+                setSelectedMinister('state');
+                if (isUg) directLoginWithGovCode('UG-MOLG-STATE-MIN');
               }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
-                selectedMinister === 'nameere'
+                selectedMinister === 'state'
                   ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-400/50'
                   : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 border border-slate-700'
               }`}
             >
               <div className="w-2 h-2 rounded-full bg-purple-300 animate-pulse" />
-              <span>Hon. Justine Nameere (State Minister)</span>
+              <span>{gov.stateMinisterName} ({isUg ? 'State Minister' : 'Deputy Minister'})</span>
             </button>
           </div>
 
@@ -247,7 +291,7 @@ export const MinisterialCommandView: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-black text-amber-800 dark:text-amber-300 text-sm">
             <Scale className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-            <span>Constitutional Separation of Powers (Constitution Arts 111 &amp; 117 vs Art 174 &amp; PFMA 2015 Section 45)</span>
+            <span>Constitutional Separation of Powers ({gov.cabinetMandateCitation})</span>
           </div>
           <button
             onClick={() => setActiveTab('constitution')}
@@ -258,8 +302,8 @@ export const MinisterialCommandView: React.FC = () => {
         </div>
         <p className="leading-relaxed text-slate-700 dark:text-slate-300">
           <strong>Ministers hold Political Command &amp; Policy Authority</strong>: Formulating legislation, defending budgets in Parliament, dispatching anti-extortion taskforces, and issuing formal statutory directives.
-          <strong> Permanent Secretary (PS MoLG) holds Statutory Accounting Authority</strong>: Sole signatory for Vote 011 warrants, fund releases, contract approvals, and civil service disciplinary actions under PFMA 2015.
-          Directives issued from this desk automatically register in the PS MoLG and IGG queues.
+          <strong> {gov.superadminTitle} holds Statutory Accounting Authority</strong>: Sole signatory for {gov.superadminVoteLabel} warrants, fund releases, contract approvals, and civil service disciplinary actions under {gov.fiscalAct}.
+          Directives issued from this desk automatically register in the {gov.superadminMinistryShort} Accounting Officer and {gov.ombudsman.shortName} queues.
         </p>
       </div>
 
@@ -309,7 +353,7 @@ export const MinisterialCommandView: React.FC = () => {
                 <span>Promulgate Statutory Ministerial Directive</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Promulgates an executive directive with cryptographic audit seal and auto-routes formal queries to PS MoLG (Administrative) and IGG (Constitutional).
+                Promulgates an executive directive with cryptographic audit seal and auto-routes formal queries to {gov.superadminTitle} (Administrative) and {gov.ombudsman.shortName} (Constitutional).
               </p>
             </div>
 
@@ -327,21 +371,18 @@ export const MinisterialCommandView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Target Local Government / Jurisdiction
+                    Target {gov.tier3UnitLabel} / Jurisdiction
                   </label>
                   <select
                     value={targetDistrict}
                     onChange={(e) => setTargetDistrict(e.target.value)}
                     className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-slate-100"
                   >
-                    <option value="Wakiso District">Wakiso District (Kira, Nansana, Entebbe)</option>
-                    <option value="Arua District & City">Arua District &amp; City (West Nile)</option>
-                    <option value="Mbale City & District">Mbale City &amp; District (Bugisu)</option>
-                    <option value="Mbarara City & District">Mbarara City &amp; District (Ankole)</option>
-                    <option value="Gulu City & District">Gulu City &amp; District (Acholi)</option>
-                    <option value="Jinja City & District">Jinja City &amp; District (Busoga)</option>
-                    <option value="Kasese District">Kasese District (Rwenzori)</option>
-                    <option value="All 135+ Local Governments (National)">All 135+ Local Governments (National Circular)</option>
+                    {gov.sampleJurisdictions.map((jur) => (
+                      <option key={jur} value={jur}>
+                        {jur}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -354,9 +395,9 @@ export const MinisterialCommandView: React.FC = () => {
                   {[
                     { id: 'anti_extortion_taskforce', label: 'Anti-Extortion Taskforce' },
                     { id: 'surprise_field_audit', label: 'Surprise Field Inspection' },
-                    { id: 'pdm_ringfence', label: 'PDM Fund Ringfencing' },
+                    { id: 'pdm_ringfence', label: `${gov.fiscalProgramName} Ringfencing` },
                     { id: 'policy_circular', label: 'Ministerial Policy Circular' },
-                    { id: 'public_hearing', label: 'Boda / Market Hearing' },
+                    { id: 'public_hearing', label: isUg ? 'Boda / Market Hearing' : 'Transit / Market Hearing' },
                   ].map((t) => (
                     <button
                       type="button"
@@ -382,7 +423,7 @@ export const MinisterialCommandView: React.FC = () => {
                   type="text"
                   value={directiveSubject}
                   onChange={(e) => setDirectiveSubject(e.target.value)}
-                  placeholder="e.g. Immediate Dismantling of Unofficial Boda-Boda Stage Taxing Syndicates"
+                  placeholder={`e.g. Immediate Dismantling of Unofficial ${isUg ? 'Boda-Boda Stage' : 'Municipal Transport'} Taxing Syndicates`}
                   className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 font-medium"
                 />
               </div>
@@ -395,7 +436,7 @@ export const MinisterialCommandView: React.FC = () => {
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
                   rows={2}
-                  placeholder="Provide precise terms of reference for taskforce officers or parish monitors..."
+                  placeholder={`Provide precise terms of reference for taskforce officers or ${gov.tier1Short.toLowerCase()} monitors...`}
                   className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 font-medium"
                 />
               </div>
@@ -404,7 +445,7 @@ export const MinisterialCommandView: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Statutory Demand to PS MoLG (Vote 011)</span>
+                    <span>Statutory Demand to {gov.superadminMinistryShort} ({gov.superadminVoteLabel})</span>
                   </div>
                   <input
                     type="text"
@@ -412,13 +453,13 @@ export const MinisterialCommandView: React.FC = () => {
                     onChange={(e) => setPsRequirement(e.target.value)}
                     className="w-full p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-slate-100"
                   />
-                  <span className="text-[10px] text-slate-500">Auto-routes to Permanent Secretary Ben Kumumanya</span>
+                  <span className="text-[10px] text-slate-500">Auto-routes to {gov.superadminHolder}</span>
                 </div>
 
                 <div>
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-                    <span>Statutory Demand to IGG (Ombudsman)</span>
+                    <span>Statutory Demand to {gov.ombudsman.shortName}</span>
                   </div>
                   <input
                     type="text"
@@ -426,7 +467,7 @@ export const MinisterialCommandView: React.FC = () => {
                     onChange={(e) => setIggRequirement(e.target.value)}
                     className="w-full p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-900 dark:text-slate-100"
                   />
-                  <span className="text-[10px] text-slate-500">Auto-routes to Hon. Beti Kamya Turwomwe</span>
+                  <span className="text-[10px] text-slate-500">Auto-routes to {gov.ombudsman.headName}</span>
                 </div>
               </div>
 
@@ -455,7 +496,9 @@ export const MinisterialCommandView: React.FC = () => {
                 <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${ministerInfo.badgeColor}`}>
                   {ministerInfo.title.includes('Cabinet') ? 'Cabinet Minister' : 'Minister of State'}
                 </span>
-                <span className="text-[11px] font-mono text-slate-500">Art. {selectedMinister === 'balaam' ? '111' : '117'}</span>
+                <span className="text-[11px] font-mono text-slate-500">
+                  {isUg ? (selectedMinister === 'cabinet' ? 'Art. 111' : 'Art. 117') : gov.countryCode}
+                </span>
               </div>
               <h3 className="text-base font-black text-slate-900 dark:text-white">
                 {ministerInfo.name}
@@ -476,41 +519,55 @@ export const MinisterialCommandView: React.FC = () => {
                 <span>Test Constitutional Separation Guardrails</span>
               </div>
               <p className="text-[11.5px] text-slate-300 leading-relaxed">
-                Under the PFMA 2015, political ministers cannot sign financial warrants, disburse treasury tranches, or execute civil service appointments directly. Try clicking below to test the platform&apos;s constitutional guardrail:
+                Under {gov.fiscalAct}, political ministers cannot sign financial warrants, disburse treasury tranches, or execute civil service appointments directly. Click below to test the guardrail:
               </p>
 
               <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={() => triggerConstitutionalGuardrail('Direct Vote 011 Treasury Disbursement')}
+                  onClick={() => triggerConstitutionalGuardrail(`Direct ${gov.superadminVoteLabel} Treasury Disbursement`)}
                   className="w-full text-left p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center justify-between border border-slate-700 transition-colors"
                 >
-                  <span>Attempt Vote 011 Cash Release</span>
+                  <span>Attempt {gov.superadminVoteLabel} Cash Release</span>
                   <Lock className="w-3.5 h-3.5 text-amber-400" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => triggerConstitutionalGuardrail('Direct Appointment / Transfer of CAO')}
+                  onClick={() => triggerConstitutionalGuardrail(`Direct Appointment / Transfer of ${gov.tier3Short}`)}
                   className="w-full text-left p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 flex items-center justify-between border border-slate-700 transition-colors"
                 >
-                  <span>Attempt Civil Service CAO Transfer</span>
+                  <span>Attempt Civil Service {gov.tier3Short} Transfer</span>
                   <Lock className="w-3.5 h-3.5 text-amber-400" />
                 </button>
               </div>
             </div>
 
-            {/* Pre-Launch Handover Note */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 text-xs space-y-2">
-              <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
-                Institutional Continuity
-              </span>
-              <div className="font-bold text-slate-900 dark:text-white">
-                Hon. Raphael Magyezi Handover
+            {/* Institutional Continuity Note */}
+            {isUg ? (
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
+                  Institutional Continuity
+                </span>
+                <div className="font-bold text-slate-900 dark:text-white">
+                  Hon. Raphael Magyezi Handover
+                </div>
+                <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+                  Former Minister Raphael Magyezi served from Dec 2019 to May 2026. His directive that outgoing local council terms ended 12 May 2026 is preserved in the statutory archive. Hon. Balaam and Hon. Justine Nameere formally assumed full executive reins on 26 May 2026.
+                </p>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
-                Former Minister Raphael Magyezi served from Dec 2019 to May 2026. His directive that outgoing local council terms ended 12 May 2026 is preserved in the statutory archive. Hon. Balaam and Hon. Justine Nameere formally assumed full executive reins on 26 May 2026.
-              </p>
-            </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
+                  Sovereign Governance Custody
+                </span>
+                <div className="font-bold text-slate-900 dark:text-white">
+                  {gov.countryName} Administrative Separation Archive
+                </div>
+                <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+                  All policy circulars issued by {gov.cabinetMinisterName} and accounting executions by {gov.superadminHolder} ({gov.superadminVoteLabel}) are logged immutably for {gov.ombudsman.shortName} review.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -549,7 +606,7 @@ export const MinisterialCommandView: React.FC = () => {
                 <option value="all">All Types</option>
                 <option value="anti_extortion_taskforce">Anti-Extortion</option>
                 <option value="surprise_field_audit">Field Audits</option>
-                <option value="pdm_ringfence">PDM Ringfence</option>
+                <option value="pdm_ringfence">{gov.fiscalProgramName} Ringfence</option>
               </select>
             </div>
           </div>
@@ -590,7 +647,8 @@ export const MinisterialCommandView: React.FC = () => {
                       type="button"
                       onClick={() => {
                         downloadForensicAuditPdf({
-                          district: 'UG',
+                          country: activeCountry,
+                          district: activeCountry,
                           auditorCode: d.ministerDeskCode,
                           targetScope: d.targetJurisdiction,
                         });
@@ -616,14 +674,14 @@ export const MinisterialCommandView: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs pt-1">
                   <div className="p-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40">
                     <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block mb-0.5">
-                      Statutory Demand to PS MoLG (Accounting Officer):
+                      Statutory Demand to {gov.superadminMinistryShort} Accounting Officer:
                     </span>
                     <span className="text-slate-700 dark:text-slate-300 text-[11px]">{d.psActionRequired}</span>
                   </div>
 
                   <div className="p-2 rounded-lg bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40">
                     <span className="text-[10px] font-bold text-rose-800 dark:text-rose-300 block mb-0.5">
-                      Constitutional Subpoena Demand to IGG:
+                      Constitutional Subpoena Demand to {gov.ombudsman.shortName}:
                     </span>
                     <span className="text-slate-700 dark:text-slate-300 text-[11px]">{d.iggActionRequired}</span>
                   </div>
@@ -700,7 +758,7 @@ export const MinisterialCommandView: React.FC = () => {
                 Inter-Ministerial Cabinet Liaison
               </span>
               <h2 className="text-lg font-black text-slate-900 dark:text-white">
-                Government of Uganda Cabinet Roster ({enrolledSectorMinisters.length})
+                Government of {gov.countryName} Cabinet Roster ({enrolledSectorMinisters.length})
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 All ministers in sister ministries are enrolled via their respective Permanent Secretaries to maintain statutory accounting sovereignty.
@@ -779,7 +837,7 @@ export const MinisterialCommandView: React.FC = () => {
               Official Supervisory Queries &amp; Citizen Dossiers ({officialQueries.length})
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Grassroots reports and statutory queries escalating from Parish Chiefs, Frontline Scouts, and CAOs across Uganda.
+              Grassroots reports and statutory queries escalating from {gov.tier1Plural}, Frontline Scouts, and {gov.tier3Plural} across {gov.countryName}.
             </p>
           </div>
 
@@ -825,7 +883,7 @@ export const MinisterialCommandView: React.FC = () => {
                     onClick={() => go('gov_audit')}
                     className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
                   >
-                    View in IGG
+                    View in {gov.ombudsman.shortName}
                   </button>
                 </div>
               </div>
@@ -842,10 +900,10 @@ export const MinisterialCommandView: React.FC = () => {
               Legal Architecture
             </span>
             <h2 className="text-lg font-black text-slate-900 dark:text-white">
-              Statutory Division of Authority in the Republic of Uganda
+              Statutory Division of Authority in {gov.countryName}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Comparative analysis of power separation between Cabinet Ministers, Permanent Secretaries (Accounting Officers), and the Inspector General of Government.
+              Comparative analysis of power separation between Cabinet Ministers, Accounting Officers ({gov.superadminTitle}), and {gov.ombudsman.name}.
             </p>
           </div>
 
@@ -854,34 +912,40 @@ export const MinisterialCommandView: React.FC = () => {
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500">
                   <th className="py-2.5 px-3 font-bold">Dimension</th>
-                  <th className="py-2.5 px-3 font-bold text-emerald-600 dark:text-emerald-400">Cabinet Ministers (Hon. Balaam &amp; Nameere)</th>
-                  <th className="py-2.5 px-3 font-bold text-blue-600 dark:text-blue-400">Permanent Secretary (PS MoLG – Ben Kumumanya)</th>
-                  <th className="py-2.5 px-3 font-bold text-rose-600 dark:text-rose-400">IGG Ombudsman (Hon. Beti Kamya)</th>
+                  <th className="py-2.5 px-3 font-bold text-emerald-600 dark:text-emerald-400">
+                    Cabinet Ministers ({gov.cabinetMinisterName} &amp; {gov.stateMinisterName})
+                  </th>
+                  <th className="py-2.5 px-3 font-bold text-blue-600 dark:text-blue-400">
+                    {gov.superadminTitle} ({gov.superadminHolder})
+                  </th>
+                  <th className="py-2.5 px-3 font-bold text-rose-600 dark:text-rose-400">
+                    {gov.ombudsman.shortName} ({gov.ombudsman.headName})
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
                 <tr>
                   <td className="py-3 px-3 font-bold">Constitutional Basis</td>
-                  <td className="py-3 px-3"><strong>Articles 111 &amp; 117</strong> (Political &amp; Policy Direction, Collective Responsibility)</td>
-                  <td className="py-3 px-3"><strong>Article 174</strong> &amp; <strong>PFMA 2015 Section 45</strong> (Statutory Accounting Officer Vote 011)</td>
-                  <td className="py-3 px-3"><strong>Chapter 13 (Arts 223–232)</strong> &amp; <strong>IGG Act 2002</strong> (Independent Watchdog)</td>
+                  <td className="py-3 px-3"><strong>{gov.cabinetMandateCitation}</strong> (Political &amp; Policy Direction)</td>
+                  <td className="py-3 px-3"><strong>{gov.constitutionalAuthority}</strong> ({gov.superadminVoteLabel} Accounting Officer)</td>
+                  <td className="py-3 px-3"><strong>{gov.ombudsman.constitutionalBasis}</strong> (Independent Watchdog)</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-3 font-bold">Financial Authority</td>
-                  <td className="py-3 px-3 text-rose-600 dark:text-rose-400 font-bold">NO direct warrant signing or cash release (Prohibited under PFMA)</td>
-                  <td className="py-3 px-3 text-emerald-600 dark:text-emerald-400 font-bold">SOLE legal signatory for Vote 011 warrants, PDM grants, and procurements</td>
-                  <td className="py-3 px-3">Can order freezing of accounts under Section 19 IGG Act</td>
+                  <td className="py-3 px-3 text-rose-600 dark:text-rose-400 font-bold">NO direct warrant signing or cash release (Prohibited under {gov.fiscalAct})</td>
+                  <td className="py-3 px-3 text-emerald-600 dark:text-emerald-400 font-bold">SOLE legal signatory for {gov.superadminVoteLabel} warrants, {gov.fiscalProgramName} grants, and procurements</td>
+                  <td className="py-3 px-3">Can order freezing of accounts under {gov.ombudsman.shortName} statutory powers</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-3 font-bold">Civil Service Hierarchy</td>
                   <td className="py-3 px-3">No direct hire/fire powers (Governed by Public Service Commission)</td>
-                  <td className="py-3 px-3">Supervises CAOs, Town Clerks, Town Agents; initiates disciplinary actions</td>
+                  <td className="py-3 px-3">Supervises {gov.tier3Plural}, {gov.tier2Plural}, {gov.tier1Plural}; initiates disciplinary actions</td>
                   <td className="py-3 px-3">Can recommend or order interdiction and prosecution of public officers</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-3 font-bold">CivicDuty Actions</td>
                   <td className="py-3 px-3">Promulgate Directives, Dispatch Political Taskforces, Review Whistleblower Dossiers</td>
-                  <td className="py-3 px-3">Approve Milestone Disbursements, Monitor CAO SLAs, Provision Municipal Nodes</td>
+                  <td className="py-3 px-3">Approve Milestone Disbursements, Monitor {gov.tier3Short} SLAs, Provision Sub-National Nodes</td>
                   <td className="py-3 px-3">Issue Subpoenas, Prosecute Extortion, Enforce Wealth Declarations</td>
                 </tr>
               </tbody>
@@ -909,7 +973,7 @@ export const MinisterialCommandView: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              Under <strong>Article 174 of the 1995 Constitution</strong> and <strong>Section 45 of the Public Finance Management Act (PFMA) 2015</strong>, direct execution of treasury warrants, Vote 011 releases, and civil service personnel appointments are strictly reserved for the <strong>Permanent Secretary / Accounting Officer</strong>.
+              Under <strong>{gov.constitutionalAuthority}</strong> and <strong>{gov.fiscalAct}</strong>, direct execution of treasury warrants, {gov.superadminVoteLabel} releases, and civil service personnel appointments are strictly reserved for the <strong>{gov.superadminTitle}</strong>.
             </p>
 
             <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">

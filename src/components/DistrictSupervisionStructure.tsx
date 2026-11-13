@@ -2,7 +2,8 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode, RoleType, Invite, TeamMember, OfficialQuery } from '../types';
 import { TERRITORY } from '../data/countries';
-import { UG_DISTRICTS } from '../data/nationalRolloutNodes';
+import { getRolloutNodesForCountry } from '../data/nationalRolloutNodes';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { ExecutiveTierAnalytics } from './ExecutiveTierAnalytics';
 import { OfficialQueryDispatchModal } from './OfficialQueryDispatchModal';
 import { OfficialQueryDossierModal } from './OfficialQueryDossierModal';
@@ -90,80 +91,86 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
   } | null>(null);
   const [selectedDossierQuery, setSelectedDossierQuery] = useState<OfficialQuery | null>(null);
 
-  const country = user?.country || 'UG';
+  const country = (user?.country || 'UG') as CountryCode;
+  const gov = useMemo(() => getCountryGovernanceSchema(country), [country]);
   const districts = TERRITORY[country] || [];
+  const rolloutNodes = useMemo(() => getRolloutNodesForCountry(country), [country]);
 
   const currentDistrict =
     districts.find((d) => d.id.toLowerCase() === districtId.toLowerCase()) ||
     districts.find((d) => districtId.toLowerCase().includes(d.id.toLowerCase())) ||
     districts[0];
 
-  const nationalDistrictData = UG_DISTRICTS.find(
-    (d) => d.name.toLowerCase().includes(currentDistrict?.name.toLowerCase() || '') ||
-    d.id.toLowerCase().includes(districtId.toLowerCase())
+  const nationalDistrictData = rolloutNodes.find(
+    (d) =>
+      d.name.toLowerCase().includes((currentDistrict?.name || '').toLowerCase()) ||
+      d.id.toLowerCase().includes(districtId.toLowerCase())
   );
 
   const subcounties = currentDistrict?.children || [];
 
-  // District Technical Departments Template
+  // District / Tier-3 Technical Departments Template
   const technicalDeptTemplates = useMemo(
     () => [
       {
         id: `${currentDistrict?.id || 'dist'}-eng`,
-        roleTitle: 'District Engineer (Roads & Works)',
+        roleTitle: `${gov.tier3Short} Engineer (Roads & Works)`,
         category: 'Public Works & Infrastructure',
-        mandate: 'Supervises roads, bridges, culverts, and public buildings across all sub-counties.',
+        mandate: `Supervises roads, bridges, culverts, and public buildings across all ${gov.tier2Plural.toLowerCase()}.`,
         role: 'spokesperson' as RoleType,
         sla: '48h SLA',
         isUtility: false,
       },
       {
         id: `${currentDistrict?.id || 'dist'}-dho`,
-        roleTitle: 'District Health Officer (DHO)',
+        roleTitle: `${gov.tier3Short} Health Officer`,
         category: 'Health Services',
-        mandate: 'Supervises Health Center IVs/IIIs and PHC grants across all sub-counties.',
+        mandate: `Supervises primary health centers, clinics, and public health grants across all ${gov.tier2Plural.toLowerCase()}.`,
         role: 'spokesperson' as RoleType,
         sla: '24h Emergency SLA',
         isUtility: false,
       },
       {
         id: `${currentDistrict?.id || 'dist'}-dwo`,
-        roleTitle: 'District Water Officer (DWO)',
+        roleTitle: `${gov.tier3Short} Water & Sanitation Officer`,
         category: 'Water & Sanitation',
-        mandate: 'Oversight of rural water coverage, borehole rehabilitations, and gravity flow schemes.',
+        mandate: `Oversight of water coverage, borehole or pipe rehabilitations, and sanitation schemes across ${currentDistrict?.name || gov.tier3UnitLabel}.`,
         role: 'spokesperson' as RoleType,
         sla: '48h SLA',
         isUtility: true,
       },
       {
         id: `${currentDistrict?.id || 'dist'}-deo`,
-        roleTitle: 'District Education Officer (DEO)',
+        roleTitle: `${gov.tier3Short} Education Officer`,
         category: 'Education Services',
-        mandate: 'Supervision of UPE/USE schools, headteachers, and capitation grants.',
+        mandate:
+          country === 'UG'
+            ? 'Supervision of UPE/USE schools, headteachers, and capitation grants.'
+            : `Supervision of public primary/secondary schools, headteachers, and capitation grants in ${currentDistrict?.name || gov.tier3UnitLabel}.`,
         role: 'spokesperson' as RoleType,
         sla: '72h SLA',
         isUtility: false,
       },
       {
         id: `${currentDistrict?.id || 'dist'}-production`,
-        roleTitle: 'District Production & Marketing Officer',
+        roleTitle: `${gov.tier3Short} Production & Commerce Officer`,
         category: 'Agriculture & Production',
-        mandate: 'Agricultural extension lead, veterinary disease control, and PDM Pillar 1 commercial hubs.',
+        mandate: `Agricultural extension lead, veterinary disease control, and ${gov.fiscalProgramName} enterprise hubs.`,
         role: 'spokesperson' as RoleType,
         sla: '48h SLA',
         isUtility: false,
       },
       {
         id: `${currentDistrict?.id || 'dist'}-dia`,
-        roleTitle: 'District Internal Auditor (DIA)',
+        roleTitle: `${gov.tier3Short} Internal Auditor`,
         category: 'Statutory Audit Oversight',
-        mandate: 'Independent statutory audit under PFMA S.45; quarterly value-for-money inspection.',
+        mandate: `Independent statutory audit under ${gov.fiscalAct}; quarterly value-for-money inspection.`,
         role: 'read_only' as RoleType,
         sla: 'Continuous Audit',
         isUtility: false,
       },
     ],
-    [currentDistrict?.id]
+    [currentDistrict?.id, currentDistrict?.name, country, gov]
   );
 
   // Map Sub-Counties to Telemetry Status (Operational, Pending, Vacant)
@@ -300,9 +307,9 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
       return;
     }
 
-    const cleanDept = user?.dept || 'molg';
+    const cleanDept = user?.dept || gov.superadminDeptId;
     const randomHex = Math.floor(1000 + Math.random() * 9000);
-    const code = `UG-${cleanDept.toUpperCase()}-${randomHex}`;
+    const code = `${gov.codePrefix}-${cleanDept.toUpperCase()}-${randomHex}`;
 
     const newInvite: Invite = {
       code,
@@ -316,7 +323,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
       country,
       duty_station: inviteModal.stationName,
       contact_phone: officerPhone.trim() || undefined,
-      invited_by: user?.officer_name || user?.name || 'Chief Administrative Officer (CAO)',
+      invited_by: user?.officer_name || user?.name || gov.tier3Label,
       invited_at: new Date().toISOString(),
       hierarchy_level: inviteModal.isTechnicalDept ? 'tier3_district_cao' : 'tier2_subcounty',
       escalation_rank: 2,
@@ -380,25 +387,25 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700 shadow-2xs">
-                Tier 3: CAO "{currentDistrict?.name || 'District'}"
+                Tier 3: {gov.tier3Short} &ldquo;{currentDistrict?.name || gov.tier3UnitLabel}&rdquo;
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                 Statutory Accounting Office
               </span>
             </div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">
-              Tier 3: CAO "{currentDistrict?.name}" — Command &amp; Telemetry
+              Tier 3: {gov.tier3Short} &ldquo;{currentDistrict?.name}&rdquo; — Command &amp; Telemetry
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl leading-relaxed">
-              Under Section 64 of the Local Governments Act (Cap. 243), the Chief Administrative Officer (CAO) directly supervises Sub-County Accounting Officers (SAS) and Technical Department Heads across {currentDistrict?.name}.
+              Under {gov.localGovLawTier3}, the {gov.tier3Label} directly supervises {gov.tier2Plural} and Technical Department Heads across {currentDistrict?.name}.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
           <div className="text-right hidden sm:block">
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sub-Counties Supervised</div>
-            <div className="text-lg font-black text-teal-600 dark:text-teal-400">{subcounties.length} LLG Stations</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{gov.tier2Plural} Supervised</div>
+            <div className="text-lg font-black text-teal-600 dark:text-teal-400">{subcounties.length} {gov.tier2Short} Stations</div>
           </div>
         </div>
       </div>
@@ -414,7 +421,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
           }`}
         >
           <Layers size={14} />
-          <span>Sub-County Chiefs &amp; SAS ({subcounties.length})</span>
+          <span>{gov.tier2Plural} ({subcounties.length})</span>
         </button>
 
         <button
@@ -426,7 +433,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
           }`}
         >
           <Briefcase size={14} />
-          <span>District Technical Heads ({technicalDeptTemplates.length})</span>
+          <span>{gov.tier3Short} Technical Heads ({technicalDeptTemplates.length})</span>
         </button>
 
         <button
@@ -438,7 +445,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
           }`}
         >
           <Award size={14} />
-          <span>Executive Tier Analytics &amp; LLG Telemetry</span>
+          <span>Executive Tier Analytics &amp; {gov.tier2Short} Telemetry</span>
         </button>
 
         <button
@@ -450,7 +457,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
           }`}
         >
           <Shield size={14} />
-          <span>District SLA &amp; Audit Compliance</span>
+          <span>{gov.tier3UnitLabel} SLA &amp; Audit Compliance</span>
         </button>
       </div>
 
@@ -509,7 +516,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search sub-counties, officers, or codes..."
+                placeholder={`Search ${gov.tier2Plural.toLowerCase()}, officers, or codes...`}
                 className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
             </div>
@@ -571,7 +578,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                   </div>
 
                   <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
-                    <span>{parishCount} Parishes</span>
+                    <span>{parishCount} {gov.tier1Plural}</span>
                     <span>48h SLA Target</span>
                   </div>
                 </div>
@@ -585,7 +592,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                         handleOpenInviteModal(
                           subcounty.id,
                           subcounty.name,
-                          `Senior Assistant Secretary (SAS), ${subcounty.name}`,
+                          `${gov.tier2Short}, ${subcounty.name}`,
                           'node_admin'
                         )
                       }
@@ -611,7 +618,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                       <button
                         type="button"
                         onClick={() => {
-                          const memo = `STATUTORY SUB-COUNTY APPOINTMENT & TRANSMITTAL MEMO\nStation: ${subcounty.name}\nAppointee: ${pendingInvite.name}\nTitle: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                          const memo = `STATUTORY ${gov.tier2UnitLabel.toUpperCase()} APPOINTMENT & TRANSMITTAL MEMO\nStation: ${subcounty.name}\nAppointee: ${pendingInvite.name}\nTitle: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                           navigator.clipboard.writeText(memo);
                           toast(`Copied dispatch memo for ${subcounty.name}!`, 'emerald');
                         }}
@@ -709,7 +716,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Direct technical directorate heads answering to the Chief Administrative Officer (CAO).
+              Direct technical directorate heads answering to the {gov.tier3Label}.
             </p>
           </div>
 
@@ -848,25 +855,28 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-xl border border-teal-100 dark:border-teal-900/40 bg-teal-50/50 dark:bg-teal-950/20">
             <div className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
-              District SLA Resolution
+              {gov.tier3UnitLabel} SLA Resolution
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
               {nationalDistrictData?.sla || '92.4%'}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Average sub-county ticket resolution time: {nationalDistrictData?.avgResponseHours || 36} hours.
+              Average {gov.tier2UnitLabel.toLowerCase()} ticket resolution time: {nationalDistrictData?.avgResponseHours || 36} hours.
             </p>
           </div>
 
           <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              PDM SACCO &amp; Parish Coverage
+              {gov.fiscalProgramName} &amp; {gov.tier1UnitLabel} Coverage
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-              {nationalDistrictData?.pdmParishes || subcounties.reduce((acc, s) => acc + (s.children?.length || 0), 0)} Parishes
+              {(country === 'UG' ? nationalDistrictData?.pdmParishes : undefined) || subcounties.reduce((acc, s) => acc + (s.children?.length || 0), 0)} {gov.tier1Plural}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              DDEG compliance rating: <span className="font-bold text-emerald-600">{nationalDistrictData?.ddegCompliance || 'Compliant (PFMA S.45)'}</span>
+              {gov.fiscalGrantName} compliance rating:{' '}
+              <span className="font-bold text-emerald-600">
+                {(country === 'UG' && nationalDistrictData?.ddegCompliance) || `Compliant (${gov.fiscalAct})`}
+              </span>
             </p>
           </div>
 
@@ -875,10 +885,10 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
               Supervisory Jurisdiction
             </div>
             <div className="text-sm font-bold text-slate-900 dark:text-white mt-1">
-              Chief Administrative Officer (CAO)
+              {gov.tier3Label}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Statutory jurisdiction strictly limited to {currentDistrict?.name} and its subordinate LLGs.
+              Statutory jurisdiction strictly limited to {currentDistrict?.name} and its subordinate {gov.tier2Plural.toLowerCase()}.
             </p>
           </div>
         </div>
@@ -932,7 +942,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                 <input
                   type="text"
                   disabled
-                  value={`${inviteModal.stationName} (${inviteModal.isTechnicalDept ? 'District Technical Directorate' : 'Sub-County LLG Station'})`}
+                  value={`${inviteModal.stationName} (${inviteModal.isTechnicalDept ? `${gov.tier3Short} Technical Directorate` : `${gov.tier2UnitLabel} Station`})`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono"
                 />
               </div>
@@ -948,7 +958,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                   autoFocus
                   value={officerName}
                   onChange={(e) => setOfficerName(e.target.value)}
-                  placeholder="e.g. John Mukasa (Type Officer's Real Substantive Name)"
+                  placeholder={`e.g. ${country === 'UG' ? 'John Mukasa' : `${gov.tier2Short} Lead`} (Type Officer's Real Substantive Name)`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -956,28 +966,28 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                 </span>
               </div>
 
-              {/* 1-Click Direct Report Presets for District */}
+              {/* 1-Click Direct Report Presets for Tier 3 */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] mono text-slate-500 uppercase tracking-wider font-bold">
-                    1-Click Direct Report Presets (CAO {currentDistrict?.name})
+                    1-Click Direct Report Presets ({gov.tier3Short} {currentDistrict?.name})
                   </span>
                   <span className="text-[9px] mono text-teal-600 dark:text-teal-400 font-bold">Station Specific</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {[
-                    { id: 'sas', label: 'Senior Assistant Secretary (SAS)', title: `Senior Assistant Secretary (SAS), ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
-                    { id: 'tc', label: 'Division Town Clerk', title: `Division Town Clerk, ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
-                    { id: 'eng', label: 'District Engineer (Roads & Works)', title: 'District Engineer (Roads & Works)', role: 'spokesperson' as RoleType },
-                    { id: 'dho', label: 'District Health Officer (DHO)', title: 'District Health Officer (DHO)', role: 'spokesperson' as RoleType },
-                    { id: 'dwo', label: 'District Water Officer (DWO)', title: 'District Water Officer (DWO)', role: 'spokesperson' as RoleType },
-                    { id: 'deo', label: 'District Education Officer (DEO)', title: 'District Education Officer (DEO)', role: 'spokesperson' as RoleType },
-                    { id: 'production', label: 'District Production Officer', title: 'District Production & Marketing Officer', role: 'spokesperson' as RoleType },
-                    { id: 'dia', label: 'District Internal Auditor (DIA)', title: 'District Internal Auditor (DIA)', role: 'read_only' as RoleType },
+                    { id: 'sas', label: gov.tier2Short, title: `${gov.tier2Short}, ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
+                    { id: 'tc', label: `${gov.tier2UnitLabel} Clerk`, title: `${gov.tier2UnitLabel} Clerk, ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
+                    { id: 'eng', label: `${gov.tier3Short} Engineer (Roads & Works)`, title: `${gov.tier3Short} Engineer (Roads & Works)`, role: 'spokesperson' as RoleType },
+                    { id: 'dho', label: `${gov.tier3Short} Health Officer`, title: `${gov.tier3Short} Health Officer`, role: 'spokesperson' as RoleType },
+                    { id: 'dwo', label: `${gov.tier3Short} Water Officer`, title: `${gov.tier3Short} Water Officer`, role: 'spokesperson' as RoleType },
+                    { id: 'deo', label: `${gov.tier3Short} Education Officer`, title: `${gov.tier3Short} Education Officer`, role: 'spokesperson' as RoleType },
+                    { id: 'production', label: `${gov.tier3Short} Production Officer`, title: `${gov.tier3Short} Production & Commerce Officer`, role: 'spokesperson' as RoleType },
+                    { id: 'dia', label: `${gov.tier3Short} Internal Auditor`, title: `${gov.tier3Short} Internal Auditor`, role: 'read_only' as RoleType },
                     { id: 'others', label: '+ Others (specify)', title: '', role: 'spokesperson' as RoleType },
                   ].map((preset) => {
                     const isSelected = preset.id === 'others'
-                      ? officerTitle !== '' && !['Senior Assistant Secretary (SAS)', 'Division Town Clerk', 'District Engineer', 'District Health Officer', 'District Water Officer', 'District Education Officer', 'District Production', 'District Internal Auditor'].some(x => officerTitle.includes(x))
+                      ? officerTitle !== '' && ![gov.tier2Short, `${gov.tier2UnitLabel} Clerk`, `${gov.tier3Short} Engineer`, `${gov.tier3Short} Health Officer`, `${gov.tier3Short} Water Officer`, `${gov.tier3Short} Education Officer`, `${gov.tier3Short} Production`, `${gov.tier3Short} Internal Auditor`].some(x => officerTitle.includes(x))
                       : officerTitle === preset.title;
                     return (
                       <button
@@ -1017,7 +1027,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                     Official Designation / Title <span className="text-rose-500">*</span>
                   </label>
                   <span className="text-[10px] font-mono text-teal-600 dark:text-teal-400 font-semibold">
-                    District Statutory Desks
+                    {gov.tier3UnitLabel} Statutory Desks
                   </span>
                 </div>
                 <input
@@ -1027,7 +1037,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                   required
                   value={officerTitle}
                   onChange={(e) => setOfficerTitle(e.target.value)}
-                  placeholder="e.g. Senior Assistant Secretary (SAS) / District Engineer"
+                  placeholder={`e.g. ${gov.tier2Short} / ${gov.tier3Short} Engineer`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -1044,7 +1054,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
                   type="tel"
                   value={officerPhone}
                   onChange={(e) => setOfficerPhone(e.target.value)}
-                  placeholder="e.g. +256 772 000 000"
+                  placeholder={`e.g. ${gov.samplePhone}`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
                 />
               </div>
@@ -1073,7 +1083,7 @@ export const DistrictSupervisionStructure: React.FC<DistrictSupervisionStructure
       {/* Official Query Dispatch Modal */}
       {dispatchModalTarget && (
         <OfficialQueryDispatchModal
-          target={dispatchModalTarget}
+          initialTarget={dispatchModalTarget}
           onClose={() => setDispatchModalTarget(null)}
           onSuccess={(query) => {
             setDispatchModalTarget(null);

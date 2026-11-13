@@ -41,6 +41,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
+import { MasterDossierDisplayer } from '../components/MasterDossierDisplayer';
 import { CivicFeedDispatcher } from '../components/CivicFeedDispatcher';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
 import { COUNTRIES, allDepts } from '../data/countries';
@@ -49,6 +50,7 @@ import { GeospatialSignalMap } from '../components/GeospatialSignalMap';
 import { TrafficSignalHUD, SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from '../components/TrafficSignalHUD';
 import { PromotionalAdFeedCard } from '../components/PromotionalAdFeedCard';
 import { getCountryPromotionalAds } from '../data/promotionalAds';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { catByID, getDept, getPostGrassroots, slaStatus } from '../utils/helpers';
 import { CountryCode, TicketCategory } from '../types';
 
@@ -152,6 +154,8 @@ export const FeedView: React.FC = () => {
     isGovFeedUser ? activeUser.country : selectedCountry || activeUser.country || 'UG'
   ).toUpperCase() as CountryCode;
   const activeCountryName = COUNTRIES[activeJurisdiction]?.name || activeJurisdiction;
+  const gov = getCountryGovernanceSchema(activeJurisdiction);
+  const isUgFeed = activeJurisdiction === 'UG';
 
   useEffect(() => {
     if (activeJurisdiction === 'UG') {
@@ -163,9 +167,10 @@ export const FeedView: React.FC = () => {
       setActiveWard('Gasabo District');
       setActiveGrassroot('Nyabugogo Hub');
     } else {
-      setActiveParish(`${activeCountryName} Central`);
-      setActiveWard('Metropolitan Ward');
-      setActiveGrassroot('Civic District 01');
+      const hub0 = gov.sampleJurisdictions[0] || activeCountryName;
+      setActiveParish(`${hub0} ${gov.tier1UnitLabel}`);
+      setActiveWard(`${hub0} ${gov.tier2UnitLabel}`);
+      setActiveGrassroot(`${gov.grassrootsUnits.villageLabel} 01`);
     }
   }, [activeJurisdiction, activeCountryName]);
 
@@ -861,7 +866,7 @@ export const FeedView: React.FC = () => {
               <MapPin size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Grassroots:</span>
               <span className="font-bold text-slate-950 dark:text-white">
-                {activeUser.district || 'Kampala'} › {activeWard} › {activeParish}
+                {activeUser.district || (isUgFeed ? 'Kampala' : (gov.sampleJurisdictions[0] || activeCountryName))} › {activeWard} › {activeParish}
               </span>
               <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">({activeGrassroot})</span>
             </div>
@@ -912,7 +917,7 @@ export const FeedView: React.FC = () => {
               All Grassroots ({nearMePosts.length})
             </button>
 
-            {/* Level: Parish */}
+            {/* Level: Tier 1 Unit */}
             <button
               type="button"
               onClick={() => setNearMeLevel('parish')}
@@ -922,10 +927,10 @@ export const FeedView: React.FC = () => {
                   : 'bg-white dark:bg-[#0e1116] text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60 hover:bg-emerald-50'
               }`}
             >
-              <span>Parish: {activeParish}</span>
+              <span>{gov.tier1UnitLabel}: {activeParish}</span>
             </button>
 
-            {/* Level: Ward */}
+            {/* Level: Tier 2 Unit */}
             <button
               type="button"
               onClick={() => setNearMeLevel('ward')}
@@ -935,10 +940,10 @@ export const FeedView: React.FC = () => {
                   : 'bg-white dark:bg-[#0e1116] text-sky-800 dark:text-sky-400 border border-sky-200 dark:border-sky-900/60 hover:bg-sky-50'
               }`}
             >
-              <span>Ward: {activeWard}</span>
+              <span>{gov.tier2UnitLabel}: {activeWard}</span>
             </button>
 
-            {/* Level: Grassroot Cell */}
+            {/* Level: Grassroots Unit */}
             <button
               type="button"
               onClick={() => setNearMeLevel('grassroot')}
@@ -948,7 +953,7 @@ export const FeedView: React.FC = () => {
                   : 'bg-white dark:bg-[#0e1116] text-amber-800 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60 hover:bg-amber-50'
               }`}
             >
-              <span>Cell: {activeGrassroot}</span>
+              <span>{gov.grassrootsUnits.villageLabel}: {activeGrassroot}</span>
             </button>
           </div>
         </div>
@@ -1139,7 +1144,7 @@ export const FeedView: React.FC = () => {
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md mx-auto">
                       {barazaCategoryFilter === 'near_me'
-                        ? 'LC1 Village Chairpersons, Parish Chiefs, and neighborhood watchdogs can convene open deliberations here.'
+                        ? `${isUgFeed ? 'LC1 Village Chairpersons, Parish Chiefs' : `${gov.grassrootsUnits.villageLabel}, ${gov.tier1Plural}`}, and neighborhood watchdogs can convene open deliberations here.`
                         : 'Convened by public officials and verified citizens for open statutory deliberation.'}
                     </p>
                     <button
@@ -1148,7 +1153,7 @@ export const FeedView: React.FC = () => {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-2xs transition-colors"
                     >
                       <Radio size={12} />
-                      <span>{barazaCategoryFilter === 'near_me' ? 'Convene Village Baraza (LC1 / Parish)' : '+ Convene Baraza'}</span>
+                      <span>{barazaCategoryFilter === 'near_me' ? `Convene Baraza (${gov.grassrootsUnits.villageLabel} / ${gov.tier1UnitLabel})` : '+ Convene Baraza'}</span>
                     </button>
                   </div>
                 ) : (
@@ -1268,7 +1273,17 @@ export const FeedView: React.FC = () => {
       )}
 
       {/* 7. CIVIC DEPARTMENT-STYLE STANDALONE POSTS FEED */}
-      <div id="feed-list" className="p-3 sm:p-5 space-y-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] min-h-[60vh]">
+      <div id="feed-list" className="p-3 sm:p-5 space-y-4 bg-[#f8f9fa] dark:bg-[#0e1116] min-h-[60vh]">
+        {/* Frontpage Master Dossier Content Displayer — top-liked submission features as Main Story */}
+        <MasterDossierDisplayer
+          countryCode={activeJurisdiction}
+          posts={allC}
+          onFilterByHashtag={(tag) => {
+            setActiveHashtagFilter(tag);
+            toast(`Filtering dispatches by ${tag}`, 'emerald');
+          }}
+        />
+
         {(() => {
           const localizedAds = getCountryPromotionalAds(activeJurisdiction);
           const scoutCampaignAd =
@@ -1405,7 +1420,7 @@ export const FeedView: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Pinpoint any Parish, Sector, Ward, or District across {activeCountryName} to explore local civic dispatches and response times.
+              Pinpoint any {gov.tier1UnitLabel}, {gov.tier2UnitLabel}, or {gov.tier3UnitLabel} across {activeCountryName} to explore local civic dispatches and response times.
             </p>
 
             {/* Quick Presets */}
@@ -1436,12 +1451,11 @@ export const FeedView: React.FC = () => {
                       { p: 'Kicukiro Sector', w: 'Kicukiro District', g: 'Gasharu Cell' },
                       { p: 'Nyamirambo Sector', w: 'Nyarugenge District', g: 'Mumena Cell' },
                     ]
-                  : [
-                      { p: `${activeCountryName} Central`, w: 'Metropolitan Ward', g: 'Civic District 01' },
-                      { p: `${activeCountryName} North`, w: 'North Council Ward', g: 'Transit Hub Zone' },
-                      { p: `${activeCountryName} East`, w: 'East Market Ward', g: 'Commercial Corridor' },
-                      { p: `${activeCountryName} West`, w: 'West Residential Ward', g: 'Community Precinct' },
-                    ]
+                  : gov.sampleJurisdictions.slice(0, 4).map((hub, idx) => ({
+                      p: `${hub} ${gov.tier1UnitLabel}`,
+                      w: `${hub} ${gov.tier2UnitLabel}`,
+                      g: `${gov.grassrootsUnits.villageLabel} 0${idx + 1}`,
+                    }))
                 ).map((item, idx) => (
                   <button
                     key={idx}
@@ -1476,14 +1490,14 @@ export const FeedView: React.FC = () => {
                   type="text"
                   value={activeParish}
                   onChange={(e) => setActiveParish(e.target.value)}
-                  placeholder="Parish (e.g. Nakasero)"
+                  placeholder={`${gov.tier1UnitLabel} (e.g. ${gov.sampleJurisdictions[0] || activeCountryName})`}
                   className="bg-white dark:bg-[#0e1116] border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
                 />
                 <input
                   type="text"
                   value={activeWard}
                   onChange={(e) => setActiveWard(e.target.value)}
-                  placeholder="Ward (e.g. Central Ward)"
+                  placeholder={`${gov.tier2UnitLabel} (e.g. Central ${gov.tier2UnitLabel})`}
                   className="bg-white dark:bg-[#0e1116] border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none"
                 />
               </div>

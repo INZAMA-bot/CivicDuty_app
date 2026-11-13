@@ -15,6 +15,7 @@ import {
   User,
 } from 'lucide-react';
 import { EscrowPerkVoucher } from '../types';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 interface VoucherScannerModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ interface VoucherScannerModalProps {
   activeBranchId?: string;
   activeBranchParish?: string;
   activeDeptName?: string;
+  activeCountry?: string;
 }
 
 export const VoucherScannerModal: React.FC<VoucherScannerModalProps> = ({
@@ -36,7 +38,10 @@ export const VoucherScannerModal: React.FC<VoucherScannerModalProps> = ({
   activeBranchId,
   activeBranchParish,
   activeDeptName,
+  activeCountry,
 }) => {
+  const countryCode = (activeCountry || vouchers[0]?.country || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(countryCode);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState<string>('');
@@ -118,8 +123,8 @@ export const VoucherScannerModal: React.FC<VoucherScannerModalProps> = ({
         brand: activeDeptName || 'Verified Merchant',
         title: 'Customer Experience & Appreciation Voucher',
         faceValue: 15000,
-        currency: 'UGX',
-        country: 'UG',
+        currency: gov.currency,
+        country: countryCode,
         batchId: 'BATCH-LIVE-ESCROW',
         status: 'dispatched',
         createdAt: new Date().toISOString(),
@@ -127,7 +132,7 @@ export const VoucherScannerModal: React.FC<VoucherScannerModalProps> = ({
         sponsorType: 'corporate_csr',
         dispatchedTo: {
           recipientName: 'Verified Customer',
-          recipientContact: '+256 770 123 456',
+          recipientContact: gov.samplePhone,
           dispatchedAt: new Date().toISOString(),
           dispatchedBy: 'Service Provider Desk',
           citationNote: 'Customer care courtesy voucher',

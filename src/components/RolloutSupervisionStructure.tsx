@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode, RoleType, Invite, TeamMember, OfficialQuery } from '../types';
 import { TERRITORY, COUNTRIES } from '../data/countries';
-import { UG_DISTRICTS, getSisterMinistriesForCountry, SisterMinistryNode } from '../data/nationalRolloutNodes';
+import { getRolloutNodesForCountry, getSisterMinistriesForCountry, SisterMinistryNode } from '../data/nationalRolloutNodes';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { ExecutiveTierAnalytics } from './ExecutiveTierAnalytics';
 import { OfficialQueryDispatchModal } from './OfficialQueryDispatchModal';
 import { OfficialQueryDossierModal } from './OfficialQueryDossierModal';
@@ -71,21 +72,28 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
   } = useApp();
 
   const activeCountry: CountryCode = (user?.country || 'UG') as CountryCode;
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
 
-  // Main Tabs: CAOs & Cities (All 135+ Local Governments), Sister PSs (11 Ministries), Analytics, SLA
+  // Main Tabs: Accounting Officers / Cities, Sister PSs, Analytics, SLA
   const [activeTab, setActiveTab] = useState<'caos' | 'sister_ps' | 'analytics' | 'sla'>('caos');
   
   // Status Filters: all | operational (Active) | pending | vacant
   const [caoStatusFilter, setCaoStatusFilter] = useState<'all' | 'operational' | 'pending' | 'vacant'>('all');
   const [psStatusFilter, setPsStatusFilter] = useState<'all' | 'operational' | 'pending' | 'vacant'>('all');
   
-  // Provision for City Arrangements: All Tier 3 (157), District CAOs (146), Strategic Cities (11)
+  // Provision for City Arrangements: All Tier 3, Districts/Counties Only, Cities/Metros Only
   const [cityArrangementFilter, setCityArrangementFilter] = useState<'all' | 'districts_only' | 'cities_only'>('all');
   
-  // Region Filter for CAOs
-  const [regionFilter, setRegionFilter] = useState<'ALL' | 'NORTHERN' | 'CENTRAL' | 'EASTERN' | 'WESTERN'>('ALL');
+  // Region Filter (country-adaptive)
+  const [regionFilter, setRegionFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRegionFilter('ALL');
+    setCityArrangementFilter('all');
+    setSearchQuery('');
+  }, [activeCountry]);
 
   // Batch Dispatch Modal State
   const [batchModalOpen, setBatchModalOpen] = useState(false);
@@ -128,22 +136,23 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
     return getSisterMinistriesForCountry(activeCountry);
   }, [activeCountry]);
 
-  // CAO District Nodes for Active Country
+  // Tier 3 District / County / Municipal Nodes for Active Country
   const districtNodesList = useMemo(() => {
-    return UG_DISTRICTS;
-  }, []);
+    return getRolloutNodesForCountry(activeCountry);
+  }, [activeCountry]);
 
-  // Map CAOs to Telemetry Status (Operational, Pending, Vacant)
+  // Map Accounting Officers to Telemetry Status (Operational, Pending, Vacant)
   const caoTelemetry = useMemo(() => {
+    const tierPrefix = gov.tier3Short.replace(/\W/g, '').slice(0, 4).toUpperCase() || 'T3';
     return districtNodesList.map((d) => {
       const caoCode =
-        d.id === 'UG-LG-GUL'
+        activeCountry === 'UG' && d.id === 'UG-LG-GUL'
           ? 'UG-CAO-GULU'
-          : d.id === 'UG-LG-WAK'
+          : activeCountry === 'UG' && d.id === 'UG-LG-WAK'
           ? 'UG-CAO-WAKISO'
-          : d.id === 'UG-LG-KLA'
+          : activeCountry === 'UG' && d.id === 'UG-LG-KLA'
           ? 'UG-KCCA-ADMIN'
-          : `UG-CAO-${d.name.replace(/\W/g, '').slice(0, 6).toUpperCase()}`;
+          : `${gov.codePrefix}-${activeCountry === 'UG' ? 'CAO' : tierPrefix}-${d.name.replace(/\W/g, '').slice(0, 6).toUpperCase()}`;
 
       // Check if officer is active in teamMembers
       const activeOfficer = teamMembers?.find(
@@ -179,7 +188,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
         status,
       };
     });
-  }, [districtNodesList, teamMembers, invites, activeCountry]);
+  }, [districtNodesList, teamMembers, invites, activeCountry, gov.codePrefix, gov.tier3Short]);
 
   // Map Sister PSs to Telemetry Status (Operational, Pending, Vacant)
   const sisterPsTelemetry = useMemo(() => {
@@ -310,11 +319,12 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
       return;
     }
 
-    const cleanDept = inviteModal.deptId || user?.dept || 'molg';
+    const cleanDept = inviteModal.deptId || user?.dept || gov.superadminDeptId;
     const randomHex = Math.floor(1000 + Math.random() * 9000);
+    const tierCodePrefix = gov.tier3Short.replace(/\W/g, '').slice(0, 4).toUpperCase() || 'T3';
     const code = inviteModal.isSisterMinistry
-      ? `PS-${cleanDept.toUpperCase()}-${randomHex}`
-      : `UG-CAO-${inviteModal.stationName.replace(/\W/g, '').slice(0, 6).toUpperCase()}-${randomHex}`;
+      ? `PS-${gov.codePrefix}-${cleanDept.toUpperCase().slice(0, 6)}-${randomHex}`
+      : `${gov.codePrefix}-${activeCountry === 'UG' ? 'CAO' : tierCodePrefix}-${inviteModal.stationName.replace(/\W/g, '').slice(0, 6).toUpperCase()}-${randomHex}`;
 
     const newInvite: Invite = {
       code,
@@ -328,7 +338,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
       country: activeCountry,
       duty_station: inviteModal.stationName,
       contact_phone: officerPhone.trim() || undefined,
-      invited_by: 'Permanent Secretary, Ministry of Local Government (PS MoLG)',
+      invited_by: gov.superadminTitle,
       invited_at: new Date().toISOString(),
       hierarchy_level: inviteModal.isSisterMinistry ? 'tier5_perm_sec' : 'tier3_district_cao',
       escalation_rank: inviteModal.isSisterMinistry ? 5 : 3,
@@ -354,7 +364,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
     logAudit(
       'official_invite_issued',
       inviteModal.stationId,
-      `PS MoLG issued statutory appointment key ${code} to ${officerName.trim()} as ${officerTitle.trim()}`,
+      `${gov.superadminTitle} issued statutory appointment key ${code} to ${officerName.trim()} as ${officerTitle.trim()}`,
       activeCountry
     );
 
@@ -388,7 +398,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
     logAudit(
       'invite_revoked',
       inviteCode,
-      `PS MoLG revoked single-use credential for ${stationNameStr}`,
+      `${gov.superadminMinistryShort} Superadmin revoked single-use credential for ${stationNameStr}`,
       activeCountry
     );
     toast(`Invite revoked for ${stationNameStr}. Station returned to VACANT.`, 'amber');
@@ -450,7 +460,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
           used: false,
           country: activeCountry,
           duty_station: sisterNode.title,
-          invited_by: 'Permanent Secretary, Ministry of Local Government (PS MoLG)',
+          invited_by: gov.superadminTitle,
           invited_at: new Date().toISOString(),
           hierarchy_level: 'tier5_perm_sec',
           escalation_rank: 5,
@@ -479,19 +489,22 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
         });
       }
 
-      // Check if it's a CAO or City Town Clerk
+      // Check if it's a Tier 3 Accounting Officer or Metropolitan / City Authority
       const districtNode = districtNodesList.find((d) => d.id === stationId);
       if (districtNode) {
         const randomHex = Math.floor(1000 + Math.random() * 9000);
-        const prefix = districtNode.isCity ? 'UG-CITY' : 'UG-CAO';
+        const t3CodePrefix = gov.tier3Short.replace(/\W/g, '').slice(0, 4).toUpperCase() || 'T3';
+        const prefix = districtNode.isCity
+          ? `${gov.codePrefix}-CITY`
+          : `${gov.codePrefix}-${activeCountry === 'UG' ? 'CAO' : t3CodePrefix}`;
         const code = `${prefix}-${districtNode.name.replace(/\W/g, '').slice(0, 6).toUpperCase()}-${randomHex}`;
-        const officerRaw = districtNode.cao.split('(')[0].trim() || (districtNode.isCity ? 'City Town Clerk' : 'Chief Administrative Officer');
+        const officerRaw = districtNode.cao.split('(')[0].trim() || (districtNode.isCity ? gov.tier3MetroLabel : gov.tier3Label);
         const officerTitleStr = districtNode.isCity
-          ? `City Town Clerk, ${districtNode.name}`
-          : `Chief Administrative Officer (CAO), ${districtNode.name}`;
+          ? `${activeCountry === 'UG' ? 'City Town Clerk' : gov.tier3Short}, ${districtNode.name}`
+          : `${gov.tier3Label}, ${districtNode.name}`;
         const dutyStationStr = districtNode.isCity
-          ? `${districtNode.name} City Hall`
-          : `${districtNode.name} District Headquarters`;
+          ? `${districtNode.name} Metro Hall`
+          : `${districtNode.name} ${gov.tier3UnitLabel}`;
 
         addInvite({
           code,
@@ -499,12 +512,12 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
           title: officerTitleStr,
           role: 'node_admin',
           scope: districtNode.id,
-          dept: 'molg',
+          dept: gov.superadminDeptId,
           is_utility: false,
           used: false,
           country: activeCountry,
           duty_station: dutyStationStr,
-          invited_by: 'Permanent Secretary, Ministry of Local Government (PS MoLG)',
+          invited_by: gov.superadminTitle,
           invited_at: new Date().toISOString(),
           hierarchy_level: 'tier3_district_cao',
           escalation_rank: 3,
@@ -512,12 +525,12 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
 
         mintGovAccessCode(code, {
           country: activeCountry,
-          dept: 'molg',
+          dept: gov.superadminDeptId,
           scope: districtNode.id,
           role: 'node_admin',
           is_utility: false,
           role_label: officerTitleStr,
-          real_title_short: districtNode.isCity ? 'City Town Clerk' : 'CAO',
+          real_title_short: districtNode.isCity && activeCountry === 'UG' ? 'City Town Clerk' : gov.tier3Short,
           officer_name: officerRaw,
           hierarchy_level: 'tier3_district_cao',
           escalation_rank: 3,
@@ -537,7 +550,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
     logAudit(
       'batch_dispatch_issued',
       'national_gateway',
-      `PS MoLG executed sovereign batch dispatch for ${manifestItems.length} accounting officers`,
+      `${gov.superadminMinistryShort} Superadmin executed sovereign batch dispatch for ${manifestItems.length} accounting officers`,
       activeCountry
     );
 
@@ -566,14 +579,14 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                 Tier 5 — Apex National Accounting Authority
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                PS MoLG National Command Desk
+                {gov.superadminMinistryShort} National Command Desk ({gov.countryName})
               </span>
             </div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white mt-1">
-              Permanent Secretary (MoLG) Statutory Supervision &amp; Telemetry
+              {gov.superadminTitle} — Supervision &amp; Telemetry
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-3xl leading-relaxed">
-              Under Article 174 of the 1995 Constitution and Section 64 of the Local Governments Act (Cap. 243), the Permanent Secretary directly supervises all Sister Ministry Permanent Secretaries and all 135+ Chief Administrative Officers (CAOs) countrywide.
+              Under {gov.constitutionalAuthority}, {gov.superadminMinistry} directly supervises all {gov.countryName} Sister Ministry Permanent Secretaries and all {totalTier3Count} {gov.tier3Plural} nationwide.
             </p>
           </div>
         </div>
@@ -602,7 +615,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
           }`}
         >
           <Building2 size={14} />
-          <span>Chief Administrative Officers (CAOs) &amp; Cities ({districtNodesList.length})</span>
+          <span>{gov.tier3Plural} ({districtNodesList.length})</span>
         </button>
 
         <button
@@ -614,7 +627,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
           }`}
         >
           <Users size={14} />
-          <span>Sister Permanent Secretaries ({sisterMinistriesList.length})</span>
+          <span>Sister Ministries / PS ({sisterMinistriesList.length})</span>
         </button>
 
         <button
@@ -675,7 +688,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  District CAOs ({totalDistrictsCount})
+                  {gov.tier3UnitLabel}s ({totalDistrictsCount})
                 </button>
                 <button
                   type="button"
@@ -686,13 +699,13 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <span>Strategic Cities ({totalCitiesCount})</span>
-                  <span className="text-[9px] px-1.5 py-0.2 bg-emerald-950/40 text-emerald-200 rounded font-mono font-bold">10 Cities + KCCA</span>
+                  <span>{gov.tier3MetroLabel} ({totalCitiesCount})</span>
+                  <span className="text-[9px] px-1.5 py-0.2 bg-emerald-950/40 text-emerald-200 rounded font-mono font-bold">{gov.tier3MetroBadge}</span>
                 </button>
               </div>
 
               <div className="text-[10.5px] font-mono font-bold text-slate-500 dark:text-slate-400 px-1">
-                Showing <strong className="text-teal-700 dark:text-teal-400">{filteredCaos.length}</strong> of {totalTier3Count} stations countrywide
+                Showing <strong className="text-teal-700 dark:text-teal-400">{filteredCaos.length}</strong> of {totalTier3Count} stations across {gov.countryName}
               </div>
             </div>
 
@@ -744,9 +757,9 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
 
               {/* Region Filter and Search Bar */}
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1 max-w-2xl">
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-[10px] font-bold">
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-[10px] font-bold flex-wrap">
                   <span className="text-slate-400 px-1">Region:</span>
-                  {(['ALL', 'NORTHERN', 'CENTRAL', 'EASTERN', 'WESTERN'] as const).map((r) => (
+                  {['ALL', ...gov.regions].map((r) => (
                     <button
                       key={r}
                       onClick={() => setRegionFilter(r)}
@@ -767,7 +780,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Filter district, city or CAO name..."
+                    placeholder={`Filter ${gov.tier3UnitLabel.toLowerCase()}, city or ${gov.tier3Short}...`}
                     className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
                   />
                 </div>
@@ -808,7 +821,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                           ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                       }`}>
-                        {district.isCity ? 'City' : 'District'}
+                        {district.isCity ? 'City / Metro' : gov.tier3UnitLabel.split(' ')[0]}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -849,13 +862,13 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       </div>
                     ) : (
                       <div className="text-slate-500 italic text-[11px]">
-                        {district.isCity ? `City Town Clerk / Accounting Officer (${district.name})` : `Chief Administrative Officer (CAO), ${district.name}`} unassigned.
+                        {district.cao || `${gov.tier3Label} (${district.name})`} unassigned.
                       </div>
                     )}
                   </div>
 
                   <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
-                    <span>{district.pdmParishes} {district.isCity ? 'Wards' : 'Parishes'}</span>
+                    <span>{district.pdmParishes} {district.isCity && activeCountry === 'UG' ? 'Wards' : `${gov.tier1UnitLabel.split(' ')[0]}s`}</span>
                     <span>{district.sla} Resolution</span>
                   </div>
                 </div>
@@ -869,7 +882,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                         handleOpenIndividualInvite(
                           district.id,
                           district.name,
-                          district.isCity ? `City Town Clerk, ${district.name}` : `Chief Administrative Officer (CAO), ${district.name}`,
+                          district.isCity && activeCountry === 'UG' ? `City Town Clerk, ${district.name}` : `${gov.tier3Label}, ${district.name}`,
                           'node_admin',
                           false
                         )
@@ -877,7 +890,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       className="flex-1 py-1.5 px-3 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                     >
                       <UserPlus size={13} />
-                      <span>{district.isCity ? 'Invite City Town Clerk' : 'Invite CAO'}</span>
+                      <span>{district.isCity && activeCountry === 'UG' ? 'Invite City Town Clerk' : `Invite ${gov.tier3Short}`}</span>
                     </button>
                   )}
 
@@ -896,7 +909,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       <button
                         type="button"
                         onClick={() => {
-                          const memo = `STATUTORY CAO APPOINTMENT & TRANSMITTAL MEMO\nStation: ${district.name} District Local Government\nAppointee: ${pendingInvite.name}\nDesignation: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nAuthority: Section 64, Local Governments Act (Cap. 243)\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                          const memo = `STATUTORY APPOINTMENT & TRANSMITTAL MEMO (${gov.countryName})\nStation: ${district.name}\nAppointee: ${pendingInvite.name}\nDesignation: ${pendingInvite.title}\nSingle-Use Sovereign Key: ${pendingInvite.code}\nAuthority: ${gov.localGovLawTier3}\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                           navigator.clipboard.writeText(memo);
                           toast(`Copied dispatch memo for ${district.name}!`, 'emerald');
                         }}
@@ -1098,7 +1111,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                       <button
                         type="button"
                         onClick={() => {
-                          const memo = `STATUTORY CABINET TRANSMITTAL MEMO\nOffice: Permanent Secretary, Ministry of Local Government\nTo: ${pendingInvite.name} (${pendingInvite.title})\nSingle-Use Sovereign Key: ${pendingInvite.code}\nMandate: Inter-Agency Cabinet Delivery Coordination\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
+                          const memo = `STATUTORY CABINET TRANSMITTAL MEMO (${gov.countryName})\nOffice: ${gov.superadminTitle}\nTo: ${pendingInvite.name} (${pendingInvite.title})\nSingle-Use Sovereign Key: ${pendingInvite.code}\nMandate: Inter-Agency Cabinet Delivery Coordination\nGateway: ${window.location.origin}${window.location.pathname}?gov_code=${pendingInvite.code}`;
                           navigator.clipboard.writeText(memo);
                           toast(`Copied dispatch memo for ${ministry.title}!`, 'emerald');
                         }}
@@ -1154,7 +1167,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
           <ExecutiveTierAnalytics
             initialCountry={activeCountry}
             initialTier={5}
-            initialScope="UG"
+            initialScope={activeCountry}
             compact={true}
           />
         </div>
@@ -1167,37 +1180,37 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-2xl border border-teal-100 dark:border-teal-900/40 bg-teal-50/50 dark:bg-teal-950/20">
             <div className="text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
-              National Local Gov SLA Resolution
+              {gov.countryName} Local Gov SLA Resolution
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
               92.8%
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Average across all 135+ Local Governments: 28.4 hours response time.
+              Average across {totalTier3Count} {gov.tier3UnitLabel}s: 24.4 hours response time.
             </p>
           </div>
 
           <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              DDEG Fiscal Compliance
+              {gov.fiscalGrantName}
             </div>
             <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
               98.2% Compliant
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              PFMA Section 45 Treasury Single Account reconciliation rating across all districts.
+              {gov.fiscalAct} reconciliation rating across all sub-national authorities.
             </p>
           </div>
 
           <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              Auditor General Readiness
+              Auditor General &amp; {gov.ombudsman.shortName} Readiness
             </div>
             <div className="text-sm font-bold text-slate-900 dark:text-white mt-1">
               Full SHA-256 Crypto Chain Active
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Real-time audit logs ready for Supreme Audit Institution &amp; IGG subpoena stamping.
+              Real-time audit logs ready for Supreme Audit Institution &amp; {gov.ombudsman.name} subpoena stamping.
             </p>
           </div>
         </div>
@@ -1222,7 +1235,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                     </span>
                   </h4>
                   <span className="text-[11px] text-slate-500 font-mono">
-                    Article 174 &amp; 188 Constitutional Gateway · {totalDistrictsCount} District CAOs + {totalCitiesCount} Strategic Cities/Metropolitan Authorities
+                    {gov.constitutionalAuthority} · {totalDistrictsCount} {gov.tier3UnitLabel}s + {totalCitiesCount} {gov.tier3MetroLabel}
                   </span>
                 </div>
               </div>
@@ -1239,7 +1252,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
               <div className="space-y-4">
                 <div className="p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-900/60 text-xs text-teal-900 dark:text-teal-300">
                   <p>
-                    <strong>Batch Dispatch Protocol:</strong> Dispatches sovereign credentials in bulk to all selected vacant stations. Single-use keys are minted immediately on the gateway and stations enter <strong>PENDING</strong> status until accepted by each officer.
+                    <strong>Batch Dispatch Protocol:</strong> Dispatches sovereign credentials in bulk to all selected vacant stations across {gov.countryName}. Single-use keys are minted immediately on the gateway and stations enter <strong>PENDING</strong> status until accepted by each officer.
                   </p>
                 </div>
 
@@ -1276,7 +1289,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                     }}
                     className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-100 text-slate-700 dark:text-slate-300"
                   >
-                    Select All Vacant District CAOs ({vacantDistrictsCount})
+                    Select All Vacant {gov.tier3Short}s ({vacantDistrictsCount})
                   </button>
                   <button
                     type="button"
@@ -1289,50 +1302,20 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                   >
                     All Vacant Tier 3 ({vacantCaoCount} Stations)
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedBatchStationIds(
-                        caoTelemetry.filter((c) => c.status === 'vacant' && c.district.region === 'NORTHERN').map((c) => c.district.id)
-                      );
-                    }}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-100 text-slate-700 dark:text-slate-300"
-                  >
-                    Northern CAOs &amp; Cities
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedBatchStationIds(
-                        caoTelemetry.filter((c) => c.status === 'vacant' && c.district.region === 'CENTRAL').map((c) => c.district.id)
-                      );
-                    }}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-100 text-slate-700 dark:text-slate-300"
-                  >
-                    Central CAOs &amp; Cities
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedBatchStationIds(
-                        caoTelemetry.filter((c) => c.status === 'vacant' && c.district.region === 'EASTERN').map((c) => c.district.id)
-                      );
-                    }}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-100 text-slate-700 dark:text-slate-300"
-                  >
-                    Eastern CAOs &amp; Cities
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedBatchStationIds(
-                        caoTelemetry.filter((c) => c.status === 'vacant' && c.district.region === 'WESTERN').map((c) => c.district.id)
-                      );
-                    }}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-100 text-slate-700 dark:text-slate-300"
-                  >
-                    Western CAOs &amp; Cities
-                  </button>
+                  {gov.regions.map((reg) => (
+                    <button
+                      key={reg}
+                      type="button"
+                      onClick={() => {
+                        setSelectedBatchStationIds(
+                          caoTelemetry.filter((c) => c.status === 'vacant' && c.district.region === reg).map((c) => c.district.id)
+                        );
+                      }}
+                      className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-teal-100 text-slate-700 dark:text-slate-300"
+                    >
+                      {reg}
+                    </button>
+                  ))}
                 </div>
 
                 {/* Stations Selection List */}
@@ -1417,7 +1400,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                             {district.isCity ? 'CITY' : 'DISTRICT'}
                           </span>
                           <span className="font-bold text-slate-800 dark:text-slate-200">
-                            {district.isCity ? `City Town Clerk, ${district.name}` : `Chief Administrative Officer (CAO), ${district.name}`}
+                            {district.isCity && activeCountry === 'UG' ? `City Town Clerk, ${district.name}` : `${gov.tier3Short}, ${district.name}`}
                           </span>
                           <span className="text-[10px] text-teal-600 font-mono">({district.region})</span>
                         </label>
@@ -1490,7 +1473,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                   <button
                     type="button"
                     onClick={() => {
-                      const memo = `REPUBLIC OF UGANDA — MINISTRY OF LOCAL GOVERNMENT\nOFFICIAL BATCH TRANSMITTAL GAZETTE MANIFEST\nDate: ${new Date().toLocaleDateString()}\nAuthority: Article 174, 1995 Constitution\n\n${batchManifest.items
+                      const memo = `${gov.countryName.toUpperCase()} — ${gov.superadminMinistry.toUpperCase()}\nOFFICIAL BATCH TRANSMITTAL GAZETTE MANIFEST\nDate: ${new Date().toLocaleDateString()}\nAuthority: ${gov.constitutionalAuthority}\n\n${batchManifest.items
                         .map(
                           (it, i) =>
                             `${i + 1}. ${it.station} | ${it.title}\n   Access Key: ${it.code}\n   Gateway: ${it.loginUrl}`
@@ -1579,7 +1562,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                   autoFocus
                   value={officerName}
                   onChange={(e) => setOfficerName(e.target.value)}
-                  placeholder="e.g. Patrick Mugabi (Type Substantive Officer Name)"
+                  placeholder={`Enter substantive ${gov.tier3Short} or Secretary name`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -1587,23 +1570,23 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                 </span>
               </div>
 
-              {/* 1-Click Direct Report Presets for PS MoLG */}
+              {/* 1-Click Direct Report Presets */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] mono text-slate-500 uppercase tracking-wider font-bold">
-                    1-Click Direct Report Presets (PS MoLG Mandate)
+                    1-Click Direct Report Presets ({gov.superadminMinistryShort} Mandate)
                   </span>
                   <span className="text-[9px] mono text-teal-600 dark:text-teal-400 font-bold">Station Specific</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
-                    { id: 'cao', label: 'Chief Administrative Officer (CAO)', title: `Chief Administrative Officer (CAO), ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
-                    { id: 'city_tc', label: 'City Town Clerk', title: `City Town Clerk, ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
+                    { id: 'cao', label: gov.tier3Label, title: `${gov.tier3Label}, ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
+                    { id: 'city_tc', label: activeCountry === 'UG' ? 'City Town Clerk' : `${gov.tier3MetroLabel} Head`, title: `${activeCountry === 'UG' ? 'City Town Clerk' : gov.tier3Short}, ${inviteModal.stationName}`, role: 'node_admin' as RoleType },
                     { id: 'sister_ps', label: 'Sister Permanent Secretary', title: inviteModal.defaultTitle, role: 'node_admin' as RoleType },
                     { id: 'others', label: '+ Others (specify)', title: '', role: 'node_admin' as RoleType },
                   ].map((preset) => {
                     const isSelected = preset.id === 'others'
-                      ? officerTitle !== '' && !['Chief Administrative Officer (CAO)', 'City Town Clerk', inviteModal.defaultTitle].includes(officerTitle)
+                      ? officerTitle !== '' && ![`${gov.tier3Label}, ${inviteModal.stationName}`, `${activeCountry === 'UG' ? 'City Town Clerk' : gov.tier3Short}, ${inviteModal.stationName}`, inviteModal.defaultTitle].includes(officerTitle)
                       : officerTitle === preset.title;
                     return (
                       <button
@@ -1652,7 +1635,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                   required
                   value={officerTitle}
                   onChange={(e) => setOfficerTitle(e.target.value)}
-                  placeholder="e.g. Chief Administrative Officer (CAO), Gulu District Local Government"
+                  placeholder={`e.g. ${gov.tier3Label}, ${inviteModal.stationName}`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
                 />
                 <span className="text-[10px] text-slate-400 mt-0.5 block">
@@ -1669,7 +1652,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
                   type="tel"
                   value={officerPhone}
                   onChange={(e) => setOfficerPhone(e.target.value)}
-                  placeholder="e.g. +256 772 000 000"
+                  placeholder={`e.g. ${gov.samplePhone}`}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
                 />
               </div>
@@ -1698,7 +1681,7 @@ export const RolloutSupervisionStructure: React.FC<RolloutSupervisionStructurePr
       {/* Official Query Dispatch Modal */}
       {dispatchModalTarget && (
         <OfficialQueryDispatchModal
-          target={dispatchModalTarget}
+          initialTarget={dispatchModalTarget}
           onClose={() => setDispatchModalTarget(null)}
           onSuccess={(query) => {
             setDispatchModalTarget(null);

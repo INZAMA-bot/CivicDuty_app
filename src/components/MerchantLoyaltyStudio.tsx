@@ -989,6 +989,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
         onRedeemVoucher={handleScannerRedeem}
         activeDeptName={merchantName}
         activeBranchParish={parish}
+        activeCountry={selectedCountry}
       />
     </div>
   );

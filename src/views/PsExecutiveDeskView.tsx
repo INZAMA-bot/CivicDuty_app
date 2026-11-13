@@ -8,6 +8,7 @@ import {
 } from '../data/countryMinistries';
 import { CountryCode } from '../types';
 import { getPsMinistryInfo } from '../utils/helpers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import {
   Building2,
   Landmark,
@@ -59,22 +60,25 @@ export const PsExecutiveDeskView: React.FC = () => {
 
   // Strictly lock to the official's commissioned country
   const currentCountry = (user?.country || selectedCountry || 'UG') as CountryCode;
+  const isUg = currentCountry === 'UG';
+  const countryMeta = COUNTRIES[currentCountry] || COUNTRIES.UG;
+  const gov = useMemo(() => getCountryGovernanceSchema(currentCountry), [currentCountry]);
   const psInfo = useMemo(() => getPsMinistryInfo(user), [user]);
   const isMinisterReadOnly = Boolean(
     user?.role === 'read_only' ||
       user?.real_title_short?.toUpperCase().includes('MINISTER') ||
       user?.role_label?.toUpperCase().includes('MINISTER')
   );
-  const isStrictLinePs = (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId !== 'PS-OPM') || isMinisterReadOnly;
+  const isStrictLinePs =
+    (psInfo.isPs && !psInfo.isMoLG && psInfo.ministryId !== 'PS-OPM' && psInfo.ministryId !== 'PS-PRIMATURE') ||
+    isMinisterReadOnly;
   const [showApexExplainer, setShowApexExplainer] = useState<boolean>(true);
   const [sectorFilter, setSectorFilter] = useState<'ALL' | MinistrySector>('ALL');
   const [activeTab, setActiveTab] = useState<'desk_operations' | 'cabinet_league' | 'circulars' | 'inter_ps'>('desk_operations');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Domain-specific state toggles
-  const [frozenDistricts, setFrozenDistricts] = useState<Record<string, boolean>>({
-    'Arua City': true,
-  });
+  const [frozenDistricts, setFrozenDistricts] = useState<Record<string, boolean>>({});
   const [dispatchedMechanics, setDispatchedMechanics] = useState<Record<string, boolean>>({});
   const [inspectedFacilities, setInspectedFacilities] = useState<Record<string, boolean>>({});
   const [sanctionModalOpen, setSanctionModalOpen] = useState(false);
@@ -88,23 +92,35 @@ export const PsExecutiveDeskView: React.FC = () => {
     return getMinistriesForCountry(currentCountry);
   }, [currentCountry]);
 
-  // Line ministries for inter-PS referrals (excluding MoLG superadmin)
+  // Line ministries for inter-PS referrals (excluding territorial superadmin)
   const lineMinistries = useMemo(() => {
+    const superDept = gov.superadminDeptId.toLowerCase();
     return allCountryMinistries.filter(
-      (m) => !m.isSuperadmin && m.id !== 'PS-MOLG' && m.sector !== 'GOVERNANCE'
+      (m) =>
+        !m.isSuperadmin &&
+        m.id !== 'PS-MOLG' &&
+        m.shortTitle.toLowerCase() !== superDept &&
+        m.sector !== 'GOVERNANCE'
     );
-  }, [allCountryMinistries]);
+  }, [allCountryMinistries, gov.superadminDeptId]);
 
   // Strictly lock every PS and Minister to their own authenticated Ministry warrant
   const activeMinistry: MinistryProfile = useMemo(() => {
     const userScope = (user?.scope || '').toUpperCase();
     const userDept = (user?.dept || '').toLowerCase();
     const targetId = psInfo.ministryId || (userScope.startsWith('PS-') ? userScope : selectedMinistryId);
+    const superDept = gov.superadminDeptId.toLowerCase();
 
-    // If Minister is for MoLG, retrieve the MoLG profile so they view their Local Government portfolio
-    if (userDept === 'molg' || targetId === 'PS-MOLG') {
-      const molgProfile = allCountryMinistries.find((m) => m.id === 'PS-MOLG' || m.shortTitle.toLowerCase() === 'molg');
-      if (molgProfile) return molgProfile;
+    // If Minister/PS is for territorial superadmin ministry, retrieve its profile
+    if (userDept === 'molg' || userDept === superDept || targetId === 'PS-MOLG') {
+      const superProfile = allCountryMinistries.find(
+        (m) =>
+          m.isSuperadmin ||
+          m.id === 'PS-MOLG' ||
+          m.shortTitle.toLowerCase() === 'molg' ||
+          m.shortTitle.toLowerCase() === superDept
+      );
+      if (superProfile) return superProfile;
     }
 
     if (targetId && targetId !== 'PS-MOLG') {
@@ -124,7 +140,7 @@ export const PsExecutiveDeskView: React.FC = () => {
       lineMinistries[0] ||
       allCountryMinistries[0]
     );
-  }, [allCountryMinistries, lineMinistries, selectedMinistryId, currentCountry, psInfo, user]);
+  }, [allCountryMinistries, lineMinistries, selectedMinistryId, currentCountry, psInfo, user, gov.superadminDeptId]);
 
   const handleRequireAccessCodeForOtherAccount = (targetLabel?: string) => {
     toast(
@@ -142,11 +158,11 @@ export const PsExecutiveDeskView: React.FC = () => {
       logAudit(
         'minister_policy_advisory_flag',
         district,
-        `Cabinet Minister flagged ${district} to Permanent Secretary (${activeMinistry.permSecretary}) for Section 15 PFMA review. Direct accounting execution reserved for PS.`,
+        `Cabinet Minister flagged ${district} to Permanent Secretary (${activeMinistry.permSecretary}) for ${gov.fiscalAct} review. Direct accounting execution reserved for PS.`,
         currentCountry
       );
       toast(
-        `[READ-ONLY MINISTER WARRANT] Policy Advisory sent to PS (${activeMinistry.permSecretary}) to execute PFMA sanction on ${district}.`,
+        `[READ-ONLY MINISTER WARRANT] Policy Advisory sent to PS (${activeMinistry.permSecretary}) to execute statutory sanction on ${district}.`,
         'amber'
       );
       return;
@@ -161,15 +177,15 @@ export const PsExecutiveDeskView: React.FC = () => {
       logAudit(
         'ps_statutory_budget_freeze',
         district,
-        `Section 15 PFMA Budget Freeze invoked on ${district} by ${activeMinistry.permSecretary} (${activeMinistry.shortTitle}) due to unresolved service backlog.`,
+        `${gov.fiscalAct} Budget Freeze invoked on ${district} by ${activeMinistry.permSecretary} (${activeMinistry.shortTitle}) due to unresolved service backlog.`,
         currentCountry
       );
-      toast(`[PFMA SANCTION ACTIVE] Q3 Disbursal for ${district} FROZEN until audit clearance.`, 'red');
+      toast(`[STATUTORY SANCTION ACTIVE] Q3 Disbursal for ${district} FROZEN until audit clearance.`, 'red');
     } else {
       logAudit(
         'ps_budget_freeze_lifted',
         district,
-        `Section 15 PFMA Budget Freeze lifted on ${district} by ${activeMinistry.permSecretary} following compliance review.`,
+        `${gov.fiscalAct} Budget Freeze lifted on ${district} by ${activeMinistry.permSecretary} following compliance review.`,
         currentCountry
       );
       toast(`Sanctions lifted for ${district}. Normal exchequer releases restored.`, 'emerald');
@@ -366,13 +382,13 @@ export const PsExecutiveDeskView: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-[10.5px] font-mono font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                   <Eye className="w-3.5 h-3.5" />
-                  <span>Cabinet Minister Read-Only Executive Warrant · Public Finance Management Act (PFMA)</span>
+                  <span>Cabinet Minister Read-Only Executive Warrant · {gov.fiscalAct}</span>
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   Political Head &amp; Policy Oversight View ({user?.name || `Hon. Cabinet Minister — ${activeMinistry.shortTitle}`})
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Under constitutional Public Finance Management rules, <strong>Cabinet Ministers &amp; Ministers of State</strong> hold <strong>Read-Only Executive Oversight</strong> over operational accounting ledgers. You are strictly locked to <strong>{activeMinistry.title} ({COUNTRIES[currentCountry]?.name})</strong> and can inspect live sector telemetry, SLA league tables, and SHA-256 audit logs, or flag <strong>Policy Advisories</strong> to the Permanent Secretary (<strong>{activeMinistry.permSecretary}</strong>).
+                  Under constitutional fiscal management rules ({gov.fiscalAct}), <strong>Cabinet Ministers &amp; Ministers of State</strong> hold <strong>Read-Only Executive Oversight</strong> over operational accounting ledgers. You are strictly locked to <strong>{activeMinistry.title} ({countryMeta.name})</strong> and can inspect live sector telemetry, SLA league tables, and SHA-256 audit logs, or flag <strong>Policy Advisories</strong> to the Permanent Secretary (<strong>{activeMinistry.permSecretary}</strong>).
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -399,7 +415,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                   <span>Constitutional Architecture Guide · Understanding the &ldquo;Apex&rdquo; Executive Desk</span>
                 </div>
                 <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  Who the Apex Desk Is For &amp; How It Differs from the Superadmin (MoLG) Desk
+                  Who the Apex Desk Is For &amp; How It Differs from the Superadmin ({gov.superadminMinistryShort}) Desk
                 </h3>
               </div>
               <button
@@ -412,9 +428,9 @@ export const PsExecutiveDeskView: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              In every country&apos;s government, authority is divided into two distinct constitutional pillars:
-              <strong> (1) Horizontal Territorial Administration</strong> (governed by the country&apos;s <strong>National Superadmin</strong>, e.g., PS Ministry of Local Government / Devolution, who commissions Regional, District/County, and Parish/Ward desks), and
-              <strong> (2) Vertical Sector Line Ministries</strong> (governed by each Ministry&apos;s <strong>Permanent Secretary &amp; Cabinet Minister</strong>).
+              In {countryMeta.name}&apos;s governance architecture, authority is divided into two distinct constitutional pillars:
+              <strong> (1) Horizontal Territorial Administration</strong> (governed by <strong>{gov.superadminTitle}</strong>, who commissions {gov.tier3Plural}, {gov.tier2Plural}, and {gov.tier1Plural}), and
+              <strong> (2) Vertical Sector Line Ministries</strong> (governed by each Ministry&apos;s <strong>Permanent Secretary / Accounting Officer &amp; Cabinet Minister</strong>).
               <strong> The &ldquo;Apex&rdquo; Desk is the specialized national command center exclusively for Sector Line Ministries ({activeMinistry.title}).</strong>
             </p>
 
@@ -427,7 +443,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                   Line Ministry PS &amp; Cabinet Minister
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                  Strictly locked to {activeMinistry.title} ({COUNTRIES[currentCountry]?.name}). Never exposes other countries or unrelated ministries.
+                  Strictly locked to {activeMinistry.title} ({countryMeta.name}). Never exposes other countries or unrelated ministries.
                 </p>
               </div>
 
@@ -439,7 +455,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                   {activeMinistry.uniqueFeatureBadge}
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                  Controls sector-specific national assets (e.g., Road Graders GPS, Treasury IFMS Freezes, NMS Drug Audits, Borehole Mechanics).
+                  Controls sector-specific national assets (e.g., Road Graders GPS, Treasury IFMS Freezes, Medical Stock Audits, Water Point Mechanics).
                 </p>
               </div>
 
@@ -593,10 +609,10 @@ export const PsExecutiveDeskView: React.FC = () => {
                 <div className="p-4 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div className="space-y-0.5">
                     <strong className="text-sm font-bold text-slate-900 dark:text-white block">
-                      Section 15 PFMA Statutory Budget Freeze &amp; Discretionary Equalization Grants (DDEG)
+                      {gov.fiscalAct} — Statutory Budget Freeze &amp; {gov.fiscalGrantName}
                     </strong>
                     <span className="text-slate-600 dark:text-slate-400">
-                      Correlate citizen unresolved service tickets with unspent district bank balances. The Permanent Secretary / Secretary to the Treasury is empowered to freeze quarterly development disbursals to defaulting accounting officers.
+                      Correlate citizen unresolved service tickets with unspent {gov.tier3UnitLabel.toLowerCase()} treasury balances. The Permanent Secretary / Secretary to the Treasury is empowered to freeze quarterly development disbursals to defaulting accounting officers.
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -610,7 +626,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                 <div className="bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] overflow-hidden">
                   <div className="p-4 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      District Treasury Accounts vs. Citizen Complaint Correlation
+                      {gov.tier3UnitLabel} Treasury Accounts vs. Citizen Complaint Correlation
                     </h3>
                     <span className="text-xs font-mono text-slate-500">Live TSA Data Sync</span>
                   </div>
@@ -619,14 +635,14 @@ export const PsExecutiveDeskView: React.FC = () => {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-[#f8f9fa] dark:bg-[#0e1116] text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 border-b border-[#e3e6ea] dark:border-[#262b36]">
                         <tr>
-                          <th className="py-3 px-4">Local Government Node</th>
+                          <th className="py-3 px-4">{gov.tier3UnitLabel} Node</th>
                           <th className="py-3 px-4">Quarterly Allocation</th>
                           <th className="py-3 px-4">Disbursed (TSA)</th>
                           <th className="py-3 px-4">Unspent Balance</th>
                           <th className="py-3 px-4">Unresolved Complaints</th>
                           <th className="py-3 px-4">Statutory Status</th>
                           <th className="py-3 px-4 text-right">
-                            {isMinisterReadOnly ? 'Ministerial Policy Flag (RO)' : 'PFMA Sanction Action'}
+                            {isMinisterReadOnly ? 'Ministerial Policy Flag (RO)' : 'Fiscal Sanction Action'}
                           </th>
                         </tr>
                       </thead>
@@ -649,7 +665,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                               <td className="py-3 px-4 font-mono text-[10px] font-semibold">
                                 {isFrozen ? (
                                   <span className="text-rose-600 dark:text-rose-400">
-                                    FROZEN S.15
+                                    FROZEN (STATUTORY)
                                   </span>
                                 ) : row.unresolvedComplaints > 30 ? (
                                   <span className="text-amber-600 dark:text-amber-400">
@@ -675,7 +691,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                                   {isMinisterReadOnly
                                     ? 'RO · Flag PS to Review'
                                     : isFrozen
-                                    ? 'Lift S.15 Freeze'
+                                    ? 'Lift Freeze'
                                     : 'Freeze Disbursal'}
                                 </button>
                               </td>
@@ -695,15 +711,15 @@ export const PsExecutiveDeskView: React.FC = () => {
                 <div className="p-4 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div className="space-y-0.5">
                     <strong className="text-sm font-bold text-slate-900 dark:text-white block">
-                      District Road Unit Heavy Equipment Telemetry &amp; Fuel Auditing
+                      {gov.tier3UnitLabel} Road Unit Heavy Equipment Telemetry &amp; Fuel Auditing
                     </strong>
                     <span className="text-slate-600 dark:text-slate-400">
-                      Live telemetry across public Komatsu/Sumitomo motor graders and excavators. Prevents private illegal hiring, tracks engine hours vs. graded kilometers, and logs fuel allocations.
+                      Live telemetry across public motor graders and excavators in {countryMeta.name}. Prevents private illegal hiring, tracks engine hours vs. graded kilometers, and logs fuel allocations.
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                      146 Units Tracked
+                      {isUg ? '146 Units Tracked' : `${countryMeta.name} Fleet Live`}
                     </span>
                   </div>
                 </div>
@@ -805,15 +821,17 @@ export const PsExecutiveDeskView: React.FC = () => {
                 <div className="p-4 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div className="space-y-0.5">
                     <strong className="text-sm font-bold text-slate-900 dark:text-white block">
-                      National Medical Stores (NMS) Stock-Out Verification &amp; Drug Diversion Audit
+                      {isUg
+                        ? 'National Medical Stores (NMS) Stock-Out Verification & Drug Diversion Audit'
+                        : `${countryMeta.name} Central Medical Supply Verification & Drug Diversion Audit`}
                     </strong>
                     <span className="text-slate-600 dark:text-slate-400">
-                      When citizens report &ldquo;no medicines&rdquo; at public health centers, cross-reference facility inventory with official NMS central delivery manifests to immediately identify drug theft or unauthorized charging.
+                      When citizens report &ldquo;no medicines&rdquo; at public health centers in {countryMeta.name}, cross-reference facility inventory with official central delivery manifests to immediately identify drug theft or unauthorized charging.
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="text-[10.5px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                      NMS Manifest Connected
+                      {isUg ? 'NMS Manifest Connected' : 'Supply Manifest Connected'}
                     </span>
                   </div>
                 </div>
@@ -831,10 +849,10 @@ export const PsExecutiveDeskView: React.FC = () => {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-[#f8f9fa] dark:bg-[#0e1116] text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 border-b border-[#e3e6ea] dark:border-[#262b36]">
                         <tr>
-                          <th className="py-3 px-4">Facility &amp; District</th>
+                          <th className="py-3 px-4">Facility &amp; {gov.tier3UnitLabel}</th>
                           <th className="py-3 px-4">Drug Category</th>
                           <th className="py-3 px-4">Stock Status</th>
-                          <th className="py-3 px-4">Last NMS Delivery</th>
+                          <th className="py-3 px-4">{isUg ? 'Last NMS Delivery' : 'Last Central Delivery'}</th>
                           <th className="py-3 px-4">Citizen Reports</th>
                           <th className="py-3 px-4">Investigation Status</th>
                           <th className="py-3 px-4 text-right">Statutory Action</th>
@@ -910,10 +928,12 @@ export const PsExecutiveDeskView: React.FC = () => {
                 <div className="p-4 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div className="space-y-0.5">
                     <strong className="text-sm font-bold text-slate-900 dark:text-white block">
-                      Universal Primary (UPE) &amp; Secondary (USE) Capitation &amp; Safety Hazard Radar
+                      {isUg
+                        ? 'Universal Primary (UPE) & Secondary (USE) Capitation & Safety Hazard Radar'
+                        : `${countryMeta.name} Public Primary & Secondary Capitation & Safety Hazard Radar`}
                     </strong>
                     <span className="text-slate-600 dark:text-slate-400">
-                      Enforce strict prohibition against unauthorized school fees, track teacher payroll attendance, and prioritize emergency renovations for condemned classroom roofs and pit latrines.
+                      Enforce strict prohibition against unauthorized school fees, track teacher payroll attendance, and prioritize emergency renovations for condemned classroom roofs and sanitation facilities.
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -935,7 +955,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-[#f8f9fa] dark:bg-[#0e1116] text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 border-b border-[#e3e6ea] dark:border-[#262b36]">
                         <tr>
-                          <th className="py-3 px-4">School &amp; District</th>
+                          <th className="py-3 px-4">School &amp; {gov.tier3UnitLabel}</th>
                           <th className="py-3 px-4">Level</th>
                           <th className="py-3 px-4">Capitation Disbursed</th>
                           <th className="py-3 px-4">Illegal Fees Flag</th>
@@ -1477,7 +1497,7 @@ export const PsExecutiveDeskView: React.FC = () => {
                   type="text"
                   value={referralSubject}
                   onChange={(e) => setReferralSubject(e.target.value)}
-                  placeholder="e.g. Road drainage overflow contaminating borehole in Kasangati SC"
+                  placeholder={`e.g. Drainage overflow affecting public water supply in ${gov.sampleJurisdictions[0] || countryMeta.name}`}
                   required
                   className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"
                 />

@@ -46,6 +46,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { COUNTRIES, getDept } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { getCountryPerks } from '../data/countryPerks';
 import { Post, TownHallSession, TownHallHandRaise, TownHallMessage } from '../types';
 import {
   sendTownHallMessageToCloud,
@@ -109,6 +111,10 @@ export const GlobalSocialModals: React.FC = () => {
   } = useApp();
 
   const activeUser = user || ensureCitizenSession();
+  const activeCountryCode = (activeUser.country || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(activeCountryCode);
+  const countryPerks = getCountryPerks(activeCountryCode);
+  const isUg = activeCountryCode === 'UG';
   const [notifFilter, setNotifFilter] = useState<'all' | 'lc1_advisory' | 'sla_update' | 'reply' | 'upvote'>('all');
   const [dmSearch, setDmSearch] = useState('');
   const [dmInput, setDmInput] = useState('');
@@ -152,10 +158,27 @@ export const GlobalSocialModals: React.FC = () => {
   const audioStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const [barazaChat, setBarazaChat] = useState<Array<{ id: string; sender: string; text: string; time: string; mediaBadge?: string; mediaUrl?: string; created_at?: string }>>([
-    { id: 'bc-1', sender: 'Grace Akello (@grace_watchdog)', text: 'Thank you Permanent Secretary for joining this live video baraza on drainage SLAs.', time: '2m ago' },
-    { id: 'bc-2', sender: 'David Mukasa (Boda Scout)', text: 'Can the municipal engineer confirm when culvert works begin on Ward 2?', time: '1m ago', mediaBadge: 'Photo Evidence + GPS Attached' },
-  ]);
+  const buildInitialBarazaChat = (code: string) => {
+    const cPerks = getCountryPerks(code);
+    const cGov = getCountryGovernanceSchema(code);
+    const c1 = cPerks.sampleCitizens[0]?.name || 'Citizen Watchdog';
+    const c2 = cPerks.sampleCitizens[1]?.name || 'Frontline Road Scout';
+    const h1 = '@' + c1.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const scoutLabel = code === 'UG' ? 'Boda Scout' : 'Frontline Scout';
+    return [
+      { id: 'bc-1', sender: `${c1} (${h1})`, text: `Thank you ${cGov.superadminTitle} for joining this live baraza on drainage & service SLAs.`, time: '2m ago' },
+      { id: 'bc-2', sender: `${c2} (${scoutLabel})`, text: `Can the municipal engineer confirm when ${cGov.tier2UnitLabel} culvert works begin?`, time: '1m ago', mediaBadge: 'Photo Evidence + GPS Attached' },
+    ];
+  };
+
+  const [barazaChat, setBarazaChat] = useState<Array<{ id: string; sender: string; text: string; time: string; mediaBadge?: string; mediaUrl?: string; created_at?: string }>>(() =>
+    buildInitialBarazaChat(activeCountryCode)
+  );
+
+  useEffect(() => {
+    const code = (activeTownHall?.country || activeCountryCode).toUpperCase();
+    setBarazaChat(buildInitialBarazaChat(code));
+  }, [activeTownHall?.id, activeCountryCode]);
 
   // Is current user host or administrative moderator
   const isHost = Boolean(
@@ -375,7 +398,7 @@ export const GlobalSocialModals: React.FC = () => {
           <div className="px-4 py-2 border-b border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {[
               { id: 'all', label: 'All Activity' },
-              { id: 'lc1_advisory', label: 'LC1 Village Advisories' },
+              { id: 'lc1_advisory', label: isUg ? 'LC1 Village Advisories' : `${gov.grassrootsUnits.villageLabel} Advisories` },
               { id: 'sla_update', label: 'Official SLA' },
               { id: 'reply', label: 'Replies & Mentions' },
               { id: 'upvote', label: 'Co-Signs & Quotes' },
@@ -460,15 +483,25 @@ export const GlobalSocialModals: React.FC = () => {
     });
 
     const knownDirectory: { name: string; role: string; handle: string; verified: boolean }[] = [
-      { name: 'Robinah Kizito', role: 'Head Teacher (Gayaza High School)', handle: '@robinah_kizito', verified: true },
-      { name: 'Sr. Mary Grace Akello', role: 'Headmistress (Mt. St. Mary Namagunga)', handle: '@sr_grace_akello', verified: true },
-      { name: 'Faruq Mandela', role: 'Customer Experience Lead (Café Javas)', handle: '@faruq_mandela', verified: true },
-      { name: 'Dr. Eng. Silver Mugisha', role: 'Managing Director (NWSC)', handle: '@silver_mugisha', verified: true },
-      { name: 'Dr. Rosemary Byanyima', role: 'Executive Director (Mulago Referral Hosp)', handle: '@rosemary_byanyima', verified: true },
-      { name: 'Ben Kumumanya', role: 'Permanent Secretary (MoLG Vote 011)', handle: '@ben_kumumanya', verified: true },
-      { name: 'Hon. Balaam Barugahara', role: 'Cabinet Minister (MoLG)', handle: '@balaam_barugahara', verified: true },
-      { name: 'Parish Chief Nakasero', role: 'Parish Chief (Nakasero Parish)', handle: '@parish_chief_nakasero', verified: true },
-      ...Array.from<string>(new Set(posts.map((p) => String(p.author || '')))).slice(0, 15).map((author: string) => ({
+      ...(isUg
+        ? [
+            { name: 'Robinah Kizito', role: 'Head Teacher (Gayaza High School)', handle: '@robinah_kizito', verified: true },
+            { name: 'Sr. Mary Grace Akello', role: 'Headmistress (Mt. St. Mary Namagunga)', handle: '@sr_grace_akello', verified: true },
+            { name: 'Faruq Mandela', role: 'Customer Experience Lead (Café Javas)', handle: '@faruq_mandela', verified: true },
+            { name: 'Dr. Eng. Silver Mugisha', role: 'Managing Director (NWSC)', handle: '@silver_mugisha', verified: true },
+            { name: 'Dr. Rosemary Byanyima', role: 'Executive Director (Mulago Referral Hosp)', handle: '@rosemary_byanyima', verified: true },
+            { name: 'Ben Kumumanya', role: 'Permanent Secretary (MoLG Vote 011)', handle: '@ben_kumumanya', verified: true },
+            { name: 'Hon. Balaam Barugahara', role: 'Cabinet Minister (MoLG)', handle: '@balaam_barugahara', verified: true },
+            { name: 'Parish Chief Nakasero', role: 'Parish Chief (Nakasero Parish)', handle: '@parish_chief_nakasero', verified: true },
+          ]
+        : [
+            { name: gov.superadminHolder, role: `${gov.superadminTitle} (${gov.superadminMinistryShort})`, handle: `@${gov.superadminHolder.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, verified: true },
+            { name: gov.cabinetMinisterName, role: `Minister (${gov.superadminMinistryShort})`, handle: `@${gov.cabinetMinisterName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, verified: true },
+            { name: gov.utilityAgency.execLeadName, role: `Executive Lead (${gov.utilityAgency.waterName})`, handle: `@${gov.utilityAgency.execLeadName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, verified: true },
+            { name: gov.ombudsman.headName, role: `${gov.ombudsman.headTitle} (${gov.ombudsman.shortName})`, handle: `@${gov.ombudsman.headName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, verified: true },
+            { name: `${gov.tier1Short} (${gov.sampleJurisdictions[0] || gov.countryName})`, role: gov.tier1Label, handle: `@${gov.tier1Short.toLowerCase().replace(/[^a-z0-9]/g, '_')}`, verified: true },
+          ]),
+      ...Array.from<string>(new Set(posts.filter((p) => p.country === activeCountryCode).map((p) => String(p.author || '')))).slice(0, 15).map((author: string) => ({
         name: author,
         role: 'Citizen Watchdog',
         handle: `@${author.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
@@ -1489,9 +1522,9 @@ export const GlobalSocialModals: React.FC = () => {
                       dept: 'mowt',
                       lane: 'civic',
                       territory: {
-                        district: 'Kampala District',
-                        subcounty: 'Kampala Central Division',
-                        parish: 'Nakasero Parish',
+                        district: gov.sampleJurisdictions[0] || cInfo.name,
+                        subcounty: `${gov.sampleJurisdictions[1] || cInfo.name} ${gov.tier2UnitLabel}`,
+                        parish: `${gov.sampleJurisdictions[0] || cInfo.name} ${gov.tier1UnitLabel}`,
                       },
                       citizen_id: activeUser.id,
                       citizen_name: th.host_name,
@@ -1511,7 +1544,7 @@ export const GlobalSocialModals: React.FC = () => {
                       ],
                       voice_note: {
                         duration: formatBroadcastTimer(broadcastDurationSec),
-                        language: 'Uganda Official Hearing Audio',
+                        language: `${cInfo.name} Official Hearing Audio`,
                         transcript: `Official live proceedings recorded from ${th.dept_name} Town Hall session. Topic: ${th.topic_tag}. Presided by ${th.host_name} with ${th.listeners_count} citizens tuned in.`,
                       },
                       status: 'resolved',
@@ -2118,34 +2151,35 @@ export const GlobalSocialModals: React.FC = () => {
                 onChange={(e) => {
                   const role = e.target.value as any;
                   setConveningDeskRole(role);
+                  const hub0 = gov.sampleJurisdictions[0] || gov.countryName;
                   if (role === 'lc1') {
-                    setNewBarazaDept('LC1 Village Council · Nakasero Cell');
-                    setNewBarazaCoHost('Kigozi Lawrence (LC1 Chairperson)');
+                    setNewBarazaDept(isUg ? 'LC1 Village Council · Nakasero Cell' : `${gov.grassrootsUnits.villageLabel} · ${hub0}`);
+                    setNewBarazaCoHost(isUg ? 'Kigozi Lawrence (LC1 Chairperson)' : `${countryPerks.sampleCitizens[0]?.name || 'Local Coordinator'} (${gov.grassrootsUnits.villageLabel})`);
                     setNewBarazaTag('#VillageBaraza');
-                    setNewBarazaTitle('LC1 Frontline Village Baraza: Sanitation, Security & Service Alerts');
+                    setNewBarazaTitle(`${gov.grassrootsUnits.villageLabel} Baraza: Sanitation, Security & Service Alerts`);
                   } else if (role === 'parish') {
-                    setNewBarazaDept('Parish Chief / PDM SACCO Desk');
-                    setNewBarazaCoHost('Namyalo Christine (Parish Chief)');
-                    setNewBarazaTag('#ParishAccountability');
-                    setNewBarazaTitle('Parish Development Model (PDM) & Statutory Road SLA Assembly');
+                    setNewBarazaDept(`${gov.tier1Short} / ${gov.fiscalProgramName} Desk`);
+                    setNewBarazaCoHost(isUg ? 'Namyalo Christine (Parish Chief)' : `${gov.tier1Short} Officer (${hub0})`);
+                    setNewBarazaTag(`#${gov.tier1UnitLabel.replace(/\s+/g, '')}Accountability`);
+                    setNewBarazaTitle(`${gov.fiscalProgramName} & Statutory ${gov.tier1UnitLabel} Road SLA Assembly`);
                   } else if (role === 'subcounty') {
-                    setNewBarazaDept('Sub-County Town Clerk / Division Desk');
-                    setNewBarazaCoHost('Town Clerk / Division Engineer');
-                    setNewBarazaTag('#DivisionWorks');
-                    setNewBarazaTitle('Division Council Service Delivery Review');
+                    setNewBarazaDept(`${gov.tier2Short} / ${gov.tier2UnitLabel} Desk`);
+                    setNewBarazaCoHost(`${gov.tier2Label} / ${gov.tier2UnitLabel} Engineer`);
+                    setNewBarazaTag(`#${gov.tier2UnitLabel.replace(/\s+/g, '')}Works`);
+                    setNewBarazaTitle(`${gov.tier2UnitLabel} Service Delivery Review`);
                   } else if (role === 'district') {
-                    setNewBarazaDept('Chief Administrative Officer (CAO) Desk');
-                    setNewBarazaCoHost('CAO / District Executive Committee');
-                    setNewBarazaTag('#DistrictSLA');
-                    setNewBarazaTitle('District Full Executive Public Accountability Hearing');
+                    setNewBarazaDept(`${gov.tier3Label} (${gov.tier3Short}) Desk`);
+                    setNewBarazaCoHost(`${gov.tier3Short} / ${gov.tier3UnitLabel} Executive Committee`);
+                    setNewBarazaTag(`#${gov.tier3UnitLabel.replace(/\s+/g, '')}SLA`);
+                    setNewBarazaTitle(`${gov.tier3UnitLabel} Executive Public Accountability Hearing`);
                   }
                 }}
                 className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
               >
-                <option value="lc1">LC1 Village Chairperson (Grassroots Council · Auto-Pins to Near Me)</option>
-                <option value="parish">Parish Chief / Ward Agent (Statutory Accounting Desk)</option>
-                <option value="subcounty">Sub-County Town Clerk / Division Administration</option>
-                <option value="district">Chief Administrative Officer (CAO) / District Desk</option>
+                <option value="lc1">{isUg ? 'LC1 Village Chairperson' : gov.grassrootsUnits.villageLabel} (Grassroots Council · Auto-Pins to Near Me)</option>
+                <option value="parish">{gov.tier1Label} / {gov.tier1UnitLabel} Agent (Statutory Accounting Desk)</option>
+                <option value="subcounty">{gov.tier2Label} / {gov.tier2UnitLabel} Administration</option>
+                <option value="district">{gov.tier3Label} ({gov.tier3Short}) / {gov.tier3UnitLabel} Desk</option>
                 <option value="citizen">Verified Citizen Watchdog / Community Convener</option>
               </select>
             </div>

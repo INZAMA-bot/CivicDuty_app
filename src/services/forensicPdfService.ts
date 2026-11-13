@@ -1,21 +1,15 @@
 /**
  * Cryptographic & Forensic Audit Dossier PDF Exporter
- * 
- * Generates an official, tamper-evident statutory audit dossier for:
- * 1. The Inspector General of Government (IGG Beti Kamya Turwomwe)
- * 2. Minister of Local Government (Hon. Balaam Barugahara Ateenyi)
- * 3. Minister of State for Local Government (Hon. Justine Nameere)
- * 
- * Includes:
- * - Republic of Uganda National Seal Header
- * - Cryptographic SHA-256 Non-Repudiation Checksum
- * - Merkle Proof Audit Chain Stamp
- * - Dual-Signed Fiscal Disbursement Ledger
+ *
+ * Generates an official, tamper-evident statutory audit dossier adapted to each country's
+ * constitutional ombudsman and local governance supervision structure.
  */
 
 import { jsPDF } from 'jspdf';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 export interface AuditDossierParams {
+  country?: string;
   docketNumber?: string;
   targetEntity?: string;
   district?: string;
@@ -36,16 +30,16 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
     format: 'a4',
   });
 
-  const docket = params.docketNumber || `IGG-MOLG-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+  const countryCode = (params.country || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(countryCode);
+  const isUg = countryCode === 'UG';
+
+  const ombudShort = gov.ombudsman.shortName.replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase();
+  const ministryShort = gov.superadminMinistryShort.replace(/[^A-Z0-9]/gi, '').slice(0, 8).toUpperCase();
+  const docket = params.docketNumber || `${ombudShort}-${ministryShort}-2026-${Math.floor(10000 + Math.random() * 90000)}`;
   const timestamp = new Date().toUTCString();
   const merkleRoot = params.merkleRootHash || `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
   const sha256Seal = `SHA256-${Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('').toUpperCase()}`;
-
-  // Styling palette
-  const darkNavy = '#0f172a';
-  const ugandaRed = '#dc2626';
-  const ugandaYellow = '#ca8a04';
-  const emerald = '#059669';
 
   // --- HEADER SECTION ---
   doc.setFillColor(15, 23, 42); // slate-900
@@ -55,23 +49,28 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('THE REPUBLIC OF UGANDA', 105, 11, { align: 'center' });
+  doc.text(isUg ? 'THE REPUBLIC OF UGANDA' : gov.countryName.toUpperCase(), 105, 11, { align: 'center' });
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(203, 213, 225); // slate-300
-  doc.text('INSPECTORATE OF GOVERNMENT (IGG) & MINISTRY OF LOCAL GOVERNMENT (MoLG)', 105, 17, { align: 'center' });
+  doc.text(
+    `${gov.ombudsman.name.toUpperCase()} & ${gov.superadminMinistry.toUpperCase()}`,
+    105,
+    17,
+    { align: 'center' }
+  );
 
   doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184); // slate-400
   doc.text('STATUTORY ANTI-CORRUPTION & PUBLIC CAPITAL EXPENDITURE AUDIT DOSSIER', 105, 22, { align: 'center' });
 
-  // Sovereign Tricolor Bar
-  doc.setFillColor(0, 0, 0); // Black
+  // Sovereign Accent Bar
+  doc.setFillColor(isUg ? 0 : 15, isUg ? 0 : 23, isUg ? 0 : 42);
   doc.rect(0, 28, 70, 2, 'F');
-  doc.setFillColor(250, 204, 21); // Yellow
+  doc.setFillColor(isUg ? 250 : 16, isUg ? 204 : 185, isUg ? 21 : 129);
   doc.rect(70, 28, 70, 2, 'F');
-  doc.setFillColor(220, 38, 38); // Red
+  doc.setFillColor(isUg ? 220 : 5, isUg ? 38 : 150, isUg ? 38 : 105);
   doc.rect(140, 28, 70, 2, 'F');
 
   // --- DOSSIER METADATA BLOCK ---
@@ -84,7 +83,7 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text(`Generated: ${timestamp} | Warrant Auth: Beti Kamya Turwomwe (IGG)`, 14, y + 5);
+  doc.text(`Generated: ${timestamp} | Warrant Auth: ${gov.ombudsman.headName} (${gov.ombudsman.shortName})`, 14, y + 5);
 
   // Status Box
   doc.setFillColor(240, 253, 244); // emerald-50
@@ -114,10 +113,10 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
   doc.setTextColor(71, 85, 105);
 
   const scopeRows = [
-    ['Jurisdiction / Sector:', `${params.district || 'All Districts'} · Local Government & PDM Pillar VII`],
-    ['Target Procuring Entity:', `${params.targetEntity || 'District Works Engineering & Water Board'}`],
+    ['Jurisdiction / Sector:', `${params.district || `All ${gov.tier3Plural}`} · ${gov.fiscalProgramName}`],
+    ['Target Procuring Entity:', `${params.targetEntity || `${gov.tier3UnitLabel} Engineering & Water Board`}`],
     ['Contractor Under Audit:', `${params.contractorName || 'Assigned Certified Civil Works Vendors'}`],
-    ['Total Capital Audited:', `UGX ${(params.totalFundsAuditedUgx || 14285000000).toLocaleString()}`],
+    ['Total Capital Audited:', `${gov.currency} ${(params.totalFundsAuditedUgx || 14285000000).toLocaleString()}`],
     ['Citizen Watchdog Reports:', '148 Verified Photographic Submissions (Grounded on-site)'],
     ['Red-Flag Irregularities:', `${params.irregularitiesCount || 3} Non-Execution Flags Detected`],
   ];
@@ -146,19 +145,30 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
   doc.text('WARRANT ID', 16, y + 4);
-  doc.text('PROJECT / SUB-COUNTY', 48, y + 4);
-  doc.text('GROSS (UGX)', 106, y + 4);
-  doc.text('WHT TAX (6%)', 134, y + 4);
+  doc.text(`PROJECT / ${gov.tier2UnitLabel.toUpperCase()}`, 48, y + 4);
+  doc.text(`GROSS (${gov.currency})`, 106, y + 4);
+  doc.text('TAX WITHHELD', 134, y + 4);
   doc.text('NET RELEASE', 158, y + 4);
   doc.text('STATUS', 182, y + 4);
 
-  const sampleLedger = [
-    ['WCH-UG-882190', 'Bukoto II Culvert Bridge', '480,000,000', '28,800,000', '451,200,000', 'RATIFIED'],
-    ['WCH-UG-882191', 'Gulu Pece Deep Borehole', '145,000,000', '8,700,000', '136,300,000', 'INSPECTED'],
-    ['WCH-UG-882192', 'Mbarara City Abattoir Drain', '220,000,000', '13,200,000', '206,800,000', 'RATIFIED'],
-    ['WCH-UG-882193', 'Masindi PDM Sacco Storage', '85,000,000', '5,100,000', '79,900,000', 'PENDING'],
-    ['WCH-UG-882194', 'Soroti Health Center III Roof', '310,000,000', '18,600,000', '291,400,000', 'FLAGGED'],
-  ];
+  const j0 = gov.sampleJurisdictions[0] || gov.countryName;
+  const j1 = gov.sampleJurisdictions[1] || gov.countryName;
+  const j2 = gov.sampleJurisdictions[2] || gov.countryName;
+  const sampleLedger = isUg
+    ? [
+        ['WCH-UG-882190', 'Bukoto II Culvert Bridge', '480,000,000', '28,800,000', '451,200,000', 'RATIFIED'],
+        ['WCH-UG-882191', 'Gulu Pece Deep Borehole', '145,000,000', '8,700,000', '136,300,000', 'INSPECTED'],
+        ['WCH-UG-882192', 'Mbarara City Abattoir Drain', '220,000,000', '13,200,000', '206,800,000', 'RATIFIED'],
+        ['WCH-UG-882193', 'Masindi PDM Sacco Storage', '85,000,000', '5,100,000', '79,900,000', 'PENDING'],
+        ['WCH-UG-882194', 'Soroti Health Center III Roof', '310,000,000', '18,600,000', '291,400,000', 'FLAGGED'],
+      ]
+    : [
+        [`WCH-${gov.codePrefix}-882190`, `${j0} Arterial Culvert`, '480,000', '28,800', '451,200', 'RATIFIED'],
+        [`WCH-${gov.codePrefix}-882191`, `${j1} Water Main Rehab`, '145,000', '8,700', '136,300', 'INSPECTED'],
+        [`WCH-${gov.codePrefix}-882192`, `${j2} Drainage Upgrade`, '220,000', '13,200', '206,800', 'RATIFIED'],
+        [`WCH-${gov.codePrefix}-882193`, `${j0} Public Clinic Wing`, '85,000', '5,100', '79,900', 'PENDING'],
+        [`WCH-${gov.codePrefix}-882194`, `${j1} School Solar Array`, '310,000', '18,600', '291,400', 'FLAGGED'],
+      ];
 
   y += 6;
   doc.setFont('helvetica', 'normal');
@@ -181,51 +191,51 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('3. STATUTORY ENDORSEMENTS & MINISTERIAL WARRANTS (26 MAY 2026 APEX LEADERSHIP)', 14, y);
+  doc.text(`3. STATUTORY ENDORSEMENTS & MINISTERIAL WARRANTS (${gov.countryName.toUpperCase()} APEX LEADERSHIP)`, 14, y);
 
   y += 6;
   const colWidth = 58;
 
-  // Box 1: Balaam
+  // Box 1: Cabinet Minister
   doc.setDrawColor(203, 213, 225);
   doc.rect(14, y, colWidth, 34);
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
-  doc.text('HON. BALAAM BARUGAHARA', 16, y + 5);
+  doc.text(gov.cabinetMinisterName.toUpperCase().slice(0, 26), 16, y + 5);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
-  doc.text('Cabinet Minister of Local Government', 16, y + 9);
-  doc.text('Appointed: 26 May 2026 Reshuffle', 16, y + 13);
+  doc.text(`Minister (${gov.superadminMinistryShort})`, 16, y + 9);
+  doc.text(gov.cabinetMandateCitation.slice(0, 34), 16, y + 13);
   doc.setFont('courier', 'bold');
-  doc.text('SEAL: [BB-MOLG-CABINET-EXEC-2026]', 16, y + 21);
+  doc.text(`SEAL: [${gov.codePrefix}-CABINET-EXEC-2026]`, 16, y + 21);
   doc.setFont('helvetica', 'italic');
   doc.text('"Zero tolerance to ghost projects"', 16, y + 29);
 
-  // Box 2: Nameere
+  // Box 2: State / Deputy Minister or Superadmin AO
   doc.rect(14 + colWidth + 4, y, colWidth, 34);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.text('HON. JUSTINE NAMEERE', 16 + colWidth + 4, y + 5);
+  doc.text(gov.stateMinisterName.toUpperCase().slice(0, 26), 16 + colWidth + 4, y + 5);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
-  doc.text('Minister of State for Local Government', 16 + colWidth + 4, y + 9);
-  doc.text('PDM Fund Protection & Anti-Graft Lead', 16 + colWidth + 4, y + 13);
+  doc.text(`${gov.superadminTitle.slice(0, 32)}`, 16 + colWidth + 4, y + 9);
+  doc.text(`${gov.fiscalProgramName.slice(0, 24)} Protection`, 16 + colWidth + 4, y + 13);
   doc.setFont('courier', 'bold');
-  doc.text('SEAL: [JN-MOLG-STATE-OMBUDS-2026]', 16 + colWidth + 4, y + 21);
+  doc.text(`SEAL: [${gov.codePrefix}-STATE-OMBUDS-2026]`, 16 + colWidth + 4, y + 21);
   doc.setFont('helvetica', 'italic');
-  doc.text('"Grassroots parish funds protected"', 16 + colWidth + 4, y + 29);
+  doc.text(`"${gov.tier1UnitLabel} funds protected"`, 16 + colWidth + 4, y + 29);
 
-  // Box 3: Kamya (IGG)
+  // Box 3: Ombudsman / Inspector General
   doc.rect(14 + (colWidth + 4) * 2, y, colWidth, 34);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.text('HON. BETI KAMYA TURWOMWE', 16 + (colWidth + 4) * 2, y + 5);
+  doc.text(gov.ombudsman.headName.toUpperCase().slice(0, 26), 16 + (colWidth + 4) * 2, y + 5);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
-  doc.text('Inspector General of Government (IGG)', 16 + (colWidth + 4) * 2, y + 9);
-  doc.text('Constitutional Article 223 Warrant', 16 + (colWidth + 4) * 2, y + 13);
+  doc.text(`${gov.ombudsman.headTitle.slice(0, 32)}`, 16 + (colWidth + 4) * 2, y + 9);
+  doc.text(`${gov.ombudsman.constitutionalBasis.slice(0, 32)}`, 16 + (colWidth + 4) * 2, y + 13);
   doc.setFont('courier', 'bold');
-  doc.text('SEAL: [IGG-APEX-SUBPOENA-AUTH-2026]', 16 + (colWidth + 4) * 2, y + 21);
+  doc.text(`SEAL: [${ombudShort}-SUBPOENA-AUTH-2026]`, 16 + (colWidth + 4) * 2, y + 21);
   doc.setFont('helvetica', 'italic');
   doc.text('"Subpoena non-repudiation binding"', 16 + (colWidth + 4) * 2, y + 29);
 
@@ -234,7 +244,7 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    'This document is an authentic electronic record under Section 5 of the Electronic Signatures Act (Uganda). Produced by CivicDuty Sovereign Gov-Cloud Node.',
+    `This document is an authentic electronic audit record under ${gov.fiscalAct} (${gov.countryName}). Produced by CivicDuty Sovereign Gov-Cloud Node.`,
     105,
     285,
     { align: 'center' }
@@ -248,6 +258,9 @@ export function generateForensicAuditPdf(params: AuditDossierParams = {}): jsPDF
  */
 export function downloadForensicAuditPdf(params: AuditDossierParams = {}): void {
   const doc = generateForensicAuditPdf(params);
-  const docket = params.docketNumber || `IGG-MOLG-2026-${Math.floor(10000 + Math.random() * 90000)}`;
+  const countryCode = (params.country || 'UG').toUpperCase();
+  const gov = getCountryGovernanceSchema(countryCode);
+  const ombudShort = gov.ombudsman.shortName.replace(/[^A-Z0-9]/gi, '').slice(0, 6).toUpperCase();
+  const docket = params.docketNumber || `${ombudShort}-${countryCode}-2026-${Math.floor(10000 + Math.random() * 90000)}`;
   doc.save(`CivicDuty_Forensic_Audit_Docket_${docket}.pdf`);
 }

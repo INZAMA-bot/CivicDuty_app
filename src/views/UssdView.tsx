@@ -16,11 +16,14 @@ import {
 } from 'lucide-react';
 import { Post, CountryCode } from '../types';
 import { COUNTRIES, allDepts } from '../data/countries';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 
 export const UssdView: React.FC = () => {
   const { user, selectedCountry, setSelectedCountry, go, toast, addPost, posts, setActivePost } = useApp();
   const activeCountry = (user?.country || selectedCountry || 'UG') as CountryCode;
   const countryInfo = COUNTRIES[activeCountry] || COUNTRIES.UG;
+  const gov = getCountryGovernanceSchema(activeCountry);
+  const isUg = activeCountry === 'UG';
   const [session, setSession] = useState<boolean>(false);
   const [screenText, setScreenText] = useState<string>('');
   const [inputVal, setInputVal] = useState<string>('');
@@ -34,20 +37,21 @@ export const UssdView: React.FC = () => {
   const [createdTicketId, setCreatedTicketId] = useState<string>('');
 
   // Simulated SMS Inbox
+  const sampleLoc = gov.sampleJurisdictions[0] || countryInfo.name;
   const [smsMessages, setSmsMessages] = useState<Array<{ id: string; sender: string; time: string; text: string; ticketId?: string }>>([
     {
       id: 'sms-1',
-      sender: 'CIVICDUTY-GOV',
+      sender: `CIVICDUTY-${gov.codePrefix}`,
       time: '10 mins ago',
-      text: 'CONFIRMATION: Report #KLA-8821 received by Kampala Central Division Works Desk. 48h SLA response deadline active.',
-      ticketId: 'KLA-8821'
+      text: `CONFIRMATION: Report #${gov.codePrefix}-8821 received by ${sampleLoc} Works Desk. 48h SLA response deadline active.`,
+      ticketId: `${gov.codePrefix}-8821`
     },
     {
       id: 'sms-2',
-      sender: 'MOLG-ESC',
+      sender: `${gov.superadminMinistryShort.toUpperCase()}-ESC`,
       time: 'Yesterday',
-      text: 'UPDATE: Road maintenance at Bukoto II Parish has been assigned to Contractor. Track progress free on *3030#.',
-      ticketId: 'KLA-102'
+      text: `UPDATE: Road maintenance at ${sampleLoc} ${gov.tier1UnitLabel} has been assigned to Contractor. Track progress free on *3030#.`,
+      ticketId: `${gov.codePrefix}-102`
     }
   ]);
 
@@ -165,7 +169,7 @@ export const UssdView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId: 'SES-' + Date.now(),
-          phoneNumber: '+256778277900',
+          phoneNumber: gov.samplePhone.replace(/\s+/g, ''),
           serviceCode: '*3030#',
           text: `1*${ussdCategory}*${ussdParish}*${finalDesc}`,
         }),
@@ -174,7 +178,7 @@ export const UssdView: React.FC = () => {
       // Add SMS Notification
       const newSms = {
         id: 'sms-' + Date.now(),
-        sender: 'CIVICDUTY-UG',
+        sender: `CIVICDUTY-${gov.codePrefix}`,
         time: 'Just now',
         text: `REPORT CONFIRMED: #${newId} registered. Statutory 48h SLA response deadline is active. Dial *3030# > 2 to track status anytime.`,
         ticketId: newId
@@ -183,7 +187,7 @@ export const UssdView: React.FC = () => {
 
       setStep(5);
       setScreenText(
-        `[OK] SUCCESS! Report Registered.\nTicket ID: ${newId}\nResponsible: Parish Chief & Works Desk\nTarget SLA: 48 Hours\nConfirmation SMS sent to your phone.`
+        `[OK] SUCCESS! Report Registered.\nTicket ID: ${newId}\nResponsible: ${gov.tier1Short} & Works Desk\nTarget SLA: 48 Hours\nConfirmation SMS sent to your phone.`
       );
       toast(`USSD Ticket #${newId} Registered and Published!`, 'emerald');
     } else if (step === 10) {
@@ -199,15 +203,15 @@ export const UssdView: React.FC = () => {
         setStep(11);
       }
     } else if (step === 20) {
-      // PDM Grievance
-      const pId = 'PDM-' + Math.floor(1000 + Math.random() * 9000);
+      // Fiscal Program Grievance
+      const pId = `${gov.codePrefix}-` + Math.floor(1000 + Math.random() * 9000);
       setStep(21);
-      setScreenText(`[OK] PDM Grievance #${pId} Logged.\nTransmitted to MoLG PDM Secretariat & District CAO.\nReference SMS sent.`);
+      setScreenText(`[OK] ${gov.fiscalProgramName} Grievance #${pId} Logged.\nTransmitted to ${gov.superadminMinistryShort} Secretariat & ${gov.tier3Short}.\nReference SMS sent.`);
       const newSms = {
         id: 'sms-' + Date.now(),
-        sender: 'PDM-SECRETARIAT',
+        sender: isUg ? 'PDM-SECRETARIAT' : `${gov.superadminMinistryShort.toUpperCase()}-FUNDS`,
         time: 'Just now',
-        text: `PDM Grievance #${pId} received. Routed to District Commercial Officer. Tracking active.`,
+        text: `${gov.fiscalProgramName} Grievance #${pId} received. Routed to ${gov.tier3Short}. Tracking active.`,
         ticketId: pId
       };
       setSmsMessages(prev => [newSms, ...prev]);

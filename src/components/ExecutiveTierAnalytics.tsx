@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { CountryCode, RoleType, OfficialQuery } from '../types';
 import { TERRITORY, COUNTRIES } from '../data/countries';
 import { TIERS, getNationalRolloutArrangements, tiersFor } from '../data/tiers';
+import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { getRolloutNodesForCountry, getSisterMinistriesForCountry, RolloutDistrictNode } from '../data/nationalRolloutNodes';
 import { OfficialQueryDispatchModal } from './OfficialQueryDispatchModal';
 import { OfficialQueryDossierModal } from './OfficialQueryDossierModal';
@@ -54,6 +55,7 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
   const activeCountry: CountryCode = initialCountry || user?.country || 'UG';
   const countryObj = COUNTRIES[activeCountry] || { name: activeCountry, flag: activeCountry };
   const rolloutArrangement = getNationalRolloutArrangements(activeCountry);
+  const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
   const countryTiers = tiersFor(activeCountry);
 
   // Compute effective tier level
@@ -139,12 +141,12 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
   // Auto-generate child performance telemetry
   const childTelemetryData = useMemo(() => {
     if (effectiveTier >= 5) {
-      // PS MoLG Level: Supervises All Districts
+      // National Superadmin Level: Supervises All Tier 3 Units
       return nationalNodes.map((d, idx) => ({
         id: d.id,
         name: d.name,
         officer: d.cao,
-        officerTitle: rolloutArrangement.targets.l2l3Title.split('/')[0] || 'District CAO',
+        officerTitle: gov.tier3Label,
         slaRate: parseFloat(d.sla) || (88 + (idx % 7) * 1.5),
         avgHours: d.avgResponseHours || (18 + idx * 3),
         csat: d.csatScore || 4.7,
@@ -153,10 +155,10 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
         resolvedCases: d.casesResolved || 380 + idx * 95,
         subUnitCount: d.subCounties?.length || 4,
         status: (d.casesLogged - d.casesResolved) > 15 ? 'Escalated Watch' : (parseFloat(d.sla) > 92 ? 'Top Performer' : 'Stable Delivery'),
-        type: 'District / Local Gov'
+        type: `${gov.tier3UnitLabel} Authority`
       }));
     } else if (effectiveTier === 3) {
-      // CAO Level: Supervises Sub-Counties / Divisions
+      // Tier 3 Level: Supervises Tier 2 Units
       return subcounties.map((s, idx) => {
         const slaVal = 94.5 - (idx * 2.8) + (idx % 2 === 0 ? 1.2 : -1.5);
         const hours = 14.5 + idx * 4.2;
@@ -164,8 +166,8 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
         return {
           id: s.id,
           name: s.name,
-          officer: `Senior Assistant Secretary (${s.name})`,
-          officerTitle: 'Sub-County Accounting Officer / SAS',
+          officer: `${gov.tier2Short} (${s.name})`,
+          officerTitle: gov.tier2Label,
           slaRate: parseFloat(slaVal.toFixed(1)),
           avgHours: parseFloat(hours.toFixed(1)),
           csat: parseFloat((4.9 - idx * 0.2).toFixed(1)),
@@ -173,12 +175,12 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
           totalCases: 95 + idx * 25,
           resolvedCases: (95 + idx * 25) - backlog,
           subUnitCount: s.children?.length || 4,
-          status: backlog > 8 ? 'Requires Query' : slaVal > 90 ? 'Exemplar LLG' : 'Standard Compliance',
-          type: 'Sub-County / Town Council'
+          status: backlog > 8 ? 'Requires Query' : slaVal > 90 ? `Exemplar ${gov.tier2UnitLabel}` : 'Standard Compliance',
+          type: `${gov.tier2UnitLabel} Node`
         };
       });
     } else {
-      // Subcounty Chief Level (Tier 2): Supervises Parishes
+      // Tier 2 Level: Supervises Tier 1 Frontline Units
       return parishes.map((p, idx) => {
         const slaVal = 96.0 - (idx * 3.5);
         const hours = 10.0 + idx * 5.0;
@@ -186,21 +188,21 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
         return {
           id: p.id,
           name: p.name,
-          officer: `Parish Chief (${p.name})`,
-          officerTitle: rolloutArrangement.lowestOfficerTitle,
+          officer: `${gov.tier1Short} (${p.name})`,
+          officerTitle: gov.tier1Label,
           slaRate: parseFloat(slaVal.toFixed(1)),
           avgHours: parseFloat(hours.toFixed(1)),
           csat: parseFloat((4.9 - idx * 0.25).toFixed(1)),
           backlog,
           totalCases: 40 + idx * 12,
           resolvedCases: (40 + idx * 12) - backlog,
-          subUnitCount: 5, // Villages
+          subUnitCount: 5,
           status: backlog > 4 ? 'Needs Field Inspection' : slaVal > 92 ? 'Pillar Model' : 'Active Duty',
-          type: 'Parish / Ward Node'
+          type: `${gov.tier1UnitLabel} Node`
         };
       });
     }
-  }, [effectiveTier, nationalNodes, subcounties, parishes, rolloutArrangement]);
+  }, [effectiveTier, nationalNodes, subcounties, parishes, gov]);
 
   const filteredTelemetry = childTelemetryData.filter(item => {
     const matchesSearch = !filterQuery.trim() || 
@@ -223,9 +225,9 @@ export const ExecutiveTierAnalytics: React.FC<ExecutiveTierAnalyticsProps> = ({
 
   const handleExportBrief = () => {
     const brief = `STATUTORY EXECUTIVE PERFORMANCE BRIEF
-Jurisdiction: ${effectiveTier >= 5 ? countryObj.name + ' National Local Government Cascade' : effectiveTier === 3 ? currentDistrictObj?.name + ' District Local Government' : currentSubcountyObj?.name + ' Sub-County / Division'}
+Jurisdiction: ${effectiveTier >= 5 ? countryObj.name + ' National Local Government Cascade' : effectiveTier === 3 ? currentDistrictObj?.name + ' ' + gov.tier3UnitLabel : currentSubcountyObj?.name + ' ' + gov.tier2UnitLabel}
 Country: ${countryObj.name} (${activeCountry})
-Supervisory Tier: Tier ${effectiveTier} (${effectiveTier >= 5 ? 'Permanent Secretary / Superadmin' : effectiveTier === 3 ? 'Chief Administrative Officer (CAO)' : 'Sub-County Chief / SAS'})
+Supervisory Tier: Tier ${effectiveTier} (${effectiveTier >= 5 ? `${gov.superadminTitle} (${gov.superadminMinistryShort})` : effectiveTier === 3 ? gov.tier3Label : gov.tier2Label})
 Generated: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
 
 --- EXECUTIVE SUMMARY TELEMETRY ---
@@ -238,7 +240,7 @@ Generated: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'lo
 --- SUBORDINATE UNITS PERFORMANCE RANKING ---
 ${childTelemetryData.map((u, i) => `${i + 1}. ${u.name} — SLA: ${u.slaRate}% | Backlog: ${u.backlog} | Turnaround: ${u.avgHours}h | Status: ${u.status}`).join('\n')}
 
-Authority: Local Governments Act & Public Finance Management Mandate
+Authority: ${gov.localGovLawTier3} & ${gov.fiscalAct}
 Civic Duty Sovereign Digital Infrastructure`;
 
     navigator.clipboard.writeText(brief);
@@ -264,16 +266,16 @@ Civic Duty Sovereign Digital Infrastructure`;
             </div>
 
             <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-              {effectiveTier >= 5 && `${rolloutArrangement.superadminMinistry} · Cabinet Command`}
-              {effectiveTier === 3 && `${currentDistrictObj?.name} Executive District Scorecard`}
-              {effectiveTier === 2 && `${currentSubcountyObj?.name} Frontline Parishes Scorecard`}
-              {effectiveTier === 1 && `Grassroots Ward & Community Scorecard`}
+              {effectiveTier >= 5 && `${gov.superadminMinistry} · Cabinet Command`}
+              {effectiveTier === 3 && `${currentDistrictObj?.name} Executive ${gov.tier3UnitLabel} Scorecard`}
+              {effectiveTier === 2 && `${currentSubcountyObj?.name} Frontline ${gov.tier1Plural} Scorecard`}
+              {effectiveTier === 1 && `Grassroots ${gov.tier1UnitLabel} & Community Scorecard`}
             </h3>
 
             <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-              {effectiveTier >= 5 && `Direct supervisory telemetry over all ${nationalNodes.length} Sub-Sovereign Accounting Officers (CAOs) and Sister Line Ministries.`}
-              {effectiveTier === 3 && `Supervisory command over all ${subcounties.length} constituent Sub-Counties, Town Councils, and municipal divisions.`}
-              {effectiveTier <= 2 && `Supervisory telemetry tracking frontline Parish Chiefs, village mobilization leads, and PDM enterprise verification.`}
+              {effectiveTier >= 5 && `Direct supervisory telemetry over all ${nationalNodes.length} Sub-Sovereign ${gov.tier3Plural} and Sister Line Ministries.`}
+              {effectiveTier === 3 && `Supervisory command over all ${subcounties.length} constituent ${gov.tier2Plural}.`}
+              {effectiveTier <= 2 && `Supervisory telemetry tracking frontline ${gov.tier1Plural}, community mobilization leads, and ${gov.fiscalProgramName} verification.`}
             </p>
           </div>
 
@@ -403,9 +405,9 @@ Civic Duty Sovereign Digital Infrastructure`;
           >
             <Layers size={13} />
             <span>
-              {effectiveTier >= 5 && `All District & Municipal Accounting Officers (${childTelemetryData.length})`}
-              {effectiveTier === 3 && `Constituent Sub-Counties & Divisions (${childTelemetryData.length})`}
-              {effectiveTier <= 2 && `Constituent Parishes & Wards (${childTelemetryData.length})`}
+              {effectiveTier >= 5 && `All ${gov.tier3Plural} (${childTelemetryData.length})`}
+              {effectiveTier === 3 && `Constituent ${gov.tier2Plural} (${childTelemetryData.length})`}
+              {effectiveTier <= 2 && `Constituent ${gov.tier1Plural} (${childTelemetryData.length})`}
             </span>
           </button>
 
@@ -670,7 +672,7 @@ Civic Duty Sovereign Digital Infrastructure`;
                   Supervisory Administrative Inquiries &amp; Sanctions Registry
                 </h4>
                 <p className="text-slate-600 dark:text-slate-400 text-[11px] font-medium">
-                  Enforcing administrative turnaround, PDM compliance, and grievance resolution under Civil Service Standing Orders.
+                  Enforcing administrative turnaround, {gov.fiscalProgramName} compliance, and grievance resolution under Civil Service Standing Orders.
                 </p>
               </div>
             </div>
@@ -717,7 +719,7 @@ Civic Duty Sovereign Digital Infrastructure`;
               </span>
             </div>
             <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-center col-span-2 sm:col-span-1">
-              <span className="text-[10px] font-bold text-rose-600 block uppercase">Sanctions / IGG</span>
+              <span className="text-[10px] font-bold text-rose-600 block uppercase">Sanctions / {gov.ombudsman.shortName}</span>
               <span className="text-lg font-black text-rose-600">
                 {countryQueries.filter((q) => ['escalated_igg', 'remedial_directive'].includes(q.status)).length}
               </span>
@@ -731,7 +733,7 @@ Civic Duty Sovereign Digital Infrastructure`;
               { id: 'pending', label: 'Pending Officer Response' },
               { id: 'review', label: 'Under Supervisory Review' },
               { id: 'resolved', label: 'Resolved & Closed' },
-              { id: 'escalated', label: 'Sanctioned / IGG' },
+              { id: 'escalated', label: `Sanctioned / ${gov.ombudsman.shortName}` },
             ].map((f) => (
               <button
                 key={f.id}
