@@ -43,18 +43,20 @@ import {
 import { PostCardComponent } from '../components/PostCardComponent';
 import { CivicFeedDispatcher } from '../components/CivicFeedDispatcher';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
-import { COUNTRIES } from '../data/countries';
+import { COUNTRIES, allDepts } from '../data/countries';
 import { DeptIcon, CategoryIcon } from '../components/DeptIcon';
 import { GeospatialSignalMap } from '../components/GeospatialSignalMap';
 import { TrafficSignalHUD, SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from '../components/TrafficSignalHUD';
 import { PromotionalAdFeedCard } from '../components/PromotionalAdFeedCard';
+import { getCountryPromotionalAds } from '../data/promotionalAds';
 import { catByID, getDept, getPostGrassroots, slaStatus } from '../utils/helpers';
-import { TicketCategory } from '../types';
+import { CountryCode, TicketCategory } from '../types';
 
 export const FeedView: React.FC = () => {
   const {
     user,
     ensureCitizenSession,
+    selectedCountry,
     posts,
     feedTab,
     setFeedTab,
@@ -143,6 +145,29 @@ export const FeedView: React.FC = () => {
   const activePromotionalAds = (promotionalAds || []).filter((a) => a.published);
 
   const activeUser = user || ensureCitizenSession();
+  const isGovFeedUser = Boolean(
+    user && ['node_admin', 'spokesperson', 'read_only', 'platform_admin'].includes(user.role)
+  );
+  const activeJurisdiction = (
+    isGovFeedUser ? activeUser.country : selectedCountry || activeUser.country || 'UG'
+  ).toUpperCase() as CountryCode;
+  const activeCountryName = COUNTRIES[activeJurisdiction]?.name || activeJurisdiction;
+
+  useEffect(() => {
+    if (activeJurisdiction === 'UG') {
+      setActiveParish(user?.parish || user?.parish_ward || 'Nakasero Parish');
+      setActiveWard(user?.ward || 'Central Ward');
+      setActiveGrassroot(user?.grassroot || user?.village || 'Lumumba Cell');
+    } else if (activeJurisdiction === 'RW') {
+      setActiveParish('Kimironko Sector');
+      setActiveWard('Gasabo District');
+      setActiveGrassroot('Nyabugogo Hub');
+    } else {
+      setActiveParish(`${activeCountryName} Central`);
+      setActiveWard('Metropolitan Ward');
+      setActiveGrassroot('Civic District 01');
+    }
+  }, [activeJurisdiction, activeCountryName]);
 
   const isGrassrootsChief = Boolean(
     activeUser.role === 'parish_chief' ||
@@ -165,7 +190,7 @@ export const FeedView: React.FC = () => {
 
   const followed = activeUser.followed || [];
   const normFollowed = followed.map((f) => f.replace(/^[a-z]{2}-/i, ''));
-  const rawCountryPosts = posts.filter((p) => p.country === activeUser.country);
+  const rawCountryPosts = posts.filter((p) => p.country === activeJurisdiction);
   const liveCount = rawCountryPosts.filter((p) => !p.is_demo).length;
   const demoCount = rawCountryPosts.filter((p) => p.is_demo).length;
 
@@ -173,7 +198,7 @@ export const FeedView: React.FC = () => {
   const matchedFollowPosts = allC.filter((p) =>
     followed.includes(p.dept) ||
     normFollowed.includes(p.dept) ||
-    followed.includes(`${activeUser.country.toLowerCase()}-${p.dept}`) ||
+    followed.includes(`${activeJurisdiction.toLowerCase()}-${p.dept}`) ||
     (followingCitizens && (followingCitizens.includes(p.citizen_name) || followingCitizens.includes(p.author || '')))
   );
   
@@ -183,7 +208,7 @@ export const FeedView: React.FC = () => {
           (p) =>
             followed.includes(p.dept) ||
             normFollowed.includes(p.dept) ||
-            followed.includes(`${activeUser.country.toLowerCase()}-${p.dept}`) ||
+            followed.includes(`${activeJurisdiction.toLowerCase()}-${p.dept}`) ||
             (followingCitizens && (followingCitizens.includes(p.citizen_name) || followingCitizens.includes(p.author || '')))
         )
       : allC;
@@ -798,90 +823,28 @@ export const FeedView: React.FC = () => {
 
             {/* Department Quick Pills Row (Finance · Local Gov · KCCA · NWSC · Umeme) */}
             <div className="px-3 sm:px-4 pb-2.5 flex items-center gap-1.5 overflow-x-auto scrollbar-none border-t border-[#e3e6ea] dark:border-[#262b36] pt-2">
-              {/* Finance (MoFPED) */}
-              <button
-                type="button"
-                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'mofped' ? null : 'mofped')}
-                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-                  selectedDeptFilter === 'mofped'
-                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                }`}
-              >
-                <CreditCard size={12} className="text-slate-400" />
-                <span>Finance (MoFPED)</span>
-                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
-                  {mofpedCount}
-                </span>
-              </button>
-
-              {/* Local Gov (LG) */}
-              <button
-                type="button"
-                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'molg' ? null : 'molg')}
-                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-                  selectedDeptFilter === 'molg'
-                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                }`}
-              >
-                <Landmark size={12} className="text-slate-400" />
-                <span>Local Gov (LG)</span>
-                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
-                  {molgCount}
-                </span>
-              </button>
-
-              {/* KCCA */}
-              <button
-                type="button"
-                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'kcca' ? null : 'kcca')}
-                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-                  selectedDeptFilter === 'kcca'
-                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                }`}
-              >
-                <Building2 size={12} className="text-slate-400" />
-                <span>KCCA</span>
-                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
-                  {kccaCount}
-                </span>
-              </button>
-
-              {/* NWSC */}
-              <button
-                type="button"
-                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'nwsc' ? null : 'nwsc')}
-                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-                  selectedDeptFilter === 'nwsc'
-                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                }`}
-              >
-                <Droplets size={12} className="text-slate-400" />
-                <span>NWSC</span>
-                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
-                  {nwscCount}
-                </span>
-              </button>
-
-              {/* Umeme */}
-              <button
-                type="button"
-                onClick={() => setSelectedDeptFilter(selectedDeptFilter === 'umeme' ? null : 'umeme')}
-                className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-                  selectedDeptFilter === 'umeme'
-                    ? 'bg-emerald-600 text-white font-bold shadow-2xs'
-                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
-                }`}
-              >
-                <Zap size={12} className="text-slate-400" />
-                <span>Umeme</span>
-                <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
-                  {umemeCount}
-                </span>
-              </button>
+              {allDepts(activeUser.country || 'UG').slice(0, 6).map((d) => {
+                const count = allC.filter((p) => p.dept === d.id || p.dept?.toLowerCase().includes(d.id.toLowerCase())).length;
+                const isSelected = selectedDeptFilter === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setSelectedDeptFilter(isSelected ? null : d.id)}
+                    className={`px-3 py-1 rounded-xl text-xs font-sans font-medium flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                        : 'bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-slate-400'
+                    }`}
+                  >
+                    <Building2 size={12} className={isSelected ? 'text-white' : 'text-slate-400'} />
+                    <span>{d.name}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-[#161a22] text-slate-600 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] text-[10px] font-mono">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -998,14 +961,24 @@ export const FeedView: React.FC = () => {
             <span className="text-[10.5px] font-mono uppercase tracking-wider text-slate-500 font-bold shrink-0 flex items-center gap-1">
               <span>🔥 Trending Grassroots:</span>
             </span>
-            {[
-              { tag: '#NakaseroWater', count: '142 dispatches' },
-              { tag: '#CentralWardRoads', count: '89 dispatches' },
-              { tag: '#KawempeDrainage', count: '64 dispatches' },
-              { tag: '#PotholeWatch', count: '51 dispatches' },
-              { tag: '#GrassrootsAction', count: '47 dispatches' },
-              { tag: '#MulagoEmergency', count: '39 dispatches' },
-            ].map((t) => (
+            {(activeJurisdiction === 'UG'
+              ? [
+                  { tag: '#NakaseroWater', count: '142 dispatches' },
+                  { tag: '#CentralWardRoads', count: '89 dispatches' },
+                  { tag: '#KawempeDrainage', count: '64 dispatches' },
+                  { tag: '#PotholeWatch', count: '51 dispatches' },
+                  { tag: '#GrassrootsAction', count: '47 dispatches' },
+                  { tag: '#MulagoEmergency', count: '39 dispatches' },
+                ]
+              : [
+                  { tag: '#RoadSafety', count: '128 dispatches' },
+                  { tag: '#FrontlineScouts', count: '94 dispatches' },
+                  { tag: '#PublicTransit', count: '71 dispatches' },
+                  { tag: '#WaterSupply', count: '56 dispatches' },
+                  { tag: '#StreetLighting', count: '43 dispatches' },
+                  { tag: '#ClinicAccountability', count: '35 dispatches' },
+                ]
+            ).map((t) => (
               <button
                 key={t.tag}
                 type="button"
@@ -1222,7 +1195,7 @@ export const FeedView: React.FC = () => {
       <div className="p-3 sm:px-4 sm:py-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36]">
         <AccountabilityDocket
           leftLabel={`${total} Civic Reports`}
-          leftSubLabel={`${COUNTRIES[activeUser.country]?.name || 'National'} Statutory SLA`}
+          leftSubLabel={`${activeCountryName} Statutory SLA`}
           centerVal={amberCount + redCount}
           centerLabel="ACTIVE DISPATCHES"
           rightLabel={`${greenCount > 0 ? Math.round((greenCount / Math.max(1, total)) * 100) : 88}% Resolved`}
@@ -1296,89 +1269,114 @@ export const FeedView: React.FC = () => {
 
       {/* 7. CIVIC DEPARTMENT-STYLE STANDALONE POSTS FEED */}
       <div id="feed-list" className="p-3 sm:p-5 space-y-3.5 bg-[#f8f9fa] dark:bg-[#0e1116] min-h-[60vh]">
-        {display.length === 0 ? (
-          <div className="py-20 text-center px-4 space-y-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] shadow-xs">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-              <Shield size={24} />
-            </div>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-              No civic dispatches found matching current filter.
-            </p>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              All submissions are monitored under statutory 24h–48h SLA response guarantees.
-            </p>
-          </div>
-        ) : (
-          display.map((p, i) => {
-            const activeId = focusedCardId || display[0]?.id;
-            return (
-              <React.Fragment key={p.id}>
-                <PostCardComponent
-                  post={p}
-                  rankIndex={feedTab === 'trending' ? i : null}
-                  isFocused={activeId === p.id}
-                  onActivateFocus={(id) => {
-                    setFocusedCardId(id);
-                    setCurrentPostIndex(i);
-                  }}
-                  onNextPost={i < display.length - 1 ? goToNextPost : undefined}
-                  onPrevPost={i > 0 ? goToPrevPost : undefined}
-                  postIndex={i}
-                  totalPosts={display.length}
-                />
+        {(() => {
+          const localizedAds = getCountryPromotionalAds(activeJurisdiction);
+          const scoutCampaignAd =
+            activePromotionalAds.find(
+              (a) => a.category === 'bodaboda' && a.id.endsWith(`-${activeJurisdiction.toLowerCase()}`)
+            ) ||
+            localizedAds[2] ||
+            localizedAds[0];
+          const transitCampaignAd =
+            activePromotionalAds.find(
+              (a) => a.category === 'bus' && a.id.endsWith(`-${activeJurisdiction.toLowerCase()}`)
+            ) || localizedAds[0];
 
-                {/* Promotional Campaign Cards smoothly integrated */}
-                {i === 2 && activePromotionalAds[0] && (
-                  <div data-post-card-id="ad-transit-painting" className="mb-4">
+          const scoutInsertIdx = Math.min(1, Math.max(0, display.length - 1));
+          const transitInsertIdx = Math.min(3, Math.max(0, display.length - 1));
+          const activeId = focusedCardId || display[0]?.id;
+
+          if (display.length === 0) {
+            return (
+              <div className="space-y-4">
+                <div className="py-12 text-center px-4 space-y-3 bg-white dark:bg-[#161a22] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] shadow-xs">
+                  <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                    <Shield size={24} />
+                  </div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                    No civic dispatches found matching current filter.
+                  </p>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    All submissions are monitored under statutory 24h–48h SLA response guarantees.
+                  </p>
+                </div>
+
+                {scoutCampaignAd && (
+                  <div data-post-card-id={`ad-frontline-scouts-${activeJurisdiction}`} className="mb-4">
                     <PromotionalAdFeedCard
-                      ad={activePromotionalAds[0]}
-                      defaultIndex={0}
-                      campaignMode="transit_painting"
-                      isFocused={activeId === 'ad-transit-painting'}
-                      onActivateFocus={() => setFocusedCardId('ad-transit-painting')}
+                      key={`${activeJurisdiction}-frontline-empty`}
+                      ad={scoutCampaignAd}
+                      defaultIndex={2}
+                      campaignMode="frontline_scouts"
+                      isFocused={true}
+                      onActivateFocus={() => setFocusedCardId(`ad-frontline-scouts-${activeJurisdiction}`)}
                     />
                   </div>
                 )}
-              </React.Fragment>
+
+                {activeJurisdiction === 'UG' && transitCampaignAd && (
+                  <div data-post-card-id="ad-transit-painting-UG" className="mb-4">
+                    <PromotionalAdFeedCard
+                      key="UG-transit-empty"
+                      ad={transitCampaignAd}
+                      defaultIndex={0}
+                      campaignMode="transit_painting"
+                      isFocused={true}
+                      onActivateFocus={() => setFocusedCardId('ad-transit-painting-UG')}
+                    />
+                  </div>
+                )}
+              </div>
             );
-          })
-        )}
+          }
+
+          return display.map((p, i) => (
+            <React.Fragment key={p.id}>
+              <PostCardComponent
+                post={p}
+                rankIndex={feedTab === 'trending' ? i : null}
+                isFocused={activeId === p.id}
+                onActivateFocus={(id) => {
+                  setFocusedCardId(id);
+                  setCurrentPostIndex(i);
+                }}
+                onNextPost={i < display.length - 1 ? goToNextPost : undefined}
+                onPrevPost={i > 0 ? goToPrevPost : undefined}
+                postIndex={i}
+                totalPosts={display.length}
+              />
+
+              {/* Frontline Scouts Campaign Card: Displayed for EVERY country with nation-authentic mobility/markets/workforce posters & 3-Signal branding */}
+              {i === scoutInsertIdx && scoutCampaignAd && (
+                <div data-post-card-id={`ad-frontline-scouts-${activeJurisdiction}`} className="mb-4">
+                  <PromotionalAdFeedCard
+                    key={`${activeJurisdiction}-frontline`}
+                    ad={scoutCampaignAd}
+                    defaultIndex={2}
+                    campaignMode="frontline_scouts"
+                    isFocused={activeId === `ad-frontline-scouts-${activeJurisdiction}`}
+                    onActivateFocus={() => setFocusedCardId(`ad-frontline-scouts-${activeJurisdiction}`)}
+                  />
+                </div>
+              )}
+
+              {/* Transit Fleet Painting Proposal Card: Displayed for Uganda (Kayoola EVS & URC Rail) */}
+              {activeJurisdiction === 'UG' && i === transitInsertIdx && transitCampaignAd && (
+                <div data-post-card-id="ad-transit-painting-UG" className="mb-4">
+                  <PromotionalAdFeedCard
+                    key="UG-transit"
+                    ad={transitCampaignAd}
+                    defaultIndex={0}
+                    campaignMode="transit_painting"
+                    isFocused={activeId === 'ad-transit-painting-UG'}
+                    onActivateFocus={() => setFocusedCardId('ad-transit-painting-UG')}
+                  />
+                </div>
+              )}
+            </React.Fragment>
+          ));
+        })()}
       </div>
-
-      {/* 8. FLOATING SWIPE NAVIGATOR HUD */}
-      {display.length > 1 && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-[#161a24]/95 text-white backdrop-blur-md px-4 py-2.5 rounded-full border border-slate-700/70 shadow-2xl flex items-center gap-3 text-xs font-mono select-none animate-fade-in ring-1 ring-white/10">
-          <button
-            type="button"
-            onClick={goToPrevPost}
-            disabled={currentPostIndex === 0}
-            className={`p-1 rounded-full transition flex items-center gap-1 ${
-              currentPostIndex === 0 ? 'opacity-30 cursor-not-allowed text-slate-500' : 'cursor-pointer text-emerald-400 hover:text-emerald-300 hover:bg-white/10'
-            }`}
-            title="Previous Dispatch (Keyboard: ↑ or K)"
-          >
-            <ChevronUp size={16} />
-            <span className="hidden sm:inline text-[11px] font-bold">Prev</span>
-          </button>
-
-          <span className="text-[11.5px] font-bold text-slate-300 px-1 border-x border-slate-700">
-            Dispatch <strong className="text-white text-xs">{currentPostIndex + 1}</strong> of {display.length}
-          </span>
-
-          <button
-            type="button"
-            onClick={goToNextPost}
-            disabled={currentPostIndex >= display.length - 1}
-            className={`p-1 rounded-full transition flex items-center gap-1 ${
-              currentPostIndex >= display.length - 1 ? 'opacity-30 cursor-not-allowed text-slate-500' : 'cursor-pointer text-emerald-400 hover:text-emerald-300 hover:bg-white/10'
-            }`}
-            title="Next Dispatch (Keyboard: ↓ or J)"
-          >
-            <span className="hidden sm:inline text-[11px] font-bold">Next</span>
-            <ChevronDown size={16} />
-          </button>
-        </div>
-      )}
 
       {/* Grassroots Selection Modal */}
       {showGrassrootsModal && (
@@ -1407,7 +1405,7 @@ export const FeedView: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Pinpoint any Parish, Ward, or Grassroot Cell across Uganda to explore local civic dispatches and response times.
+              Pinpoint any Parish, Sector, Ward, or District across {activeCountryName} to explore local civic dispatches and response times.
             </p>
 
             {/* Quick Presets */}
@@ -1416,18 +1414,35 @@ export const FeedView: React.FC = () => {
                 Popular Grassroots Hubs:
               </label>
               <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
-                {[
-                  { p: 'Nakasero Parish', w: 'Central Ward', g: 'Lumumba Cell' },
-                  { p: 'Bukoto Parish', w: 'Nakawa Ward', g: 'Kalinabiri Zone' },
-                  { p: 'Naguru Parish', w: 'Nakawa Ward', g: 'Upper Naguru' },
-                  { p: 'Mulago Parish', w: 'Kawempe Ward', g: 'Mulago III Cell' },
-                  { p: 'Kisenyi Parish', w: 'Central Ward', g: 'Kisenyi I Cell' },
-                  { p: 'Kamwokya Parish', w: 'Central Ward', g: 'Church Zone' },
-                  { p: 'Ntinda Parish', w: 'Nakawa Ward', g: 'Semawata Zone' },
-                  { p: 'Kibuye Parish', w: 'Makindye Ward', g: 'Kibuye Market' },
-                  { p: 'Ggaba Parish', w: 'Makindye Ward', g: 'Landing Site' },
-                  { p: 'Mengo Parish', w: 'Rubaga Ward', g: 'Bakuli Cell' },
-                ].map((item, idx) => (
+                {(activeJurisdiction === 'UG'
+                  ? [
+                      { p: 'Nakasero Parish', w: 'Central Ward', g: 'Lumumba Cell' },
+                      { p: 'Bukoto Parish', w: 'Nakawa Ward', g: 'Kalinabiri Zone' },
+                      { p: 'Naguru Parish', w: 'Nakawa Ward', g: 'Upper Naguru' },
+                      { p: 'Mulago Parish', w: 'Kawempe Ward', g: 'Mulago III Cell' },
+                      { p: 'Kisenyi Parish', w: 'Central Ward', g: 'Kisenyi I Cell' },
+                      { p: 'Kamwokya Parish', w: 'Central Ward', g: 'Church Zone' },
+                      { p: 'Ntinda Parish', w: 'Nakawa Ward', g: 'Semawata Zone' },
+                      { p: 'Kibuye Parish', w: 'Makindye Ward', g: 'Kibuye Market' },
+                      { p: 'Ggaba Parish', w: 'Makindye Ward', g: 'Landing Site' },
+                      { p: 'Mengo Parish', w: 'Rubaga Ward', g: 'Bakuli Cell' },
+                    ]
+                  : activeJurisdiction === 'RW'
+                  ? [
+                      { p: 'Kimironko Sector', w: 'Gasabo District', g: 'Bibare Cell' },
+                      { p: 'Nyarugenge Sector', w: 'Nyarugenge District', g: 'Kiyovu Cell' },
+                      { p: 'Remera Sector', w: 'Gasabo District', g: 'Rukiri I Cell' },
+                      { p: 'Kacyiru Sector', w: 'Gasabo District', g: 'Kamatamu Cell' },
+                      { p: 'Kicukiro Sector', w: 'Kicukiro District', g: 'Gasharu Cell' },
+                      { p: 'Nyamirambo Sector', w: 'Nyarugenge District', g: 'Mumena Cell' },
+                    ]
+                  : [
+                      { p: `${activeCountryName} Central`, w: 'Metropolitan Ward', g: 'Civic District 01' },
+                      { p: `${activeCountryName} North`, w: 'North Council Ward', g: 'Transit Hub Zone' },
+                      { p: `${activeCountryName} East`, w: 'East Market Ward', g: 'Commercial Corridor' },
+                      { p: `${activeCountryName} West`, w: 'West Residential Ward', g: 'Community Precinct' },
+                    ]
+                ).map((item, idx) => (
                   <button
                     key={idx}
                     type="button"

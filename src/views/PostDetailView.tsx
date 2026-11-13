@@ -635,6 +635,20 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
             This illustrative showcase demonstrates how CivicDuty compiles multi-witness evidence, enforces statutory SLA timers, and locks anti-graft proof in the SHA-256 ledger. Try co-signing or testing the controls below.
           </p>
         </div>
+      ) : p.is_test_post ? (
+        <div className="mx-4 mt-3.5 p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[9.5px] font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              TEST POST
+            </span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              Pre-Launch Public Beta · {p.country}
+            </span>
+          </div>
+          <span className="text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
+            Automatically deleted when CivicDuty goes Live in {p.country}
+          </span>
+        </div>
       ) : (
         <div className="mx-4 mt-3.5 p-3 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-300/70 dark:border-emerald-800/60 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
@@ -2565,44 +2579,6 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
         entityName={user?.dept_label || d.name}
         contextTitle={p.title}
       />
-
-      {/* Floating Quick-Triage Pill for Mobile Thumb Browsing */}
-      {postsList.length > 1 && (
-        <aside
-          aria-label="Dispatch navigation"
-          className="fixed bottom-6 right-4 sm:right-8 z-30 flex items-center gap-1.5 bg-white/95 dark:bg-[#161a22]/95 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 rounded-full px-3 py-1.5 shadow-xl font-mono text-xs select-none"
-        >
-          <button
-            type="button"
-            onClick={handlePrevPost}
-            disabled={!hasPrev}
-            className={`p-1 rounded-full transition-colors ${
-              hasPrev
-                ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer'
-                : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
-            }`}
-            title="Previous Dispatch (Left Arrow or K)"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <span className="px-1 text-[10.5px] font-bold text-slate-600 dark:text-slate-300">
-            {currentIndex + 1} / {postsList.length}
-          </span>
-          <button
-            type="button"
-            onClick={handleNextPost}
-            disabled={!hasNext}
-            className={`p-1 rounded-full transition-colors ${
-              hasNext
-                ? 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 cursor-pointer'
-                : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
-            }`}
-            title="Next Dispatch (Right Arrow or J)"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </aside>
-      )}
     </div>
   );
 };

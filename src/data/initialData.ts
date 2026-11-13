@@ -964,7 +964,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: '/evidence/power_transformer_repair.jpg',
+        url: '/evidence/ke_kplc_power_repair.jpg?v=20261114',
         caption: 'KPLC emergency team replacing storm-damaged conductor cables',
       },
     ],
@@ -1054,7 +1054,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: '/evidence/sidewalk_damage.jpg',
+        url: '/evidence/rw_kigali_water_repair.jpg?v=20261114',
         caption: 'Drainage channel overflow near Kimironko market',
       },
     ],
@@ -1629,7 +1629,7 @@ export const INITIAL_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: '/evidence/gayaza_science_lab.jpg',
+        url: '/campaign/africa_school_youth_ad.jpg?v=20261114',
         caption: 'Gayaza High School Senior Science Practical Laboratory',
       },
     ],

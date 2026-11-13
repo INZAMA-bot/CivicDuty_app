@@ -66,6 +66,7 @@ function buildPostPayload(post: Post) {
     compiled_count: Number(post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1)),
     escalated: Boolean(post.escalated),
     is_master_dossier: Boolean(post.is_master_dossier),
+    is_test_post: Boolean(post.is_test_post),
     merged_from_ids: (post.merged_from_ids || []).slice(0, 50),
   };
 }
@@ -761,6 +762,28 @@ export function subscribeToTownHallHandsFromCloud(
   return unsubscribe;
 }
 
-
-
-
+/**
+ * Deletes all test posts (is_test_post === true) for a given country when going live
+ */
+export async function purgeCountryTestPostsInCloud(countryCode: CountryCode): Promise<number> {
+  try {
+    const q = query(collection(db, 'posts'), where('country', '==', countryCode));
+    const snapshot = await getDocs(q);
+    let deletedCount = 0;
+    const deletions: Promise<void>[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data?.is_test_post === true) {
+        deletedCount += 1;
+        deletions.push(deleteDoc(doc(db, 'posts', docSnap.id)));
+      }
+    });
+    if (deletions.length > 0) {
+      await Promise.all(deletions);
+    }
+    return deletedCount;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `posts/purge/${countryCode}`);
+    return 0;
+  }
+}

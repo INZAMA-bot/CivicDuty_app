@@ -17,7 +17,13 @@ export const InstallPwaBanner: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('cd_pwa_banner_dismissed') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
@@ -95,26 +101,21 @@ export const InstallPwaBanner: React.FC = () => {
   return (
     <>
       {!dismissed && !isStandalone && (
-        <div className="bg-white dark:bg-[#161a22] border-b border-[#e3e6ea] dark:border-[#262b36] px-3.5 py-2.5 relative animate-fade-in text-slate-900 dark:text-slate-100">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
+        <div className="bg-white/95 dark:bg-[#161a22]/95 border-b border-[#e3e6ea] dark:border-[#262b36] px-3.5 py-1.5 relative animate-fade-in text-slate-900 dark:text-slate-100">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 min-w-0">
               <img
                 src="/favicon.svg"
                 alt="CivicDuty PWA Icon"
-                className="w-8 h-8 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] shrink-0 bg-[#090d16]"
+                className="w-6 h-6 rounded-md border border-[#e3e6ea] dark:border-[#262b36] shrink-0 bg-[#090d16]"
               />
               <div className="min-w-0">
                 <div className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 font-mono">
-                  <span className="truncate">Install CivicDuty Sovereign PWA</span>
+                  <span className="truncate">Install CivicDuty App</span>
                   <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium hidden sm:inline">
-                    · Offline Ready
+                    · Offline Ready PWA
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                  {isIOS
-                    ? 'Add to iPhone Home Screen · Crisp Green Checkmark Beacon icon'
-                    : '1-click Home Screen app · Sovereign Green Checkmark Beacon icon'}
-                </p>
               </div>
             </div>
 
@@ -122,19 +123,24 @@ export const InstallPwaBanner: React.FC = () => {
               <button
                 type="button"
                 onClick={handleInstallClick}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold px-3 py-1.5 rounded-lg text-[10.5px] transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold px-2.5 py-1 rounded-lg text-[10px] transition-colors flex items-center gap-1 cursor-pointer"
               >
-                <Download size={12} strokeWidth={2} />
-                <span>{deferredPrompt ? 'Install Now' : 'Download PWA'}</span>
+                <Download size={11} strokeWidth={2} />
+                <span>{deferredPrompt ? 'Install' : 'Get App'}</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setDismissed(true)}
+                onClick={() => {
+                  setDismissed(true);
+                  try {
+                    localStorage.setItem('cd_pwa_banner_dismissed', '1');
+                  } catch {}
+                }}
                 className="text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 p-1 cursor-pointer"
                 title="Dismiss banner"
               >
-                <X size={15} strokeWidth={1.75} />
+                <X size={14} strokeWidth={1.75} />
               </button>
             </div>
           </div>

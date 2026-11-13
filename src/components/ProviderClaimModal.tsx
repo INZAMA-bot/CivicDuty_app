@@ -5,6 +5,7 @@ import { COUNTRIES, allDepts } from '../data/countries';
 import { primaryUnit, tiersFor } from '../data/tiers';
 import { INITIAL_PARTNERSHIPS } from '../data/partnerships';
 import { getCountryBranding } from '../data/countryBranding';
+import { getCountryPerkProfile, getCurrencyForCountry, getUsdRateForCurrency } from '../data/countryCurrency';
 import {
   X,
   Building2,
@@ -176,26 +177,16 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
   const tiers = tiersFor(country);
   const l1Unit = tiers[1]?.unit || 'District / County';
 
-  // Currency rate mapping
-  const rateMap: Record<string, { currency: string; rate: number }> = {
-    UG: { currency: 'UGX', rate: 3750 },
-    KE: { currency: 'KES', rate: 130 },
-    NG: { currency: 'NGN', rate: 1500 },
-    GH: { currency: 'GHS', rate: 15.5 },
-    RW: { currency: 'RWF', rate: 1350 },
-    TZ: { currency: 'TZS', rate: 2600 },
-    ZA: { currency: 'ZAR', rate: 18.5 },
-    EG: { currency: 'EGP', rate: 48.5 },
-  };
-
-  const currentRate = rateMap[country] || { currency: countryData.currency || 'USD', rate: 1 };
+  // Currency rate mapping across all countries (subscriptions priced & charged in USD)
+  const localCurr = getCurrencyForCountry(country);
+  const localRate = getUsdRateForCurrency(localCurr);
 
   const formatPrice = (usdAmount: number, isAnnualSelected: boolean) => {
     if (usdAmount === 0) return 'Free';
-    const converted = Math.round(usdAmount * currentRate.rate);
-    const curr = currentRate.currency;
-    const formatted = curr === 'USD' ? `$${converted.toLocaleString()}` : `${curr} ${converted.toLocaleString()}`;
-    return `${formatted}${isAnnualSelected ? '/yr' : '/mo'}`;
+    const usdLabel = `$${usdAmount}${isAnnualSelected ? '/yr' : '/mo'}`;
+    if (localCurr === 'USD') return usdLabel;
+    const converted = Math.round(usdAmount * localRate);
+    return `${usdLabel} (~${localCurr} ${converted.toLocaleString()})`;
   };
 
   const territoryPlans: Record<TerritoryPlanKey, TerritoryPlanConfig> = {
@@ -990,7 +981,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                     <input
                       type="tel"
                       required
-                      placeholder="e.g., +256 700 000 000"
+                      placeholder={`e.g., ${getCountryPerkProfile(country).samplePhone}`}
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none"
@@ -1016,7 +1007,7 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g., URA TIN 1009876543 or Registrar Certificate #"
+                    placeholder="e.g., Tax ID / Registrar Certificate #"
                     value={tinOrReg}
                     onChange={(e) => setTinOrReg(e.target.value)}
                     className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-xs font-medium focus:ring-1 focus:ring-emerald-500 focus:outline-none"

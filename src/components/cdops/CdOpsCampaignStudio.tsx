@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { CdOpsPromotionalAd } from '../../types';
+import { getCountryTransitSpecs } from '../../data/promotionalAds';
 import {
   Megaphone,
   Bus,
@@ -31,106 +32,189 @@ export const CdOpsCampaignStudio: React.FC = () => {
     addPromotionalAd,
     togglePromotionalAdStatus,
     deletePromotionalAd,
+    selectedCountry,
+    user,
     go,
     toast,
   } = useApp();
 
-  // Manufacturing Form State
-  const [title, setTitle] = useState('Bodaboda Stage Poster & Civic Alert');
-  const [category, setCategory] = useState<'bodaboda' | 'bus' | 'train' | 'terminal' | 'radio' | 'noticeboard' | 'ussd'>('bodaboda');
-  const [categoryLabel, setCategoryLabel] = useState('Bodaboda Stage Poster');
-  const [tagline, setTagline] = useState('BODA MAN: GWE BOSS W’OLUGUUDO! • SPEAK. SERVE. BE HEARD.');
-  const [summary, setSummary] = useState(
-    'Empower stage riders as frontline municipal road defect inspectors. Report potholes, broken culverts, and extortion without internet bundles via zero-rated USSD.'
+  const activeCountry = selectedCountry || user?.country || 'UG';
+  const isUganda = activeCountry === 'UG';
+  const transitSpec = getCountryTransitSpecs(activeCountry);
+
+  // Manufacturing Form State (initialized cleanly per active jurisdiction)
+  const [title, setTitle] = useState(
+    isUganda
+      ? 'Bodaboda Stage Poster & Civic Alert'
+      : `${transitSpec.countryName} ${transitSpec.stageTransportName}: Frontline Scouts Poster`
   );
-  const [imageSrc, setImageSrc] = useState('/campaign/boda_poster_ad_1790426299023.jpg');
-  const [callToAction, setCallToAction] = useState('Dial *3030# FREE (Zero Data)');
+  const [category, setCategory] = useState<'bodaboda' | 'bus' | 'train' | 'terminal' | 'radio' | 'noticeboard' | 'ussd'>('bodaboda');
+  const [categoryLabel, setCategoryLabel] = useState(transitSpec.scoutTabLabel);
+  const [tagline, setTagline] = useState(`${transitSpec.localSlogan} • SPEAK. SERVE. BE HEARD.`);
+  const [summary, setSummary] = useState(
+    isUganda
+      ? 'Empower stage riders as frontline municipal road defect inspectors. Report potholes, broken culverts, and extortion without internet bundles via zero-rated USSD.'
+      : `Empower ${transitSpec.stageTransportName.toLowerCase()} in ${transitSpec.countryName} as frontline civic scouts reporting road hazards, damaged lanes, and public service outages directly to ${transitSpec.municipalAuthority}.`
+  );
+  const [imageSrc, setImageSrc] = useState(
+    isUganda ? '/campaign/boda_poster_ad_1790426299023.jpg?v=20261113' : transitSpec.scoutPosterSrc
+  );
+  const [callToAction, setCallToAction] = useState(`Dial ${transitSpec.ussdCode} FREE (Zero Friction)`);
   const [ctaType, setCtaType] = useState<'ussd' | 'specs' | 'report' | 'perks' | 'custom'>('ussd');
-  const [ctaValue, setCtaValue] = useState('*3030#');
-  const [sponsorName, setSponsorName] = useState('CivicDuty CD-Ops · KCCA Transit Accord');
-  const [targetAudience, setTargetAudience] = useState('Bodaboda Riders, Stage Chairmen & Commuters');
-  const [specs, setSpecs] = useState('A1/A2 Waterproof Outdoor Polypropylene Poster · High-Tack Adhesive');
-  const [highlight1, setHighlight1] = useState('Empowers riders as frontline street inspectors with direct council access');
-  const [highlight2, setHighlight2] = useState('Works instantly on simple Kabiriti phones via *3030# without internet bundles');
-  const [highlight3, setHighlight3] = useState('Verified riders earn fuel and telecom data perks upon defect validation');
+  const [ctaValue, setCtaValue] = useState(transitSpec.ussdCode);
+  const [sponsorName, setSponsorName] = useState(`CivicDuty CD-Ops · ${transitSpec.municipalAuthority}`);
+  const [targetAudience, setTargetAudience] = useState(`${transitSpec.stageTransportName} & Daily Commuters`);
+  const [specs, setSpecs] = useState(
+    isUganda
+      ? 'A1/A2 Waterproof Outdoor Polypropylene Poster · High-Tack Adhesive'
+      : `Outdoor Street Kiosk & Hub Poster · CivicDuty 3-Signal System (${transitSpec.countryCode})`
+  );
+  const [highlight1, setHighlight1] = useState(
+    `Empowers ${transitSpec.stageTransportName.toLowerCase()} as frontline inspectors with direct municipal desk access`
+  );
+  const [highlight2, setHighlight2] = useState(
+    isUganda
+      ? 'Works instantly on simple Kabiriti phones via *3030# without internet bundles'
+      : `Instant citizen reporting via ${transitSpec.ussdCode} & civicduty.site without friction`
+  );
+  const [highlight3, setHighlight3] = useState(
+    'Verified frontline scouts earn monthly mobility & telecom data perks upon ticket validation'
+  );
+
+  useEffect(() => {
+    setTitle(
+      isUganda
+        ? 'Bodaboda Stage Poster & Civic Alert'
+        : `${transitSpec.countryName} ${transitSpec.stageTransportName}: Frontline Scouts Poster`
+    );
+    setCategory('bodaboda');
+    setCategoryLabel(transitSpec.scoutTabLabel);
+    setTagline(`${transitSpec.localSlogan} • SPEAK. SERVE. BE HEARD.`);
+    setSummary(
+      isUganda
+        ? 'Empower stage riders as frontline municipal road defect inspectors. Report potholes, broken culverts, and extortion without internet bundles via zero-rated USSD.'
+        : `Empower ${transitSpec.stageTransportName.toLowerCase()} in ${transitSpec.countryName} as frontline civic scouts reporting road hazards, damaged lanes, and public service outages directly to ${transitSpec.municipalAuthority}.`
+    );
+    setImageSrc(isUganda ? '/campaign/boda_poster_ad_1790426299023.jpg?v=20261113' : transitSpec.scoutPosterSrc);
+    setCallToAction(isUganda ? `Dial ${transitSpec.ussdCode} FREE (Zero Data)` : `Join via ${transitSpec.ussdCode}`);
+    setCtaType('ussd');
+    setCtaValue(transitSpec.ussdCode);
+    setSponsorName(`CivicDuty CD-Ops · ${transitSpec.municipalAuthority}`);
+    setTargetAudience(`${transitSpec.stageTransportName} & Daily Commuters`);
+    setSpecs(
+      isUganda
+        ? 'A1/A2 Waterproof Outdoor Polypropylene Poster · High-Tack Adhesive'
+        : `Outdoor Street Kiosk & Hub Poster · CivicDuty 3-Signal System (${transitSpec.countryCode})`
+    );
+    setHighlight1(
+      `Empowers ${transitSpec.stageTransportName.toLowerCase()} as frontline inspectors with direct municipal desk access`
+    );
+    setHighlight2(
+      isUganda
+        ? 'Works instantly on simple Kabiriti phones via *3030# without internet bundles'
+        : `Instant citizen reporting via ${transitSpec.ussdCode} & civicduty.site without friction`
+    );
+    setHighlight3('Verified frontline scouts earn monthly mobility & telecom data perks upon ticket validation');
+  }, [activeCountry, isUganda, transitSpec]);
 
   // Preset Template Loader
   const loadPreset = (presetKey: 'bodaboda' | 'bus' | 'ussd' | 'perks') => {
+    const scoutImg = isUganda ? '/campaign/boda_poster_ad_1790426299023.jpg?v=20261113' : transitSpec.scoutPosterSrc;
+    const busImg = isUganda ? '/campaign/kayoola_bus_branding_1788711208719.jpg?v=20261113' : transitSpec.busPosterSrc;
+
     if (presetKey === 'bodaboda') {
-      setTitle('Bodaboda Community Stage Poster & Market Launch Campaign');
+      setTitle(
+        isUganda
+          ? 'Bodaboda Community Stage Poster & Market Launch Campaign'
+          : `${transitSpec.countryName} ${transitSpec.stageTransportName} Frontline Scouts Campaign`
+      );
       setCategory('bodaboda');
-      setCategoryLabel('Bodaboda Stage Poster');
-      setTagline('BODA MAN: GWE BOSS W’OLUGUUDO! • SPEAK. SERVE. BE HEARD.');
+      setCategoryLabel(transitSpec.scoutTabLabel);
+      setTagline(`${transitSpec.localSlogan} • SPEAK. SERVE. BE HEARD.`);
       setSummary(
-        'High-visibility weather-resistant advertising poster tailored directly to Uganda’s 1.5M+ Bodaboda riders, stage chairmen, and SACCO leadership across Kampala, Wakiso, and national transit hubs.'
+        isUganda
+          ? 'High-visibility weather-resistant advertising poster tailored directly to Uganda’s 1.5M+ Bodaboda riders, stage chairmen, and SACCO leadership across Kampala, Wakiso, and national transit hubs.'
+          : `Weather-resistant street kiosk and hub campaign tailored to ${transitSpec.countryName}’s ${transitSpec.stageTransportName.toLowerCase()} across ${transitSpec.stageLocations}.`
       );
-      setImageSrc('/campaign/boda_poster_ad_1790426299023.jpg');
-      setCallToAction('Dial *3030# FREE (Zero Data)');
+      setImageSrc(scoutImg);
+      setCallToAction(isUganda ? `Dial ${transitSpec.ussdCode} FREE (Zero Data)` : `Join Frontline Scouts (${transitSpec.ussdCode})`);
       setCtaType('ussd');
-      setCtaValue('*3030#');
-      setSpecs('A1/A2 Waterproof Outdoor Polypropylene Poster · High-Tack Adhesive & Stage Noticeboard Mount');
-      setSponsorName('CivicDuty Transit Ops · KCCA & Works Accord');
-      setTargetAudience('Bodaboda Riders, SACCO Chairmen & Commuters');
-      setHighlight1('Empowers riders as frontline street inspectors with direct access to KCCA & Ministry of Works');
-      setHighlight2('Instant USSD *3030# access works on simple feature phones (Kabiriti) without internet bundles');
-      setHighlight3('Stage SACCO recognition and verified rider fuel perks for validated road reports');
-      toast('Loaded Bodaboda Stage Poster creative template', 'emerald');
-    } else if (presetKey === 'bus') {
-      setTitle('Kayoola EVS Electric Bus Full Vehicle Wrap');
-      setCategory('bus');
-      setCategoryLabel('Kayoola Electric Bus');
-      setTagline('SPEAK. SERVE. BE HEARD. • Connect. Resolve. Progress.');
-      setSummary(
-        'Full exterior commercial vehicle wrap for the 10.5m & 12m Kiira Motors Kayoola EVS transit bus, operating along high-density metropolitan routes.'
+      setCtaValue(transitSpec.ussdCode);
+      setSpecs(`A1/A2 Outdoor Poster & Frontline Kiosk Display (${transitSpec.countryName})`);
+      setSponsorName(`CivicDuty Transit Ops · ${transitSpec.municipalAuthority}`);
+      setTargetAudience(`${transitSpec.stageTransportName} & Commuters`);
+      setHighlight1(`Empowers street scouts with direct escalation access to ${transitSpec.municipalAuthority}`);
+      setHighlight2(
+        isUganda
+          ? 'Instant USSD *3030# access works on simple feature phones (Kabiriti) without internet bundles'
+          : `Zero-friction reporting via ${transitSpec.ussdCode} & civicduty.site with verified GPS proofs`
       );
-      setImageSrc('/campaign/kayoola_bus_branding_1788711208719.jpg');
+      setHighlight3('Monthly merit recognition and verified mobility/data perks for validated hazard reports');
+      toast(`Loaded ${transitSpec.countryName} Frontline Scouts creative template`, 'emerald');
+    } else if (presetKey === 'bus') {
+      setTitle(
+        isUganda
+          ? 'Kayoola EVS Electric Bus Full Vehicle Wrap'
+          : `${transitSpec.busPartnerName} 3-Signal Transit Fleet Campaign`
+      );
+      setCategory('bus');
+      setCategoryLabel(isUganda ? 'Kayoola Electric Bus' : `${transitSpec.busPartnerName} Fleet`);
+      setTagline('SPEAK. SERVE. BE HEARD. • Connect. Resolve. Progress.');
+      setSummary(transitSpec.busProposalSummary);
+      setImageSrc(busImg);
       setCallToAction('Inspect Vehicle Specs & Livery');
       setCtaType('specs');
       setCtaValue('transit_preview');
-      setSpecs('3M IJ180mC-10 Vinyl with Cast Lamination · High-Contrast UV Resistant');
-      setSponsorName('Kiira Motors & CivicDuty Sovereign Fleet');
+      setSpecs(`${transitSpec.busFleetType} · ${transitSpec.busRoutes}`);
+      setSponsorName(`${transitSpec.busPartnerName} & CivicDuty Sovereign Fleet`);
       setTargetAudience('Metropolitan Commuters & Urban Residents');
-      setHighlight1('Zero-emission sovereign public transit branding operating along Northern Bypass and Jinja Road');
-      setHighlight2('Onboard QR code scans direct commuters to the municipal complaint tracker');
-      setHighlight3('Integrated digital ticket telemetry tracking bus arrival and road quality feedback');
-      toast('Loaded Kayoola EVS Bus Wrap creative template', 'emerald');
+      setHighlight1(`High-visibility public transit branding operating across ${transitSpec.busRoutes}`);
+      setHighlight2('Onboard QR & shortcode prompts direct commuters to the live municipal complaint tracker');
+      setHighlight3('Integrated citizen telemetry tracking fleet corridors and road surface quality');
+      toast(`Loaded ${transitSpec.countryName} Transit Fleet template`, 'emerald');
     } else if (presetKey === 'ussd') {
-      setTitle('Kabiriti *3030# Zero-Data Citizen Hotline');
-      setCategory('ussd');
-      setCategoryLabel('USSD Kabiriti Hotline');
-      setTagline('NO SMARTPHONE? NO INTERNET? DIAL *3030# FOR FREE!');
-      setSummary(
-        'Nationwide zero-rated sovereign telecom gateway allowing citizens with basic 2G feature phones (Kabiriti) to report burst water pipes, blackouts, and council clinic shortages.'
+      setTitle(
+        isUganda
+          ? 'Kabiriti *3030# Zero-Data Citizen Hotline'
+          : `${transitSpec.countryName} ${transitSpec.ussdCode} Direct Citizen Hotline`
       );
-      setImageSrc('/campaign/boda_poster_ad_1790426299023.jpg');
-      setCallToAction('Test *3030# USSD Gateway');
+      setCategory('ussd');
+      setCategoryLabel(isUganda ? 'USSD Kabiriti Hotline' : `${transitSpec.ussdCode} Citizen Hotline`);
+      setTagline(`NO BARRIERS? NO PROBLEM. USE ${transitSpec.ussdCode} ANYWHERE!`);
+      setSummary(
+        isUganda
+          ? 'Nationwide zero-rated sovereign telecom gateway allowing citizens with basic 2G feature phones (Kabiriti) to report burst water pipes, blackouts, and council clinic shortages.'
+          : `Nationwide low-bandwidth and USSD/SMS reporting gateway allowing every resident in ${transitSpec.countryName} to report water leaks, power outages, and road hazards.`
+      );
+      setImageSrc(scoutImg);
+      setCallToAction(`Test ${transitSpec.ussdCode} Citizen Gateway`);
       setCtaType('ussd');
-      setCtaValue('*3030#');
-      setSpecs('Zero-Rated SS7 / SIGTRAN USSD Protocol via MTN & Airtel Core Switches');
-      setSponsorName('UCC, Ministry of ICT & CivicDuty CD-Ops');
-      setTargetAudience('Grassroots Rural & Urban Citizens with 2G Handsets');
-      setHighlight1('Works on any basic mobile phone without airtime or internet bundles');
-      setHighlight2('Zero data charge approved under UCC Universal Service Access Fund');
-      setHighlight3('Instant SMS confirmation with sovereign ticket serial number');
-      toast('Loaded USSD *3030# Hotline creative template', 'emerald');
+      setCtaValue(transitSpec.ussdCode);
+      setSpecs(`Direct Citizen Shortcode Protocol · ${transitSpec.countryName}`);
+      setSponsorName(`${transitSpec.municipalAuthority} & CivicDuty CD-Ops`);
+      setTargetAudience('Urban & Rural Residents on All Handsets');
+      setHighlight1('Works seamlessly on both smartphones and offline feature phones');
+      setHighlight2('Instant ticket routing straight to assigned district & municipal engineers');
+      setHighlight3('Real-time status notification with public SLA accountability timer');
+      toast(`Loaded ${transitSpec.ussdCode} Hotline creative template`, 'emerald');
     } else if (presetKey === 'perks') {
-      setTitle('CSR & Digital Utility Perk Escrow Vault');
+      setTitle(`CSR & Community Utility Perk Escrow Vault (${transitSpec.countryCode})`);
       setCategory('noticeboard');
       setCategoryLabel('Watchdog Perk Fund');
-      setTagline('SERVE YOUR COMMUNITY · EARN PRE-FUNDED AIRTIME & DATA');
+      setTagline('SERVE YOUR COMMUNITY · EARN VERIFIED MOBILITY & DATA PERKS');
       setSummary(
-        'Batch deposit pre-funded airtime, data & utility vouchers for civic watchdogs. Open to individual citizens, diaspora patrons, and corporate CSR programs.'
+        'Batch deposit pre-funded airtime, data, transit & utility vouchers for verified civic watchdogs. Open to individual citizens, diaspora patrons, and corporate CSR programs.'
       );
-      setImageSrc('/campaign/boda_poster_ad_1790426299023.jpg');
+      setImageSrc(scoutImg);
       setCallToAction('Open Escrow Perk Vault');
       setCtaType('perks');
       setCtaValue('perk_vault');
-      setSpecs('Smart Escrow Multi-Sig Vault · Mobile Money & Card Gateway Integration');
+      setSpecs('Smart Escrow Multi-Sig Vault · Transparent Public Audit Trail');
       setSponsorName('CivicDuty Perk Escrow Vault & Corporate CSR Patrons');
       setTargetAudience('Civic Watchdogs, Citizens & Corporate Donors');
       setHighlight1('Open to individual citizens, diaspora patrons, and corporate CSR programs');
-      setHighlight2('Pre-funded telecom data bundles and water utility discounts dispatched upon verified ticket resolution');
-      setHighlight3('Transparent public audit trail on Supreme SAI Chain');
+      setHighlight2('Pre-funded transit, data, and utility allocations dispatched upon verified ticket resolution');
+      setHighlight3('Transparent public audit trail on CivicDuty Accountability Ledger');
       toast('Loaded CSR Perk Vault creative template', 'emerald');
     }
   };
@@ -152,7 +236,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
       categoryLabel: categoryLabel.trim() || 'Promotional Ad',
       tagline: tagline.trim(),
       summary: summary.trim(),
-      imageSrc: imageSrc.trim() || '/campaign/boda_poster_ad_1790426299023.jpg',
+      imageSrc: imageSrc.trim() || transitSpec.scoutPosterSrc,
       callToAction: callToAction.trim() || 'View Campaign',
       ctaType,
       ctaValue: ctaValue.trim(),
@@ -188,10 +272,10 @@ export const CdOpsCampaignStudio: React.FC = () => {
               </span>
             </div>
             <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Bodaboda Stage Posters &amp; Transit Promotional Ad Creator
+              {transitSpec.countryName} {transitSpec.scoutTabLabel} &amp; Transit Promotional Ad Creator
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl mt-1 leading-relaxed">
-              Manufacture high-impact promotional advertisements between you and CD-Ops. Once created, publish them directly to the citizen Civic Feed as interactive promotional bulletins.
+              Manufacture region-authentic 3-Signal promotional advertisements for {transitSpec.countryName}. Once created, publish them directly to the citizen Civic Feed as interactive promotional bulletins.
             </p>
           </div>
 
@@ -199,7 +283,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
             <button
               onClick={() => go('transit_preview')}
               className="px-3.5 py-2 rounded-lg bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-bold mono uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs active:scale-95 cursor-pointer"
-              title="Open full Kayoola bus engineering blueprints & high-res posters"
+              title={`Open full ${transitSpec.countryName} transit blueprints & high-res posters`}
             >
               <Bus size={14} />
               <span>Full Vehicle &amp; Poster Specs</span>
@@ -261,7 +345,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Bike size={13} />
-                <span>Bodaboda Stage Poster</span>
+                <span>{transitSpec.scoutTabLabel}</span>
               </button>
               <button
                 type="button"
@@ -269,7 +353,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 hover:bg-emerald-200 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Bus size={13} />
-                <span>Kayoola Bus Wrap</span>
+                <span>{isUganda ? 'Kayoola Bus Wrap' : 'Transit Fleet Wrap'}</span>
               </button>
               <button
                 type="button"
@@ -277,7 +361,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-cyan-100 dark:bg-cyan-950/60 hover:bg-cyan-200 text-cyan-900 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700/60 flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Smartphone size={13} />
-                <span>*3030# USSD Kabiriti</span>
+                <span>{isUganda ? '*3030# USSD Kabiriti' : `${transitSpec.ussdCode} Hotline`}</span>
               </button>
               <button
                 type="button"
@@ -315,25 +399,25 @@ export const CdOpsCampaignStudio: React.FC = () => {
                     const cat = e.target.value as any;
                     setCategory(cat);
                     const labels: Record<string, string> = {
-                      bodaboda: 'Bodaboda Stage Poster',
-                      bus: 'Kayoola Electric Bus',
-                      train: 'Metropolitan Commuter Train',
+                      bodaboda: transitSpec.scoutTabLabel,
+                      bus: isUganda ? 'Kayoola Electric Bus' : `${transitSpec.busPartnerName} Fleet`,
+                      train: 'Metropolitan Commuter Rail',
                       terminal: 'Transit Terminal Billboard',
-                      radio: 'FM Radio Jingle & Drop',
-                      noticeboard: 'Community SACCO Board',
-                      ussd: 'USSD Kabiriti Hotline',
+                      radio: 'Radio & Broadcast Spot',
+                      noticeboard: 'Community Watchdog Board',
+                      ussd: isUganda ? 'USSD Kabiriti Hotline' : `${transitSpec.ussdCode} Citizen Hotline`,
                     };
                     setCategoryLabel(labels[cat] || 'Promotional Ad');
                   }}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
-                  <option value="bodaboda">Bodaboda Community Stage Poster</option>
-                  <option value="bus">Kayoola Electric Bus Full Wrap</option>
+                  <option value="bodaboda">{transitSpec.scoutTabLabel} Poster</option>
+                  <option value="bus">{isUganda ? 'Kayoola Electric Bus Full Wrap' : 'Transit Fleet Full Wrap'}</option>
                   <option value="train">Commuter Railway Livery</option>
                   <option value="terminal">Transit Terminal Digital Billboard</option>
-                  <option value="radio">FM Radio Sensitization Jingle</option>
-                  <option value="noticeboard">Community Noticeboard &amp; SACCO Poster</option>
-                  <option value="ussd">*3030# Kabiriti Feature Phone Banner</option>
+                  <option value="radio">Radio Sensitization Jingle</option>
+                  <option value="noticeboard">Community Noticeboard &amp; Association Poster</option>
+                  <option value="ussd">{transitSpec.ussdCode} Citizen Hotline Banner</option>
                 </select>
               </div>
             </div>
@@ -346,7 +430,7 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 type="text"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
-                placeholder="e.g. BODA MAN: GWE BOSS W'OLUGUUDO! • SPEAK. SERVE. BE HEARD."
+                placeholder={`e.g. ${transitSpec.localSlogan} • SPEAK. SERVE. BE HEARD.`}
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-amber-700 dark:text-amber-400 focus:outline-none focus:border-amber-500"
                 required
               />
@@ -381,14 +465,13 @@ export const CdOpsCampaignStudio: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      const sample =
-                        imageSrc === '/campaign/boda_poster_ad_1790426299023.jpg'
-                          ? '/campaign/kayoola_bus_branding_1788711208719.jpg'
-                          : '/campaign/boda_poster_ad_1790426299023.jpg';
+                      const scoutAsset = isUganda ? '/campaign/boda_poster_ad_1790426299023.jpg?v=20261113' : transitSpec.scoutPosterSrc;
+                      const busAsset = isUganda ? '/campaign/kayoola_bus_branding_1788711208719.jpg?v=20261113' : transitSpec.busPosterSrc;
+                      const sample = imageSrc === scoutAsset ? busAsset : scoutAsset;
                       setImageSrc(sample);
                     }}
-                    className="px-2.5 py-1 text-[10px] mono rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300"
-                    title="Swap between Bodaboda Poster and Kayoola Bus Wrap image"
+                    className="px-2.5 py-1 text-[10px] mono rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 cursor-pointer"
+                    title={`Swap between ${transitSpec.scoutTabLabel} and Transit Fleet image`}
                   >
                     Swap
                   </button>
@@ -418,14 +501,14 @@ export const CdOpsCampaignStudio: React.FC = () => {
                   onChange={(e) => {
                     const ct = e.target.value as any;
                     setCtaType(ct);
-                    if (ct === 'ussd') setCallToAction('Dial *3030# FREE (Zero Data)');
+                    if (ct === 'ussd') setCallToAction(`Dial ${transitSpec.ussdCode} FREE`);
                     if (ct === 'specs') setCallToAction('Inspect Vehicle Specs & Livery');
                     if (ct === 'report') setCallToAction('File Road Defect Report');
                     if (ct === 'perks') setCallToAction('Open Escrow Perk Vault');
                   }}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
-                  <option value="ussd">Zero-Data USSD (*3030#)</option>
+                  <option value="ussd">Citizen Shortcode ({transitSpec.ussdCode})</option>
                   <option value="specs">Inspect Transit Blueprints</option>
                   <option value="report">File Sovereign Report</option>
                   <option value="perks">Perk Escrow Vault</option>
@@ -528,9 +611,10 @@ export const CdOpsCampaignStudio: React.FC = () => {
               <img
                 src={imageSrc}
                 alt={title}
+                referrerPolicy="no-referrer"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/campaign/boda_poster_ad_1790426299023.jpg';
+                  (e.currentTarget as HTMLImageElement).src = transitSpec.scoutPosterSrc;
                 }}
               />
               <div className="absolute inset-0 bg-black/55 flex flex-col justify-end p-2.5">
@@ -635,9 +719,10 @@ export const CdOpsCampaignStudio: React.FC = () => {
                     <img
                       src={ad.imageSrc}
                       alt={ad.title}
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = '/campaign/boda_poster_ad_1790426299023.jpg';
+                        (e.currentTarget as HTMLImageElement).src = transitSpec.scoutPosterSrc;
                       }}
                     />
                   </div>

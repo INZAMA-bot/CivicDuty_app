@@ -15,6 +15,12 @@ import { savePerkVoucherBatchToCloud, savePerkVoucherToCloud, saveGatewayTransac
 import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
 import { FrontlineStageExplorer } from '../components/FrontlineStageExplorer';
 import { getStoredMerchantProducts, filterMerchantProductsByLocation, calculateVoucherEconomics } from '../data/merchantLoyaltyData';
+import {
+  getCountryPerkProfile,
+  convertUsdToLocal,
+  getLocalizedMerchantProductsForCountry,
+  getLocalizedSandboxVouchersForCountry,
+} from '../data/countryCurrency';
 import { VoucherPassModal } from '../components/VoucherPassModal';
 import { VoucherScannerModal } from '../components/VoucherScannerModal';
 import {
@@ -310,10 +316,14 @@ export const PerkVaultView: React.FC = () => {
     }
   }, [user?.country, ctxCountry]);
 
+  const perkProfile = useMemo(() => getCountryPerkProfile(selectedCountry), [selectedCountry]);
+
   const userHomeParish = useMemo(() => {
-    if (user?.scope_label) return user.scope_label;
-    return selectedCountry === 'KE' ? 'Kilimani Ward' : selectedCountry === 'NG' ? 'Lekki Phase 1 Ward' : 'Kitintale Parish';
-  }, [user?.scope_label, selectedCountry]);
+    if (user?.scope_label && (!user?.country || user.country === selectedCountry)) {
+      return user.scope_label;
+    }
+    return perkProfile.defaultParish;
+  }, [user?.scope_label, user?.country, selectedCountry, perkProfile.defaultParish]);
 
   const lowestMeta = useMemo(() => getLowestUnitVaultMeta(selectedCountry), [selectedCountry]);
 
@@ -326,10 +336,7 @@ export const PerkVaultView: React.FC = () => {
     if (user?.entity_type === 'non_government_entity') return 'provider_vault';
     return 'parish_vault';
   });
-  const [selectedParish, setSelectedParish] = useState<string>(() => {
-    if (user?.scope_label && user.scope_label.toLowerCase().includes('parish')) return user.scope_label;
-    return 'Kitintale Parish';
-  });
+  const [selectedParish, setSelectedParish] = useState<string>(() => userHomeParish);
 
   useEffect(() => {
     if (parishDepositMode === 'home') {
@@ -340,12 +347,14 @@ export const PerkVaultView: React.FC = () => {
   const [selectedProviderDept, setSelectedProviderDept] = useState<string>(
     user?.entity_type === 'non_government_entity' && user?.dept ? user.dept : 'umeme'
   );
-  const [selectedContractId, setSelectedContractId] = useState<string>('PRJ-UG-01');
-  const [selectedScoutCorridor, setSelectedScoutCorridor] = useState<string>('corridor_northern_bypass');
+  const [selectedContractId, setSelectedContractId] = useState<string>('');
+  const [selectedScoutCorridor, setSelectedScoutCorridor] = useState<string>(
+    perkProfile.corridors[0]?.id || 'corridor_central'
+  );
   const [selectedScoutProfession, setSelectedScoutProfession] = useState<string>('boda');
   const [individualTargetPostId, setIndividualTargetPostId] = useState<string>('');
-  const [individualRecipientName, setIndividualRecipientName] = useState<string>('Amina Nabatanzi');
-  const [individualRecipientPhone, setIndividualRecipientPhone] = useState<string>('+256 774 819 203');
+  const [individualRecipientName, setIndividualRecipientName] = useState<string>(perkProfile.sampleRecipientName);
+  const [individualRecipientPhone, setIndividualRecipientPhone] = useState<string>(perkProfile.samplePhone);
   const [individualCitationNote, setIndividualCitationNote] = useState<string>(
     'Rewarding your outstanding field post and photo evidence from my Individual Vault!'
   );
@@ -374,9 +383,7 @@ export const PerkVaultView: React.FC = () => {
   // Marketplace Category Ribbon & Sorting States
   const [marketCategoryFilter, setMarketCategoryFilter] = useState<string>('all');
   const [marketSortBy, setMarketSortBy] = useState<'featured' | 'price_asc' | 'price_desc' | 'brand'>('featured');
-  const [merchantLocationFilterParish, setMerchantLocationFilterParish] = useState<string>(() => {
-    return user?.scope_label && user.scope_label.toLowerCase().includes('parish') ? user.scope_label : 'Kitintale Parish';
-  });
+  const [merchantLocationFilterParish, setMerchantLocationFilterParish] = useState<string>('all');
   const [merchantRewardTypeFilter, setMerchantRewardTypeFilter] = useState<'all' | MerchantVoucherRewardType>('all');
   const [merchantCategoryFilter, setMerchantCategoryFilter] = useState<string>('all');
   const [selectedMerchantProduct, setSelectedMerchantProduct] = useState<MerchantProductService | null>(null);
@@ -428,21 +435,21 @@ export const PerkVaultView: React.FC = () => {
     'all' | 'food_dining' | 'telco_data' | 'water_electricity' | 'transit_fuel' | 'supermarket' | 'health' | 'education' | 'electronics'
   >('all');
   const [customPackagedItemsInput, setCustomPackagedItemsInput] = useState<string>(
-    '2kg Maize Flour (Unga), 1L Cooking Oil, 1kg Sugar, 2kg Rice, Bar of Soap & Milk'
+    perkProfile.basketStaples.join(', ')
   );
-  const [paySponsorName, setPaySponsorName] = useState(user?.name ? `${user.name} (Civic Patron)` : 'Seyani Brothers Construction Ltd');
+  const [paySponsorName, setPaySponsorName] = useState(user?.name ? `${user.name} (Civic Patron)` : perkProfile.sampleSponsor);
   const [paySponsorType, setPaySponsorType] = useState<'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron'>('citizen_patron');
-  const [payProjectName, setPayProjectName] = useState('Community Civic Watchdog Incentive Fund');
+  const [payProjectName, setPayProjectName] = useState(perkProfile.sampleProject);
   const [payMethod, setPayMethod] = useState<'momo' | 'airtel' | 'mpesa' | 'card' | 'bank'>('momo');
-  const [payPhone, setPayPhone] = useState('+256778277900');
-  const [payEmail, setPayEmail] = useState('csr@seyanibrothers.ug');
-  const [payCardName, setPayCardName] = useState('Seyani Brothers Ltd (Corporate)');
+  const [payPhone, setPayPhone] = useState(perkProfile.samplePhone);
+  const [payEmail, setPayEmail] = useState(`csr@${selectedCountry.toLowerCase()}.civicduty.org`);
+  const [payCardName, setPayCardName] = useState(`${perkProfile.sampleSponsor} (Corporate)`);
   const [payCardNumber, setPayCardNumber] = useState('4242 •••• •••• 4242');
   const [payCardExpiry, setPayCardExpiry] = useState('12/28');
   const [payCardCvc, setPayCardCvc] = useState('892');
   const [customQuantity, setCustomQuantity] = useState(3);
-  const [customFaceValue, setCustomFaceValue] = useState(1000);
-  const [customBrand, setCustomBrand] = useState('Naivas / Quality Supermarket');
+  const [customFaceValue, setCustomFaceValue] = useState(() => convertUsdToLocal(8, selectedCountry).amount);
+  const [customBrand, setCustomBrand] = useState(perkProfile.supermarketBrand);
   const [customCategory, setCustomCategory] = useState<'telco_data' | 'water_utility' | 'electricity' | 'transit_credit' | 'supermarket'>('supermarket');
   const [isPaying, setIsPaying] = useState(false);
   const [paymentReceipt, setPaymentReceipt] = useState<any>(null);
@@ -450,21 +457,46 @@ export const PerkVaultView: React.FC = () => {
   // CSV Upload State
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreviewRows, setCsvPreviewRows] = useState<any[]>([]);
-  const [csvSponsor, setCsvSponsor] = useState(user?.name ? `${user.name} (Community CSR)` : 'Seyani Brothers Construction Ltd (CSR Allocation)');
+  const [csvSponsor, setCsvSponsor] = useState(user?.name ? `${user.name} (Community CSR)` : `${perkProfile.sampleSponsor} (CSR Allocation)`);
   const [csvSponsorType, setCsvSponsorType] = useState<'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron'>('citizen_patron');
-  const [csvProjectName, setCsvProjectName] = useState('Kampala Flyover & Southern Bypass');
+  const [csvProjectName, setCsvProjectName] = useState(perkProfile.sampleProject);
   const [isUploading, setIsUploading] = useState(false);
 
   // Manual Deposit Form State
-  const [manualBrand, setManualBrand] = useState('MTN Uganda');
+  const [manualBrand, setManualBrand] = useState(perkProfile.telcoBrand);
   const [manualCategory, setManualCategory] = useState<'telco_data' | 'water_utility' | 'electricity' | 'transit_credit' | 'supermarket'>('telco_data');
   const [manualCode, setManualCode] = useState('');
   const [manualPin, setManualPin] = useState('');
-  const [manualFaceValue, setManualFaceValue] = useState('10000');
-  const [manualCurrency, setManualCurrency] = useState('UGX');
-  const [manualSponsor, setManualSponsor] = useState(user?.name ? `${user.name} (Civic Patron)` : 'Seyani Brothers Construction Ltd');
+  const [manualFaceValue, setManualFaceValue] = useState(() => String(convertUsdToLocal(3, selectedCountry).amount));
+  const [manualCurrency, setManualCurrency] = useState(perkProfile.currency);
+  const [manualSponsor, setManualSponsor] = useState(user?.name ? `${user.name} (Civic Patron)` : perkProfile.sampleSponsor);
   const [manualSponsorType, setManualSponsorType] = useState<'contractor' | 'authority' | 'corporate_csr' | 'citizen_patron'>('citizen_patron');
   const [manualExpiry, setManualExpiry] = useState('2026-12-31');
+
+  // Auto-sync defaults & localized labels whenever the active country changes
+  useEffect(() => {
+    setSelectedParish(perkProfile.defaultParish);
+    setMerchantLocationFilterParish('all');
+    setSelectedMerchantProduct(null);
+    setPaymentReceipt(null);
+    setIndividualTargetPostId('');
+    setIndividualRecipientName(perkProfile.sampleRecipientName);
+    setIndividualRecipientPhone(perkProfile.samplePhone);
+    setCustomPackagedItemsInput(perkProfile.basketStaples.join(', '));
+    setPaySponsorName(user?.name ? `${user.name} (Civic Patron)` : perkProfile.sampleSponsor);
+    setPayProjectName(perkProfile.sampleProject);
+    setPayPhone(perkProfile.samplePhone);
+    setPayEmail(`csr@${selectedCountry.toLowerCase()}.civicduty.org`);
+    setPayCardName(`${perkProfile.sampleSponsor} (Corporate)`);
+    setCustomFaceValue(convertUsdToLocal(8, selectedCountry).amount);
+    setCustomBrand(perkProfile.supermarketBrand);
+    setCsvSponsor(user?.name ? `${user.name} (Community CSR)` : `${perkProfile.sampleSponsor} (CSR Allocation)`);
+    setCsvProjectName(perkProfile.sampleProject);
+    setManualBrand(perkProfile.telcoBrand);
+    setManualFaceValue(String(convertUsdToLocal(3, selectedCountry).amount));
+    setManualCurrency(perkProfile.currency);
+    setManualSponsor(user?.name ? `${user.name} (Civic Patron)` : perkProfile.sampleSponsor);
+  }, [selectedCountry, perkProfile, user?.name]);
 
   // --- JURISDICTION OPTIONS PER COUNTRY ---
   const parishOptions = useMemo(() => {
@@ -485,13 +517,10 @@ export const PerkVaultView: React.FC = () => {
         });
       });
     });
-    const defaultUgParishes = ['Kitintale Parish', 'Wandegeya Parish', 'Nakasero II Parish', 'Kisenyi II Parish', 'Ntinda Parish', 'Bwaise III Parish'];
-    const combined = Array.from(new Set([...(selectedCountry === 'UG' ? ['Kitintale Parish'] : []), ...fromPosts, ...fromTree, ...(selectedCountry === 'UG' ? defaultUgParishes : [])]));
+    const combined = Array.from(new Set([perkProfile.defaultParish, ...fromPosts, ...fromTree]));
     if (combined.length > 0) return combined.slice(0, 18);
-    return selectedCountry === 'KE'
-      ? ['Kilimani Ward', 'Westlands Ward', 'Kibera Lindi Ward', 'Embakasi Central Ward']
-      : defaultUgParishes;
-  }, [posts, selectedCountry]);
+    return [perkProfile.defaultParish];
+  }, [posts, selectedCountry, perkProfile.defaultParish]);
 
   // Strict Role-Based Visibility Checks for Institutional Vault Execution Buttons
   const isParishChiefUser = Boolean(
@@ -558,23 +587,23 @@ export const PerkVaultView: React.FC = () => {
     return [
       ...base,
       {
-        id: 'shop_quality_supermarket',
-        name: selectedCountry === 'KE' ? 'Naivas Supermarket Community Desk' : 'Quality Supermarket Community Desk',
+        id: 'shop_supermarket_community',
+        name: `${perkProfile.supermarketBrand} Community Desk`,
         full: 'Retail & Supermarket Patron Service Desk',
         sla: 24,
         lane: 'consumer' as const,
         category: 'retail_shops' as const,
       },
       {
-        id: 'shop_javahouse_acacia',
-        name: 'Java House & Hospitality Desk',
+        id: 'shop_hospitality_desk',
+        name: `${perkProfile.diningBrand} Hospitality Desk`,
         full: 'Food, Dining & Patron Experience Desk',
         sla: 24,
         lane: 'consumer' as const,
         category: 'food_dining' as const,
       },
     ];
-  }, [selectedCountry]);
+  }, [selectedCountry, perkProfile.supermarketBrand, perkProfile.diningBrand]);
 
   const contractOptions = useMemo(() => {
     const countryProjects = projects.filter((pr) => (pr.country || 'UG') === selectedCountry);
@@ -583,26 +612,8 @@ export const PerkVaultView: React.FC = () => {
   }, [projects, selectedCountry]);
 
   const scoutCorridorOptions = useMemo(() => {
-    if (selectedCountry === 'KE') {
-      return [
-        { id: 'corridor_thika_superhighway', label: 'Thika Superhighway & Roysambu Bodaboda / Matatu Stage', authority: 'KeNHA / NTSA Road Safety Desk' },
-        { id: 'corridor_mombasa_road', label: 'Mombasa Road & Nyayo Stadium Transit Corridor', authority: 'KURA / Nairobi Transit Watch' },
-        { id: 'corridor_waiyaki_way', label: 'Waiyaki Way & Westlands Stage Scout Zone', authority: 'NTSA Frontline Riders Pool' },
-      ];
-    }
-    if (selectedCountry === 'NG') {
-      return [
-        { id: 'corridor_lekki_epe', label: 'Lekki-Epe Expressway & Marwa/Okada Scout Corridor', authority: 'LASG / FRSC Road Safety Pool' },
-        { id: 'corridor_third_mainland', label: 'Third Mainland & Ikeja Along Transit Stage', authority: 'LAMATA / FRSC Corridor Watch' },
-      ];
-    }
-    return [
-      { id: 'corridor_northern_bypass', label: 'Kampala Northern Bypass & Bwaise Bodaboda Stage', authority: 'UNRA / MoWT & SafeBoda Stage Safety' },
-      { id: 'corridor_jinja_highway', label: 'Jinja Road, Nakawa & Mukono Highway Scout Corridor', authority: 'KCCA / Traffic Police Road Safety Pool' },
-      { id: 'corridor_entebbe_express', label: 'Entebbe Road, Kibuye & Kajjansi Stage Scout Zone', authority: 'MoWT / Frontline Bodaboda Union' },
-      { id: 'corridor_gulu_highway', label: 'Bombo-Gulu Highway & Kawempe Stage Corridor', authority: 'UNRA Northern Corridor Scout Pool' },
-    ];
-  }, [selectedCountry]);
+    return perkProfile.corridors;
+  }, [perkProfile.corridors]);
 
   useEffect(() => {
     if (parishOptions.length > 0 && !parishOptions.includes(selectedParish)) {
@@ -643,7 +654,7 @@ export const PerkVaultView: React.FC = () => {
 
   // --- DETERMINISTIC TOP-3 RANKING ENGINE PER VAULT JURISDICTION ---
   const activeJurisdictionTop3: RankedJurisdictionCitizen[] = useMemo(() => {
-    const phonePrefix = selectedCountry === 'KE' ? '+254 7' : selectedCountry === 'NG' ? '+234 80' : '+256 77';
+    const phonePrefix = `${perkProfile.phonePrefix} `;
 
     // Helper to aggregate citizen standing from a filtered subset of posts
     const buildTop3FromPosts = (
@@ -917,7 +928,12 @@ export const PerkVaultView: React.FC = () => {
             reason: `#1 Highway Scout (reported dangerous highway shoulder washout & unregulated heavy truck parking)`,
           },
           {
-            name: selectedCountry === 'KE' ? 'David Kamau (Route 44 Rep)' : 'Musa Mukasa (Kamunye Driver)',
+            name:
+              selectedCountry === 'KE'
+                ? 'David Kamau (Route 44 Rep)'
+                : selectedCountry === 'UG'
+                ? 'Musa Mukasa (Kamunye Driver)'
+                : 'Daniel Vance (Transit Corridor Driver)',
             role: `Commercial Corridor Watchdog · ${cLabel}`,
             baseScore: 340,
             reports: 6,
@@ -1236,10 +1252,9 @@ export const PerkVaultView: React.FC = () => {
 
     setIsBatchDispatching(true);
     try {
-      const isKe = selectedCountry === 'KE';
-      const defaultCurrency = isKe ? 'KES' : selectedCountry === 'NG' ? 'NGN' : 'UGX';
-      const defaultBrand = isKe ? 'Safaricom' : selectedCountry === 'NG' ? 'MTN Nigeria' : 'MTN Uganda';
-      const defaultFaceValue = isKe ? 360 : selectedCountry === 'NG' ? 3500 : 10000;
+      const defaultCurrency = perkProfile.currency;
+      const defaultBrand = perkProfile.telcoBrand;
+      const defaultFaceValue = convertUsdToLocal(3, selectedCountry).amount;
       const nowIso = new Date().toISOString();
 
       if (activeVaultKind === 'individual_vault') {
@@ -1263,7 +1278,7 @@ export const PerkVaultView: React.FC = () => {
               status: 'dispatched',
               dispatchedTo: {
                 recipientName: individualRecipientName.trim(),
-                recipientContact: individualRecipientPhone.trim() || '+256 770 000 000',
+                recipientContact: individualRecipientPhone.trim() || perkProfile.samplePhone,
                 dispatchedAt: nowIso,
                 dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
                 citationNote: individualCitationNote.trim(),
@@ -1294,10 +1309,10 @@ export const PerkVaultView: React.FC = () => {
               status: 'dispatched',
               createdAt: nowIso,
               expiryDate: '2026-12-31',
-              redemptionUssdString: `*303*${code}#`,
+              redemptionUssdString: perkProfile.ussdDial,
               dispatchedTo: {
                 recipientName: individualRecipientName.trim(),
-                recipientContact: individualRecipientPhone.trim() || '+256 770 000 000',
+                recipientContact: individualRecipientPhone.trim() || perkProfile.samplePhone,
                 dispatchedAt: nowIso,
                 dispatchedBy: currentVaultJurisdictionMeta.dispatcherTitle,
                 citationNote: individualCitationNote.trim(),
@@ -1542,17 +1557,19 @@ export const PerkVaultView: React.FC = () => {
     }
   };
 
-  // Load vouchers from server and Cloud Firestore
+  // Load vouchers from server and localize fallback for any country without backend seeds
   const loadVaultData = async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/perks/vault?country=${selectedCountry}`);
       const data = await res.json();
-      if (data.success && data.vouchers) {
+      if (data.success && Array.isArray(data.vouchers) && data.vouchers.length > 0) {
         setVouchers(data.vouchers);
+      } else {
+        setVouchers(getLocalizedSandboxVouchersForCountry(selectedCountry, parishOptions));
       }
     } catch {
-      // Fallback to local
+      setVouchers(getLocalizedSandboxVouchersForCountry(selectedCountry, parishOptions));
     } finally {
       setLoading(false);
     }
@@ -1576,9 +1593,9 @@ export const PerkVaultView: React.FC = () => {
       dispatchedCount: dispatched.length,
       totalEscrowFaceValue,
       uniqueSponsors,
-      currency: countryVouchers[0]?.currency || (selectedCountry === 'KE' ? 'KES' : 'UGX'),
+      currency: countryVouchers[0]?.currency || perkProfile.currency,
     };
-  }, [vouchers, selectedCountry]);
+  }, [vouchers, selectedCountry, perkProfile.currency]);
 
   // Filtered list
   const filteredVouchers = useMemo(() => {
@@ -1698,7 +1715,7 @@ export const PerkVaultView: React.FC = () => {
           brand: voucher.brand,
           category: voucher.category,
           recipientName: user?.name || 'Verified Citizen Watchdog',
-          recipientContact: user?.phone || '+256 770 000 000',
+          recipientContact: user?.phone || perkProfile.samplePhone,
           dispatchedBy: 'Citizen Self-Redemption Store (CivicScore XP)',
           ticketId: `XP-REDEEM-${xpCost}PTS`,
           selfRedeem: true,
@@ -1831,12 +1848,16 @@ export const PerkVaultView: React.FC = () => {
 
   // Download Sample CSV
   const handleDownloadSampleCsv = () => {
+    const dataAmt = convertUsdToLocal(3, selectedCountry).amount;
+    const powerAmt = convertUsdToLocal(4, selectedCountry).amount;
+    const transitAmt = convertUsdToLocal(2, selectedCountry).amount;
+    const curr = perkProfile.currency;
     const sampleCsv = `voucher_code,brand,category,face_value,currency,pin,expiry_date
-MTN-2GB-9001-TEST,MTN Uganda,telco_data,10000,UGX,9001,2026-12-31
-MTN-2GB-9002-TEST,MTN Uganda,telco_data,10000,UGX,9002,2026-12-31
-NWSC-10K-9003-TEST,NWSC Uganda,water_utility,10000,UGX,9003,2026-12-31
-YAKA-15K-9004-TEST,Umeme Power,electricity,15000,UGX,9004,2026-12-31
-SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
+${selectedCountry}-DATA-9001,${perkProfile.telcoBrand},telco_data,${dataAmt},${curr},9001,2026-12-31
+${selectedCountry}-DATA-9002,${perkProfile.telcoBrand},telco_data,${dataAmt},${curr},9002,2026-12-31
+${selectedCountry}-WTR-9003,${perkProfile.waterBrand},water_utility,${dataAmt},${curr},9003,2026-12-31
+${selectedCountry}-PWR-9004,${perkProfile.powerBrand},electricity,${powerAmt},${curr},9004,2026-12-31
+${selectedCountry}-TRN-9005,${perkProfile.transitBrand},transit_credit,${transitAmt},${curr},9005,2026-12-31`;
 
     const blob = new Blob([sampleCsv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1878,8 +1899,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             voucherCode: rowObj.voucher_code || rowObj.code || cols[0],
             brand: rowObj.brand || cols[1] || 'Utility',
             category: rowObj.category || cols[2] || 'telco_data',
-            faceValue: Number(rowObj.face_value || cols[3] || 10000),
-            currency: rowObj.currency || cols[4] || (selectedCountry === 'KE' ? 'KES' : 'UGX'),
+            faceValue: Number(rowObj.face_value || cols[3] || convertUsdToLocal(3, selectedCountry).amount),
+            currency: rowObj.currency || cols[4] || perkProfile.currency,
             pin: rowObj.pin || cols[5] || '',
             expiryDate: rowObj.expiry_date || cols[6] || '2026-12-31',
           });
@@ -1996,102 +2017,97 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
     }
   };
 
-  // Quick Seed Pack (Country-Adaptive + Includes Boda Bounty Pool & 1,000 KSh Supermarket Basket)
+  // Quick Seed Pack (100% Country-Adaptive across Currency, Brands & Local Baskets)
   const handleSeedPack = async (packType: 'mtn' | 'nwsc' | 'yaka' | 'boda' | 'supermarket') => {
-    const isKe = selectedCountry === 'KE';
-    const isNg = selectedCountry === 'NG';
-    const currency = isKe ? 'KES' : isNg ? 'NGN' : 'UGX';
+    const currency = perkProfile.currency;
+    const basketConv = convertUsdToLocal(8, selectedCountry);
+    const dataConv = convertUsdToLocal(3, selectedCountry);
+    const waterConv = convertUsdToLocal(3, selectedCountry);
+    const powerConv = convertUsdToLocal(4, selectedCountry);
+    const transitConv = convertUsdToLocal(2, selectedCountry);
 
     let seedRows: any[] = [];
-    let sponsorName = 'Seyani Brothers Construction Ltd (CSR Allocation)';
+    let sponsorName = `${perkProfile.sampleSponsor} (CSR Allocation)`;
     let batchTitle = 'Corporate CSR Allocation';
 
     if (packType === 'supermarket') {
-      sponsorName = isKe ? 'Naivas & Carrefour Supermarket Community Desk' : 'Quality Supermarket & Carrefour Patron Pool';
-      batchTitle = 'Supermarket 1,000 KSh (30,000 UGX) Packaged Household Shopping Vouchers';
+      sponsorName = `${perkProfile.supermarketBrand} Community Desk`;
+      batchTitle = `Supermarket ${basketConv.formatted} Packaged Household Shopping Vouchers`;
       for (let i = 1; i <= 5; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `SHOP-1000KSH-${rand}-${selectedCountry}`,
+          voucherCode: `SHOP-${rand}-${selectedCountry}`,
           pin: `${rand}`,
-          brand: isKe ? 'Naivas / Carrefour Supermarket' : 'Quality Supermarket / Carrefour',
+          brand: perkProfile.supermarketBrand,
           category: 'supermarket',
-          title: isKe
-            ? '1,000 KSh Supermarket Shopping Basket Voucher'
-            : '1,000 KSh Equiv. (30,000 UGX) Supermarket Shopping Voucher',
-          faceValue: isKe ? 1000 : isNg ? 12000 : 30000,
+          title: `${basketConv.formatted} ${perkProfile.supermarketBrand} Shopping Basket Voucher`,
+          faceValue: basketConv.amount,
           currency,
-          packagedItems: [
-            '2kg Maize Flour (Unga / Posho)',
-            '1L Fresh Cooking Oil',
-            '1kg Sugar & Tea Leaves',
-            '2kg Rice & Bar of Laundry Soap',
-            'Milk, Bread & Supermarket Items up to 1,000 KSh',
-          ],
+          packagedItems: perkProfile.basketStaples,
           expiryDate: '2026-12-31',
         });
       }
     } else if (packType === 'mtn') {
-      sponsorName = 'Seyani Brothers Construction Ltd (CSR Allocation)';
-      batchTitle = `Seyani Bros CSR - ${isKe ? 'Safaricom' : 'MTN'} 2GB Data Seed`;
+      sponsorName = `${perkProfile.sampleSponsor} (CSR Allocation)`;
+      batchTitle = `${perkProfile.countryName} CSR - ${perkProfile.telcoBrand} 2GB Data Seed`;
       for (let i = 1; i <= 5; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `${isKe ? 'SAF' : 'MTN'}-2GB-${rand}-CIVIC`,
+          voucherCode: `DATA-${rand}-${selectedCountry}`,
           pin: `${rand}`,
-          brand: isKe ? 'Safaricom' : isNg ? 'MTN Nigeria' : 'MTN Uganda',
+          brand: perkProfile.telcoBrand,
           category: 'telco_data',
-          faceValue: isKe ? 360 : isNg ? 3500 : 10000,
+          faceValue: dataConv.amount,
           currency,
           packagedItems: ['2GB 4G/5G Data Bundle', '30 On-Net Voice Mins', 'Zero-Rated Evidence Upload'],
           expiryDate: '2026-12-31',
         });
       }
     } else if (packType === 'nwsc') {
-      sponsorName = isKe ? 'Nairobi City County Infrastructure Desk' : 'KCCA Urban Infrastructure Division';
+      sponsorName = `${perkProfile.countryName} Municipal Water Accountability Desk`;
       batchTitle = 'Municipal Water Leakage Audit Incentives';
       for (let i = 1; i <= 3; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `WATER-10K-${rand}-${selectedCountry}`,
+          voucherCode: `WTR-${rand}-${selectedCountry}`,
           pin: `${rand}`,
-          brand: isKe ? 'Nairobi Water (NCWSC)' : 'NWSC Uganda',
+          brand: perkProfile.waterBrand,
           category: 'water_utility',
-          faceValue: isKe ? 300 : isNg ? 3000 : 10000,
+          faceValue: waterConv.amount,
           currency,
-          packagedItems: ['6,500 Litres Prepaid Domestic Water', 'Public Standpipe / Smart Meter Token'],
+          packagedItems: [`Prepaid Domestic Water Credit (${perkProfile.waterBrand})`, 'Public Standpipe / Smart Meter Token'],
           expiryDate: '2026-12-31',
         });
       }
     } else if (packType === 'yaka') {
-      sponsorName = 'Ministry of Energy & Mineral Development';
-      batchTitle = 'MEMD Rural Electrification CSR';
+      sponsorName = `${perkProfile.countryName} Energy & Grid Accountability Pool`;
+      batchTitle = 'Civic Energy & Streetlight Audit CSR';
       for (let i = 1; i <= 3; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `POWER-15K-${rand}-${selectedCountry}`,
+          voucherCode: `PWR-${rand}-${selectedCountry}`,
           pin: `${rand}`,
-          brand: isKe ? 'Kenya Power (KPLC)' : 'Umeme Power',
+          brand: perkProfile.powerBrand,
           category: 'electricity',
-          faceValue: isKe ? 500 : isNg ? 5000 : 15000,
+          faceValue: powerConv.amount,
           currency,
-          packagedItems: ['45 kWh Domestic Power Units', '20-Digit STS Meter Token'],
+          packagedItems: [`45 kWh Domestic Power Units (${perkProfile.powerBrand})`, 'Prepaid Utility Meter Token'],
           expiryDate: '2026-12-31',
         });
       }
     } else if (packType === 'boda') {
-      sponsorName = 'SafeBoda & National Stage Scout Mobility Pool';
-      batchTitle = 'Frontline Scout & Bodaboda Road Safety Bounty Pool';
+      sponsorName = `${perkProfile.transitBrand} & National Stage Scout Mobility Pool`;
+      batchTitle = 'Frontline Scout Road Safety Mobility Bounty Pool';
       for (let i = 1; i <= 5; i++) {
         const rand = Math.floor(1000 + Math.random() * 9000);
         seedRows.push({
-          voucherCode: `BODA-FUEL-${rand}-${selectedCountry}`,
+          voucherCode: `SCOUT-${rand}-${selectedCountry}`,
           pin: `${rand}`,
-          brand: 'SafeBoda',
+          brand: perkProfile.transitBrand,
           category: 'transit_credit',
-          faceValue: isKe ? 250 : isNg ? 2500 : 5000,
+          faceValue: transitConv.amount,
           currency,
-          packagedItems: ['Cashless SafeBoda Commuter Pass', '2L Stage Petrol Equivalent'],
+          packagedItems: [`Cashless ${perkProfile.transitBrand} Commuter Pass`, 'Road Safety Scout Fuel Equivalent'],
           expiryDate: '2026-12-31',
         });
       }
@@ -2108,10 +2124,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
           sponsorType: packType === 'boda' || packType === 'supermarket' ? 'corporate_csr' : 'contractor',
           projectName:
             packType === 'boda'
-              ? 'Frontline Scout & Bodaboda Road Safety Bounty Pool'
+              ? 'Frontline Scout Road Safety Mobility Pool'
               : packType === 'supermarket'
-              ? 'Supermarket 1,000 KSh Community Shopping Basket Pool'
-              : 'Municipal Infrastructure Watchdog Pool',
+              ? `Supermarket ${basketConv.formatted} Community Shopping Basket Pool`
+              : `${perkProfile.countryName} Infrastructure Watchdog Pool`,
           country: selectedCountry,
           vouchers: seedRows,
           isDemo: false,
@@ -2149,124 +2165,116 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
     }
   };
 
-  // Structured Catalog of Packaged Voucher Allocations (Searchable & Filterable)
+  // Structured Catalog of Packaged Voucher Allocations (Auto-Adjusted per Active Country & Currency)
   const allocationCatalog = useMemo(() => {
-    const isKe = selectedCountry === 'KE';
-    const currency = isKe ? 'KES' : 'UGX';
+    const currency = perkProfile.currency;
+    const basket = convertUsdToLocal(8, selectedCountry);
+    const hamper = convertUsdToLocal(20, selectedCountry);
+    const dataAmt = convertUsdToLocal(3, selectedCountry);
+    const waterAmt = convertUsdToLocal(3, selectedCountry);
+    const powerAmt = convertUsdToLocal(4, selectedCountry);
+    const transitAmt = convertUsdToLocal(2, selectedCountry);
+    const fuelAmt = convertUsdToLocal(8, selectedCountry);
+    const diningAmt = convertUsdToLocal(8, selectedCountry);
+    const solarAmt = convertUsdToLocal(16, selectedCountry);
+    const pharmaAmt = convertUsdToLocal(8, selectedCountry);
+    const schoolAmt = convertUsdToLocal(8, selectedCountry);
+    const agroAmt = convertUsdToLocal(8, selectedCountry);
 
     return [
       {
         id: 'supermarket_1000ksh_single' as const,
-        shortTitle: isKe ? '1,000 KSh Supermarket Voucher (1x)' : '1,000 KSh / 30K UGX Supermarket (1x)',
-        title: isKe
-          ? '1x Naivas / Carrefour 1,000 KSh Shopping Basket Voucher'
-          : '1x Quality / Carrefour 30,000 UGX (1,000 KSh) Shopping Voucher',
-        brand: isKe ? 'Naivas / Carrefour Supermarket' : 'Quality Supermarket / Carrefour',
+        shortTitle: `${basket.compact} Supermarket Voucher (1x)`,
+        title: `1x ${perkProfile.supermarketBrand} ${basket.formatted} Shopping Basket`,
+        brand: perkProfile.supermarketBrand,
         category: 'supermarket' as const,
         filterGroup: 'supermarket' as const,
-        unitFaceValue: isKe ? 1000 : 30000,
+        unitFaceValue: basket.amount,
         quantity: 1,
-        totalCost: isKe ? 1000 : 30000,
+        totalCost: basket.amount,
         currency,
-        badge: '1,000 KSh Basket',
+        badge: `${basket.compact} Basket`,
         accent: 'rose',
         description:
-          'Single 1,000 KSh (UGX 30,000) supermarket shopping voucher—redeemable at the till for a variety of packaged household groceries.',
-        packagedItems: [
-          '2kg Maize Flour (Unga / Posho)',
-          '1L Fresh Cooking Oil',
-          '1kg Sugar & Tea Leaves',
-          '2kg Rice & Bar of Laundry Soap',
-          'Milk, Bread & Till Choice up to 1,000 KSh',
-        ],
+          `Single ${basket.formatted} supermarket shopping voucher—redeemable at checkout for packaged household groceries in ${perkProfile.countryName}.`,
+        packagedItems: [...perkProfile.basketStaples],
       },
       {
         id: 'supermarket_1000ksh_5' as const,
-        shortTitle: isKe ? '1,000 KSh Supermarket Basket (5x)' : '1,000 KSh / 30K UGX Supermarket (5x)',
-        title: isKe
-          ? '5x Naivas / Carrefour 1,000 KSh Supermarket Shopping Vouchers'
-          : '5x Quality / Carrefour 30,000 UGX (1,000 KSh) Supermarket Vouchers',
-        brand: isKe ? 'Naivas / Carrefour Supermarket' : 'Quality Supermarket / Carrefour',
+        shortTitle: `${basket.compact} Supermarket Basket (5x)`,
+        title: `5x ${perkProfile.supermarketBrand} ${basket.formatted} Supermarket Vouchers`,
+        brand: perkProfile.supermarketBrand,
         category: 'supermarket' as const,
         filterGroup: 'supermarket' as const,
-        unitFaceValue: isKe ? 1000 : 30000,
+        unitFaceValue: basket.amount,
         quantity: 5,
-        totalCost: isKe ? 5000 : 150000,
+        totalCost: basket.amount * 5,
         currency,
-        badge: '5x 1,000 KSh Pack',
+        badge: `5x ${basket.compact} Pack`,
         accent: 'rose',
         description:
-          '5 supermarket shopping vouchers (each worth 1,000 KSh / UGX 30,000) packaged with essential household groceries for community winners.',
-        packagedItems: [
-          '2kg Maize Flour (Unga / Posho)',
-          '1L Fresh Cooking Oil',
-          '1kg Sugar & Tea Leaves',
-          '2kg Rice & Bar of Laundry Soap',
-          'Milk, Bread & Household Essentials',
-        ],
+          `5 supermarket shopping vouchers (each ${basket.formatted}) packaged with essential household groceries for ${perkProfile.countryName} community winners.`,
+        packagedItems: [...perkProfile.basketStaples],
       },
       {
         id: 'supermarket_mega_hamper_3' as const,
-        shortTitle: isKe ? 'Supermarket Family Hamper (3x)' : 'Supermarket Family Hamper (3x)',
-        title: isKe
-          ? '3x Carrefour / Quickmart 2,500 KSh Family Grocery Hampers'
-          : '3x Capital Shoppers / Carrefour 75,000 UGX Family Hampers',
-        brand: isKe ? 'Carrefour / Quickmart Kenya' : 'Capital Shoppers / Carrefour',
+        shortTitle: 'Supermarket Family Hamper (3x)',
+        title: `3x ${perkProfile.familySupermarketBrand} ${hamper.formatted} Family Hampers`,
+        brand: perkProfile.familySupermarketBrand,
         category: 'supermarket' as const,
         filterGroup: 'supermarket' as const,
-        unitFaceValue: isKe ? 2500 : 75000,
+        unitFaceValue: hamper.amount,
         quantity: 3,
-        totalCost: isKe ? 7500 : 225000,
+        totalCost: hamper.amount * 3,
         currency,
         badge: 'Top-3 Monthly Split',
         accent: 'rose',
         description:
-          '3 full-month family supermarket hampers designed for exact 1/3 Top-3 Monthly Jurisdiction Awarding.',
+          `3 full-month family supermarket hampers (${hamper.formatted} each) designed for exact 1/3 Top-3 Monthly Jurisdiction Awarding.`,
         packagedItems: [
-          '5kg Basmati / Super Rice',
-          '3L Vegetable Cooking Oil',
-          '2kg Sugar & 4kg Maize Flour',
-          'Bathing & Multi-Purpose Soap Pack',
-          'Long-Life Milk Carton & Breakfast Oats',
+          'Family Grain & Staple Flour Pack',
+          'Multi-Litre Cooking Oil & Pantry Essentials',
+          'Tea / Coffee & Breakfast Provisions',
+          'Bathing & Household Care Pack',
         ],
       },
       {
         id: 'mtn_5' as const,
-        shortTitle: isKe ? 'Safaricom 2GB Data (5x)' : 'MTN 2GB Data & Voice (5x)',
-        title: isKe ? '5x Safaricom 2GB Data Packs' : '5x MTN 2GB Freedom Data Packs',
-        brand: isKe ? 'Safaricom' : 'MTN Uganda',
+        shortTitle: `${perkProfile.telcoBrand.split(' ')[0]} 2GB Data & Voice (5x)`,
+        title: `5x ${perkProfile.telcoBrand} 2GB Field Data Packs`,
+        brand: perkProfile.telcoBrand,
         category: 'telco_data' as const,
         filterGroup: 'telco_data' as const,
-        unitFaceValue: isKe ? 360 : 10000,
+        unitFaceValue: dataAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 1800 : 50000,
+        totalCost: dataAmt.amount * 5,
         currency,
         badge: 'Field Data + Voice',
         accent: 'amber',
         description:
-          '5 high-speed telecom vouchers packaged with data, voice minutes, and SMS for field evidence uploads.',
+          `5 high-speed ${perkProfile.telcoBrand} telecom vouchers packaged with data, voice minutes, and SMS for field evidence uploads.`,
         packagedItems: [
           '2GB 4G/5G High-Speed Data',
           '30 On-Net Voice Minutes',
-          '100 SMS for *284*33# USSD',
+          `100 SMS for ${perkProfile.ussdDial} USSD`,
           'Zero-Rated Evidence Upload',
         ],
       },
       {
         id: 'mtn_10' as const,
-        shortTitle: isKe ? 'Safaricom 2GB Mega (10x)' : 'MTN 2GB Mega (10x)',
-        title: isKe ? '10x Safaricom 2GB Data Packs' : '10x MTN 2GB Data Mega Batch',
-        brand: isKe ? 'Safaricom' : 'MTN Uganda',
+        shortTitle: `${perkProfile.telcoBrand.split(' ')[0]} 2GB Mega (10x)`,
+        title: `10x ${perkProfile.telcoBrand} 2GB Data Mega Batch`,
+        brand: perkProfile.telcoBrand,
         category: 'telco_data' as const,
         filterGroup: 'telco_data' as const,
-        unitFaceValue: isKe ? 360 : 10000,
+        unitFaceValue: dataAmt.amount,
         quantity: 10,
-        totalCost: isKe ? 3600 : 100000,
+        totalCost: dataAmt.amount * 10,
         currency,
-        badge: '10x Parish Pool',
+        badge: '10x Ward/Parish Pool',
         accent: 'amber',
         description:
-          '10 data vouchers for sustained community watchdog reporting and video inspection uploads.',
+          `10 ${perkProfile.telcoBrand} data vouchers for sustained community watchdog reporting and video inspection uploads.`,
         packagedItems: [
           '10x 2GB 4G/5G Data Bundles',
           'HD Video & Geotagged Photo Quota',
@@ -2275,207 +2283,195 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       },
       {
         id: 'nwsc_5' as const,
-        shortTitle: isKe ? 'Nairobi Water (5x)' : 'NWSC Clean Water (5x)',
-        title: isKe ? '5x Nairobi Water Clean Water Credits' : '5x NWSC 10,000 UGX Water Tokens',
-        brand: isKe ? 'Nairobi Water (NCWSC)' : 'NWSC Uganda',
+        shortTitle: `${perkProfile.waterBrand.split(' ')[0]} Clean Water (5x)`,
+        title: `5x ${perkProfile.waterBrand} ${waterAmt.formatted} Water Credits`,
+        brand: perkProfile.waterBrand,
         category: 'water_utility' as const,
         filterGroup: 'water_electricity' as const,
-        unitFaceValue: isKe ? 300 : 10000,
+        unitFaceValue: waterAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 1500 : 50000,
+        totalCost: waterAmt.amount * 5,
         currency,
-        badge: '6,500L Water',
+        badge: 'Clean Water Credit',
         accent: 'cyan',
         description:
-          '5 pre-paid water utility tokens rewarding citizens who report pipe bursts and sanitation hazards.',
+          `5 pre-paid water utility tokens rewarding ${perkProfile.countryName} citizens who report pipe bursts and sanitation hazards.`,
         packagedItems: [
-          '6,500 Litres Prepaid Domestic Water',
-          'Public Standpipe / Smart Meter Token',
+          'Prepaid Domestic Water Allocation',
+          `Public Standpipe / Smart Meter Token (${perkProfile.waterBrand})`,
           'Sanitation Levy Credit',
         ],
       },
       {
         id: 'yaka_5' as const,
-        shortTitle: isKe ? 'KPLC Stima Power (5x)' : 'Umeme Yaka Power (5x)',
-        title: isKe ? '5x Kenya Power KPLC Prepaid Tokens' : '5x Umeme Yaka 15,000 UGX Power Tokens',
-        brand: isKe ? 'Kenya Power (KPLC)' : 'Umeme Power',
+        shortTitle: `${perkProfile.powerBrand.split(' ')[0]} Prepaid Power (5x)`,
+        title: `5x ${perkProfile.powerBrand} ${powerAmt.formatted} Power Tokens`,
+        brand: perkProfile.powerBrand,
         category: 'electricity' as const,
         filterGroup: 'water_electricity' as const,
-        unitFaceValue: isKe ? 500 : 15000,
+        unitFaceValue: powerAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 2500 : 75000,
+        totalCost: powerAmt.amount * 5,
         currency,
-        badge: '45 kWh Stima/Yaka',
+        badge: '45 kWh Smart Power',
         accent: 'yellow',
         description:
-          '5 pre-paid electricity tokens packaged with domestic kWh units for streetlight & grid audits.',
+          `5 pre-paid electricity tokens (${perkProfile.powerBrand}) for streetlight & power grid citizen accountability.`,
         packagedItems: [
           '45 kWh Domestic Electricity Units',
-          'Instant 20-Digit STS Meter Token',
+          'Instant Prepaid Meter Token',
           'Zero Standing Charge Deduction',
         ],
       },
       {
         id: 'safeboda_10' as const,
-        shortTitle: 'SafeBoda Transit (10x)',
-        title: '10x SafeBoda Rapid Field Ride Credits',
-        brand: 'SafeBoda',
+        shortTitle: `${perkProfile.transitBrand.split('/')[0].trim()} Mobility (10x)`,
+        title: `10x ${perkProfile.transitBrand} Rapid Field Credits`,
+        brand: perkProfile.transitBrand,
         category: 'transit_credit' as const,
         filterGroup: 'transit_fuel' as const,
-        unitFaceValue: isKe ? 150 : 5000,
+        unitFaceValue: transitAmt.amount,
         quantity: 10,
-        totalCost: isKe ? 1500 : 50000,
+        totalCost: transitAmt.amount * 10,
         currency,
-        badge: '10x Stage Mobility',
+        badge: '10x Scout Mobility',
         accent: 'emerald',
         description:
-          '10 transit credits for citizen inspectors & Frontline Scouts visiting public works sites.',
+          `10 transit credits (${perkProfile.transitBrand}) for citizen inspectors & Frontline Scouts visiting public works sites.`,
         packagedItems: [
-          'Cashless SafeBoda Commuter Credit',
-          '2L Stage Petrol Equivalent',
-          'Reflector & Helmet Safety Care',
+          `Cashless ${perkProfile.transitBrand} Commuter Credit`,
+          'Field Dispatch Mobility Pass',
+          'Helmet & High-Visibility Safety Care',
         ],
       },
       {
         id: 'fuel_shell_5' as const,
-        shortTitle: 'Total / Shell Fuel & Lube (5x)',
-        title: isKe
-          ? '5x TotalEnergies / Shell 1,000 KSh Rider Fuel & Lube Vouchers'
-          : '5x TotalEnergies / Shell 30,000 UGX (1,000 KSh) Fuel Vouchers',
-        brand: 'TotalEnergies / Shell Service Station',
+        shortTitle: `${perkProfile.fuelBrand.split('/')[0].trim()} Fuel (5x)`,
+        title: `5x ${perkProfile.fuelBrand} ${fuelAmt.formatted} Fuel Vouchers`,
+        brand: perkProfile.fuelBrand,
         category: 'transit_credit' as const,
         filterGroup: 'transit_fuel' as const,
-        unitFaceValue: isKe ? 1000 : 30000,
+        unitFaceValue: fuelAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 5000 : 150000,
+        totalCost: fuelAmt.amount * 5,
         currency,
-        badge: '1,000 KSh Fuel + Oil',
+        badge: `${fuelAmt.compact} Fuel`,
         accent: 'emerald',
         description:
-          '5 service-station fuel & lubricant vouchers (1,000 KSh / UGX 30,000 each) for Bodaboda & Taxi Scouts.',
+          `5 service-station fuel & lubricant vouchers (${fuelAmt.formatted} each) for verified Frontline Transport & Delivery Scouts.`,
         packagedItems: [
-          '5.5 Litres Unleaded Petrol / Diesel',
-          '4T Bodaboda Engine Oil Top-Up',
+          'Unleaded Petrol / Diesel Credit',
+          'EV Charging / Engine Lube Top-Up',
           'Free Tire Pressure & Safety Inspection',
         ],
       },
       {
         id: 'kfc_dining_5' as const,
-        shortTitle: isKe ? 'KFC Streetwise Meal (5x)' : 'KFC Streetwise Meal (5x)',
-        title: isKe
-          ? '5x KFC Kenya 1,000 KSh Streetwise Family Chicken Vouchers'
-          : '5x KFC Uganda 30,000 UGX (1,000 KSh) Streetwise Meal Vouchers',
-        brand: isKe ? 'KFC Kenya' : 'KFC Uganda',
+        shortTitle: `${perkProfile.diningBrand.split('/')[0].trim()} Meal (5x)`,
+        title: `5x ${perkProfile.diningBrand} ${diningAmt.formatted} Meal Vouchers`,
+        brand: perkProfile.diningBrand,
         category: 'supermarket' as const,
         filterGroup: 'food_dining' as const,
-        unitFaceValue: isKe ? 1000 : 30000,
+        unitFaceValue: diningAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 5000 : 150000,
+        totalCost: diningAmt.amount * 5,
         currency,
-        badge: '1,000 KSh Meal',
+        badge: `${diningAmt.compact} Meal`,
         accent: 'rose',
         description:
-          '5 hot dining & chicken meal vouchers redeemable at any nationwide KFC branch counter via QR code pass.',
+          `5 hot dining & meal vouchers redeemable at ${perkProfile.diningBrand} counters via QR code pass.`,
         packagedItems: [
-          '2x Pieces Golden Fried Chicken & Large Chips',
-          'Coleslaw & Creamy Mash Gravy',
-          'Soft Drink & Wet Wipe Hand Pack',
+          'Signature Warm Meal Combo',
+          'Fresh Side & Beverage Pack',
+          'Instant QR Counter Checkout',
         ],
       },
       {
         id: 'solar_electronics_3' as const,
-        shortTitle: 'd.light Solar & Tech (3x)',
-        title: isKe
-          ? '3x d.light 2,000 KSh Solar Lighting & Powerbank Vouchers'
-          : '3x Barefoot / d.light 60,000 UGX Solar Lighting Vouchers',
-        brand: isKe ? 'd.light Solar Kenya' : 'Barefoot Solar / d.light Uganda',
+        shortTitle: `${perkProfile.solarBrand.split('/')[0].trim()} Power (3x)`,
+        title: `3x ${perkProfile.solarBrand} ${solarAmt.formatted} Lighting & Power Vouchers`,
+        brand: perkProfile.solarBrand,
         category: 'electricity' as const,
         filterGroup: 'electronics' as const,
-        unitFaceValue: isKe ? 2000 : 60000,
+        unitFaceValue: solarAmt.amount,
         quantity: 3,
-        totalCost: isKe ? 6000 : 180000,
+        totalCost: solarAmt.amount * 3,
         currency,
-        badge: 'Solar & Tech',
+        badge: 'Solar & Power Tech',
         accent: 'yellow',
         description:
-          '3 solar reading lamps & high-efficiency powerbank vouchers for night community inspectors and off-grid students.',
+          `3 portable lighting & powerbank vouchers for night community inspectors and field reporters.`,
         packagedItems: [
-          'Rechargeable Solar Reading Lamp',
+          'Rechargeable LED Field Lamp',
           '10,000 mAh High-Capacity Powerbank',
-          'Multi-Tip Universal Phone USB Cable',
+          'Multi-Tip Universal USB Cable',
         ],
       },
       {
         id: 'pharmacy_wellness_5' as const,
         shortTitle: 'Pharmacy & First-Aid Kit (5x)',
-        title: isKe
-          ? '5x Goodlife Pharmacy 1,000 KSh Family First-Aid & Wellness Vouchers'
-          : '5x Vine / Ecopharm 30,000 UGX (1,000 KSh) Pharmacy Vouchers',
-        brand: isKe ? 'Goodlife Pharmacy Kenya' : 'Vine Pharmacy / Ecopharm Uganda',
+        title: `5x ${perkProfile.pharmacyBrand} ${pharmaAmt.formatted} Wellness Vouchers`,
+        brand: perkProfile.pharmacyBrand,
         category: 'supermarket' as const,
         filterGroup: 'health' as const,
-        unitFaceValue: isKe ? 1000 : 30000,
+        unitFaceValue: pharmaAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 5000 : 150000,
+        totalCost: pharmaAmt.amount * 5,
         currency,
-        badge: '1,000 KSh Health Kit',
+        badge: `${pharmaAmt.compact} Health Kit`,
         accent: 'rose',
         description:
-          '5 pharmacy vouchers packaged with essential family first-aid, ORS, and wellness items for VHTs & citizens.',
+          `5 pharmacy vouchers (${perkProfile.pharmacyBrand}) packaged with family first-aid, hydration, and wellness essentials.`,
         packagedItems: [
           'First-Aid Bandages, Gauze & Antiseptic',
-          'Anti-Malarial & Pain Relief Essentials',
-          'ORS, Zinc & Family Hygiene Soap Pack',
+          'Pain Relief & Family Wellness Essentials',
+          'Hydration & Hygiene Care Pack',
         ],
       },
       {
         id: 'school_stationery_5' as const,
         shortTitle: 'Back-to-School Scholastic (5x)',
-        title: isKe
-          ? '5x Text Book Centre / Naivas 1,000 KSh Scholastic Vouchers'
-          : '5x Aristoc / Supermarket 30,000 UGX (1,000 KSh) School Vouchers',
-        brand: isKe ? 'Text Book Centre / Naivas School' : 'Aristoc / Quality School Desk',
+        title: `5x ${perkProfile.bookshopBrand} ${schoolAmt.formatted} Scholastic Vouchers`,
+        brand: perkProfile.bookshopBrand,
         category: 'supermarket' as const,
         filterGroup: 'education' as const,
-        unitFaceValue: isKe ? 1000 : 30000,
+        unitFaceValue: schoolAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 5000 : 150000,
+        totalCost: schoolAmt.amount * 5,
         currency,
-        badge: '1,000 KSh School Pack',
+        badge: `${schoolAmt.compact} School Pack`,
         accent: 'rose',
         description:
-          '5 packaged scholastic supply vouchers redeemable at supermarkets and bookshops for exercise books & solar lamps.',
+          `5 packaged scholastic supply vouchers redeemable at ${perkProfile.bookshopBrand} for notebooks & student supplies.`,
         packagedItems: [
-          '12x A4 Counter & Exercise Books',
-          'Mathematical Geometry Set, Pens & Pencils',
-          'Rechargeable Solar Reading Lamp Credit',
+          'A4 Exercise & Study Notebooks',
+          'Geometry Set, Pens & Pencils',
+          'LED Desk Study Light Credit',
         ],
       },
       {
         id: 'agri_market_5' as const,
-        shortTitle: 'Agro-Seed & Market Stall (5x)',
-        title: isKe
-          ? '5x Agro-Vet & Market Vendor 1,000 KSh Input Vouchers'
-          : '5x Container Village / Agro-Input 30,000 UGX (1,000 KSh) Vouchers',
-        brand: isKe ? 'Kenya Seed & Market Coop' : 'Bukoola / Market Vendor Input Desk',
+        shortTitle: 'Market Coop & Fresh Produce (5x)',
+        title: `5x ${perkProfile.agroBrand} ${agroAmt.formatted} Market Vouchers`,
+        brand: perkProfile.agroBrand,
         category: 'supermarket' as const,
         filterGroup: 'supermarket' as const,
-        unitFaceValue: isKe ? 1000 : 30000,
+        unitFaceValue: agroAmt.amount,
         quantity: 5,
-        totalCost: isKe ? 5000 : 150000,
+        totalCost: agroAmt.amount * 5,
         currency,
-        badge: '1,000 KSh Agro/Market',
+        badge: `${agroAmt.compact} Market/Coop`,
         accent: 'emerald',
         description:
-          '5 packaged agricultural seed & market vendor stall vouchers for rural parish farmers and market scouts.',
+          `5 community market vendor & co-op produce vouchers for local parish stewards and market scouts in ${perkProfile.countryName}.`,
         packagedItems: [
-          '2kg Certified Maize & Bean Seeds',
-          'Organic Foliar Fertilizer Pack',
-          'Solar Market Stall Bulb & Eco Bags',
+          'Fresh Market Produce & Seed Basket',
+          'Stall Vendor Credit & Eco Bags',
+          'LED Stall Illumination Credit',
         ],
       },
     ];
-  }, [selectedCountry]);
+  }, [selectedCountry, perkProfile]);
 
   const filteredAllocationCatalog = useMemo(() => {
     return allocationCatalog.filter((item) => {
@@ -2503,9 +2499,13 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
   }, [allocationCatalog, allocationCategoryFilter, allocationSearchQuery]);
 
   const filteredMerchantCatalog = useMemo(() => {
-    let list = merchantProducts.filter(
+    const staticCountryList = merchantProducts.filter(
       (p) => p.country.toUpperCase() === selectedCountry.toUpperCase() && p.active
     );
+    let list =
+      staticCountryList.length > 0
+        ? staticCountryList
+        : getLocalizedMerchantProductsForCountry(selectedCountry, parishOptions);
     if (merchantRewardTypeFilter !== 'all') {
       list = list.filter((p) => p.rewardType === merchantRewardTypeFilter);
     }
@@ -2534,12 +2534,11 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
       );
     }
     return list;
-  }, [merchantProducts, selectedCountry, merchantRewardTypeFilter, merchantCategoryFilter, merchantLocationFilterParish, allocationSearchQuery]);
+  }, [merchantProducts, selectedCountry, parishOptions, merchantRewardTypeFilter, merchantCategoryFilter, merchantLocationFilterParish, allocationSearchQuery]);
 
   // Details of the selected digital utility, supermarket, or local merchant package
   const getPackageDetails = () => {
-    const isKe = selectedCountry === 'KE';
-    const currency = isKe ? 'KES' : 'UGX';
+    const currency = perkProfile.currency;
 
     // When Local Merchant & Provider Voucher is selected
     if (allocationSource === 'merchant_loyalty' && selectedMerchantProduct) {
@@ -2614,7 +2613,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entityName: paySponsorName || 'Seyani Brothers Construction Ltd',
+          entityName: paySponsorName || perkProfile.sampleSponsor,
           invoiceId: `PERK-ESCROW-${Date.now().toString(36).toUpperCase()}`,
           amount: pkg.totalCost,
           currency: pkg.currency,
@@ -2677,8 +2676,8 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             payoutStatus: 'escrowed' as const,
           },
           qrCodeData: prod.qrCodePayload || code,
-          barcode: prod.barcode || `${selectedCountry === 'KE' ? '710' : '890'}${Math.floor(100000000 + Math.random() * 900000000)}`,
-          redemptionUssdString: prod.ussdCode || (selectedCountry === 'KE' ? `*141*${rand}#` : `*303*${rand}#`),
+          barcode: prod.barcode || `${perkProfile.barcodePrefix}${Math.floor(100000000 + Math.random() * 900000000)}`,
+          redemptionUssdString: prod.ussdCode || perkProfile.ussdDial,
         });
       } else {
         for (let i = 1; i <= pkg.quantity; i++) {
@@ -2695,7 +2694,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
             currency: pkg.currency,
             packagedItems: pkg.packagedItems,
             expiryDate: '2026-12-31',
-            redemptionUssdString: (selectedCountry === 'KE' ? '*141*CODE#' : '*303*CODE#').replace('CODE', code),
+            redemptionUssdString: perkProfile.ussdDial,
           });
         }
       }
@@ -3626,7 +3625,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                               ? 'Buy Haircut/Service → Free Wash & Care ($0)'
                               : cit.rank === 2
                               ? '20% OFF Braiding, Styling or Consultation'
-                              : 'BOGO (Buy 1 Get 1) or UGX 5,000 Loyalty Cashback'}
+                              : `BOGO (Buy 1 Get 1) or ${convertUsdToLocal(2, selectedCountry).formatted} Loyalty Cashback`}
                           </div>
                         </div>
                       )}
@@ -3835,11 +3834,11 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   <label className="text-[10px] font-mono font-bold uppercase text-slate-500 block mb-1">
                     Citizen Recipient Name
                   </label>
-                  <input
+                    <input
                     type="text"
                     value={individualRecipientName}
                     onChange={(e) => setIndividualRecipientName(e.target.value)}
-                    placeholder="e.g. Amina Nabatanzi"
+                    placeholder={`e.g. ${perkProfile.sampleRecipientName}`}
                     className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white"
                   />
                 </div>
@@ -3851,7 +3850,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                     type="text"
                     value={individualRecipientPhone}
                     onChange={(e) => setIndividualRecipientPhone(e.target.value)}
-                    placeholder="+256 774 819 203"
+                    placeholder={perkProfile.samplePhone}
                     className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white"
                   />
                 </div>
@@ -4171,7 +4170,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                               </>
                             ) : (
                               <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 <span>Active &amp; Ready</span>
                               </>
                             )}
@@ -4330,7 +4329,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                     type="text"
                     value={allocationSearchQuery}
                     onChange={(e) => setAllocationSearchQuery(e.target.value)}
-                    placeholder="Search 1,000 KSh, supermarket basket, sugar, oil, fuel, data, water..."
+                    placeholder={`Search ${perkProfile.supermarketBrand}, groceries, fuel, data, water...`}
                     className="w-full pl-8 pr-8 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                   />
                   {allocationSearchQuery && (
@@ -4521,7 +4520,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       {payPackage === 'custom' && <Check size={14} className="text-indigo-600 dark:text-indigo-400" />}
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Build your own supermarket, utility, or retail shopping voucher with custom face value (e.g. 1,000 KSh) and itemized basket list.
+                      Build your own supermarket, utility, or retail shopping voucher with custom face value ({perkProfile.currency}) and itemized basket list.
                     </p>
                     <div className="p-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[10px] text-slate-600 dark:text-slate-300">
                       <span className="font-mono font-bold text-[9.5px] uppercase text-indigo-600 dark:text-indigo-400 block mb-0.5">
@@ -4550,13 +4549,13 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         onChange={(e) => {
                           const val = e.target.value;
                           setCustomBrand(val);
-                          if (val.toLowerCase().includes('supermarket') || val.toLowerCase().includes('naivas') || val.toLowerCase().includes('carrefour') || val.toLowerCase().includes('pharmacy')) {
+                          if (val === perkProfile.supermarketBrand || val === perkProfile.familySupermarketBrand || val === perkProfile.pharmacyBrand) {
                             setCustomCategory('supermarket');
-                          } else if (val.toLowerCase().includes('mtn') || val.toLowerCase().includes('airtel') || val.toLowerCase().includes('safaricom')) {
+                          } else if (val === perkProfile.telcoBrand || val === perkProfile.altTelcoBrand) {
                             setCustomCategory('telco_data');
-                          } else if (val.toLowerCase().includes('water') || val.toLowerCase().includes('nwsc')) {
+                          } else if (val === perkProfile.waterBrand) {
                             setCustomCategory('water_utility');
-                          } else if (val.toLowerCase().includes('power') || val.toLowerCase().includes('umeme')) {
+                          } else if (val === perkProfile.powerBrand) {
                             setCustomCategory('electricity');
                           } else {
                             setCustomCategory('transit_credit');
@@ -4564,18 +4563,15 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         }}
                         className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg p-1.5 text-xs font-medium"
                       >
-                        <option value="Naivas / Quality Supermarket">Naivas / Quality Supermarket</option>
-                        <option value="Carrefour East Africa">Carrefour East Africa</option>
-                        <option value="Capital Shoppers / Quickmart">Capital Shoppers / Quickmart</option>
-                        <option value="Goodlife / Vine Pharmacy">Goodlife / Vine Pharmacy</option>
-                        <option value="TotalEnergies / Shell Fuel">TotalEnergies / Shell Fuel</option>
-                        <option value="MTN Uganda">MTN Uganda</option>
-                        <option value="Airtel Uganda">Airtel Uganda</option>
-                        <option value="NWSC Uganda">NWSC Uganda</option>
-                        <option value="Umeme Power">Umeme Power</option>
-                        <option value="SafeBoda">SafeBoda</option>
-                        <option value="Safaricom">Safaricom</option>
-                        <option value="Kenya Power (KPLC)">Kenya Power (KPLC)</option>
+                        <option value={perkProfile.supermarketBrand}>{perkProfile.supermarketBrand}</option>
+                        <option value={perkProfile.familySupermarketBrand}>{perkProfile.familySupermarketBrand}</option>
+                        <option value={perkProfile.pharmacyBrand}>{perkProfile.pharmacyBrand}</option>
+                        <option value={perkProfile.fuelBrand}>{perkProfile.fuelBrand}</option>
+                        <option value={perkProfile.telcoBrand}>{perkProfile.telcoBrand}</option>
+                        <option value={perkProfile.altTelcoBrand}>{perkProfile.altTelcoBrand}</option>
+                        <option value={perkProfile.waterBrand}>{perkProfile.waterBrand}</option>
+                        <option value={perkProfile.powerBrand}>{perkProfile.powerBrand}</option>
+                        <option value={perkProfile.transitBrand}>{perkProfile.transitBrand}</option>
                       </select>
                     </div>
                     <div>
@@ -4798,7 +4794,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                     type="text"
                     value={paySponsorName}
                     onChange={(e) => setPaySponsorName(e.target.value)}
-                    placeholder="e.g. Seyani Brothers Construction Ltd"
+                    placeholder={`e.g. ${perkProfile.sampleSponsor}`}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                     required
                   />
@@ -4828,7 +4824,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                     type="text"
                     value={payProjectName}
                     onChange={(e) => setPayProjectName(e.target.value)}
-                    placeholder="e.g. Kampala Flyover & Southern Bypass"
+                    placeholder={`e.g. ${perkProfile.sampleProject}`}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -4936,7 +4932,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         type="tel"
                         value={payPhone}
                         onChange={(e) => setPayPhone(e.target.value)}
-                        placeholder="+256 778 277900"
+                        placeholder={perkProfile.samplePhone}
                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-amber-500"
                         required
                       />
@@ -4953,7 +4949,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                         type="email"
                         value={payEmail}
                         onChange={(e) => setPayEmail(e.target.value)}
-                        placeholder="csr@contractor.ug"
+                        placeholder={`csr@${selectedCountry.toLowerCase()}.civicduty.org`}
                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500"
                       />
                     </div>
@@ -5034,12 +5030,12 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                     <span>Corporate Bank Wire (RTGS / Electronic Funds Transfer)</span>
                   </div>
                   <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 text-xs space-y-1">
-                    <div>Bank: <span className="font-bold">Stanbic Bank Uganda Ltd (Corporate Escrow Branch)</span></div>
-                    <div>Account Name: <span className="font-bold">CivicDuty Sovereign Escrow Pool</span></div>
-                    <div>Account No: <span className="font-mono font-bold text-amber-600 dark:text-amber-400">9030018849201</span></div>
-                    <div>Swift Code: <span className="font-mono">SBICUGKX</span></div>
+                    <div>Bank: <span className="font-bold">{perkProfile.bankName} ({perkProfile.bankBranch})</span></div>
+                    <div>Account Name: <span className="font-bold">CivicDuty Sovereign Escrow Pool ({perkProfile.countryName})</span></div>
+                    <div>Account No: <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{perkProfile.accountNo}</span></div>
+                    <div>Swift Code: <span className="font-mono">{perkProfile.swiftCode}</span></div>
                     <div className="text-[11px] text-slate-400 pt-1">
-                      Funds are credited automatically upon real-time RTGS webhook notification.
+                      Funds are credited automatically upon real-time settlement webhook notification.
                     </div>
                   </div>
                 </div>
@@ -5161,7 +5157,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   type="text"
                   value={csvSponsor}
                   onChange={(e) => setCsvSponsor(e.target.value)}
-                  placeholder="e.g. Seyani Brothers Construction Ltd"
+                  placeholder={`e.g. ${perkProfile.sampleSponsor}`}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -5190,7 +5186,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   type="text"
                   value={csvProjectName}
                   onChange={(e) => setCsvProjectName(e.target.value)}
-                  placeholder="e.g. Kampala Flyover & Bypass"
+                  placeholder={`e.g. ${perkProfile.sampleProject}`}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -5300,16 +5296,13 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   onChange={(e) => setManualBrand(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
-                  <option value="Quality Supermarket / Carrefour">Quality / Carrefour Supermarket (1,000 KSh / 30K UGX Basket)</option>
-                  <option value="Naivas / Carrefour Supermarket">Naivas / Carrefour Supermarket (1,000 KSh Basket)</option>
-                  <option value="MTN Uganda">MTN Uganda (Telco)</option>
-                  <option value="Airtel Uganda">Airtel Uganda (Telco)</option>
-                  <option value="NWSC Uganda">NWSC Uganda (Water)</option>
-                  <option value="Umeme Power">Umeme Power (Electricity)</option>
-                  <option value="SafeBoda">SafeBoda (Transit)</option>
-                  <option value="Safaricom">Safaricom (Kenya Telco)</option>
-                  <option value="Kenya Power (KPLC)">Kenya Power KPLC</option>
-                  <option value="Nairobi Water (NCWSC)">Nairobi Water NCWSC</option>
+                  <option value={perkProfile.supermarketBrand}>{perkProfile.supermarketBrand} ({convertUsdToLocal(8, selectedCountry).formatted} Basket)</option>
+                  <option value={perkProfile.familySupermarketBrand}>{perkProfile.familySupermarketBrand} (Family Hamper)</option>
+                  <option value={perkProfile.telcoBrand}>{perkProfile.telcoBrand} (Telco)</option>
+                  <option value={perkProfile.altTelcoBrand}>{perkProfile.altTelcoBrand} (Telco)</option>
+                  <option value={perkProfile.waterBrand}>{perkProfile.waterBrand} (Water)</option>
+                  <option value={perkProfile.powerBrand}>{perkProfile.powerBrand} (Electricity)</option>
+                  <option value={perkProfile.transitBrand}>{perkProfile.transitBrand} (Transit)</option>
                 </select>
               </div>
 
@@ -5322,7 +5315,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   onChange={(e) => setManualCategory(e.target.value as any)}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 >
-                  <option value="supermarket">Supermarket Shopping Basket (1,000 KSh / 30K UGX)</option>
+                  <option value="supermarket">Supermarket Shopping Basket ({convertUsdToLocal(8, selectedCountry).formatted})</option>
                   <option value="telco_data">Mobile Telco Data</option>
                   <option value="water_utility">Clean Water Bill Waiver</option>
                   <option value="electricity">Prepaid Electricity Token</option>
@@ -5340,7 +5333,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                     value={manualFaceValue}
                     onChange={(e) => setManualFaceValue(e.target.value)}
                     className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
-                    placeholder="10000"
+                    placeholder={String(convertUsdToLocal(3, selectedCountry).amount)}
                   />
                   <input
                     type="text"
@@ -5359,7 +5352,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   type="text"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
-                  placeholder="e.g. MTN-2GB-9921-UGX"
+                  placeholder={`e.g. DATA-2GB-9921-${perkProfile.currency}`}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 focus:outline-none focus:border-amber-500"
                   required
                 />
@@ -5400,7 +5393,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   type="text"
                   value={manualSponsor}
                   onChange={(e) => setManualSponsor(e.target.value)}
-                  placeholder="e.g. Seyani Brothers Construction Ltd"
+                  placeholder={`e.g. ${perkProfile.sampleSponsor}`}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -5479,7 +5472,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] text-slate-500 dark:text-slate-400 mono">
                   <span>• Transit Pass: <strong>100 XP</strong></span>
                   <span>• Mobile Data Pack: <strong>150 XP</strong></span>
-                  <span>• Supermarket 1,000 KSh Basket: <strong>175 XP</strong></span>
+                  <span>• Supermarket Basket ({convertUsdToLocal(8, selectedCountry).formatted}): <strong>175 XP</strong></span>
                   <span>• Water / Power Token: <strong>200 XP</strong></span>
                   <span>• Cooldown Limit: <strong>Max 1 Claim / 7 Days</strong></span>
                   <span>• Parish Lock: <strong>Redeemable first in {userHomeParish}</strong></span>
@@ -5758,10 +5751,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div>
                   <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-xs">
                     <ShoppingBag size={15} />
-                    <span>5x 1,000 KSh Supermarket</span>
+                    <span>5x {convertUsdToLocal(8, selectedCountry).compact} Supermarket</span>
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    {selectedCountry === 'KE' ? 'Naivas / Carrefour 1,000 KSh' : 'Quality / Carrefour 30K UGX (1,000 KSh)'} basket: Unga, Oil, Sugar, Rice, Soap &amp; Milk.
+                    {perkProfile.supermarketBrand} ({convertUsdToLocal(8, selectedCountry).formatted}): {perkProfile.basketStaples.slice(0, 3).join(', ')}.
                   </div>
                 </div>
                 <button
@@ -5770,7 +5763,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   disabled={isUploading}
                   className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Deposit 5x 1,000 KSh Basket
+                  Deposit 5x {convertUsdToLocal(8, selectedCountry).compact} Basket
                 </button>
               </div>
 
@@ -5778,10 +5771,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div>
                   <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
                     <Smartphone size={15} className="text-amber-500" />
-                    <span>5x Telco 2GB Data Packs</span>
+                    <span>5x {perkProfile.telcoBrand.split(' ')[0]} 2GB Data</span>
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    Sponsored by Seyani Brothers CSR Allocation. Pre-funded for citizen project watchdogs.
+                    Sponsored by {perkProfile.sampleSponsor}. Pre-funded ({convertUsdToLocal(3, selectedCountry).formatted}) for citizen watchdogs.
                   </div>
                 </div>
                 <button
@@ -5798,10 +5791,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div>
                   <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
                     <Droplet size={15} className="text-cyan-500" />
-                    <span>3x Water Utility Tokens</span>
+                    <span>3x {perkProfile.waterBrand.split(' ')[0]} Water</span>
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    National Water leak &amp; pipe-burst whistleblower reimbursement pool.
+                    {perkProfile.waterBrand} ({convertUsdToLocal(3, selectedCountry).formatted}) leak &amp; pipe-burst whistleblower reimbursement pool.
                   </div>
                 </div>
                 <button
@@ -5818,10 +5811,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div>
                   <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-xs">
                     <Zap size={15} className="text-yellow-500" />
-                    <span>3x Prepaid Power Units</span>
+                    <span>3x {perkProfile.powerBrand.split(' ')[0]} Power</span>
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    Ministry of Energy prepaid electricity tokens for streetlight &amp; grid audits.
+                    {perkProfile.powerBrand} ({convertUsdToLocal(4, selectedCountry).formatted}) electricity tokens for streetlight &amp; grid audits.
                   </div>
                 </div>
                 <button
@@ -5838,10 +5831,10 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                 <div>
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs">
                     <Bike size={15} />
-                    <span>5x Boda Fuel &amp; Ride Pool</span>
+                    <span>5x Scout Mobility Pool</span>
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                    SafeBoda &amp; Stage Scout fuel/transit credits for verified road safety reports.
+                    {perkProfile.transitBrand} ({convertUsdToLocal(2, selectedCountry).formatted}) transit credits for verified road safety reports.
                   </div>
                 </div>
                 <button
@@ -5850,7 +5843,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                   disabled={isUploading}
                   className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Deposit 5x Boda Bounty
+                  Deposit 5x Scout Bounty
                 </button>
               </div>
             </div>
@@ -6004,7 +5997,7 @@ SB-5K-9005-TEST,SafeBoda,transit_credit,5000,UGX,9005,2026-12-31`;
                       <td className="py-3 px-3">
                         {isUnassigned ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                             In Escrow Vault
                           </span>
                         ) : v.status === 'dispatched' ? (

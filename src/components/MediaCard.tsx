@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MediaItem, LanguageCode } from '../types';
+import { MediaItem, LanguageCode, CountryCode } from '../types';
 import { ALL_LANGUAGES } from '../data/translations';
+import { getRegionEvidenceMedia, isUgandaLegacyMediaUrl } from '../data/countryCurrency';
 import {
   Play,
   Pause,
@@ -29,6 +30,7 @@ import {
 interface MediaCardProps {
   media?: MediaItem[];
   postId: string;
+  countryCode?: CountryCode;
   voiceNote?: {
     duration: string;
     language?: string;
@@ -38,7 +40,7 @@ interface MediaCardProps {
   onToast?: (msg: string) => void;
 }
 
-export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: postVoiceNote, onToast }) => {
+export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, countryCode, voiceNote: postVoiceNote, onToast }) => {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [imageFit, setImageFit] = useState<'contain' | 'cover'>('cover');
@@ -81,6 +83,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
   };
 
   const getSafeFallbackUrl = (idx: number = 0, caption: string = '') => {
+    if (countryCode && countryCode.toUpperCase() !== 'UG') {
+      return getRegionEvidenceMedia(countryCode, caption);
+    }
     const c = (caption || '').toLowerCase();
     if (c.includes('hospital') || c.includes('doctor') || c.includes('health') || c.includes('pediatric') || c.includes('triage') || c.includes('clinic')) {
       return '/evidence/hospital_emergency_mulago.jpg';
@@ -124,6 +129,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, voiceNote: 
   };
 
   const resolveImageUrl = (rawUrl: string, idx: number, caption: string = '') => {
+    if (countryCode && countryCode.toUpperCase() !== 'UG' && isUgandaLegacyMediaUrl(rawUrl)) {
+      return getRegionEvidenceMedia(countryCode, caption || rawUrl);
+    }
     if (!rawUrl || rawUrl.includes('unsplash.com') || failedMediaUrls[rawUrl]) {
       return failedMediaUrls[rawUrl] || getSafeFallbackUrl(idx, caption);
     }

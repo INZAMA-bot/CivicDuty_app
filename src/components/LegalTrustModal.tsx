@@ -212,6 +212,17 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                     Citizens publicly commend heroic nurses, honest police officers, diligent teachers, and responsive utilities via verified commendations.
                   </div>
                 </div>
+
+                {/* Statutory Registration Badge */}
+                <div className="p-3 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-[11px] text-emerald-900 dark:text-emerald-200 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span><strong>Statutory Entity:</strong> CivicDuty Technologies Limited · Registered under RDB (<strong>REG-2026-181906</strong>)</span>
+                  </div>
+                  <span className="font-mono text-[9.5px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-bold tracking-wider uppercase">
+                    Launch Entity Live
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -227,7 +238,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                   <span>Sovereign Data Protection &amp; Citizen Privacy Charter</span>
                 </div>
                 <p className="text-[11.5px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Engineered in compliance with national data protection frameworks including the <strong>Uganda Data Protection and Privacy Act</strong>, <strong>Kenya Data Protection Act</strong>, <strong>Nigeria Data Protection Act (NDPA)</strong>, South Africa&apos;s <strong>POPIA</strong>, and the <strong>EU GDPR</strong>.
+                  Engineered in compliance with national data protection frameworks including <strong>Rwanda Law N° 058/2021 on Personal Data and Privacy (NCSA)</strong>, the <strong>Uganda Data Protection and Privacy Act</strong>, <strong>Kenya Data Protection Act</strong>, <strong>Nigeria Data Protection Act (NDPA)</strong>, South Africa&apos;s <strong>POPIA</strong>, and the <strong>EU GDPR</strong>.
                 </p>
               </div>
 

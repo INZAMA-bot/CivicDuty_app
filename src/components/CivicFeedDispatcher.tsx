@@ -82,18 +82,36 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   const depts = allDepts(country);
   const territory = TERRITORY[country] || [];
 
+  const firstSub = territory[0]?.children?.[0];
+  const firstParish = firstSub?.children?.[0];
+  const fallbackDistrict =
+    (activeUser.country === country ? activeUser.district : '') ||
+    territory[0]?.name ||
+    (country === 'UG' ? 'Kampala' : `${country} Capital District`);
+  const fallbackSubcounty =
+    (activeUser.country === country ? activeUser.subcounty || activeUser.ward : '') ||
+    firstSub?.name ||
+    'Central Division';
+  const fallbackParish =
+    (activeUser.country === country ? activeUser.parish || activeUser.parish_ward : '') ||
+    firstParish?.name ||
+    'Central Ward';
+  const fallbackGrassroot =
+    (activeUser.country === country ? activeUser.grassroot || activeUser.village : '') ||
+    (country === 'UG' ? 'Lumumba Cell' : 'Sector 01');
+
   const [expanded, setExpanded] = useState<boolean>(defaultExpanded || standalonePage);
   const [submittedDocketPost, setSubmittedDocketPost] = useState<Post | null>(null);
   const [signalBulb, setSignalBulb] = useState<'red' | 'amber' | 'green'>('red');
-  const [dept, setDept] = useState(() => activeDept || (country === 'KE' ? 'kplc' : 'kcca'));
+  const [dept, setDept] = useState(() => activeDept || depts[0]?.id || (country === 'KE' ? 'kplc' : 'kcca'));
   const [wallSearchQuery, setWallSearchQuery] = useState('');
   const [isWallDropdownOpen, setIsWallDropdownOpen] = useState(false);
 
-  const [profession, setProfession] = useState('Bodaboda Rider / Cyclist');
-  const [district, setDistrict] = useState(() => activeUser.district || 'Kampala');
-  const [subcounty, setSubcounty] = useState(() => activeUser.subcounty || activeUser.ward || 'Central Division');
-  const [parish, setParish] = useState(() => activeUser.parish || activeUser.parish_ward || 'Nakasero Parish');
-  const [grassroot, setGrassroot] = useState(() => activeUser.grassroot || activeUser.village || 'Lumumba Cell');
+  const [profession, setProfession] = useState('Citizen / Commuter');
+  const [district, setDistrict] = useState(() => fallbackDistrict);
+  const [subcounty, setSubcounty] = useState(() => fallbackSubcounty);
+  const [parish, setParish] = useState(() => fallbackParish);
+  const [grassroot, setGrassroot] = useState(() => fallbackGrassroot);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   const [category, setCategory] = useState<TicketCategory>('roads');
@@ -101,7 +119,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   const [body, setBody] = useState('');
   const [anonymous, setAnonymous] = useState(false);
   const [gps, setGps] = useState<{ lat: string; lng: string } | null>({ lat: '0.3162', lng: '32.5781' });
-  const [gpsStatus, setGpsStatus] = useState('GPS auto-calibrated to home parish');
+  const [gpsStatus, setGpsStatus] = useState('GPS auto-calibrated to local sector');
   const [showManualGpsInput, setShowManualGpsInput] = useState(false);
   const [manualLatInput, setManualLatInput] = useState('0.3162');
   const [manualLngInput, setManualLngInput] = useState('32.5781');
@@ -112,7 +130,9 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   // Frontline Scout Workstation State
   const [isFrontlineScout, setIsFrontlineScout] = useState(false);
   const [scoutCategory, setScoutCategory] = useState<FrontlineScoutCategory>('bodaboda');
-  const [workstationName, setWorkstationName] = useState('Equatorial Boda Stage');
+  const [workstationName, setWorkstationName] = useState(
+    country === 'RW' ? 'Kimironko Moto Stage' : country === 'UG' ? 'Equatorial Boda Stage' : 'Central Transit Hub'
+  );
 
   // Media Staging
   const [stagedMedia, setStagedMedia] = useState<
@@ -504,9 +524,9 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
             lat: latNum,
             lng: lngNum,
             country,
-            parish: parish || 'Central Ward',
-            subcounty: subcounty || 'Central',
-            district: district || 'Kampala',
+            parish: parish || fallbackParish,
+            subcounty: subcounty || fallbackSubcounty,
+            district: district || fallbackDistrict,
             scoutId: activeUser.id || 'usr-scout',
             scoutName: activeUser.name || 'Citizen Scout',
             reportSnippet: derivedTitle,
@@ -520,19 +540,19 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         dept,
         lane: 'civic',
         territory: {
-          district: district || 'Kampala',
-          subcounty: subcounty || 'Central Division',
-          parish: parish || 'Nakasero Parish',
-          ward: subcounty || 'Central Ward',
-          village: grassroot || 'Lumumba Cell',
-          cell: grassroot || 'Lumumba Cell',
-          grassroot: grassroot || 'Lumumba Cell',
+          district: district || fallbackDistrict,
+          subcounty: subcounty || fallbackSubcounty,
+          parish: parish || fallbackParish,
+          ward: subcounty || fallbackSubcounty,
+          village: grassroot || fallbackGrassroot,
+          cell: grassroot || fallbackGrassroot,
+          grassroot: grassroot || fallbackGrassroot,
         },
-        ward: subcounty || 'Central Ward',
-        parish: parish || 'Nakasero Parish',
-        village: grassroot || 'Lumumba Cell',
-        cell: grassroot || 'Lumumba Cell',
-        grassroot: grassroot || 'Lumumba Cell',
+        ward: subcounty || fallbackSubcounty,
+        parish: parish || fallbackParish,
+        village: grassroot || fallbackGrassroot,
+        cell: grassroot || fallbackGrassroot,
+        grassroot: grassroot || fallbackGrassroot,
         citizen_id: activeUser.id || `usr-${Date.now()}`,
         citizen_name: anonymous ? 'Verified Citizen' : activeUser.name || 'Citizen Watchdog',
         citizen_rank: activeUser.rank || (isFrontlineScout ? 'Frontline Scout' : 'Verified Scout'),

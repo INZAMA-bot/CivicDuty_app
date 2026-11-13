@@ -37,8 +37,17 @@ import {
   Zap,
   Sparkles,
   Clock,
+  Fuel,
+  ShoppingBag,
+  Wifi,
+  Droplets,
+  HeartPulse,
+  Scissors,
+  Store,
+  Tag,
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
+import { INITIAL_MERCHANT_PRODUCTS } from '../data/merchantLoyaltyData';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
 import { ParishRelocationModal } from '../components/ParishRelocationModal';
 
@@ -94,6 +103,63 @@ export const ProfileView: React.FC = () => {
   const [showReputationRules, setShowReputationRules] = useState(false);
   const [showParishModal, setShowParishModal] = useState(false);
   const [selectedVoucherPass, setSelectedVoucherPass] = useState<any | null>(null);
+
+  // Perk Categories and Merchant Directory State
+  const [selectedPerkCategory, setSelectedPerkCategory] = useState<string | null>(null);
+  const [showShopDirectoryModal, setShowShopDirectoryModal] = useState(false);
+  const [shopParishFilter, setShopParishFilter] = useState<'all' | 'my_parish'>('all');
+  const [claimedPasses, setClaimedPasses] = useState<any[]>([]);
+
+  const PERK_CATEGORIES = [
+    {
+      id: 'fuel_transport',
+      title: 'Fuel & Transport',
+      icon: Fuel,
+      matchCats: ['automotive_motorbikes', 'transport'],
+      baseXp: 25,
+      desc: 'Shell, TotalEnergies, bodaboda maintenance & transit vouchers',
+    },
+    {
+      id: 'groceries_food',
+      title: 'Groceries & Food',
+      icon: ShoppingBag,
+      matchCats: ['groceries_consumables', 'retail_shops'],
+      baseXp: 15,
+      desc: 'Quality Supermarket discounts, artisan bakeries & fresh market staples',
+    },
+    {
+      id: 'telecom_data',
+      title: 'Telecom & 5G Data',
+      icon: Wifi,
+      matchCats: ['services_digital_products', 'electronics'],
+      baseXp: 20,
+      desc: 'MTN, Airtel & Safaricom 5G data bundles & airtime recharges',
+    },
+    {
+      id: 'water_solar',
+      title: 'Clean Water & Solar',
+      icon: Droplets,
+      matchCats: ['home_living', 'agriculture_industrial'],
+      baseXp: 30,
+      desc: 'Clean water vending tokens, solar lamps & home power units',
+    },
+    {
+      id: 'health_pharmacy',
+      title: 'Health & Pharmacy',
+      icon: HeartPulse,
+      matchCats: ['health_wellness'],
+      baseXp: 35,
+      desc: 'Prescription pharmacy credits, first aid & clinic subsidies',
+    },
+    {
+      id: 'personal_care',
+      title: 'Personal Care & Craft',
+      icon: Scissors,
+      matchCats: ['beauty_personal_care', 'fashion_apparel'],
+      baseXp: 10,
+      desc: 'Executive barbers, salons, tailoring & repair craft workshops',
+    },
+  ];
 
   // User Civic Vouchers & Courtesy Goodwill Passes
   const postCourtesyVouchers = (posts || []).flatMap((p) =>
@@ -156,7 +222,7 @@ export const ProfileView: React.FC = () => {
     },
   ];
 
-  const allVouchers = [...postCourtesyVouchers, ...defaultCivicPasses];
+  const allVouchers = [...claimedPasses, ...postCourtesyVouchers, ...defaultCivicPasses];
 
   const handleUpdateParish = (newParish: string, reason: string) => {
     const now = new Date().toISOString().split('T')[0];
@@ -678,20 +744,99 @@ export const ProfileView: React.FC = () => {
           </div>
         )}
 
-        {/* Single Concise Link to Honours & Perk Escrow Vault */}
-        <button
-          type="button"
-          onClick={() => go('perk_vault')}
-          className="w-full p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <Award size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
-            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-              Redeem Utility Vouchers &amp; Honours in Perk Escrow Vault
+        {/* Civic Perks & Merchant Rewards Category Form with Notification Badges */}
+        <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                Civic XP Perks &amp; Participating Merchant Shops
+              </span>
+            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              {score} XP Balance
             </span>
           </div>
-          <ArrowUpRight size={14} className="text-slate-400 shrink-0" />
-        </button>
+
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+            Tap any category below to view certified shops in your parish and claim merchant voucher passes with your CivicScore balance.
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {PERK_CATEGORIES.map((cat) => {
+              const matchedProducts = INITIAL_MERCHANT_PRODUCTS.filter((p) =>
+                cat.matchCats.includes(p.category) && (!p.country || p.country === activeCountry)
+              );
+              const totalCount = matchedProducts.length > 0 ? matchedProducts.length : 6;
+              const isEligible = score >= cat.baseXp;
+              const claimableCount = isEligible ? Math.min(totalCount, Math.max(1, Math.floor(score / cat.baseXp))) : 0;
+              const CatIcon = cat.icon;
+
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedPerkCategory(cat.id);
+                    setShowShopDirectoryModal(true);
+                  }}
+                  className="p-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 dark:hover:border-emerald-500 transition-all text-left flex flex-col justify-between gap-2 cursor-pointer group shadow-2xs relative overflow-hidden"
+                >
+                  <div className="flex items-start justify-between gap-1 w-full">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <CatIcon size={15} />
+                    </div>
+
+                    {/* Pop-up Notification Badge */}
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] shadow-2xs">
+                        {totalCount} Available
+                      </span>
+                      {claimableCount > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-mono font-bold bg-emerald-600 text-white shadow-xs animate-pulse">
+                          <span className="w-1 h-1 rounded-full bg-white" />
+                          <span>{claimableCount} Claimable</span>
+                        </span>
+                      ) : (
+                        <span className="text-[8.5px] font-mono text-slate-400">
+                          {cat.baseXp} XP min
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight truncate">
+                      {cat.title}
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                      {cat.desc}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 pt-1 border-t border-[#e3e6ea]/60 dark:border-[#262b36]/60">
+                    <span>View Shops</span>
+                    <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => go('perk_vault')}
+            className="w-full p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Award size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                Open Sovereign Perk Escrow Vault &amp; Statutory Honours
+              </span>
+            </div>
+            <ArrowUpRight size={14} className="text-slate-400 shrink-0" />
+          </button>
+        </div>
       </div>
 
       {/* 3. Monitored Desks Strip */}
@@ -1143,6 +1288,185 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Participating Community Shops & Merchants Directory Modal */}
+      {showShopDirectoryModal && selectedPerkCategory && (() => {
+        const currentCat = PERK_CATEGORIES.find((c) => c.id === selectedPerkCategory) || PERK_CATEGORIES[0];
+        const CatIcon = currentCat.icon;
+        const allCatProducts = INITIAL_MERCHANT_PRODUCTS.filter((p) =>
+          currentCat.matchCats.includes(p.category) && (!p.country || p.country === activeCountry)
+        );
+        const myParishName = activeUser.parish || 'Kitintale Parish';
+        const filteredProducts =
+          shopParishFilter === 'my_parish'
+            ? allCatProducts.filter((p) => p.parish?.toLowerCase().includes(myParishName.toLowerCase().split(' ')[0]))
+            : allCatProducts;
+
+        const handleClaimMerchantVoucher = (product: any) => {
+          const voucherCode = `CD-${currentCat.id.slice(0, 4).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+          const newVoucher = {
+            id: 'vch-' + Date.now(),
+            code: voucherCode,
+            title: product.rewardHeadline || product.title,
+            brand: product.merchantName,
+            faceValue: product.voucherCost || 20000,
+            currency: product.currency || (activeCountry === 'KE' ? 'KES' : 'UGX'),
+            note: product.rewardDescription || 'Verified community merchant perk voucher.',
+            source: `Certified Merchant · ${product.parish || 'Parish'}`,
+            expires: 'Valid 60 Days',
+            status: 'active',
+            type: 'merit',
+          };
+          setClaimedPasses((prev) => [newVoucher, ...prev]);
+          setShowShopDirectoryModal(false);
+          setSelectedVoucherPass(newVoucher);
+          toast(`Claimed perk pass for ${product.merchantName}! Code: ${voucherCode}`, 'emerald');
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+              {/* Modal Header */}
+              <div className="px-4 py-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <CatIcon size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      {currentCat.title} · Certified Merchant Directory
+                    </div>
+                    <div className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400">
+                      {filteredProducts.length} Verified Participating Outlets
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowShopDirectoryModal(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Parish Filter Tabs */}
+              <div className="px-4 py-2 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-2 bg-slate-50 dark:bg-[#12151b]">
+                <button
+                  type="button"
+                  onClick={() => setShopParishFilter('all')}
+                  className={`px-3 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                    shopParishFilter === 'all'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36]'
+                  }`}
+                >
+                  All Outlets ({allCatProducts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShopParishFilter('my_parish')}
+                  className={`px-3 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
+                    shopParishFilter === 'my_parish'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36]'
+                  }`}
+                >
+                  Near My Parish ({myParishName.split(' ')[0]})
+                </button>
+              </div>
+
+              {/* Shop List Body */}
+              <div className="p-4 overflow-y-auto space-y-3 flex-1">
+                {filteredProducts.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 space-y-2">
+                    <Store size={28} className="mx-auto text-slate-400 opacity-60" />
+                    <div className="text-xs font-semibold">No merchants found in this parish view</div>
+                    <p className="text-[11px]">
+                      Switch to "All Outlets" above to explore verified merchants across {countryPerks.countryName}.
+                    </p>
+                  </div>
+                ) : (
+                  filteredProducts.map((p) => (
+                    <div
+                      key={p.id}
+                      className="p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 transition-colors hover:border-emerald-500/50"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {p.merchantName}
+                            </span>
+                            <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                          </div>
+                          <div className="text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                            <MapPin size={11} className="text-slate-400 shrink-0" />
+                            <span className="truncate">{p.address || `${p.parish}, ${p.district}`}</span>
+                          </div>
+                        </div>
+
+                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 shrink-0">
+                          {p.rewardType?.toUpperCase() || 'OFFER'}
+                        </span>
+                      </div>
+
+                      {/* Offer Description */}
+                      <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+                        <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                          {p.rewardHeadline || p.title}
+                        </div>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                          {p.rewardDescription}
+                        </p>
+                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-[#e3e6ea]/60 dark:border-[#262b36]/60">
+                          <span>USSD: {p.ussdCode || '*303*2040#'}</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            Value: {p.currency} {Number(p.voucherCost || p.basePrice).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Claim Action */}
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                          <span>Required: </span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {currentCat.baseXp} XP
+                          </span>
+                          <span className="text-slate-400"> (You have {score} XP)</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleClaimMerchantVoucher(p)}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Ticket size={12} />
+                          <span>Claim 1-Tap Voucher Pass</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-4 py-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between text-[10px] font-mono text-slate-500">
+                <span>Certified Sovereign Merchant Alliance</span>
+                <button
+                  type="button"
+                  onClick={() => setShowShopDirectoryModal(false)}
+                  className="text-slate-700 dark:text-slate-300 font-bold hover:underline cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

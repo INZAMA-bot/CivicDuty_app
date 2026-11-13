@@ -52,8 +52,12 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
   const [showSpecs, setShowSpecs] = useState(false);
   const [socialPlatform, setSocialPlatform] = useState<'x' | 'linkedin' | 'whatsapp' | 'facebook'>('x');
 
-  // Sync if propVehicleType changes from parent (e.g. PromotionalAdFeedCard pillar tabs)
-  const effectiveVehicle = propVehicleType || activeVehicle;
+  // When outside Uganda, strictly exclude bus & train (Kayoola and URC Train are Uganda-only)
+  const isUganda = countryCode === 'UG';
+  const rawVehicle = propVehicleType || activeVehicle;
+  const effectiveVehicle: GraphicVehicleType = !isUganda && (rawVehicle === 'bus' || rawVehicle === 'train')
+    ? 'bodaboda'
+    : rawVehicle;
   const transitSpec = getCountryTransitSpecs(countryCode);
 
   const viewBoxes = {
@@ -87,18 +91,18 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
   };
 
   const VEHICLE_JPG_MAP: Record<GraphicVehicleType, string> = {
-    bus: '/campaign/kayoola_kampala_street_ad.jpg',
-    train: '/campaign/train_moving_billboard_kampala.jpg',
-    bodaboda: '/campaign/boda_stage_billboard_ad.jpg',
-    market: '/campaign/market_vendors_billboard_ad.jpg',
-    taxi: '/campaign/taxi_park_billboard_ad.jpg',
-    health: '/campaign/health_clinic_billboard_ad.jpg',
-    teacher: '/campaign/school_youth_billboard_ad.jpg',
-    artisan: '/campaign/artisan_construction_billboard_ad.jpg',
+    bus: transitSpec.busPosterSrc,
+    train: transitSpec.trainPosterSrc,
+    bodaboda: transitSpec.scoutPosterSrc,
+    market: transitSpec.marketPosterSrc,
+    taxi: transitSpec.taxiPosterSrc,
+    health: transitSpec.healthPosterSrc,
+    teacher: transitSpec.teacherPosterSrc,
+    artisan: transitSpec.artisanPosterSrc,
   };
 
   const handleDownloadJpg = () => {
-    const src = VEHICLE_JPG_MAP[effectiveVehicle] || '/campaign/boda_stage_billboard_ad.jpg';
+    const src = VEHICLE_JPG_MAP[effectiveVehicle] || transitSpec.scoutPosterSrc;
     const link = document.createElement('a');
     link.href = src;
     link.download = `civicduty-${effectiveVehicle}-${countryCode.toLowerCase()}-street-poster.jpg`;
@@ -113,32 +117,36 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
     const country = transitSpec.countryName;
     const web = 'https://civicduty.site';
 
-    const baseHashtags = `#CivicDuty #SpeakServeBeHeard #${country.replace(/\s+/g, '')} #PublicAccountability #ZeroData #SmartCities`;
+    const baseHashtags = `#CivicDuty #SpeakServeBeHeard #${country.replace(/\s+/g, '')} #PublicAccountability #SmartCities`;
 
     switch (effectiveVehicle) {
       case 'bus':
-        return `🚨 TRANSIT PARTNERSHIP BLUEPRINT: CivicDuty × ${transitSpec.busPartnerName}!\n\nWe are proposing to fund and execute the official exterior painting of ${country}’s Kayoola electric bus fleet in the 3-Signal design.\n\n🚌 Zero-data USSD ${ussd} empowers millions of daily commuters to report potholes, non-functional streetlights & municipal defects straight to local authorities.\n\n👉 Inspect full blueprint or partner: ${web}\n\n${baseHashtags} #KayoolaEVS #KiiraMotors #GreenMobility`;
+        return isUganda
+          ? `🚨 TRANSIT PARTNERSHIP BLUEPRINT: CivicDuty × ${transitSpec.busPartnerName}!\n\nWe are proposing to fund and execute the official exterior painting of ${country}’s Kayoola electric bus fleet in the 3-Signal design.\n\n🚌 Zero-data USSD ${ussd} empowers millions of daily commuters to report potholes, non-functional streetlights & municipal defects straight to local authorities.\n\n👉 Inspect full blueprint or partner: ${web}\n\n${baseHashtags} #KayoolaEVS #KiiraMotors #GreenMobility`
+          : `🚨 TRANSIT PARTNERSHIP BLUEPRINT: CivicDuty × ${transitSpec.busPartnerName}!\n\nCivicDuty proposes high-visibility 3-Signal transit fleet livery across ${country} (${transitSpec.busRoutes}).\n\n🚌 Access (${ussd} / ${web}) empowers daily commuters to report road defects, streetlights & municipal hazards directly to authorities.\n\n👉 Inspect blueprint or partner: ${web}\n\n${baseHashtags} #TransitAccountability`;
 
       case 'train':
-        return `🚂 A MOVING BILLBOARD FOR CITIZEN EMPOWERMENT: CivicDuty × ${transitSpec.trainOperatorName}!\n\nCivicDuty proposes sandblasting and freshly painting commuter passenger trains across ${transitSpec.trainCorridors}.\n\nTurning everyday rail corridors into panoramic civic accountability billboards visible across every level crossing!\n\n📲 Dial ${ussd} (100% FREE on any phone)\n👉 Visit: ${web}\n\n${baseHashtags} #RailTransit #MovingBillboard #CommuterRail`;
+        return `🚂 A MOVING BILLBOARD FOR CITIZEN EMPOWERMENT: CivicDuty × ${transitSpec.trainOperatorName}!\n\nCivicDuty proposes exterior transit branding on passenger rail carriages and station concourses across ${transitSpec.trainCorridors}.\n\nTurning everyday rail corridors into panoramic civic accountability billboards visible to daily commuters!\n\n📲 Access ${ussd} · 👉 Visit: ${web}\n\n${baseHashtags} #RailTransit #MovingBillboard #CommuterRail`;
 
       case 'bodaboda':
-        return `🛵 BODA MAN: GWE BOSS W’OLUGUUDO! (Frontline Road Safety Scouts)\n\nBodaboda riders navigate every single corner of ${country}. Through CivicDuty, stages and riders report potholes, open manholes & road hazards.\n\n🎁 Top 3 Frontline Scouts in each stage receive monthly fuel & mobile data bounties!\n\n📲 DIAL ${ussd} (FREE · Works on any basic phone without bundles)\n👉 Join: ${web}\n\n${baseHashtags} #BodabodaScouts #RoadSafety #FrontlineScouts`;
+        return isUganda
+          ? `🛵 BODA MAN: GWE BOSS W’OLUGUUDO! (Frontline Road Safety Scouts)\n\nBodaboda riders navigate every single corner of ${country}. Through CivicDuty, stages and riders report potholes, open manholes & road hazards.\n\n🎁 Top 3 Frontline Scouts in each stage receive monthly fuel & mobile data bounties!\n\n📲 DIAL ${ussd} (FREE · Works on any basic phone without bundles)\n👉 Join: ${web}\n\n${baseHashtags} #BodabodaScouts #RoadSafety #FrontlineScouts`
+          : `🚲🛵 FRONTLINE MOBILITY SCOUTS (${transitSpec.stageTransportName.toUpperCase()}): ${country.toUpperCase()}!\n\n${transitSpec.stageTransportName} navigate every neighborhood of ${country}. Report potholes, blocked lanes & road hazards in 30 seconds.\n\n🎁 Top Frontline Scouts earn verified community recognition & partner utility bounties!\n\n📲 Access ${ussd} or web portal · 👉 Join: ${web}\n\n${baseHashtags} #RoadSafety #FrontlineScouts`;
 
       case 'market':
-        return `🏪 MARKET VENDORS & TRADERS: DEFEND YOUR MARKET!\n\nFrom Nakasero to Owino, Kalerwe & city markets across ${country}, vendors can now report blocked drains, uncollected garbage, water outages & unfair market dues in 30 seconds.\n\n🏆 Top-ranked market traders receive monthly grocery & utility bounties!\n\n📲 Dial ${ussd} (100% FREE)\n👉 ${web}\n\n${baseHashtags} #MarketVendors #CleanCities #LocalTraders`;
+        return `🏪 ${transitSpec.marketTabLabel.toUpperCase()} & TRADERS: DEFEND YOUR MARKET!\n\nAcross ${transitSpec.marketHeadlinePlaces} in ${country}, vendors and citizens can report blocked drains, uncollected waste & water outages in 30 seconds.\n\n🏆 Top-ranked market monitors build verified civic standing!\n\n📲 Access ${ussd} or ${web}\n\n${baseHashtags} #MarketVendors #CleanCities #LocalTraders`;
 
       case 'taxi':
-        return `🚐 TAXI & MATATU DRIVERS: HIGHWAY CORRIDOR WATCHDOGS!\n\nCommercial taxi drivers and matatu crews are the heartbeat of ${country}’s transport arteries. Log highway washouts, illegal extortion checkpoints & dangerous blackspots.\n\n⛽ Top-ranking drivers earn monthly highway transit fuel vouchers!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${baseHashtags} #MatatuSacco #TaxiDrivers #HighwaySafety`;
+        return `🚕🚐 ${transitSpec.taxiHeadlineLabel.toUpperCase()}: ${country.toUpperCase()}!\n\n${transitSpec.taxiTabLabel} keep cities moving across ${country}. Log highway washouts, hazardous intersections & transit delays directly to ${transitSpec.municipalAuthority}.\n\n📲 Access ${ussd} · 👉 ${web}\n\n${baseHashtags} #TransitWatch #HighwaySafety`;
 
       case 'health':
-        return `🏥 HEALTHCARE MONITORS & PATIENTS: DEFEND YOUR CLINIC!\n\nCommunity health centers deserve continuous support. Healthcare workers and patients can now track essential medicine stockouts, triage equipment & maternity ward oxygen in real-time.\n\n💊 Health monitors receive clinical data & wellness vouchers!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${baseHashtags} #PublicHealth #HealthMonitors #MinistryOfHealth`;
+        return `🏥 HEALTHCARE MONITORS & PATIENTS: DEFEND YOUR CLINIC!\n\nCommunity clinics in ${country} deserve continuous accountability. Healthcare workers and patients can track medical supply shortages, triage equipment & power outages in real time.\n\n📲 Access ${ussd} · 👉 ${web}\n\n${baseHashtags} #PublicHealth #HealthMonitors`;
 
       case 'teacher':
-        return `🎓 TEACHERS, STUDENTS & YOUTH SCOUTS: SAFE SCHOOL ZONES!\n\nYouth leaders and teachers are guarding our educational centers. Report dilapidated classrooms, missing desks, child crossing hazards & library needs.\n\n📚 Youth scouts receive monthly educational data bundles & stationery credits!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${baseHashtags} #EducationWatch #YouthLeaders #SafeSchools`;
+        return `🎓 TEACHERS, STUDENTS & YOUTH SCOUTS: SAFE SCHOOL ZONES!\n\nYouth leaders and teachers across ${country} are guarding school neighborhoods. Report dilapidated classrooms, crossing hazards & safety needs.\n\n📲 Access ${ussd} · 👉 ${web}\n\n${baseHashtags} #EducationWatch #YouthLeaders #SafeSchools`;
 
       case 'artisan':
-        return `🏗️ ARTISANS, BUILDERS & TECHNICIANS: AUDIT PUBLIC WORKS!\n\nCalling all masons, civil technicians, plumbers & electricians! Audit substandard asphalt, unvibrated bridge concrete & delayed road culverts on public contracts.\n\n🛠️ Top workmanship inspectors earn contractor CSR tool bounties!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${baseHashtags} #InfrastructureWatch #PublicWorks #CivilArtisans`;
+        return `🏗️ ARTISANS, BUILDERS & ENGINEERS: AUDIT PUBLIC WORKS!\n\nCalling all masons, civil technicians, plumbers & electricians in ${country}! Document substandard asphalt, delayed culverts & public contract quality.\n\n📲 Access ${ussd} · 👉 ${web}\n\n${baseHashtags} #InfrastructureWatch #PublicWorks #CivilArtisans`;
     }
   };
 
@@ -148,37 +156,83 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
     setTimeout(() => setCopiedSocial(false), 2200);
   };
 
-  // Reusable 3-Signal Checkmark Logo Group
-  const renderOfficialLogoSvg = (x: number, y: number, scale = 1) => (
+  // Reusable 3-Signal Checkmark Logo Group matching official TrafficLightLogo SVG
+  const renderOfficialLogoSvg = (x: number, y: number, scale = 1, showText = true) => (
     <g transform={`translate(${x}, ${y}) scale(${scale})`}>
       <rect
         x="0"
         y="0"
-        width="236"
-        height="78"
-        rx="16"
+        width={showText ? 368 : 224}
+        height="76"
+        rx="18"
         fill="#0e1116"
         stroke="#262b36"
-        strokeWidth="2.5"
+        strokeWidth="2"
       />
-      {/* Signal 1: Red (Citizen Speaks) */}
-      <circle cx="44" cy="39" r="23" fill="none" stroke="#EF4444" strokeWidth="5.5" />
-      <circle cx="44" cy="39" r="7.5" fill="#F87171" />
+      {/* Signal 1: Red Ring + Coral Dot (Citizen Speaks) */}
+      <g transform="translate(40, 38)">
+        <circle cx="0" cy="0" r="22" fill="none" stroke="#EF4444" strokeWidth="5.5" />
+        <circle cx="0" cy="0" r="7" fill="#F87171" />
+      </g>
 
-      {/* Signal 2: Amber (Government Serves) */}
-      <circle cx="118" cy="39" r="23" fill="none" stroke="#F59E0B" strokeWidth="5.5" />
-      <circle cx="118" cy="39" r="7.5" fill="#FDE047" />
+      {/* Signal 2: Amber Ring + Gold Dot (Government Serves) */}
+      <g transform="translate(108, 38)">
+        <circle cx="0" cy="0" r="22" fill="none" stroke="#F59E0B" strokeWidth="5.5" />
+        <circle cx="0" cy="0" r="7" fill="#FDE047" />
+      </g>
 
-      {/* Signal 3: Emerald Checkmark (Resolved & Heard) */}
-      <circle cx="192" cy="39" r="23" fill="#064E3B" stroke="#10B981" strokeWidth="5.5" />
+      {/* Signal 3: Solid Pine-Green Circle + Emerald Ring + White Checkmark */}
+      <g transform="translate(176, 38)">
+        <circle cx="0" cy="0" r="25" fill="#10b981" opacity="0.35" filter="url(#emeraldGlow)" />
+        <circle cx="0" cy="0" r="22" fill="#064E3B" stroke="#10B981" strokeWidth="5.5" />
+        <path
+          d="M -9 0.5 L -2.5 7 L 10 -6"
+          fill="none"
+          stroke="#FFFFFF"
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
+
+      {showText && (
+        <g transform="translate(224, 25)">
+          <text x="0" y="20" fontFamily="Inter, system-ui, sans-serif" fontWeight="900" fontSize="23" fill="#ffffff" letterSpacing="-0.5">
+            CivicDuty
+          </text>
+          <text x="0" y="37" fontFamily="Inter, system-ui, sans-serif" fontWeight="700" fontSize="9.5" fill="#34d399" letterSpacing="0.4">
+            Speak · Serve · Be Heard
+          </text>
+        </g>
+      )}
+    </g>
+  );
+
+  // Reusable Actual Resolved Checkmark Badge (matching Stage 5 on homepage)
+  const renderResolvedBadgeSvg = (x: number, y: number, scale = 1) => (
+    <g transform={`translate(${x}, ${y}) scale(${scale})`}>
+      <rect
+        x="0"
+        y="0"
+        width="240"
+        height="44"
+        rx="10"
+        fill="#064e3b"
+        stroke="#10b981"
+        strokeWidth="2"
+      />
+      <circle cx="24" cy="22" r="13" fill="#10b981" />
       <path
-        d="M 181 39.5 L 189 47.5 L 203 32.5"
+        d="M 17 22 L 23 27.5 L 31 16.5"
         fill="none"
-        stroke="#FFFFFF"
-        strokeWidth="5.5"
+        stroke="#ffffff"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <text x="46" y="27" fontFamily="monospace" fontWeight="900" fontSize="13" fill="#34d399" letterSpacing="0.5">
+        5 RESOLVED · STATUTORY
+      </text>
     </g>
   );
 
@@ -214,15 +268,15 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 <div className="font-mono font-bold text-[11px] text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5 flex-wrap">
                   <span>
                     {effectiveVehicle === 'bus'
-                      ? `${transitSpec.busPartnerName} · Kayoola EVS Street Appearance`
+                      ? `${transitSpec.busPartnerName} · ${isUganda ? 'Kayoola EVS' : 'Transit Fleet'} Street Appearance`
                       : effectiveVehicle === 'train'
-                      ? `${transitSpec.trainOperatorName} · Moving Billboard Train Appearance`
+                      ? `${transitSpec.trainOperatorName} · Moving Billboard Rail Appearance`
                       : effectiveVehicle === 'bodaboda'
-                      ? `${transitSpec.countryName} Bodaboda Stage & Rider Billboard`
+                      ? `${transitSpec.countryName} ${transitSpec.scoutTabLabel} Frontline Scouts Billboard`
                       : effectiveVehicle === 'market'
-                      ? `${transitSpec.countryName} Market Vendors & Traders Billboard`
+                      ? `${transitSpec.countryName} ${transitSpec.marketTabLabel} & Traders Billboard`
                       : effectiveVehicle === 'taxi'
-                      ? `${transitSpec.countryName} Matatu & Taxi Drivers Gantry Billboard`
+                      ? `${transitSpec.countryName} ${transitSpec.taxiHeadlineLabel} Billboard`
                       : effectiveVehicle === 'health'
                       ? `${transitSpec.countryName} Healthcare Center Accountability Board`
                       : effectiveVehicle === 'teacher'
@@ -295,14 +349,30 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
             </div>
           </div>
 
-          {/* 8-Category Reporter Profession & Transit Selector Bar */}
+          {/* Reporter Profession & Transit Selector Bar */}
           <div className="flex items-center gap-1 overflow-x-auto pb-0.5 pt-1">
             {[
-              { id: 'bus' as GraphicVehicleType, label: 'Kayoola Bus', icon: Bus },
-              { id: 'train' as GraphicVehicleType, label: 'Commuter Train', icon: Train },
-              { id: 'bodaboda' as GraphicVehicleType, label: 'Bodaboda Stage', icon: Bike },
-              { id: 'market' as GraphicVehicleType, label: 'Market Vendors', icon: Store },
-              { id: 'taxi' as GraphicVehicleType, label: 'Matatu & Taxis', icon: Car },
+              ...(isUganda
+                ? [
+                    { id: 'bus' as GraphicVehicleType, label: 'Kayoola Bus', icon: Bus },
+                    { id: 'train' as GraphicVehicleType, label: 'Commuter Train', icon: Train },
+                  ]
+                : []),
+              {
+                id: 'bodaboda' as GraphicVehicleType,
+                label: transitSpec.scoutTabLabel,
+                icon: Bike,
+              },
+              {
+                id: 'taxi' as GraphicVehicleType,
+                label: transitSpec.taxiTabLabel,
+                icon: Car,
+              },
+              {
+                id: 'market' as GraphicVehicleType,
+                label: transitSpec.marketTabLabel,
+                icon: Store,
+              },
               { id: 'health' as GraphicVehicleType, label: 'Health Monitors', icon: Stethoscope },
               { id: 'teacher' as GraphicVehicleType, label: 'Teachers & Youth', icon: GraduationCap },
               { id: 'artisan' as GraphicVehicleType, label: 'Artisans & Builders', icon: HardHat },
@@ -357,6 +427,19 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
               <stop offset="50%" stopColor="#10b981" />
               <stop offset="100%" stopColor="#34d399" />
             </linearGradient>
+            <linearGradient id="emeraldWrapGrad" x1="0%" y1="0%" x2="100%" y2="80%">
+              <stop offset="0%" stopColor="#064e3b" />
+              <stop offset="35%" stopColor="#047857" />
+              <stop offset="70%" stopColor="#059669" />
+              <stop offset="100%" stopColor="#10b981" />
+            </linearGradient>
+            <filter id="emeraldGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
             <linearGradient id="goldStripe" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#d97706" />
               <stop offset="100%" stopColor="#fbbf24" />
@@ -432,11 +515,11 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
               />
               <rect x="260" y="139" width="145" height="13" rx="3" fill="#0e1116" stroke="#10b981" strokeWidth="1" />
               <text x="332" y="149" textAnchor="middle" fontFamily="monospace" fontWeight="700" fontSize="8.5" fill="#10b981">
-                KAYOOLA ZERO-EMISSION BATTERY
+                {isUganda ? 'KAYOOLA ZERO-EMISSION BATTERY' : `${transitSpec.countryName.toUpperCase()} ZERO-EMISSION TRANSIT`}
               </text>
               <rect x="780" y="138" width="150" height="13" rx="3" fill="#0e1116" stroke="#262b36" strokeWidth="1" />
               <text x="855" y="148" textAnchor="middle" fontFamily="monospace" fontWeight="700" fontSize="8.5" fill="#94a3b8">
-                KIIRA MOTORS CORPORATION
+                {isUganda ? 'KIIRA MOTORS CORPORATION' : transitSpec.busPartnerName.toUpperCase().slice(0, 24)}
               </text>
 
               {/* Main Coach Body Shell in Sleek Matte Dark Studio Livery */}
@@ -447,6 +530,23 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 strokeWidth="3"
               />
 
+              {/* Sweeping Dynamic Emerald Green Rear Wrap (Authentic CivicDuty Fleet Livery) */}
+              <path
+                d="M 670 466 C 730 466 745 286 820 170 L 1070 170 C 1085 170 1098 180 1098 194 L 1098 446 C 1098 458 1088 466 1072 466 Z"
+                fill="url(#emeraldWrapGrad)"
+                opacity="0.95"
+              />
+
+              {/* Giant Semi-Transparent Prismatic Traffic Light Lens Watermark on Rear Wrap */}
+              <g opacity="0.32">
+                <circle cx="890" cy="340" r="115" fill="none" stroke="#ffffff" strokeWidth="4" />
+                <circle cx="890" cy="340" r="90" fill="none" stroke="#34d399" strokeWidth="3" strokeDasharray="6 4" />
+                <circle cx="890" cy="340" r="65" fill="none" stroke="#ffffff" strokeWidth="2.5" />
+                <circle cx="890" cy="340" r="40" fill="#10b981" opacity="0.4" filter="url(#emeraldGlow)" />
+                <circle cx="1010" cy="280" r="75" fill="none" stroke="#fde047" strokeWidth="3" strokeDasharray="5 3" />
+                <circle cx="1010" cy="280" r="45" fill="none" stroke="#f59e0b" strokeWidth="2" />
+              </g>
+
               {/* Continuous Panoramic Glazed Window Belt */}
               <path
                 d="M 122 280 C 126 218 135 176 158 170 L 1075 170 C 1082 170 1086 175 1086 184 L 1086 286 L 122 286 Z"
@@ -455,16 +555,21 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 strokeWidth="2"
               />
 
+              {/* Roofline Curved Slogan from Official Fleet Design */}
+              <text x="340" y="152" fontFamily="Inter, system-ui, sans-serif" fontWeight="700" fontSize="10.5" fill="#e2e8f0" letterSpacing="0.4">
+                Give Every Street Voice to Municipal Services. · www.civicduty.org
+              </text>
+
               {/* Front Destination LED Matrix Board */}
               <rect x="148" y="174" width="170" height="25" rx="4" fill="#090c10" stroke="#f59e0b" strokeWidth="1.5" />
               <text x="233" y="191" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="11" fill="#fde047" letterSpacing="1">
-                KAMPALA ROAD · {transitSpec.ussdCode}
+                {isUganda ? 'KAMPALA ROAD' : `${transitSpec.countryName.toUpperCase().slice(0, 12)} METRO`} · {transitSpec.ussdCode}
               </text>
 
               {/* Passenger Windows & Interior Silhouette */}
               {[335, 465, 595, 795, 925].map((wx, idx) => (
                 <g key={idx}>
-                  <rect x={wx} y="176" width="118" height="102" rx="5" fill="#0f172a" stroke="#334155" strokeWidth="1.5" />
+                  <rect x={wx} y={176} width="118" height="102" rx="5" fill="#0f172a" stroke="#334155" strokeWidth="1.5" />
                   <line x1={wx} y1="202" x2={wx + 118} y2="202" stroke="#1e293b" strokeWidth="1.5" />
                   <circle cx={wx + 34} cy="235" r="11" fill="#334155" />
                   <circle cx={wx + 80} cy="235" r="11" fill="#334155" />
@@ -483,10 +588,8 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
 
               {/* Pedestrians & Commuters on Sidewalk Boarding */}
               <g opacity="0.9">
-                {/* Commuter 1 Entering Bus */}
                 <circle cx="210" cy="410" r="11" fill="#e2e8f0" />
                 <path d="M 198 424 L 222 424 L 225 470 L 195 470 Z" fill="#1e293b" />
-                {/* Commuter 2 Waiting on Sidewalk Holding Phone */}
                 <circle cx="160" cy="425" r="10" fill="#e2e8f0" />
                 <path d="M 150 438 L 170 438 L 172 485 L 148 485 Z" fill="#047857" />
                 <rect x="171" y="440" width="5" height="9" rx="1" fill="#38bdf8" />
@@ -498,40 +601,43 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
               <rect x="322" y="286" width="396" height="4.5" fill="url(#emeraldStripe)" />
               <rect x="790" y="286" width="306" height="4.5" fill="url(#emeraldStripe)" />
 
-              {/* Official 3-Signal Checkmark Logo */}
-              {renderOfficialLogoSvg(334, 304, 0.72)}
+              {/* Official 3-Signal Checkmark Logo Group */}
+              {renderOfficialLogoSvg(332, 298, 0.72, false)}
 
-              {/* Brand Wordmark & Tagline */}
-              <text x="518" y="338" fontFamily="Inter, system-ui, sans-serif" fontWeight="900" fontSize="34" fill="#ffffff">
+              {/* Brand Wordmark & Tagline Matching Billboard & Merchandise */}
+              <text x="502" y="334" fontFamily="Inter, system-ui, sans-serif" fontWeight="900" fontSize="35" fill="#ffffff" letterSpacing="-0.5">
                 CivicDuty
               </text>
-              <text x="520" y="357" fontFamily="monospace" fontWeight="700" fontSize="11.5" fill="#10b981" letterSpacing="1.8">
-                SPEAK · SERVE · BE HEARD
+              <text x="504" y="354" fontFamily="Inter, system-ui, sans-serif" fontWeight="800" fontSize="12" fill="#34d399" letterSpacing="1.2">
+                CONNECT. RESOLVE. PROGRESS.
               </text>
-              <text x="520" y="374" fontFamily="monospace" fontWeight="600" fontSize="10.5" fill="#94a3b8">
-                Report Potholes, Water Outages &amp; Street Defects
+              <text x="504" y="371" fontFamily="Inter, system-ui, sans-serif" fontWeight="600" fontSize="10.5" fill="#94a3b8">
+                Citizen-Government Interface · Sovereign Statutory Accountability
               </text>
 
+              {/* Official Stage 5 Resolved Checkmark Badge on Bus */}
+              {renderResolvedBadgeSvg(332, 388, 0.72)}
+
               {/* Route & Fleet Tag Strip */}
-              <rect x="334" y="390" width="372" height="32" rx="6" fill="#0e1116" stroke="#262b36" strokeWidth="1.5" />
-              <text x="348" y="410" fontFamily="monospace" fontWeight="700" fontSize="11" fill="#fde047">
-                FLEET PARTNERSHIP · {transitSpec.busPartnerName.toUpperCase().slice(0, 26)}
+              <rect x="510" y="388" width="196" height="32" rx="7" fill="#0e1116" stroke="#262b36" strokeWidth="1.5" />
+              <text x="522" y="408" fontFamily="monospace" fontWeight="800" fontSize="10.5" fill="#fde047">
+                {isUganda ? 'FLEET · KAYOOLA EVS #088' : `FLEET · ${transitSpec.countryCode} TRANSIT #088`}
               </text>
 
               {/* Rear USSD Callout Badge on Bus */}
-              <rect x="796" y="302" width="284" height="120" rx="10" fill="#0e1116" stroke="#10b981" strokeWidth="1.75" />
-              <text x="812" y="324" fontFamily="monospace" fontWeight="700" fontSize="10" fill="#94a3b8" letterSpacing="1">
-                ZERO-DATA PUBLIC ACCOUNTABILITY
+              <rect x="786" y="298" width="298" height="124" rx="12" fill="#0e1116" stroke="#10b981" strokeWidth="2" />
+              <text x="804" y="322" fontFamily="monospace" fontWeight="700" fontSize="10" fill="#94a3b8" letterSpacing="1">
+                ZERO-DATA REVERSE-BILLED USSD
               </text>
-              <text x="812" y="356" fontFamily="monospace" fontWeight="900" fontSize="28" fill="#ffffff">
+              <text x="804" y="356" fontFamily="monospace" fontWeight="900" fontSize="29" fill="#ffffff">
                 DIAL {transitSpec.ussdCode}
               </text>
-              <text x="812" y="376" fontFamily="monospace" fontWeight="700" fontSize="11" fill="#10b981">
-                OR VISIT CIVICDUTY.SITE (PWA)
+              <text x="804" y="377" fontFamily="monospace" fontWeight="800" fontSize="11" fill="#10b981">
+                100% FREE ON ANY PHONE · NO DATA NEEDED
               </text>
-              <line x1="812" y1="388" x2="1064" y2="388" stroke="#262b36" strokeWidth="1" />
-              <text x="812" y="406" fontFamily="monospace" fontWeight="600" fontSize="10" fill="#cbd5e1">
-                Oversight: {transitSpec.municipalAuthority.slice(0, 30)}
+              <line x1="804" y1="389" x2="1064" y2="389" stroke="#262b36" strokeWidth="1" />
+              <text x="804" y="407" fontFamily="monospace" fontWeight="600" fontSize="9.5" fill="#cbd5e1">
+                Municipal Oversight: {transitSpec.municipalAuthority.slice(0, 32)}
               </text>
 
               {/* Radial Bus Wheels & Rim Detailing */}
@@ -564,7 +670,7 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
               {/* Station Canopy & Platform Signboard */}
               <rect x="720" y="130" width="280" height="26" rx="4" fill="#161a22" stroke="#10b981" strokeWidth="1.5" />
               <text x="860" y="147" textAnchor="middle" fontFamily="monospace" fontWeight="800" fontSize="11" fill="#10b981" letterSpacing="1">
-                KAMPALA–NAMANVE COMMUTER RAIL PLATFORM
+                {isUganda ? 'KAMPALA–NAMANVE COMMUTER RAIL PLATFORM' : `${transitSpec.countryName.toUpperCase()} COMMUTER RAIL PLATFORM`}
               </text>
 
               {/* Railway Ballast Bed & Steel Tracks */}
@@ -613,7 +719,19 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
 
               {/* 2. PASSENGER CARRIAGE WRAPPED IN CIVICDUTY MOVING BILLBOARD LIVERY */}
               <g>
-                <rect x="436" y="204" width="706" height="238" rx="6" fill="#161a22" stroke="#10b981" strokeWidth="2.5" />
+                <rect x="436" y="204" width="706" height="238" rx="6" fill="#161a22" stroke="#334155" strokeWidth="2.5" />
+                {/* Sweeping Dynamic Emerald Wrap on Carriage End */}
+                <path
+                  d="M 820 442 C 880 442 895 204 970 204 L 1142 204 L 1142 442 Z"
+                  fill="url(#emeraldWrapGrad)"
+                  opacity="0.95"
+                />
+                {/* Giant Traffic Light Lens Watermark on Carriage Wrap */}
+                <g opacity="0.3">
+                  <circle cx="1020" cy="324" r="80" fill="none" stroke="#ffffff" strokeWidth="3" />
+                  <circle cx="1020" cy="324" r="60" fill="none" stroke="#34d399" strokeWidth="2.5" strokeDasharray="5 3" />
+                  <circle cx="1020" cy="324" r="40" fill="#10b981" opacity="0.4" filter="url(#emeraldGlow)" />
+                </g>
                 {/* Windows with Commuters */}
                 {[496, 578, 660, 742, 824, 906, 988].map((wx, idx) => (
                   <g key={idx}>
@@ -623,32 +741,33 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 ))}
                 {/* Livery Stripe & Logo */}
                 <rect x="494" y="282" width="564" height="4.5" fill="url(#emeraldStripe)" />
-                {renderOfficialLogoSvg(496, 298, 0.72)}
-                <text x="680" y="330" fontFamily="Inter, system-ui, sans-serif" fontWeight="900" fontSize="32" fill="#ffffff">
+                {renderOfficialLogoSvg(496, 296, 0.72, false)}
+                <text x="670" y="330" fontFamily="Inter, system-ui, sans-serif" fontWeight="900" fontSize="34" fill="#ffffff" letterSpacing="-0.5">
                   CivicDuty
                 </text>
-                <text x="682" y="350" fontFamily="monospace" fontWeight="700" fontSize="11.5" fill="#10b981" letterSpacing="1.5">
-                  SPEAK · SERVE · BE HEARD
+                <text x="672" y="350" fontFamily="Inter, system-ui, sans-serif" fontWeight="800" fontSize="11.5" fill="#34d399" letterSpacing="1.2">
+                  CONNECT. RESOLVE. PROGRESS.
                 </text>
-                <text x="682" y="368" fontFamily="monospace" fontWeight="600" fontSize="10.5" fill="#cbd5e1">
-                  MOVING BILLBOARD · RAIL REFURBISHMENT PROPOSAL
+                <text x="672" y="368" fontFamily="Inter, system-ui, sans-serif" fontWeight="600" fontSize="10" fill="#cbd5e1">
+                  Citizen-Government Interface · Moving Passenger Billboard
                 </text>
                 {/* USSD Box */}
-                <rect x="865" y="298" width="192" height="76" rx="8" fill="#0e1116" stroke="#10b981" strokeWidth="1.75" />
+                <rect x="865" y="298" width="202" height="76" rx="8" fill="#0e1116" stroke="#10b981" strokeWidth="1.75" />
                 <text x="880" y="319" fontFamily="monospace" fontWeight="700" fontSize="9.5" fill="#fde047">
                   REPORT DEFECTS FREE
                 </text>
-                <text x="880" y="346" fontFamily="monospace" fontWeight="900" fontSize="22" fill="#ffffff">
+                <text x="880" y="346" fontFamily="monospace" fontWeight="900" fontSize="24" fill="#ffffff">
                   DIAL {transitSpec.ussdCode}
                 </text>
                 <text x="880" y="364" fontFamily="monospace" fontWeight="700" fontSize="10" fill="#10b981">
                   CIVICDUTY.SITE · PWA
                 </text>
-                {/* Corridor */}
-                <rect x="496" y="388" width="562" height="34" rx="6" fill="#0e1116" stroke="#262b36" strokeWidth="1.5" />
-                <text x="512" y="409" fontFamily="monospace" fontWeight="700" fontSize="11" fill="#94a3b8">
-                  CORRIDOR: {transitSpec.trainCorridors.toUpperCase().slice(0, 60)}
+                {/* Corridor & Resolved Badge on Train */}
+                <rect x="496" y="388" width="370" height="34" rx="6" fill="#0e1116" stroke="#262b36" strokeWidth="1.5" />
+                <text x="510" y="409" fontFamily="monospace" fontWeight="700" fontSize="10.5" fill="#94a3b8">
+                  CORRIDOR: {transitSpec.trainCorridors.toUpperCase().slice(0, 36)}
                 </text>
+                {renderResolvedBadgeSvg(880, 385, 0.72)}
                 {/* Wheels */}
                 {[494, 566, 969, 1041].map((bx) => (
                   <circle key={bx} cx={bx} cy="466" r="21" fill="#1e293b" stroke="#94a3b8" strokeWidth="4" />
@@ -680,10 +799,10 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 <line x1="58" y1="180" x2="58" y2="505" stroke="#475569" strokeWidth="4" />
                 <rect x="30" y="160" width="210" height="48" rx="6" fill="#0e1116" stroke="#f59e0b" strokeWidth="2" />
                 <text x="135" y="180" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="10.5" fill="#fde047" letterSpacing="0.8">
-                  STAGE: NORTHERN BYPASS
+                  {isUganda ? 'STAGE: NORTHERN BYPASS' : `ZONE: ${transitSpec.countryName.toUpperCase()} HUB`}
                 </text>
                 <text x="135" y="196" textAnchor="middle" fontFamily="monospace" fontWeight="800" fontSize="9" fill="#10b981">
-                  BWAISE RIDERS · SCOUT #049
+                  {isUganda ? 'BWAISE RIDERS · SCOUT #049' : `${transitSpec.scoutTabLabel.toUpperCase()} · SCOUT #049`}
                 </text>
                 {/* Stage Wooden Bench */}
                 <rect x="35" y="445" width="115" height="10" rx="2" fill="#78350f" stroke="#451a03" strokeWidth="1.5" />
@@ -866,10 +985,10 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 {/* Stall Signboard */}
                 <rect x="60" y="165" width="220" height="42" rx="6" fill="#0e1116" stroke="#10b981" strokeWidth="2" />
                 <text x="170" y="185" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="10.5" fill="#fde047">
-                  NAKASERO &amp; OWINO MARKET
+                  {isUganda ? 'NAKASERO & OWINO MARKET' : transitSpec.marketTabLabel.toUpperCase()}
                 </text>
                 <text x="170" y="198" textAnchor="middle" fontFamily="monospace" fontWeight="800" fontSize="9" fill="#10b981">
-                  STALL #14 · FRESH PRODUCE SCOUT
+                  STALL #14 · MARKET SCOUT
                 </text>
 
                 {/* Giant Striped Market Umbrellas with Scalloped Edges */}
@@ -911,7 +1030,7 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 {/* Matooke Green Plantains Heap */}
                 <rect x="58" y="385" width="105" height="28" rx="6" fill="#15803d" stroke="#166534" strokeWidth="2" />
                 <text x="110" y="403" textAnchor="middle" fontFamily="monospace" fontWeight="800" fontSize="9" fill="#ffffff">
-                  MATOOKE
+                  {isUganda ? 'MATOOKE' : 'BANANAS'}
                 </text>
                 {/* Red Tomatoes Crate */}
                 <rect x="175" y="385" width="105" height="28" rx="6" fill="#dc2626" stroke="#991b1b" strokeWidth="2" />
@@ -1023,8 +1142,8 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 <text x="840" y="226" fontFamily="monospace" fontWeight="900" fontSize="15" fill="#10b981">
                   TOP-3 DRIVERS WIN FUEL
                 </text>
-                <text x="608" y="278" fontFamily="Inter, system-ui, sans-serif" fontWeight="900" fontSize="27" fill="#ffffff">
-                  Matatu &amp; Taxi Drivers: Highway Watchdogs!
+                <text x="608" y="278" fontFamily="Inter, system-ui, sans-serif" fontWeight="900" fontSize="25" fill="#ffffff">
+                  {transitSpec.taxiHeadlineLabel}!
                 </text>
                 <text x="608" y="302" fontFamily="monospace" fontWeight="700" fontSize="11.5" fill="#fde047">
                   REPORT HIGHWAY WASHOUTS, EXTORTION &amp; DEADLY ACCIDENT BLACKSPOTS
@@ -1059,7 +1178,7 @@ export const KayoolaBusGraphic: React.FC<KayoolaBusGraphicProps> = ({
                 <rect x="40" y="210" width="450" height="295" fill="#161f2e" stroke="#38bdf8" strokeWidth="2.5" rx="8" />
                 <rect x="180" y="170" width="170" height="42" rx="6" fill="#0e1726" stroke="#38bdf8" strokeWidth="2" />
                 <text x="265" y="196" textAnchor="middle" fontFamily="monospace" fontWeight="900" fontSize="12" fill="#38bdf8">
-                  + HEALTH CENTRE IV +
+                  {isUganda ? '+ HEALTH CENTRE IV +' : '+ COMMUNITY CLINIC +'}
                 </text>
                 {/* Clinic Glass Doors */}
                 <rect x="185" y="325" width="160" height="180" fill="#0b1320" stroke="#64748b" strokeWidth="2" />

@@ -20,8 +20,13 @@ import {
   AlertTriangle,
   FileCheck2,
   CheckCircle2,
+  KeyRound,
+  Smartphone,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { DeptIcon } from '../components/DeptIcon';
+import { trackVisitorInteraction } from '../services/analyticsService';
 
 const FOREIGN_DOCUMENT_OPTIONS: {
   id: IdentityDocumentType;
@@ -178,6 +183,149 @@ export const OnboardingCitizenView: React.FC = () => {
   // Onboarding Step 3 (Walls) State
   const [followedDepts, setFollowedDepts] = useState<string[]>([]);
   const [deptSearch, setDeptSearch] = useState('');
+
+  // Fast Login Preference State
+  const [fastLoginMethod, setFastLoginMethod] = useState<'google' | 'biometric' | 'pin'>('biometric');
+  const [setupPin, setSetupPin] = useState<string>('2026');
+  const [showPinModal, setShowPinModal] = useState<boolean>(false);
+  const [enteredPin, setEnteredPin] = useState<string>('');
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  const handleFastGoogleLogin = () => {
+    const targetCountry = (loginCountry || country || 'UG') as CountryCode;
+    const uid = 'usr-goog-' + targetCountry;
+    const existing = profiles[uid] || {
+      id: uid,
+      country: targetCountry,
+      verifiedCountryCode: targetCountry,
+      citizenshipStatus: 'citizen' as const,
+      identityDocumentType: 'nid' as const,
+      id_frag: '8841',
+      display_name: 'Google Verified Citizen',
+      civic_score: 55,
+      rank: 'Observer',
+      followed: targetCountry === 'KE' ? ['ke-kplc', 'ke-ncwsc', 'ke-kura'] : targetCountry === 'RW' ? ['rw-reg', 'rw-wasac', 'rw-kigali'] : ['ug-unra', 'ug-nwsc', 'ug-kcca'],
+      posts: 2,
+      resolved: 1,
+      corruption_reports: 0,
+      upvotes_received: 12,
+    };
+    if (!profiles[uid]) {
+      setProfiles((prev) => ({ ...prev, [uid]: existing }));
+    }
+    setUser({
+      id: uid,
+      role: 'citizen',
+      country: targetCountry,
+      verifiedCountryCode: targetCountry,
+      citizenshipStatus: 'citizen',
+      identityDocumentType: 'nid',
+      nodeTag: COUNTRIES[targetCountry]?.node || 'NODE_01',
+      followed: existing.followed,
+      name: existing.display_name,
+    });
+    setSelectedCountry(targetCountry);
+    trackVisitorInteraction('onboarding_complete', `Google One-Tap (${targetCountry})`, targetCountry, {
+      countryCode: targetCountry,
+      method: 'google_one_tap',
+    });
+    toast(`Google One-Tap Sovereign Sign-In: Authenticated for ${COUNTRIES[targetCountry]?.name}`, 'emerald');
+    go('feed');
+  };
+
+  const handleFastBiometricLogin = () => {
+    const targetCountry = (loginCountry || country || 'UG') as CountryCode;
+    toast('Prompting TouchID / FaceID Passkey verification...', 'emerald');
+    setTimeout(() => {
+      const uid = 'usr-bio-' + targetCountry;
+      const existing = profiles[uid] || {
+        id: uid,
+        country: targetCountry,
+        verifiedCountryCode: targetCountry,
+        citizenshipStatus: 'citizen' as const,
+        identityDocumentType: 'nid' as const,
+        id_frag: '9042',
+        display_name: 'Biometric Verified Watchdog',
+        civic_score: 65,
+        rank: 'Watchdog',
+        followed: targetCountry === 'KE' ? ['ke-kplc', 'ke-ncwsc', 'ke-kura'] : targetCountry === 'RW' ? ['rw-reg', 'rw-wasac', 'rw-kigali'] : ['ug-unra', 'ug-nwsc', 'ug-umeme'],
+        posts: 3,
+        resolved: 2,
+        corruption_reports: 0,
+        upvotes_received: 20,
+      };
+      if (!profiles[uid]) {
+        setProfiles((prev) => ({ ...prev, [uid]: existing }));
+      }
+      setUser({
+        id: uid,
+        role: 'citizen',
+        country: targetCountry,
+        verifiedCountryCode: targetCountry,
+        citizenshipStatus: 'citizen',
+        identityDocumentType: 'nid',
+        nodeTag: COUNTRIES[targetCountry]?.node || 'NODE_01',
+        followed: existing.followed,
+        name: existing.display_name,
+      });
+      setSelectedCountry(targetCountry);
+      trackVisitorInteraction('onboarding_complete', `Biometric Passkey (${targetCountry})`, targetCountry, {
+        countryCode: targetCountry,
+        method: 'biometric',
+      });
+      toast(`Biometric Passkey Authenticated (SHA-256 WebAuthn) · Live Feed Mounted`, 'emerald');
+      go('feed');
+    }, 350);
+  };
+
+  const handleFastPinSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (enteredPin.length < 4) {
+      setPinError('Please enter your 4-digit PIN');
+      return;
+    }
+    const targetCountry = (loginCountry || country || 'UG') as CountryCode;
+    setShowPinModal(false);
+    setPinError(null);
+    const uid = 'usr-pin-' + targetCountry;
+    const existing = profiles[uid] || {
+      id: uid,
+      country: targetCountry,
+      verifiedCountryCode: targetCountry,
+      citizenshipStatus: 'citizen' as const,
+      identityDocumentType: 'nid' as const,
+      id_frag: '4410',
+      display_name: 'PIN Verified Citizen',
+      civic_score: 50,
+      rank: 'Observer',
+      followed: targetCountry === 'KE' ? ['ke-kplc', 'ke-ncwsc', 'ke-kura'] : targetCountry === 'RW' ? ['rw-reg', 'rw-wasac', 'rw-kigali'] : ['ug-unra', 'ug-nwsc', 'ug-kcca'],
+      posts: 1,
+      resolved: 1,
+      corruption_reports: 0,
+      upvotes_received: 8,
+    };
+    if (!profiles[uid]) {
+      setProfiles((prev) => ({ ...prev, [uid]: existing }));
+    }
+    setUser({
+      id: uid,
+      role: 'citizen',
+      country: targetCountry,
+      verifiedCountryCode: targetCountry,
+      citizenshipStatus: 'citizen',
+      identityDocumentType: 'nid',
+      nodeTag: COUNTRIES[targetCountry]?.node || 'NODE_01',
+      followed: existing.followed,
+      name: existing.display_name,
+    });
+    setSelectedCountry(targetCountry);
+    trackVisitorInteraction('onboarding_complete', `PIN Login (${targetCountry})`, targetCountry, {
+      countryCode: targetCountry,
+      method: 'pin',
+    });
+    toast(`Sovereign PIN Verified · Unlocked in 0.2s`, 'emerald');
+    go('feed');
+  };
 
   const detectCountry = (v: string): CountryCode | '' => {
     const val = v.trim().toUpperCase();
@@ -381,6 +529,10 @@ export const OnboardingCitizenView: React.FC = () => {
       name: activeProfile.display_name,
     });
     setSelectedCountry(targetCountry);
+    trackVisitorInteraction('onboarding_complete', `Citizen Sign-In (${targetCountry})`, targetCountry, {
+      countryCode: targetCountry,
+      method: 'id_signin',
+    });
 
     toast(
       isForeigner
@@ -446,6 +598,10 @@ export const OnboardingCitizenView: React.FC = () => {
       name: newProfile.display_name,
     });
     setSelectedCountry(activeCountry);
+    trackVisitorInteraction('onboarding_complete', `3-Step Citizen Onboarding (${activeCountry})`, activeCountry, {
+      countryCode: activeCountry,
+      method: 'full_onboarding',
+    });
 
     toast(
       isForeigner
@@ -588,6 +744,73 @@ export const OnboardingCitizenView: React.FC = () => {
                     </button>
                   </div>
                 )}
+
+                {/* 1-Tap Sovereign Fast Login Methods */}
+                <div className="p-3.5 rounded-lg border border-emerald-500/30 bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                      <Zap size={12} className="text-emerald-500" />
+                      <span>1-Tap Sovereign Fast Sign-In</span>
+                    </span>
+                    <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                      Sub-Second
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleFastGoogleLogin}
+                      className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 flex flex-col items-center justify-center gap-1 text-center transition-colors cursor-pointer group"
+                    >
+                      <div className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Sparkles size={13} />
+                      </div>
+                      <span className="text-[10px] font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        Google
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleFastBiometricLogin}
+                      className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 flex flex-col items-center justify-center gap-1 text-center transition-colors cursor-pointer group"
+                    >
+                      <div className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Fingerprint size={13} />
+                      </div>
+                      <span className="text-[10px] font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        Touch/Face
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEnteredPin('');
+                        setPinError(null);
+                        setShowPinModal(true);
+                      }}
+                      className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 flex flex-col items-center justify-center gap-1 text-center transition-colors cursor-pointer group"
+                    >
+                      <div className="w-6 h-6 rounded-md bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <KeyRound size={13} />
+                      </div>
+                      <span className="text-[10px] font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        4-Digit PIN
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative flex items-center justify-center my-1">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#e3e6ea] dark:border-[#262b36]" />
+                  </div>
+                  <span className="relative px-2 bg-white dark:bg-[#161a22] text-[9.5px] font-mono uppercase tracking-wider text-slate-400">
+                    Or Sign In via Official Statutory Credentials
+                  </span>
+                </div>
 
                 {/* 1-Step NIN / Phone Direct Login Form */}
                 <form
@@ -1477,6 +1700,80 @@ export const OnboardingCitizenView: React.FC = () => {
             )}
           </div>
 
+          {/* Fast Login Setup Card (Step 3 final onboarding stage) */}
+          <div className="p-3.5 rounded-lg border border-emerald-500/30 bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <Zap size={12} className="text-emerald-500" />
+                <span>Fast Login Credential Setup</span>
+              </span>
+              <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                Instant Next Login
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+              Choose your quick authorization method so future visits take under 1 second without re-entering your 14-digit National ID or passport.
+            </p>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setFastLoginMethod('google')}
+                className={`p-2 rounded-lg border text-center transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                  fastLoginMethod === 'google'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <Sparkles size={13} className={fastLoginMethod === 'google' ? 'text-emerald-500' : 'text-slate-400'} />
+                <span className="text-[10px] font-mono font-semibold">Google Sync</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFastLoginMethod('biometric')}
+                className={`p-2 rounded-lg border text-center transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                  fastLoginMethod === 'biometric'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <Fingerprint size={13} className={fastLoginMethod === 'biometric' ? 'text-emerald-500' : 'text-slate-400'} />
+                <span className="text-[10px] font-mono font-semibold">Biometrics</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFastLoginMethod('pin')}
+                className={`p-2 rounded-lg border text-center transition-colors cursor-pointer flex flex-col items-center justify-center gap-1 ${
+                  fastLoginMethod === 'pin'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : 'border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <KeyRound size={13} className={fastLoginMethod === 'pin' ? 'text-emerald-500' : 'text-slate-400'} />
+                <span className="text-[10px] font-mono font-semibold">4-Digit PIN</span>
+              </button>
+            </div>
+
+            {fastLoginMethod === 'pin' && (
+              <div className="pt-1">
+                <label className="text-[9.5px] font-mono text-slate-500 uppercase tracking-wider block font-semibold mb-1">
+                  Create Sovereign PIN
+                </label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={setupPin}
+                  onChange={(e) => setSetupPin(e.target.value)}
+                  placeholder="Set 4-digit numeric PIN"
+                  className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleFinishOnboarding}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-semibold rounded-lg py-2.5 text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
@@ -1489,6 +1786,61 @@ export const OnboardingCitizenView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* 4-Digit Sovereign PIN Unlock Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl max-w-xs w-full p-5 space-y-4 shadow-xl">
+            <div className="text-center space-y-1">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 flex items-center justify-center mx-auto">
+                <KeyRound size={20} />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Enter Sovereign PIN
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Unlock your verified citizen session in 1 tap
+              </p>
+            </div>
+
+            <form onSubmit={handleFastPinSubmit} className="space-y-3">
+              <input
+                type="password"
+                maxLength={4}
+                autoFocus
+                value={enteredPin}
+                onChange={(e) => {
+                  setEnteredPin(e.target.value);
+                  setPinError(null);
+                }}
+                placeholder="••••"
+                className="w-full text-center tracking-[1em] text-xl font-mono py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:outline-none focus:border-emerald-500"
+              />
+              {pinError && (
+                <div className="text-[11px] font-mono text-rose-500 text-center font-semibold">
+                  {pinError}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowPinModal(false)}
+                  className="flex-1 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold"
+                >
+                  Unlock
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

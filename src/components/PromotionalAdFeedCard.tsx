@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CdOpsPromotionalAd } from '../types';
 import { getCountryPromotionalAds, getCountryTransitSpecs } from '../data/promotionalAds';
@@ -57,20 +57,23 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
   const transitSpec = getCountryTransitSpecs(countryCode);
 
   // Determine which of the two distinct card modes this instance represents:
-  // 1) 'transit_painting': Strictly Kayoola Bus & Train painting proposal
+  // 1) 'transit_painting': Strictly Kayoola Bus & Train painting proposal (Uganda ONLY)
   // 2) 'frontline_scouts': Directed towards Frontline Scouts (Bodaboda, Market, Taxi, Health, Youth, Artisans)
+  const isUganda = countryCode === 'UG';
   const resolvedMode: 'transit_painting' | 'frontline_scouts' =
-    campaignMode ||
-    (defaultIndex !== undefined && defaultIndex >= 2
+    !isUganda
       ? 'frontline_scouts'
-      : ad.category === 'bodaboda' ||
-        ad.category === 'market' ||
-        ad.category === 'taxi' ||
-        ad.category === 'health' ||
-        ad.category === 'teacher' ||
-        ad.category === 'artisan'
-      ? 'frontline_scouts'
-      : 'transit_painting');
+      : campaignMode ||
+        (defaultIndex !== undefined && defaultIndex >= 2
+          ? 'frontline_scouts'
+          : ad.category === 'bodaboda' ||
+            ad.category === 'market' ||
+            ad.category === 'taxi' ||
+            ad.category === 'health' ||
+            ad.category === 'teacher' ||
+            ad.category === 'artisan'
+          ? 'frontline_scouts'
+          : 'transit_painting');
 
   // Within Card 1 ('transit_painting'), indices are 0 (Kayoola Bus) or 1 (Commuter Train)
   // Within Card 2 ('frontline_scouts'), indices are 2 (Bodaboda Stage) to 7 (Artisans)
@@ -94,7 +97,12 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
       : 2;
 
   const [selectedPillarIdx, setSelectedPillarIdx] = useState<number>(initialIdx);
-  const activeAd = countryAds[selectedPillarIdx] || ad;
+
+  useEffect(() => {
+    setSelectedPillarIdx(initialIdx);
+  }, [countryCode, resolvedMode, initialIdx]);
+
+  const activeAd = countryAds[selectedPillarIdx] || countryAds[initialIdx] || ad;
 
   const activeVehicleType: GraphicVehicleType =
     selectedPillarIdx === 0
@@ -113,20 +121,20 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
       ? 'teacher'
       : 'artisan';
 
-  // Fallback map to guarantee image availability
+  // Region-isolated fallback map to guarantee zero Uganda imagery outside UG
   const POSTER_IMAGE_MAP: Record<number, string> = {
-    0: '/campaign/kayoola_kampala_street_ad.jpg',
-    1: '/campaign/train_moving_billboard_kampala.jpg',
-    2: '/campaign/boda_stage_billboard_ad.jpg',
-    3: '/campaign/market_vendors_billboard_ad.jpg',
-    4: '/campaign/taxi_park_billboard_ad.jpg',
-    5: '/campaign/health_clinic_billboard_ad.jpg',
-    6: '/campaign/school_youth_billboard_ad.jpg',
-    7: '/campaign/artisan_construction_billboard_ad.jpg',
+    0: transitSpec.busPosterSrc,
+    1: transitSpec.trainPosterSrc,
+    2: transitSpec.scoutPosterSrc,
+    3: transitSpec.marketPosterSrc,
+    4: transitSpec.taxiPosterSrc,
+    5: transitSpec.healthPosterSrc,
+    6: transitSpec.teacherPosterSrc,
+    7: transitSpec.artisanPosterSrc,
   };
 
   const effectiveImageSrc =
-    activeAd.imageSrc || activeAd.realLifePosterSrc || POSTER_IMAGE_MAP[selectedPillarIdx] || '/campaign/boda_stage_billboard_ad.jpg';
+    activeAd.imageSrc || activeAd.realLifePosterSrc || POSTER_IMAGE_MAP[selectedPillarIdx] || transitSpec.scoutPosterSrc;
 
   const handlePrimaryAction = () => {
     recordAdClick(activeAd.id);
@@ -163,25 +171,29 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
     const ussd = transitSpec.ussdCode;
     const country = transitSpec.countryName;
     const web = 'https://civicduty.site';
-    const hashtags = `#CivicDuty #SpeakServeBeHeard #${country.replace(/\s+/g, '')} #PublicAccountability #ZeroData`;
+    const hashtags = `#CivicDuty #SpeakServeBeHeard #${country.replace(/\s+/g, '')} #PublicAccountability #FrontlineScouts`;
 
     switch (activeVehicleType) {
       case 'bus':
-        return `🚨 TRANSIT PARTNERSHIP BLUEPRINT: CivicDuty × ${transitSpec.busPartnerName}!\n\nWe are funding & executing the official 3-Signal exterior painting of ${country}’s Kayoola electric bus fleet.\n\n🚌 Zero-data USSD ${ussd} empowers millions of daily commuters to report potholes, non-functional streetlights & municipal defects straight to authorities.\n\n👉 Inspect proposal: ${web}\n\n${hashtags} #KayoolaEVS #KiiraMotors`;
+        return isUganda
+          ? `🚨 TRANSIT PARTNERSHIP BLUEPRINT: CivicDuty × ${transitSpec.busPartnerName}!\n\nWe are funding & executing the official 3-Signal exterior painting of ${country}’s Kayoola electric bus fleet.\n\n🚌 Zero-data USSD ${ussd} empowers millions of daily commuters to report potholes, non-functional streetlights & municipal defects straight to authorities.\n\n👉 Inspect proposal: ${web}\n\n${hashtags} #KayoolaEVS #KiiraMotors`
+          : `🚨 TRANSIT PARTNERSHIP BLUEPRINT: CivicDuty × ${transitSpec.busPartnerName}!\n\nCivicDuty proposes high-visibility 3-Signal civic fleet branding across ${country} (${transitSpec.busRoutes}).\n\n🚌 Access via ${ussd} or ${web} empowers daily commuters to report road hazards, outages & municipal defects directly to ${transitSpec.municipalAuthority}.\n\n👉 Inspect proposal: ${web}\n\n${hashtags} #SmartCities`;
       case 'train':
-        return `🚂 MOVING BILLBOARD FOR CITIZEN EMPOWERMENT: CivicDuty × ${transitSpec.trainOperatorName}!\n\nCivicDuty proposes sandblasting and freshly painting commuter passenger trains across ${transitSpec.trainCorridors}.\n\nTurning everyday rail corridors into panoramic civic accountability billboards visible at every level crossing!\n\n📲 Dial ${ussd} (100% FREE on any basic phone)\n👉 Visit: ${web}\n\n${hashtags} #RailTransit #MovingBillboard`;
+        return `🚂 MOVING BILLBOARD FOR CITIZEN EMPOWERMENT: CivicDuty × ${transitSpec.trainOperatorName}!\n\nCivicDuty proposes 3-Signal commuter rail carriage and station concourse displays across ${transitSpec.trainCorridors}.\n\nTurning everyday rail corridors into panoramic civic accountability displays visible at every station!\n\n📲 Access: ${ussd} · 👉 Visit: ${web}\n\n${hashtags} #RailTransit #MovingBillboard`;
       case 'bodaboda':
-        return `🛵 BODA MAN: GWE BOSS W’OLUGUUDO! (Frontline Road Safety Scouts)\n\nBodaboda riders navigate every single corner of ${country}. Through CivicDuty, stages and riders report potholes, open manholes & road hazards.\n\n🎁 Top 3 Frontline Scouts in each stage receive monthly fuel & mobile data bounties!\n\n📲 DIAL ${ussd} (FREE · Works on any basic phone without bundles)\n👉 Join: ${web}\n\n${hashtags} #BodabodaScouts #RoadSafety`;
+        return isUganda
+          ? `🛵 BODA MAN: GWE BOSS W’OLUGUUDO! (Frontline Road Safety Scouts)\n\nBodaboda riders navigate every single corner of ${country}. Through CivicDuty, stages and riders report potholes, open manholes & road hazards.\n\n🎁 Top 3 Frontline Scouts in each stage receive monthly fuel & mobile data bounties!\n\n📲 DIAL ${ussd} (FREE · Works on any basic phone without bundles)\n👉 Join: ${web}\n\n${hashtags} #BodabodaScouts #RoadSafety`
+          : `🚲🛵 ${transitSpec.localSlogan}\n\n${transitSpec.stageTransportName} navigate every street across ${country}. Through CivicDuty Frontline Scouts, riders, couriers, and neighbors log potholes, lighting failures, and service hazards in 30 seconds.\n\n🎁 Verified Frontline Scouts build civic standing & partner utility bounties!\n\n📲 Access via ${ussd} or ${web}\n\n${hashtags} #RoadSafety`;
       case 'market':
-        return `🏪 MARKET VENDORS & TRADERS: DEFEND YOUR MARKET!\n\nFrom Nakasero to Owino, Kalerwe & city markets across ${country}, vendors can now report blocked drains, uncollected garbage, water outages & unfair market dues in 30 seconds.\n\n🏆 Top-ranked market traders receive monthly grocery & utility bounties!\n\n📲 Dial ${ussd} (100% FREE)\n👉 ${web}\n\n${hashtags} #MarketVendors #CleanCities`;
+        return `🏪 ${transitSpec.marketTabLabel.toUpperCase()} & TRADERS: DEFEND YOUR MARKETPLACE!\n\nAcross ${transitSpec.marketHeadlinePlaces} in ${country}, vendors and citizens can now report blocked drains, uncollected waste, water outages & facility defects in 30 seconds.\n\n🏆 Verified market monitors strengthen public accountability!\n\n📲 Access: ${ussd} · 👉 ${web}\n\n${hashtags} #MarketVendors #CleanCities`;
       case 'taxi':
-        return `🚐 TAXI & MATATU DRIVERS: HIGHWAY CORRIDOR WATCHDOGS!\n\nCommercial taxi drivers and matatu crews are the heartbeat of ${country}’s transport arteries. Log highway washouts, illegal extortion checkpoints & dangerous blackspots.\n\n⛽ Top-ranking drivers earn monthly highway transit fuel vouchers!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${hashtags} #MatatuSacco #TaxiDrivers #HighwaySafety`;
+        return `🚕🚐 ${transitSpec.taxiHeadlineLabel.toUpperCase()} (${country.toUpperCase()})!\n\n${transitSpec.taxiTabLabel} drivers keep ${country} moving every day. Log road washouts, dangerous traffic blackspots & transit delays straight to ${transitSpec.municipalAuthority}.\n\n📲 Access: ${ussd} · 👉 ${web}\n\n${hashtags} #TransitSafety #HighwayWatch`;
       case 'health':
-        return `🏥 HEALTHCARE MONITORS & PATIENTS: DEFEND YOUR CLINIC!\n\nCommunity health centers deserve continuous support. Healthcare workers and patients can now track essential medicine stockouts, triage equipment & maternity ward oxygen in real-time.\n\n💊 Health monitors receive clinical data & wellness vouchers!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${hashtags} #PublicHealth #HealthMonitors #MinistryOfHealth`;
+        return `🏥 HEALTHCARE MONITORS & PATIENTS: DEFEND YOUR CLINIC!\n\nCommunity clinics in ${country} deserve continuous accountability. Healthcare workers and patients can track supply shortages, triage equipment & power outages in real time.\n\n📲 Access: ${ussd} · 👉 ${web}\n\n${hashtags} #PublicHealth #HealthMonitors`;
       case 'teacher':
-        return `🎓 TEACHERS, STUDENTS & YOUTH SCOUTS: SAFE SCHOOL ZONES!\n\nYouth leaders and teachers are guarding our educational centers. Report dilapidated classrooms, missing desks, child crossing hazards & library needs.\n\n📚 Youth scouts receive monthly educational data bundles & stationery credits!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${hashtags} #EducationWatch #YouthLeaders #SafeSchools`;
+        return `🎓 TEACHERS, STUDENTS & YOUTH SCOUTS: SAFE SCHOOL ZONES!\n\nEducators, student leaders & parents across ${country} are guarding school neighborhoods. Report broken classrooms, crosswalk hazards & safety needs.\n\n📲 Access: ${ussd} · 👉 ${web}\n\n${hashtags} #EducationWatch #SafeSchools`;
       case 'artisan':
-        return `🏗️ ARTISANS, BUILDERS & TECHNICIANS: AUDIT PUBLIC WORKS!\n\nCalling all masons, civil technicians, plumbers & electricians! Audit substandard asphalt, unvibrated bridge concrete & delayed road culverts on public contracts.\n\n🛠️ Top workmanship inspectors earn contractor CSR tool bounties!\n\n📲 Dial ${ussd} FREE\n👉 ${web}\n\n${hashtags} #InfrastructureWatch #PublicWorks #CivilArtisans`;
+        return `🏗️ ARTISANS, ENGINEERS & BUILDERS: AUDIT PUBLIC WORKS!\n\nMasons, civil technicians, plumbers & electricians across ${country} can document substandard asphalt, delayed culverts & infrastructure quality on public contracts.\n\n📲 Access: ${ussd} · 👉 ${web}\n\n${hashtags} #InfrastructureWatch #PublicWorks`;
     }
   };
 
@@ -204,18 +216,53 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
             : 'opacity-40 saturate-50 scale-[0.99] hover:opacity-80'
         }`}
       >
-        {/* Minimal Compact Header + Multi-Category Switcher Strictly Scoped to Card Objective */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <TrafficLightLogo size={16} />
-            <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              {resolvedMode === 'transit_painting'
-                ? '1. Transit Fleet Painting Proposal'
-                : '2. Frontline Scouts Campaign'}
-            </span>
+        {/* Header + CAD/Photo View Switcher */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <TrafficLightLogo size="sm" />
+              <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 truncate">
+                {resolvedMode === 'transit_painting'
+                  ? '1. Transit Fleet Painting Proposal'
+                  : '2. Frontline Scouts Campaign'}
+              </span>
+            </div>
+
+            {/* View Mode Toggle: Live CAD Livery vs Street Billboard */}
+            <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#0e1116] p-0.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] shrink-0">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCardDisplayMode('cad');
+                }}
+                className={`px-2 py-0.5 rounded text-[9.5px] font-mono font-semibold transition-colors cursor-pointer ${
+                  cardDisplayMode === 'cad'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Livery CAD
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCardDisplayMode('poster');
+                }}
+                className={`px-2 py-0.5 rounded text-[9.5px] font-mono font-semibold transition-colors cursor-pointer ${
+                  cardDisplayMode === 'poster'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Street Photo
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#f8f9fa] dark:bg-[#0e1116] p-0.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] self-start sm:self-auto overflow-x-auto max-w-full">
+          {/* Full-Width Unclipped Category Switcher Tabs */}
+          <div className="w-full overflow-x-auto scrollbar-none bg-[#f8f9fa] dark:bg-[#0e1116] p-1 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-1">
             {resolvedMode === 'transit_painting' ? (
               <>
                 <button
@@ -224,7 +271,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                     e.stopPropagation();
                     setSelectedPillarIdx(0);
                   }}
-                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                     selectedPillarIdx === 0
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -239,7 +286,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                     e.stopPropagation();
                     setSelectedPillarIdx(1);
                   }}
-                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                     selectedPillarIdx === 1
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -250,92 +297,144 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
                 </button>
               </>
             ) : (
-              <div className="flex items-center gap-1 overflow-x-auto max-w-[280px] sm:max-w-[420px] scrollbar-none py-0.5">
-                {[
-                  { idx: 2, label: 'Bodaboda', icon: Bike },
-                  { idx: 3, label: 'Market', icon: Store },
-                  { idx: 4, label: 'Drivers', icon: Car },
-                  { idx: 5, label: 'Health', icon: Stethoscope },
-                  { idx: 6, label: 'Youth', icon: GraduationCap },
-                  { idx: 7, label: 'Artisans', icon: HardHat },
-                ].map((item) => {
-                  const ItemIcon = item.icon;
-                  const isItemActive = selectedPillarIdx === item.idx;
-                  return (
-                    <button
-                      key={item.idx}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedPillarIdx(item.idx);
-                      }}
-                      className={`px-2 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 whitespace-nowrap transition-colors cursor-pointer ${
-                        isItemActive
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <ItemIcon size={11} />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              [
+                {
+                  idx: 2,
+                  label: transitSpec.scoutTabLabel,
+                  icon: Bike,
+                },
+                {
+                  idx: 3,
+                  label: transitSpec.marketTabLabel,
+                  icon: Store,
+                },
+                {
+                  idx: 4,
+                  label: transitSpec.taxiTabLabel,
+                  icon: Car,
+                },
+                { idx: 5, label: 'Health', icon: Stethoscope },
+                { idx: 6, label: 'Youth', icon: GraduationCap },
+                { idx: 7, label: 'Artisans', icon: HardHat },
+              ].map((item) => {
+                const ItemIcon = item.icon;
+                const isItemActive = selectedPillarIdx === item.idx;
+                return (
+                  <button
+                    key={item.idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPillarIdx(item.idx);
+                    }}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                      isItemActive
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <ItemIcon size={11} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* Photographic Campaign Poster Presentation - Pure, Uncluttered, Pristine */}
-        <div
-          onClick={() => setDetailsModalOpen(true)}
-          className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#0e1116] cursor-pointer group relative"
-        >
-          <div className="relative aspect-video w-full overflow-hidden bg-slate-950 flex items-center justify-center">
-            <img
-              src={effectiveImageSrc}
-              alt={activeAd.title}
-              className="w-full h-full object-cover group-hover:scale-[1.015] transition-transform duration-500 select-none"
-              loading="lazy"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = '/campaign/kayoola_bus_partnership.jpg';
-              }}
+        {/* Media Presentation: Either Live Vector CAD Livery OR Street Photo with Dual Logos */}
+        {cardDisplayMode === 'cad' ? (
+          <div className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#0e1116] shadow-sm">
+            <KayoolaBusGraphic
+              showControls={false}
+              vehicleType={activeVehicleType}
+              countryCode={countryCode}
             />
-            {/* Minimal Unobtrusive Zoom Hint on Hover */}
-            <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
-              <button
-                type="button"
-                onClick={handleDownloadPoster}
-                className="p-1.5 rounded-lg bg-black/75 hover:bg-black text-white border border-white/20 transition-colors shadow-sm"
-                title="Download Poster Image for Social Media"
-              >
-                <Download size={12} />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDetailsModalOpen(true);
+          </div>
+        ) : (
+          <div
+            onClick={() => setDetailsModalOpen(true)}
+            className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-[#0e1116] cursor-pointer group relative"
+          >
+            <div className="relative aspect-video w-full overflow-hidden bg-slate-950 flex items-center justify-center">
+              <img
+                key={effectiveImageSrc}
+                src={effectiveImageSrc}
+                alt={activeAd.title}
+                className="w-full h-full object-cover group-hover:scale-[1.015] transition-transform duration-500 select-none"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = transitSpec.scoutPosterSrc;
                 }}
-                className="px-2.5 py-1.5 rounded-lg bg-black/75 hover:bg-black text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 border border-white/20 transition-colors shadow-sm"
-                title="View Full Resolution Poster"
-              >
-                <Maximize2 size={12} />
-                <span className="hidden sm:inline">Inspect Poster</span>
-              </button>
+              />
+
+              {/* Compact Single Brand + Jurisdiction Badge */}
+              <div className="absolute top-2.5 left-2.5">
+                <div className="px-2.5 py-1 rounded-lg bg-[#0e1116]/90 backdrop-blur-xs border border-white/15 flex items-center gap-2 shadow-md">
+                  <svg viewBox="0 0 90 30" className="w-10 h-3 shrink-0" aria-hidden="true">
+                    <circle cx="15" cy="15" r="10" fill="none" stroke="#EF4444" strokeWidth="2.5" />
+                    <circle cx="15" cy="15" r="3" fill="#F87171" />
+                    <circle cx="45" cy="15" r="10" fill="none" stroke="#F59E0B" strokeWidth="2.5" />
+                    <circle cx="45" cy="15" r="3" fill="#FDE047" />
+                    <circle cx="75" cy="15" r="10" fill="#064E3B" stroke="#10B981" strokeWidth="2.5" />
+                    <path d="M 70 15.2 L 73.8 18.8 L 80 12.2" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[10px] font-black text-white tracking-tight">CivicDuty</span>
+                  <span className="text-white/30">·</span>
+                  <span className="text-[9.5px] font-mono font-bold text-emerald-400">
+                    {transitSpec.countryCode}
+                  </span>
+                </div>
+              </div>
+
+              {/* Minimal Unobtrusive Zoom Hint on Hover */}
+              <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={handleDownloadPoster}
+                  className="p-1.5 rounded-lg bg-black/75 hover:bg-black text-white border border-white/20 transition-colors shadow-sm cursor-pointer"
+                  title="Download Poster Image for Social Media"
+                >
+                  <Download size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetailsModalOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-black/75 hover:bg-black text-white text-[10.5px] font-mono font-semibold flex items-center gap-1 border border-white/20 transition-colors shadow-sm cursor-pointer"
+                  title="View Full Resolution Poster"
+                >
+                  <Maximize2 size={12} />
+                  <span className="hidden sm:inline">Inspect Poster</span>
+                </button>
+              </div>
+
+              {/* Bottom Street Banner Overlay */}
+              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-6 flex items-center justify-between text-white">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                    Citizen-Government Interface
+                  </div>
+                  <div className="text-xs font-semibold truncate text-slate-200">
+                    {activeAd.title}
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-black px-2 py-1 rounded bg-emerald-600 text-white shadow-xs shrink-0">
+                  DIAL {transitSpec.ussdCode}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Third-Party Platform Transparency Notice */}
-        <div className="px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-[10.5px] font-mono">
-          <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-            <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
-            <span>
-              <strong>Third-Party Civic Platform:</strong> Enabling frontline scouts to verify public service standards.
-            </span>
-          </div>
-          <span className="px-2 py-0.5 rounded bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 font-bold shrink-0 border border-emerald-500/20 self-start sm:self-auto">
-            DIAL {transitSpec.ussdCode}
+        <div className="px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-2 text-[10.5px] font-mono text-slate-600 dark:text-slate-400">
+          <ShieldCheck size={13} className="text-emerald-600 shrink-0" />
+          <span>
+            <strong className="text-slate-800 dark:text-slate-200">Third-Party Civic Platform:</strong> Enabling frontline scouts to verify public service standards.
           </span>
         </div>
 
@@ -402,7 +501,7 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#e3e6ea] dark:border-[#262b36]">
               <div className="flex items-center gap-2.5">
-                <TrafficLightLogo size={24} />
+                <TrafficLightLogo size="sm" />
                 <div>
                   <span className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 font-semibold">
                     {resolvedMode === 'transit_painting'
@@ -491,11 +590,13 @@ export const PromotionalAdFeedCard: React.FC<PromotionalAdFeedCardProps> = ({
               <div className="space-y-3">
                 <div className="rounded-xl overflow-hidden border border-[#e3e6ea] dark:border-[#262b36] bg-slate-950 aspect-video flex items-center justify-center">
                   <img
+                    key={`modal-${effectiveImageSrc}`}
                     src={effectiveImageSrc}
                     alt={activeAd.title}
                     className="w-full h-full object-cover select-none"
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/campaign/boda_stage_billboard_ad.jpg';
+                      (e.currentTarget as HTMLImageElement).src = transitSpec.scoutPosterSrc;
                     }}
                   />
                 </div>

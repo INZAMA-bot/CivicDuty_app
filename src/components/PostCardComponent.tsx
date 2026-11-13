@@ -358,6 +358,14 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
 
         {/* Right: Traffic Signal Bulbs & Status Badge */}
         <div className="flex items-center gap-2 shrink-0">
+          {post.is_test_post && !post.is_demo && (
+            <span
+              className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-[#e3e6ea] dark:border-[#262b36] text-[9.5px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300"
+              title="Created during Public Beta — automatically removed when this country goes Live"
+            >
+              TEST POST
+            </span>
+          )}
           <div
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono font-bold shadow-2xs ${
               isGreen
@@ -569,19 +577,19 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               setFeedTab('near_me');
               toast(`Filtering to Parish: ${grassroots.parish}`, 'emerald');
             }}
-            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7.5px] font-mono bg-slate-100/60 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 border border-slate-200/50 dark:border-slate-800/80 hover:border-emerald-300 transition-colors cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer shrink-0"
             title="Click to view all dispatches in this locality"
           >
-            <MapPin size={7.5} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="text-[8.5px] sm:text-[9px] font-bold text-slate-900 dark:text-slate-100 truncate max-w-[105px] sm:max-w-none">
+            <MapPin size={10} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[115px] sm:max-w-none">
               {grassroots.parish}
             </span>
-            <span className="text-[6.5px] text-slate-400">·</span>
-            <span className="text-[7px] text-slate-500 dark:text-slate-400 truncate max-w-[80px] sm:max-w-none">
+            <span className="text-slate-400">·</span>
+            <span className="truncate max-w-[85px] sm:max-w-none hidden xs:inline sm:inline">
               {grassroots.subcounty}
             </span>
-            <span className="text-[6.5px] text-slate-400">·</span>
-            <span className="text-[6.5px] text-slate-400 dark:text-slate-500 truncate max-w-[70px] sm:max-w-none">
+            <span className="text-slate-400 hidden sm:inline">·</span>
+            <span className="truncate max-w-[80px] sm:max-w-none hidden sm:inline">
               {grassroots.district}
             </span>
           </button>
@@ -779,6 +787,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               <MediaCard
                 media={filteredMedia}
                 postId={post.id}
+                countryCode={post.country}
                 voiceNote={post.voice_note}
                 onToast={(msg) => toast(msg)}
               />
@@ -860,8 +869,8 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             {ratifyTimeRemaining && (
               <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 font-mono text-[10px] text-amber-900 dark:text-amber-300">
                 <span className="flex items-center gap-1.5 font-bold">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                  <span>⏱️ 72h Ratification: <strong>{ratifyTimeRemaining} remaining</strong></span>
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <span>72h Ratification: <strong>{ratifyTimeRemaining} remaining</strong></span>
                 </span>
                 <button
                   type="button"

@@ -1018,10 +1018,15 @@ export const DEPARTMENTS: Record<string, { civic: Department[]; consumer: Depart
   },
   RW: {
     civic: [
-      { id: 'reg', name: 'REG', full: 'Rwanda Energy Group', icon: 'zap', ministry: 'Ministry of Infrastructure', sla: 48, category: 'utility', sector: 'Power Grid', trustScore: 94, verified: true },
-      { id: 'wasac', name: 'WASAC', full: 'Water & Sanitation Corp Rwanda', icon: 'droplets', ministry: 'Ministry of Infrastructure', sla: 48, category: 'utility', sector: 'Clean Water Network', trustScore: 92, verified: true },
-      { id: 'rnp', name: 'Rwanda Police', full: 'Rwanda National Police', icon: 'scale', ministry: 'Min. Internal Security', sla: 24, category: 'government', sector: 'National Police', trustScore: 96, verified: true },
-      { id: 'cob_rw', name: 'City of Kigali', full: 'City of Kigali Administration', icon: 'landmark', ministry: 'Kigali City', sla: 48, category: 'government', sector: 'Urban Governance', trustScore: 95, verified: true },
+      { id: 'minaloc_rw', name: 'MINALOC', full: 'Ministry of Local Government (MINALOC)', icon: 'landmark', ministry: 'Ministry of Local Government', sla: 48, category: 'government', sector: 'Territorial Administration & Local Governance', trustScore: 97, verified: true },
+      { id: 'cob_rw', name: 'City of Kigali', full: 'City of Kigali Administration (Umujyi wa Kigali)', icon: 'landmark', ministry: 'Kigali City', sla: 48, category: 'government', sector: 'Metropolitan Infrastructure & Sanitation', trustScore: 96, verified: true },
+      { id: 'reg', name: 'REG', full: 'Rwanda Energy Group (REG / EUCL)', icon: 'zap', ministry: 'Ministry of Infrastructure', sla: 48, category: 'utility', sector: 'National Power Grid & Metering', trustScore: 94, verified: true },
+      { id: 'wasac', name: 'WASAC', full: 'Water & Sanitation Corp Rwanda', icon: 'droplets', ministry: 'Ministry of Infrastructure', sla: 48, category: 'utility', sector: 'Potable Water Network', trustScore: 92, verified: true },
+      { id: 'rtda_rw', name: 'RTDA', full: 'Rwanda Transport Development Agency', icon: 'bus', ministry: 'Ministry of Infrastructure', sla: 48, category: 'government', sector: 'National Arterials & Pothole Sealing', trustScore: 93, verified: true },
+      { id: 'rnp', name: 'Rwanda Police', full: 'Rwanda National Police (Traffic & Safety)', icon: 'scale', ministry: 'Min. Internal Security', sla: 24, category: 'government', sector: 'National Police & Road Safety', trustScore: 97, verified: true },
+      { id: 'rura_rw', name: 'RURA', full: 'Rwanda Utilities Regulatory Authority', icon: 'shield-check', ministry: 'Office of the Prime Minister', sla: 48, category: 'government', sector: 'Telecom, Energy & Transport Regulation', trustScore: 95, verified: true },
+      { id: 'rgb_rw', name: 'RGB', full: 'Rwanda Governance Board (Citizen Report Card)', icon: 'shield-check', ministry: 'Office of the President', sla: 48, category: 'government', sector: 'Public Service Accountability & Governance Audit', trustScore: 98, verified: true },
+      { id: 'rra_rw', name: 'RRA', full: 'Rwanda Revenue Authority', icon: 'landmark', ministry: 'Ministry of Finance & Econ. Planning', sla: 72, category: 'government', sector: 'Tax Administration & E-Tax Integrity', trustScore: 96, verified: true },
     ],
     consumer: [
       { id: 'ur_rwanda', name: 'Univ. of Rwanda', full: 'University of Rwanda (Campuses & Research)', sla: 48, icon: 'graduation-cap', category: 'education', sector: 'Higher Education', trustScore: 92, verified: true },

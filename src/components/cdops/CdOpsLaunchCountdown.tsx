@@ -205,6 +205,17 @@ const INITIAL_LAUNCH_ITEMS: LaunchChecklistItem[] = [
     targetLabel: 'Open Ministerial Desk',
     defaultDone: true,
   },
+  {
+    id: 'reg-rwanda-rdb',
+    category: 'sovereign_hierarchy',
+    title: '13C. Rwanda Inaugural Legal Incorporation (RDB REG-2026-181906)',
+    description:
+      'CivicDuty Technologies Limited officially incorporated under Rwanda Development Board (RDB). Statutory operating vehicle approved for City of Kigali, REG, WASAC, and Kigali commercial rollouts.',
+    statusNote: 'Approved & Incorporated (REG-2026-181906)',
+    targetView: 'depts',
+    targetLabel: 'Inspect Rwanda Registry',
+    defaultDone: true,
+  },
 
   // Category 3: Cryptographic Audit & Statutory Security
   {

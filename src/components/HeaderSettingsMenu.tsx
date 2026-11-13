@@ -259,41 +259,77 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
             </div>
           )}
 
-          {/* 5. Documentation & Quick Consoles (Strictly Guarded on Splash Homepage) */}
-          <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-1">
+          {/* 5. Documentation & Quick Consoles */}
+          <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
             <div className="flex items-center justify-between pb-0.5">
               <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Documentation &amp; Consoles
               </span>
               {isSplash && (
-                <span className="text-[9px] font-mono text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
-                  <Shield size={10} />
-                  <span>RESTRICTED</span>
+                <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                  Open Public Beta
                 </span>
               )}
             </div>
 
             {isSplash ? (
-              /* Restricted Docs Trigger for Homepage: Requires Master Key Authorization */
               <div className="space-y-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      go('docs');
+                    }}
+                    className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <BookOpen size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="truncate">Docs</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      openGuide('quickstart');
+                    }}
+                    className="min-h-[40px] px-2.5 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <HelpCircle size={13} strokeWidth={1.75} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="truncate">Field Guide</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    go('ussd');
+                  }}
+                  className="w-full min-h-[38px] px-3 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] text-xs font-mono font-medium text-slate-700 dark:text-slate-200 flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <Terminal size={13} strokeWidth={1.75} className="text-amber-500 shrink-0" />
+                    <span>Zero-Data USSD Simulator</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">*3030#</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
                     setOpen(false);
                     window.dispatchEvent(
-                      new CustomEvent('civicduty_open_master_auth', { detail: { target: 'docs' } })
+                      new CustomEvent('civicduty_open_master_auth', { detail: { target: 'company_management' } })
                     );
                   }}
-                  className="w-full min-h-[40px] px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15 text-xs font-mono font-semibold text-amber-800 dark:text-amber-300 flex items-center justify-between transition-colors cursor-pointer"
-                  title="Master Key Required to View Architecture & Documentation"
+                  className="w-full min-h-[36px] px-3 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] hover:border-slate-400 text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center justify-between transition-colors cursor-pointer"
                 >
-                  <span className="flex items-center gap-2">
-                    <BookOpen size={13} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span>Technical Architecture &amp; Docs</span>
+                  <span className="flex items-center gap-1.5">
+                    <Shield size={12} strokeWidth={1.75} />
+                    <span>Founder CD-Ops Console</span>
                   </span>
-                  <span className="text-[9.5px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-900 dark:text-amber-200 font-bold">
-                    Key Required
-                  </span>
+                  <span className="text-[9.5px] uppercase tracking-wider">Master Key</span>
                 </button>
               </div>
             ) : (

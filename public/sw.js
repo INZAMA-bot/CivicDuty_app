@@ -1,4 +1,4 @@
-const CACHE_NAME = 'civicduty-v1';
+const CACHE_NAME = 'civicduty-v4-20261114';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -30,9 +30,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network first, falling back to cache
   if (event.request.method !== 'GET') return;
-  // Skip non-http(s) or extension requests
   if (!event.request.url.startsWith('http')) return;
 
   event.respondWith(

@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { CountryCode } from '../types';
+import {
+  getCountryPerkProfile,
+  getCurrencyForCountry,
+  getUsdRateForCurrency,
+  roundFriendlyCurrencyAmount,
+} from '../data/countryCurrency';
 import {
   FrontlineStage,
   FrontlineScoutCategory,
@@ -66,12 +73,29 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     }
   };
 
+  const cc = (country || 'UG').toUpperCase() as CountryCode;
+  const activeCurrency = getCurrencyForCountry(cc);
+  const currencyRate = getUsdRateForCurrency(activeCurrency);
+  const perkProfile = useMemo(() => getCountryPerkProfile(cc), [cc]);
+  const presetSponsorAmounts = useMemo(
+    () => [7, 14, 28, 70].map((usd) => roundFriendlyCurrencyAmount(usd * currencyRate, activeCurrency)),
+    [currencyRate, activeCurrency]
+  );
+  const minSponsorAmount = useMemo(
+    () => roundFriendlyCurrencyAmount(2 * currencyRate, activeCurrency),
+    [currencyRate, activeCurrency]
+  );
+
   // Patron Sponsor Form State
   const [patronName, setPatronName] = useState('');
   const [diasporaCity, setDiasporaCity] = useState('');
-  const [sponsorAmount, setSponsorAmount] = useState<number>(50000);
+  const [sponsorAmount, setSponsorAmount] = useState<number>(presetSponsorAmounts[1] || 50000);
   const [customAmount, setCustomAmount] = useState('');
   const [sponsorSuccessMessage, setSponsorSuccessMessage] = useState('');
+
+  useEffect(() => {
+    setSponsorAmount(presetSponsorAmounts[1] || 50000);
+  }, [presetSponsorAmounts]);
 
   const refreshStages = () => {
     setStages(getStoredStages());
@@ -115,8 +139,8 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     if (!sponsorModalStage) return;
 
     const amount = customAmount ? parseInt(customAmount, 10) : sponsorAmount;
-    if (isNaN(amount) || amount < 5000) {
-      toast('Minimum sponsorship amount is 5,000 UGX', 'amber');
+    if (isNaN(amount) || amount < minSponsorAmount) {
+      toast(`Minimum sponsorship amount is ${minSponsorAmount.toLocaleString()} ${activeCurrency}`, 'amber');
       return;
     }
 
@@ -130,9 +154,9 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     if (updated) {
       setStages(getStoredStages());
       setSponsorSuccessMessage(
-        `Successfully sponsored ${amount.toLocaleString()} UGX to ${updated.name}! Funds are locked to ${updated.parish} Top-3 scouts.`
+        `Successfully sponsored ${amount.toLocaleString()} ${activeCurrency} to ${updated.name}! Funds are locked to ${updated.parish} Top-3 scouts.`
       );
-      toast(`Sponsored ${amount.toLocaleString()} UGX to ${updated.name}!`, 'emerald');
+      toast(`Sponsored ${amount.toLocaleString()} ${activeCurrency} to ${updated.name}!`, 'emerald');
       setTimeout(() => {
         setSponsorModalStage(null);
         setSponsorSuccessMessage('');
@@ -357,7 +381,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                       Station Vault Pool:
                     </span>
                     <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {stage.patronSponsorPoolUgx.toLocaleString()} UGX
+                      {stage.patronSponsorPoolUgx.toLocaleString()} {activeCurrency}
                     </span>
                   </div>
 
@@ -417,7 +441,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                           {scout.name.split(' ')[0]}
                         </div>
                         <div className="text-emerald-700 dark:text-emerald-400 font-bold text-[9.5px]">
-                          {scout.bountyShareUgx.toLocaleString()} U
+                          {scout.bountyShareUgx.toLocaleString()} {activeCurrency}
                         </div>
                       </div>
                     ))}
@@ -533,10 +557,10 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                 {/* Preset Amount Chips */}
                 <div>
                   <label className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1.5">
-                    Sponsor Amount (UGX)
+                    Sponsor Amount ({activeCurrency})
                   </label>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {[25000, 50000, 100000, 250000].map((amt) => (
+                    {presetSponsorAmounts.map((amt) => (
                       <button
                         key={amt}
                         type="button"
@@ -550,7 +574,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                             : 'bg-white dark:bg-[#12161f] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-amber-500'
                         }`}
                       >
-                        {(amt / 1000).toFixed(0)}k UGX
+                        {amt >= 10000 && amt % 1000 === 0 ? `${Math.round(amt / 1000)}k` : amt.toLocaleString()} {activeCurrency}
                       </button>
                     ))}
                   </div>
@@ -559,7 +583,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                     type="number"
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
-                    placeholder="Or enter custom amount (e.g. 150000)"
+                    placeholder={`Or enter custom amount (${activeCurrency})`}
                     className="mt-2 w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
@@ -574,7 +598,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                       type="text"
                       value={patronName}
                       onChange={(e) => setPatronName(e.target.value)}
-                      placeholder="e.g. Dr. James Byamukama / Kampala Hardware SACCO"
+                      placeholder={`e.g. ${perkProfile.sampleSponsor}`}
                       className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                     />
                   </div>
@@ -587,7 +611,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                       type="text"
                       value={diasporaCity}
                       onChange={(e) => setDiasporaCity(e.target.value)}
-                      placeholder="e.g. London UK / Boston USA / Kampala Local"
+                      placeholder={`e.g. London UK / ${perkProfile.countryName} Local`}
                       className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                     />
                   </div>
@@ -599,7 +623,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                 >
                   <DollarSign size={14} />
                   <span>
-                    Confirm {customAmount ? parseInt(customAmount, 10).toLocaleString() : sponsorAmount.toLocaleString()} UGX Sponsorship
+                    Confirm {customAmount ? parseInt(customAmount, 10).toLocaleString() : sponsorAmount.toLocaleString()} {activeCurrency} Sponsorship
                   </span>
                 </button>
               </form>

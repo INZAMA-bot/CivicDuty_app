@@ -404,6 +404,7 @@ export interface Post {
   is_master_dossier?: boolean;
   merged_from_ids?: string[];
   is_demo?: boolean;
+  is_test_post?: boolean;
   demo_highlight?: string;
   reposts?: number;
   quote_of?: {
@@ -1349,6 +1350,41 @@ export interface TownHallHandRaise {
   raised_at: string;
 }
 
+export type CountryLaunchStatus = 'public_beta' | 'live';
 
+export interface CountryAnalyticsMetrics {
+  countryCode: CountryCode;
+  entries: number;
+  uniqueVisitors: number;
+  portalClicks: number;
+  govClicks: number;
+  providerClicks: number;
+  onboardingCompletes: number;
+  testPostsCreated: number;
+  ussdLaunches: number;
+  crowdfundClicks: number;
+  partnerClicks: number;
+  feedbackCount: number;
+  lastActiveAt: string;
+}
 
+export type TesterFeedbackCategory =
+  | 'Governance Hierarchy'
+  | 'Local Brands / Utilities'
+  | 'UI / UX Suggestion'
+  | 'Bug Report'
+  | 'Partnership Inquiry';
 
+export interface TesterFeedbackItem {
+  id: string;
+  docType: 'tester_feedback';
+  countryCode: CountryCode;
+  countryName: string;
+  view: string;
+  category: TesterFeedbackCategory;
+  message: string;
+  contact?: string;
+  device: 'mobile' | 'desktop' | 'tablet';
+  referrer: string;
+  createdAt: string;
+}

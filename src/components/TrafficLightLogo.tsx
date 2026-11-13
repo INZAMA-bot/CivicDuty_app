@@ -78,7 +78,7 @@ export const TrafficLightLogo: React.FC<TrafficLightLogoProps> = ({
         {/* Official Vector Logo SVG */}
         <svg
           viewBox="0 0 360 120"
-          className="w-full h-full object-contain filter drop-shadow-md transition-all duration-300"
+          className="w-full h-full object-contain overflow-visible filter drop-shadow-md transition-all duration-300"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           role="img"
@@ -122,10 +122,10 @@ export const TrafficLightLogo: React.FC<TrafficLightLogoProps> = ({
           <g
             className={`transition-all duration-200 cursor-pointer origin-[290px_60px] ${
               hoveredSignal === 'green'
-                ? 'scale-110 filter drop-shadow-[0_0_14px_rgba(16,185,129,0.85)]'
+                ? 'scale-110 filter drop-shadow-[0_0_16px_rgba(16,185,129,0.95)]'
                 : hoveredSignal
                 ? 'opacity-50 scale-95'
-                : 'hover:scale-105'
+                : 'hover:scale-105 filter drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]'
             }`}
             onMouseEnter={() => setHoveredSignal('green')}
             onMouseLeave={() => setHoveredSignal(null)}

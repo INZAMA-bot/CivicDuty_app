@@ -37,8 +37,8 @@ export const GovBillingView: React.FC = () => {
   const { user, invoices, recordInvoicePayment, go, toast } = useApp();
 
   const [activeTab, setActiveTab] = useState<'status' | 'invoices' | 'pay' | 'integrations' | 'uganda_wealth'>('status');
-  const [payMethod, setPayMethod] = useState<'momo' | 'airtel' | 'flutterwave' | 'stripe'>('momo');
-  const [currency, setCurrency] = useState<'USD' | 'UGX' | 'KES' | 'NGN' | 'GHS' | 'RWF' | 'ZAR'>('UGX');
+  const [payMethod, setPayMethod] = useState<'momo' | 'airtel' | 'paypack' | 'flutterwave' | 'stripe'>('paypack');
+  const [currency, setCurrency] = useState<'USD' | 'UGX' | 'KES' | 'NGN' | 'GHS' | 'RWF' | 'ZAR'>('RWF');
   const [customAmount, setCustomAmount] = useState<string>('1500000');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
   const [momoPhone, setMomoPhone] = useState('+256778277900');
@@ -94,10 +94,10 @@ export const GovBillingView: React.FC = () => {
           currency: currency,
           provider: payMethod,
           paymentMethod: payMethod,
-          payerPhoneOrEmail: payMethod.includes('momo') || payMethod.includes('airtel') ? momoPhone : payerEmail,
+          payerPhoneOrEmail: payMethod.includes('momo') || payMethod.includes('airtel') || payMethod === 'paypack' ? momoPhone : payerEmail,
           payerPhone: momoPhone,
           payerEmail: payerEmail,
-          channel: payMethod === 'momo' || payMethod === 'airtel' ? 'mobile_money' : 'card',
+          channel: payMethod === 'momo' || payMethod === 'airtel' || payMethod === 'paypack' ? 'mobile_money' : 'card',
         }),
       });
 
@@ -298,33 +298,19 @@ export const GovBillingView: React.FC = () => {
             </div>
 
             {/* Provider Selector */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <button
                 type="button"
-                onClick={() => setPayMethod('momo')}
+                onClick={() => setPayMethod('paypack')}
                 className={`p-3 rounded-2xl border text-left transition-all ${
-                  payMethod === 'momo'
-                    ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20'
+                  payMethod === 'paypack'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20'
                     : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
                 }`}
               >
-                <Smartphone size={18} className="mb-1 text-amber-500" />
-                <div className="text-xs font-black">MTN MoMo</div>
-                <div className="text-[10px] text-slate-400">UG, RW, GH, NG</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPayMethod('airtel')}
-                className={`p-3 rounded-2xl border text-left transition-all ${
-                  payMethod === 'airtel'
-                    ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/20'
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                }`}
-              >
-                <Smartphone size={18} className="mb-1 text-rose-500" />
-                <div className="text-xs font-black">Airtel Money</div>
-                <div className="text-[10px] text-slate-400">Pan-Africa USSD</div>
+                <Smartphone size={18} className="mb-1 text-emerald-500" />
+                <div className="text-xs font-black">Paypack RW</div>
+                <div className="text-[10px] text-slate-400">MTN &amp; Airtel RWF</div>
               </button>
 
               <button
@@ -339,6 +325,34 @@ export const GovBillingView: React.FC = () => {
                 <Globe size={18} className="mb-1 text-orange-500" />
                 <div className="text-xs font-black">Flutterwave v3</div>
                 <div className="text-[10px] text-slate-400">Cards &amp; Bank Wire</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPayMethod('momo')}
+                className={`p-3 rounded-2xl border text-left transition-all ${
+                  payMethod === 'momo'
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                }`}
+              >
+                <Smartphone size={18} className="mb-1 text-amber-500" />
+                <div className="text-xs font-black">MTN MoMo</div>
+                <div className="text-[10px] text-slate-400">UG, RW (*182#)</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPayMethod('airtel')}
+                className={`p-3 rounded-2xl border text-left transition-all ${
+                  payMethod === 'airtel'
+                    ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/20'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                }`}
+              >
+                <Smartphone size={18} className="mb-1 text-rose-500" />
+                <div className="text-xs font-black">Airtel Money</div>
+                <div className="text-[10px] text-slate-400">Pan-Africa USSD</div>
               </button>
 
               <button
@@ -404,16 +418,18 @@ export const GovBillingView: React.FC = () => {
             </div>
 
             {/* Payer Details */}
-            {(payMethod === 'momo' || payMethod === 'airtel') ? (
+            {(payMethod === 'momo' || payMethod === 'airtel' || payMethod === 'paypack') ? (
               <div>
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  Authorized Signer Mobile Number (for USSD Prompt)
+                  {payMethod === 'paypack'
+                    ? 'Rwandan Signer Mobile Number (MTN MoMo *182# or Airtel)'
+                    : 'Authorized Signer Mobile Number (for USSD Prompt)'}
                 </label>
                 <input
                   type="text"
                   value={momoPhone}
                   onChange={(e) => setMomoPhone(e.target.value)}
-                  placeholder="+256778277900"
+                  placeholder={payMethod === 'paypack' ? '+250788123456' : '+256778277900'}
                   className="w-full text-xs font-mono p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
                 />
               </div>

@@ -1,4 +1,5 @@
 import { MerchantProductService, CountryCode } from '../types';
+import { getLocalizedMerchantProductsForCountry, getCountryPerkProfile } from './countryCurrency';
 
 export const INITIAL_MERCHANT_PRODUCTS: MerchantProductService[] = [
   // --- UGANDA: KAMPALA / WAKISO PARISHES (12 CATEGORIES) ---
@@ -534,11 +535,21 @@ export function saveStoredMerchantProduct(product: MerchantProductService): void
 export function filterMerchantProductsByLocation(
   products: MerchantProductService[],
   targetCountry: CountryCode,
-  targetParish?: string
+  targetParish?: string,
+  parishOptions?: string[]
 ): { exactParish: MerchantProductService[]; widerJurisdiction: MerchantProductService[] } {
-  const countryFiltered = products.filter(
+  const staticFiltered = products.filter(
     (p) => p.country.toUpperCase() === targetCountry.toUpperCase() && p.active
   );
+  const countryFiltered =
+    staticFiltered.length > 0
+      ? staticFiltered
+      : getLocalizedMerchantProductsForCountry(
+          targetCountry,
+          parishOptions && parishOptions.length > 0
+            ? parishOptions
+            : [targetParish || getCountryPerkProfile(targetCountry).defaultParish]
+        );
 
   if (!targetParish || targetParish.trim() === '' || targetParish.toLowerCase().includes('all')) {
     return {

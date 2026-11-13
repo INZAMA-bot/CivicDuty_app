@@ -43,6 +43,11 @@ import {
   saveStoredMerchantProduct,
   calculateVoucherEconomics,
 } from '../data/merchantLoyaltyData';
+import {
+  getCountryPerkProfile,
+  convertUsdToLocal,
+  getLocalizedMerchantProductsForCountry,
+} from '../data/countryCurrency';
 
 interface MerchantLoyaltyStudioProps {
   selectedCountry: CountryCode;
@@ -65,14 +70,40 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
 
   const [studioSubTab, setStudioSubTab] = useState<'create' | 'pos_scanner' | 'catalog'>('create');
 
+  const perkProfile = useMemo(() => getCountryPerkProfile(selectedCountry), [selectedCountry]);
+  const sampleServicePrice = useMemo(() => convertUsdToLocal(12, selectedCountry), [selectedCountry]);
+  const sampleCashbackReturn = useMemo(() => convertUsdToLocal(2, selectedCountry), [selectedCountry]);
+
   // Form State for Voucher Creation
   const [merchantName, setMerchantName] = useState(() => {
     if (activeMerchantDept) {
       const d = getDept(selectedCountry, activeMerchantDept);
       if (d) return d.name;
     }
-    return user?.organization_name || user?.name ? `${user.organization_name || user.name} Services` : 'Kireka Beauty & Hair Salon';
+    return user?.organization_name || user?.name ? `${user.organization_name || user.name} Services` : `${perkProfile.defaultParish.split(' ')[0]} Community Services`;
   });
+
+  const [category, setCategory] = useState<string>('beauty_personal_care');
+  const [parish, setParish] = useState<string>(() => {
+    return user?.scope_label && user.scope_label.toLowerCase().includes('parish')
+      ? user.scope_label
+      : perkProfile.defaultParish;
+  });
+  const [subCounty, setSubCounty] = useState<string>(`${perkProfile.countryName} Metro`);
+  const [district, setDistrict] = useState<string>(perkProfile.countryName);
+  const [address, setAddress] = useState<string>('Main Commercial High Street');
+  const [productTitle, setProductTitle] = useState<string>('Hair Braiding & Scalp Steaming Treatment');
+  const [basePrice, setBasePrice] = useState<number>(sampleServicePrice.amount);
+  const [rewardType, setRewardType] = useState<MerchantVoucherRewardType>('discount');
+  const [discountPercent, setDiscountPercent] = useState<number>(20);
+  const [freebieItem, setFreebieItem] = useState<string>('Free Herbal Hair Wash & Scalp Massage');
+  const [bogoQuantity, setBogoQuantity] = useState<string>('Buy 1 Enriched Family Loaf, Get 1 Free');
+  const [giftItem, setGiftItem] = useState<string>('High-Performance Spark Plug & Chain Lube Free');
+  const [cashbackSpend, setCashbackSpend] = useState<number>(sampleServicePrice.amount);
+  const [cashbackReturn, setCashbackReturn] = useState<number>(sampleCashbackReturn.amount);
+  const [rewardDescription, setRewardDescription] = useState<string>(
+    'Professional service voucher redeemable at store checkout for verified community winners.'
+  );
 
   useEffect(() => {
     if (activeMerchantDept) {
@@ -80,29 +111,16 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
       if (d) {
         setMerchantName(d.name);
       }
+    } else if (!user?.organization_name && !user?.name) {
+      setMerchantName(`${perkProfile.defaultParish.split(' ')[0]} Community Services`);
     }
-  }, [activeMerchantDept, selectedCountry]);
-  const [category, setCategory] = useState<string>('beauty_personal_care');
-  const [parish, setParish] = useState<string>(() => {
-    return user?.scope_label && user.scope_label.toLowerCase().includes('parish')
-      ? user.scope_label
-      : selectedCountry === 'KE' ? 'Kilimani Ward' : 'Kitintale Parish';
-  });
-  const [subCounty, setSubCounty] = useState<string>(selectedCountry === 'KE' ? 'Dagoretti North' : 'Nakawa Division');
-  const [district, setDistrict] = useState<string>(selectedCountry === 'KE' ? 'Nairobi County' : 'Kampala');
-  const [address, setAddress] = useState<string>('Plot 14, Main Commercial Street');
-  const [productTitle, setProductTitle] = useState<string>('Hair Braiding & Scalp Steaming Treatment');
-  const [basePrice, setBasePrice] = useState<number>(selectedCountry === 'KE' ? 1500 : 50000);
-  const [rewardType, setRewardType] = useState<MerchantVoucherRewardType>('discount');
-  const [discountPercent, setDiscountPercent] = useState<number>(20);
-  const [freebieItem, setFreebieItem] = useState<string>('Free Herbal Hair Wash & Scalp Massage');
-  const [bogoQuantity, setBogoQuantity] = useState<string>('Buy 1 Enriched Family Loaf, Get 1 Free');
-  const [giftItem, setGiftItem] = useState<string>('High-Performance Spark Plug & Chain Lube Free');
-  const [cashbackSpend, setCashbackSpend] = useState<number>(selectedCountry === 'KE' ? 1500 : 50000);
-  const [cashbackReturn, setCashbackReturn] = useState<number>(selectedCountry === 'KE' ? 150 : 5000);
-  const [rewardDescription, setRewardDescription] = useState<string>(
-    'Professional salon service covering box braids, treatment & wash for verified community winners.'
-  );
+    setParish(perkProfile.defaultParish);
+    setSubCounty(`${perkProfile.countryName} Metro`);
+    setDistrict(perkProfile.countryName);
+    setBasePrice(sampleServicePrice.amount);
+    setCashbackSpend(sampleServicePrice.amount);
+    setCashbackReturn(sampleCashbackReturn.amount);
+  }, [activeMerchantDept, selectedCountry, perkProfile, sampleServicePrice.amount, sampleCashbackReturn.amount, user?.organization_name, user?.name]);
 
   // POS Scanner State
   const [scannerCodeInput, setScannerCodeInput] = useState<string>('');
@@ -132,7 +150,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
   // Local products list state
   const [productsList, setProductsList] = useState<MerchantProductService[]>(() => getStoredMerchantProducts());
 
-  const currency = selectedCountry === 'KE' ? 'KES' : selectedCountry === 'NG' ? 'NGN' : 'UGX';
+  const currency = perkProfile.currency;
 
   // Calculate Voucher Face Value / Price based on reward type
   const calculatedVoucherCost = useMemo(() => {
@@ -177,7 +195,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
       merchantId: activeMerchantDept || user?.id || `merch_${Date.now()}`,
       merchantName: merchantName.trim(),
       category,
-      parish: parish.trim() || 'Kitintale Parish',
+      parish: parish.trim() || perkProfile.defaultParish,
       subCounty: subCounty.trim(),
       district: district.trim(),
       address: address.trim(),
@@ -195,8 +213,8 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
       merchantPayoutAmount: economics.merchantPayoutAmount,
       payoutStatus: 'escrowed',
       qrCodePayload: `CIVIC-${merchantName.slice(0, 4).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      barcode: `${selectedCountry === 'KE' ? '710' : '890'}${Math.floor(100000000 + Math.random() * 900000000)}`,
-      ussdCode: `*303*${Math.floor(1000 + Math.random() * 9000)}#`,
+      barcode: `${perkProfile.barcodePrefix}${Math.floor(100000000 + Math.random() * 900000000)}`,
+      ussdCode: perkProfile.ussdDial,
       smsCode: `${merchantName.slice(0, 4).toUpperCase()}${Math.floor(100 + Math.random() * 900)}`,
       active: true,
       createdAt: new Date().toISOString(),
@@ -257,7 +275,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
         setPosReceipt({
           voucherCode: data.voucher.voucherCode,
           customerName: data.voucher.dispatchedTo?.recipientName || 'Verified Citizen Winner',
-          customerContact: data.voucher.dispatchedTo?.recipientContact || '+256 770 000 000',
+          customerContact: data.voucher.dispatchedTo?.recipientContact || perkProfile.samplePhone,
           itemTitle: data.voucher.title,
           faceValue: data.voucher.faceValue,
           currency: data.voucher.currency,
@@ -298,7 +316,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
           setPosReceipt({
             voucherCode: updated.voucherCode,
             customerName: updated.dispatchedTo?.recipientName || 'Verified Citizen Winner',
-            customerContact: updated.dispatchedTo?.recipientContact || '+256 770 000 000',
+            customerContact: updated.dispatchedTo?.recipientContact || perkProfile.samplePhone,
             itemTitle: updated.title,
             faceValue: updated.faceValue,
             currency: updated.currency,
@@ -323,10 +341,12 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
   };
 
   const filteredCatalog = useMemo(() => {
-    return productsList.filter(
+    const staticMatches = productsList.filter(
       (p) => p.country.toUpperCase() === selectedCountry.toUpperCase()
     );
-  }, [productsList, selectedCountry]);
+    if (staticMatches.length > 0) return staticMatches;
+    return getLocalizedMerchantProductsForCountry(selectedCountry, [parish]);
+  }, [productsList, selectedCountry, parish]);
 
   return (
     <div className="space-y-4 animate-fade-in text-slate-900 dark:text-slate-100">
@@ -419,7 +439,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                     type="text"
                     value={merchantName}
                     onChange={(e) => setMerchantName(e.target.value)}
-                    placeholder="e.g. Kireka Beauty Salon &amp; Spa"
+                    placeholder={`e.g. ${perkProfile.supermarketBrand}`}
                     className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                     required
                   />
@@ -451,7 +471,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                     type="text"
                     value={parish}
                     onChange={(e) => setParish(e.target.value)}
-                    placeholder="e.g. Kitintale Parish or Kireka"
+                    placeholder={`e.g. ${perkProfile.defaultParish}`}
                     className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                     required
                   />
@@ -465,7 +485,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="e.g. Plot 14, Opposite Shell"
+                    placeholder="e.g. Main High Street, Opposite Station"
                     className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-medium focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -523,7 +543,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                       <option value="freebie">🎁 Freebie (e.g. Buy haircut get free wash)</option>
                       <option value="bogo">🔄 BOGO (Buy 1 get 1 free)</option>
                       <option value="gift">🛍️ Gift (Buy product X, get prize/product Y free)</option>
-                      <option value="cashback">💰 Cashback (Spend 50k get 5k voucher next time)</option>
+                      <option value="cashback">💰 Cashback (Spend {sampleServicePrice.compact} get {sampleCashbackReturn.compact})</option>
                     </select>
                   </div>
                 </div>
@@ -684,13 +704,13 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                       <div className="font-bold text-slate-800 dark:text-slate-200">
                         CIVIC-VCH-{merchantName.slice(0, 4).toUpperCase()}
                       </div>
-                      <div className="text-slate-500">USSD: *303*CODE#</div>
+                      <div className="text-slate-500">USSD: {perkProfile.ussdDial}</div>
                       <div className="text-emerald-600 font-semibold">Ready for Mobile Scan</div>
                     </div>
                   </div>
                   <div className="text-right font-mono text-[9px] text-slate-400 space-y-1">
                     <div className="tracking-widest">||| | || |||| |</div>
-                    <div>890124458921</div>
+                    <div>{perkProfile.barcodePrefix}124458921</div>
                   </div>
                 </div>
 
@@ -776,7 +796,7 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                     type="text"
                     value={scannerCodeInput}
                     onChange={(e) => setScannerCodeInput(e.target.value)}
-                    placeholder="e.g. SHOP-1000KSH-... or CIVIC-VCH-..."
+                    placeholder={`e.g. SHOP-${selectedCountry}-8820 or CIVIC-VCH-...`}
                     className="flex-1 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-bold focus:outline-none focus:border-emerald-500"
                   />
                   <button

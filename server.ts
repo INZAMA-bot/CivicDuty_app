@@ -451,10 +451,14 @@ Session ended.`;
       reference,
       transactionReference: reference,
       status: 'pending',
-      channel: channel || (selectedProvider.includes('momo') || selectedProvider.includes('airtel') ? 'mobile_money' : 'card'),
+      channel: channel || (selectedProvider.includes('momo') || selectedProvider.includes('airtel') || selectedProvider.includes('paypack') ? 'mobile_money' : 'card'),
       timestamp: new Date().toISOString(),
-      instructions: selectedProvider.includes('momo')
-        ? `Prompt sent to ${contact}. Dial *165*1# to approve PIN.`
+      instructions: selectedProvider.includes('paypack')
+        ? `STK Push dispatched via Paypack Rwanda to ${contact}. Dial *182# or confirm prompt.`
+        : selectedProvider.includes('flutterwave')
+        ? `3D-Secure payment portal generated for ${contact} (Supports Cards & RWF MoMo).`
+        : selectedProvider.includes('momo')
+        ? `Prompt sent to ${contact}. Dial *165*1# or *182# to approve PIN.`
         : selectedProvider.includes('airtel')
         ? `USSD push sent to ${contact}. Enter Airtel Money PIN.`
         : `Secure 3D-Secure link generated for ${contact}.`,
@@ -1114,15 +1118,24 @@ Session ended.`;
           : 'water_utility');
       const fv = Number(v.faceValue) || 10000;
 
+      const SERVER_COUNTRY_CURRENCY: Record<string, string> = {
+        UG: 'UGX', KE: 'KES', RW: 'RWF', TZ: 'TZS', NG: 'NGN', GH: 'GHS', ZA: 'ZAR',
+        ET: 'ETB', EG: 'EGP', US: 'USD', CA: 'CAD', GB: 'GBP', DE: 'EUR', FR: 'EUR',
+        AT: 'EUR', NL: 'EUR', BE: 'EUR', IT: 'EUR', ES: 'EUR', IN: 'INR', CN: 'CNY',
+        JP: 'JPY', KR: 'KRW', AU: 'AUD', BR: 'BRL', MX: 'MXN', AE: 'AED', SG: 'SGD',
+      };
+      const fallbackCurr = SERVER_COUNTRY_CURRENCY[String(targetCountry).toUpperCase()] || 'USD';
+      const resolvedCurr = v.currency || fallbackCurr;
+
       const record = {
         id: 'PV-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
         voucherCode: code,
         pin: v.pin || code.split('-').pop() || '',
         category,
         brand,
-        title: v.title || `${fv.toLocaleString()} ${v.currency || 'UGX'} ${brand} Voucher`,
+        title: v.title || `${fv.toLocaleString()} ${resolvedCurr} ${brand} Voucher`,
         faceValue: fv,
-        currency: v.currency || (targetCountry === 'KE' ? 'KES' : 'UGX'),
+        currency: resolvedCurr,
         country: targetCountry,
         packagedItems: Array.isArray(v.packagedItems) ? v.packagedItems : undefined,
         sponsoredBy: targetSponsor,
@@ -1150,7 +1163,7 @@ Session ended.`;
         qrCodeData: v.qrCodePayload || v.qrCodeData || code,
         barcode: v.barcode || (code.replace(/[^0-9]/g, '').padEnd(12, '0').slice(0, 12)),
         commissionBreakdown: buildCommissionBreakdown(fv, isByov),
-        redemptionUssdString: v.redemptionUssdString || (targetCountry === 'KE' ? '*141*CODE#' : '*303*CODE#').replace('CODE', code),
+        redemptionUssdString: v.redemptionUssdString || `*3030*${code}#`,
         expiryDate: v.expiryDate || '2026-12-31',
       };
 

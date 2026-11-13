@@ -4,6 +4,7 @@ import { CountryCode } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { primaryNodes, primaryUnit, tiersFor, GOV_CODES, getBusinessTitlePresets } from '../data/tiers';
 import { copyToClipboard } from '../utils/helpers';
+import { getCurrencyForCountry, getUsdRateForCurrency } from '../data/countryCurrency';
 import {
   ChevronLeft,
   Search,
@@ -453,8 +454,8 @@ export const EntityRegisterView: React.FC = () => {
     }, 800);
   };
 
-  const exchangeRateLocal = country === 'KE' ? 129 : country === 'NG' ? 1600 : country === 'GH' ? 15.5 : 3700;
-  const localCurrencyCode = country === 'KE' ? 'KES' : country === 'NG' ? 'NGN' : country === 'GH' ? 'GHS' : 'UGX';
+  const localCurrencyCode = getCurrencyForCountry(country);
+  const exchangeRateLocal = getUsdRateForCurrency(localCurrencyCode);
   const priceLocal = Math.round(priceVal * exchangeRateLocal);
 
   return (

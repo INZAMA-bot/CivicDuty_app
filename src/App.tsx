@@ -56,6 +56,7 @@ import { CivicDutyGuideModal } from './components/CivicDutyGuideModal';
 import { LegalTrustModal } from './components/LegalTrustModal';
 import { GlobalSocialModals } from './components/GlobalSocialModals';
 import { OfflineSyncHUD } from './components/OfflineSyncHUD';
+import { TesterFeedbackWidget } from './components/TesterFeedbackWidget';
 import { isPlatformUnlocked } from './constants/masterAuth';
 import { ViewType } from './types';
 
@@ -245,23 +246,27 @@ const AppContent: React.FC = () => {
       ['gayaza_hs', 'namagunga', 'cafe_javas', 'mak_univ', 'mulago_hosp', 'nakasero_hosp', 'serena_hotel_kla', 'stanbic', 'centenary_bank', 'kotsa_taxi', 'kigo_contractors'].includes(activeUser.dept || '')
   );
 
-  // Platform perimeter guard: administrative & ministerial consoles require master authorization
-  const RESTRICTED_ADMIN_VIEWS: ViewType[] = [
+  // Internal Founder Operations remain strictly restricted behind Master Key.
+  // Public Gov / Entity Demo Desks are accessible once authenticated through GovLoginView / EntityGatewayView.
+  const INTERNAL_CDOPS_VIEWS: ViewType[] = ['company_management', 'cd_ops'];
+  const DESK_ONLY_VIEWS: ViewType[] = [
     'gov_inbox',
     'gov_reply',
     'gov_projects',
     'gov_admin',
     'ministerial_command',
-    'company_management',
-    'cd_ops',
     'ps_executive_desk',
   ];
 
   React.useEffect(() => {
-    if (!isPlatformUnlocked() && RESTRICTED_ADMIN_VIEWS.includes(view)) {
+    if (!isPlatformUnlocked() && INTERNAL_CDOPS_VIEWS.includes(view)) {
       go('splash');
+      return;
     }
-  }, [view, go]);
+    if (!isPlatformUnlocked() && !isGov && DESK_ONLY_VIEWS.includes(view)) {
+      go('ob2');
+    }
+  }, [view, isGov, go]);
 
   const renderView = () => {
     switch (view) {
@@ -350,6 +355,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-slate-100 antialiased selection:bg-emerald-500 selection:text-white font-sans">
         <SplashView />
+        <TesterFeedbackWidget isSplash />
         <CivicDutyGuideModal isOpen={guideModalOpen} onClose={closeGuide} initialTab={guideInitialTab} />
         <LegalTrustModal isOpen={legalModalOpen} onClose={closeLegalCenter} initialTab={legalInitialTab} />
         <GlobalSocialModals />
@@ -401,6 +407,7 @@ const AppContent: React.FC = () => {
         </div>
       </div>
 
+      <TesterFeedbackWidget />
       <CivicDutyGuideModal isOpen={guideModalOpen} onClose={closeGuide} initialTab={guideInitialTab} />
       <LegalTrustModal isOpen={legalModalOpen} onClose={closeLegalCenter} initialTab={legalInitialTab} />
       <GlobalSocialModals />

@@ -36,6 +36,7 @@ export const SplashView: React.FC = () => {
     posts,
     setActivePost,
     ensureCitizenSession,
+    selectedCountry,
     t,
   } = useApp();
 
@@ -50,11 +51,13 @@ export const SplashView: React.FC = () => {
   const countriesCount = Object.keys(COUNTRIES).length;
 
   useEffect(() => {
-    trackVisitorInteraction('page_view', 'Homepage Loaded');
+    trackVisitorInteraction('page_view', `Homepage Loaded (${selectedCountry})`, selectedCountry, {
+      countryCode: selectedCountry,
+    });
 
     const handleExternalOpenAuth = (e: Event) => {
       const customEvent = e as CustomEvent<{ target?: string }>;
-      const target = customEvent.detail?.target || 'ob1';
+      const target = customEvent.detail?.target || 'company_management';
       setPendingRoute(target);
       setAccessCodeInput('');
       setAccessError(null);
@@ -76,16 +79,9 @@ export const SplashView: React.FC = () => {
         : target === 'entity'
         ? 'provider_desk'
         : target;
-    trackVisitorInteraction('cta_click', `Clicked ${targetLabel}`, targetLabel);
-
-    // FULL RESTRICTION ENFORCED DURING PREVIEW/DEVELOPMENT (INCLUDING CITIZENS):
-    if (!isPlatformUnlocked()) {
-      setPendingRoute(target);
-      setAccessCodeInput('');
-      setAccessError(null);
-      setShowAccessModal(true);
-      return;
-    }
+    trackVisitorInteraction('cta_click', `Entered ${targetLabel} (${selectedCountry})`, targetLabel, {
+      countryCode: selectedCountry,
+    });
 
     if (target === 'ob1') {
       go('ob1');
@@ -180,8 +176,8 @@ export const SplashView: React.FC = () => {
             <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400">
               SELECT WORKSPACE PORTAL
             </span>
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-              Restricted Preview
+            <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+              Public Beta · All Nations Invited
             </span>
           </div>
 

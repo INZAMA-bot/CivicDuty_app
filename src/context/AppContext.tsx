@@ -27,10 +27,12 @@ import {
   TownHallSession,
   MinisterialDirective,
   EnrolledSectorMinister,
+  CountryLaunchStatus,
 } from '../types';
 import { INITIAL_ENROLLED_SECTOR_MINISTERS, INITIAL_MINISTERIAL_DIRECTIVES } from '../data/initialMinisterialData';
-import { INITIAL_PROMOTIONAL_ADS } from '../data/promotionalAds';
+import { INITIAL_PROMOTIONAL_ADS, getCountryPromotionalAds, CAMPAIGN_ASSET_VERSION } from '../data/promotionalAds';
 import { getDynamicCountryDemos } from '../data/countryDemos';
+import { getRegionEvidenceMedia, isUgandaLegacyMediaUrl } from '../data/countryCurrency';
 import {
   INITIAL_AUDIT,
   INITIAL_INVOICES,
@@ -66,7 +68,13 @@ import {
   updateTownHallInCloud,
   deleteTownHallFromCloud,
   subscribeToTownHallsFromCloud,
+  purgeCountryTestPostsInCloud,
 } from '../services/firestoreSync';
+import {
+  trackVisitorInteraction,
+  saveCloudCountryLaunchStatus,
+  fetchCloudAnalyticsBundle,
+} from '../services/analyticsService';
 import {
   GovFeedbackMessage,
   INITIAL_FEEDBACK_MESSAGES,
@@ -390,6 +398,11 @@ interface AppContextType {
   setActiveHashtagFilter: (tag: string | null) => void;
   isCitizenSpeaking: boolean;
   setIsCitizenSpeaking: (speaking: boolean) => void;
+  // Per-Country Launch Status & Test Post Auto-Purge
+  countryLaunchStatus: Record<string, CountryLaunchStatus>;
+  getCountryStatus: (c: CountryCode) => CountryLaunchStatus;
+  setCountryGoLive: (c: CountryCode) => Promise<number>;
+  resetCountryToBeta: (c: CountryCode) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -588,32 +601,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 merged_from_ids: seed.merged_from_ids ?? p.merged_from_ids,
               }
             : p;
-          const cleanCachedMedia = (rawMedia: any[], seedMedia?: any[]): any[] => {
+          const cleanCachedMedia = (
+            rawMedia: any[],
+            seedMedia?: any[],
+            postCountry?: CountryCode,
+            hintText?: string
+          ): any[] => {
             if (seedMedia && seedMedia.length > 0) return seedMedia;
             if (!Array.isArray(rawMedia)) return [];
+            const cc = (postCountry || 'UG').toUpperCase() as CountryCode;
             return rawMedia.map((m) => {
-              if (m?.url && (typeof m.url !== 'string' || m.url.includes('unsplash.com') || !m.url.trim())) {
-                const c = (m.caption || '').toLowerCase();
-                let safe = '/evidence/matatu_swerving_pothole.jpg';
-                if (c.includes('hospital') || c.includes('doctor') || c.includes('health') || c.includes('pediatric')) safe = '/evidence/hospital_emergency_mulago.jpg';
-                else if (c.includes('transformer') || c.includes('power') || c.includes('kplc') || c.includes('electric')) safe = '/evidence/power_transformer_repair.jpg';
-                else if (c.includes('kigali') || c.includes('clean') || c.includes('corridor')) safe = '/evidence/kigali_clean_corridor.jpg';
-                else if (c.includes('tyre') || c.includes('tire') || c.includes('wheel')) safe = '/evidence/damaged_tyre_pothole.jpg';
-                else if (c.includes('unbuilt') || c.includes('site') || c.includes('contract') || c.includes('culvert')) safe = '/evidence/unbuilt_road_site.jpg';
+              const urlStr = typeof m?.url === 'string' ? m.url : '';
+              const isStaleUgandaLeak = cc !== 'UG' && isUgandaLegacyMediaUrl(urlStr);
+              if (!urlStr.trim() || urlStr.includes('unsplash.com') || isStaleUgandaLeak) {
+                const safe = getRegionEvidenceMedia(cc, `${m?.caption || ''} ${hintText || ''} ${urlStr}`);
                 return { ...m, url: safe };
               }
               return m;
             });
           };
 
+          const rawBA = seed?.before_after || base.before_after;
+          const safeBA =
+            rawBA && (base.country || 'UG').toUpperCase() !== 'UG' && isUgandaLegacyMediaUrl(rawBA.before_url)
+              ? {
+                  ...rawBA,
+                  before_url: getRegionEvidenceMedia(base.country, `${base.category} ${base.title}`),
+                }
+              : rawBA;
+
           return sanitizePostEmojis({
             ...base,
             comments: Array.isArray(base.comments) ? base.comments : seed?.comments || [],
-            media: cleanCachedMedia(base.media, seed?.media),
+            media: cleanCachedMedia(base.media, seed?.media, base.country, `${base.category} ${base.title}`),
             territory: base.territory || seed?.territory || { district: '', subcounty: '', parish: '' },
             poll: base.poll || seed?.poll,
             community_notes: base.community_notes || seed?.community_notes,
-            before_after: seed?.before_after || base.before_after,
+            before_after: safeBA,
             voice_note: base.voice_note || seed?.voice_note,
             hashtags: base.hashtags || seed?.hashtags,
             reposts: base.reposts ?? seed?.reposts ?? 0,
@@ -765,24 +789,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const PROMO_ADS_SEED_VERSION = '20261114-v4';
+
   const [promotionalAds, setPromotionalAds] = useState<CdOpsPromotionalAd[]>(() => {
+    let initialCountry: CountryCode = 'UG';
     try {
-      const saved = localStorage.getItem('civicduty_promotional_ads');
-      if (saved) {
-        const parsed: CdOpsPromotionalAd[] = JSON.parse(saved);
-        const existingIds = new Set(parsed.map((a) => a.id));
-        const missingSeeds = INITIAL_PROMOTIONAL_ADS.filter((a) => !existingIds.has(a.id));
-        if (missingSeeds.length > 0) {
-          const merged = [...parsed, ...missingSeeds];
-          try {
-            localStorage.setItem('civicduty_promotional_ads', JSON.stringify(merged));
-          } catch {}
-          return merged;
-        }
-        return parsed;
-      }
+      const savedCountry = localStorage.getItem('cd_selected_country');
+      if (savedCountry) initialCountry = savedCountry.toUpperCase() as CountryCode;
     } catch {}
-    return INITIAL_PROMOTIONAL_ADS;
+    const freshSeeds = getCountryPromotionalAds(initialCountry);
+    try {
+      const savedVer = localStorage.getItem('civicduty_promo_ads_version');
+      const saved = localStorage.getItem('civicduty_promotional_ads');
+      if (saved && savedVer === PROMO_ADS_SEED_VERSION) {
+        const parsed: CdOpsPromotionalAd[] = JSON.parse(saved);
+        const customAds = parsed.filter((a) => a.id.startsWith('ad-'));
+        const seedPubMap = new Map(parsed.map((a) => [a.id, a.published]));
+        const syncedSeeds = freshSeeds.map((s) =>
+          seedPubMap.has(s.id) ? { ...s, published: Boolean(seedPubMap.get(s.id)) } : s
+        );
+        return [...customAds, ...syncedSeeds];
+      }
+      localStorage.setItem('civicduty_promo_ads_version', PROMO_ADS_SEED_VERSION);
+      localStorage.setItem('civicduty_promotional_ads', JSON.stringify(freshSeeds));
+    } catch {}
+    return freshSeeds;
   });
 
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
@@ -1110,7 +1141,89 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const [countryLaunchStatus, setCountryLaunchStatus] = useState<Record<string, CountryLaunchStatus>>(() => {
+    try {
+      const saved = localStorage.getItem('cd_country_launch_status');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    fetchCloudAnalyticsBundle()
+      .then((bundle) => {
+        if (bundle.launchStatuses && Object.keys(bundle.launchStatuses).length > 0) {
+          setCountryLaunchStatus((prev) => {
+            const merged = { ...prev, ...bundle.launchStatuses };
+            try {
+              localStorage.setItem('cd_country_launch_status', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const getCountryStatus = (c: CountryCode): CountryLaunchStatus => {
+    return countryLaunchStatus[c] || 'public_beta';
+  };
+
+  const setCountryGoLive = async (c: CountryCode): Promise<number> => {
+    setCountryLaunchStatus((prev) => {
+      const next: Record<string, CountryLaunchStatus> = { ...prev, [c]: 'live' };
+      try {
+        localStorage.setItem('cd_country_launch_status', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    const localTestIds = posts.filter((p) => p.country === c && p.is_test_post === true).map((p) => p.id);
+    if (localTestIds.length > 0) {
+      try {
+        const savedDeleted = localStorage.getItem('cd_deleted_post_ids');
+        const existing: string[] = savedDeleted ? JSON.parse(savedDeleted) : [];
+        localStorage.setItem('cd_deleted_post_ids', JSON.stringify(Array.from(new Set([...existing, ...localTestIds]))));
+      } catch {}
+
+      setPosts((prev) => {
+        const next = prev.filter((p) => !(p.country === c && p.is_test_post === true));
+        try {
+          localStorage.setItem('cd_posts', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+
+    await saveCloudCountryLaunchStatus(c, 'live');
+    const cloudPurged = await purgeCountryTestPostsInCloud(c);
+    const totalPurged = Math.max(localTestIds.length, cloudPurged);
+
+    logAudit(
+      'country_go_live',
+      `LIVE-${c}`,
+      `Jurisdiction ${COUNTRIES[c]?.name || c} promoted from Public Beta to LIVE. Auto-purged ${totalPurged} pre-launch test post(s).`,
+      c
+    );
+    toast(`${COUNTRIES[c]?.name || c} is now LIVE · ${totalPurged} test post(s) auto-deleted`, 'emerald');
+    return totalPurged;
+  };
+
+  const resetCountryToBeta = async (c: CountryCode): Promise<void> => {
+    setCountryLaunchStatus((prev) => {
+      const next: Record<string, CountryLaunchStatus> = { ...prev, [c]: 'public_beta' };
+      try {
+        localStorage.setItem('cd_country_launch_status', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    await saveCloudCountryLaunchStatus(c, 'public_beta');
+    toast(`${COUNTRIES[c]?.name || c} returned to Public Beta (Test Post mode active)`, 'amber');
+  };
+
   const setSelectedCountry = (c: CountryCode) => {
+    const prevCode = selectedCountry;
     setSelectedCountryState(c);
     setActiveDeptCountry(c);
     const defaultFollowed = allDepts(c).slice(0, 4).map((d) => d.id);
@@ -1140,6 +1253,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       localStorage.setItem('cd_selected_country', c);
     } catch {}
+    if (c !== prevCode) {
+      trackVisitorInteraction('country_switch', `Entered ${COUNTRIES[c]?.name || c} (${c})`, c, {
+        countryCode: c,
+        previousCountry: prevCode,
+      });
+    }
   };
   const [selectedMinistryId, setSelectedMinistryId] = useState<string | null>('PS-MOFPED');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
@@ -1219,15 +1338,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (cp.id && !delSet.has(cp.id)) {
             const existing = postMap.get(cp.id);
             const seed = seedMap.get(cp.id);
+            const mergedPostCountry = ((cp as Post).country || existing?.country || seed?.country || 'UG').toUpperCase() as CountryCode;
+            const rawCloudMedia = seed?.media && seed.media.length > 0
+              ? seed.media
+              : Array.isArray(cp.media)
+              ? cp.media
+              : existing?.media || [];
+            const sanitizedCloudMedia = rawCloudMedia.map((m: any) => {
+              const u = typeof m?.url === 'string' ? m.url : '';
+              if (mergedPostCountry !== 'UG' && isUgandaLegacyMediaUrl(u)) {
+                return {
+                  ...m,
+                  url: getRegionEvidenceMedia(mergedPostCountry, `${m?.caption || ''} ${cp.title || ''} ${cp.category || ''}`),
+                };
+              }
+              return m;
+            });
+
             postMap.set(cp.id, sanitizePostEmojis({
               ...(existing || {}),
               ...(cp as Post),
               comments: Array.isArray(cp.comments)
                 ? cp.comments
                 : existing?.comments || seed?.comments || [],
-              media: Array.isArray(cp.media)
-                ? cp.media
-                : existing?.media || seed?.media || [],
+              media: sanitizedCloudMedia,
               territory:
                 cp.territory ||
                 existing?.territory ||
@@ -1252,6 +1386,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, [selectedCountry, user?.country]);
 
+  // Sync built-in promotional ad seeds with the active country while preserving custom manufactured ads
+  useEffect(() => {
+    const activeCountry = (selectedCountry || user?.country || 'UG') as CountryCode;
+    const freshSeeds = getCountryPromotionalAds(activeCountry);
+    setPromotionalAds((prev) => {
+      const customAds = prev.filter((a) => a.id.startsWith('ad-'));
+      const seedPubMap = new Map(prev.map((a) => [a.id, a.published]));
+      const synced = [
+        ...customAds,
+        ...freshSeeds.map((s) =>
+          seedPubMap.has(s.id) ? { ...s, published: Boolean(seedPubMap.get(s.id)) } : s
+        ),
+      ];
+      try {
+        localStorage.setItem('civicduty_promo_ads_version', PROMO_ADS_SEED_VERSION);
+        localStorage.setItem('civicduty_promotional_ads', JSON.stringify(synced));
+      } catch {}
+      return synced;
+    });
+  }, [selectedCountry, user?.country]);
+
   // Real-time Cloud Firestore subscription for CD-Ops Promotional Ads
   useEffect(() => {
     const unsubscribe = subscribeToPromotionalAdsFromCloud((cloudAds) => {
@@ -1260,7 +1415,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const adMap = new Map<string, CdOpsPromotionalAd>();
         prev.forEach((a) => adMap.set(a.id, a));
         cloudAds.forEach((ca) => {
-          if (ca.id) {
+          if (!ca.id) return;
+          // Preserve freshly localized/versioned built-in seeds; only merge custom ads or v-tagged updates
+          const isCustom = ca.id.startsWith('ad-');
+          const hasCurrentAsset = typeof ca.imageSrc === 'string' && ca.imageSrc.includes(CAMPAIGN_ASSET_VERSION);
+          if (isCustom || hasCurrentAsset) {
             adMap.set(ca.id, { ...(adMap.get(ca.id) || {}), ...ca });
           }
         });
@@ -1401,6 +1560,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!user || (user.role === 'citizen' && user.country !== selectedCountry)) {
         setUser(ensureCitizenSession());
       }
+    }
+    if (v === 'ussd') {
+      trackVisitorInteraction('ussd_launch', `Opened USSD Simulator (${selectedCountry})`, selectedCountry, {
+        countryCode: selectedCountry,
+      });
+    } else if (v === 'docs') {
+      trackVisitorInteraction('docs_view', `Opened Technical Docs (${selectedCountry})`, selectedCountry, {
+        countryCode: selectedCountry,
+      });
     }
     setPrevView(view);
     setView(v);
@@ -1868,8 +2036,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addPost = (newPost: Post) => {
-    const livePost: Post = { ...newPost, is_demo: false };
+    const isBeta = getCountryStatus(newPost.country) === 'public_beta';
+    const livePost: Post = {
+      ...newPost,
+      is_demo: false,
+      is_test_post: newPost.is_test_post !== undefined ? newPost.is_test_post : isBeta,
+    };
     setPosts((prev) => [livePost, ...prev]);
+
+    if (livePost.is_test_post) {
+      trackVisitorInteraction('test_post_created', livePost.title.slice(0, 60), livePost.country, {
+        countryCode: livePost.country,
+        dept: livePost.dept,
+      });
+    }
 
     // Asynchronously synchronize to Cloud Firestore & ledger
     savePostToCloud(livePost).catch((err) => {
@@ -3966,6 +4146,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         snippet: originalPost.body.slice(0, 160),
       },
       is_demo: false,
+      is_test_post: getCountryStatus(originalPost.country) === 'public_beta',
     };
 
     setPosts((prev) => [
@@ -4114,8 +4295,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
     {
       id: `th-live-2-${activeCountryCode}`,
-      title: `Live Field Inspection: Urban Roads, Drainage & Kayoola Transit Corridor Audit`,
-      host_name: 'Eng. Ronald Ssemakula & Works Inspectorate',
+      title:
+        activeCountryCode === 'UG'
+          ? 'Live Field Inspection: Urban Roads, Drainage & Kayoola Transit Corridor Audit'
+          : `Live Field Inspection: ${activeCountryObj.name} Urban Roads, Drainage & Transit Corridor Audit`,
+      host_name:
+        activeCountryCode === 'UG'
+          ? 'Eng. Ronald Ssemakula & Works Inspectorate'
+          : `${activeCountryObj.name} Works & Transport Inspectorate`,
       host_title: 'Directorate of Engineering & Works',
       dept_name: 'Public Works & Urban Transit Authority',
       dept_id: 'kcca',
@@ -4128,20 +4315,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       video_stream_label: 'FOLLOWING · ON-SITE FIELD CAMERA · GPS VERIFIED',
       topic_tag: '#LiveRoadAudit',
       speakers: [
-        { name: 'Eng. Ronald Ssemakula', role: 'Host · Chief Road Inspector', speaking: true, video_on: true, camera_label: 'Drone & Culvert Cam' },
-        { name: 'Boda Stage Chairman', role: 'Co-Host · Commuter Scout', speaking: false, video_on: true, camera_label: 'Stage Mobile Cam' },
+        {
+          name: activeCountryCode === 'UG' ? 'Eng. Ronald Ssemakula' : 'Chief Municipal Road Inspector',
+          role: 'Host · Chief Road Inspector',
+          speaking: true,
+          video_on: true,
+          camera_label: 'Drone & Culvert Cam',
+        },
+        {
+          name: activeCountryCode === 'UG' ? 'Boda Stage Chairman' : 'Frontline Mobility Scout Lead',
+          role: 'Co-Host · Commuter Scout',
+          speaking: false,
+          video_on: true,
+          camera_label: 'Stage Mobile Cam',
+        },
         { name: 'District Auditor', role: 'Statutory Fiscal Observer', speaking: false, video_on: false },
       ],
     },
     {
       id: `th-live-3-${activeCountryCode}`,
-      title: `Grassroots Parish Water, Power & Health Center III Drug Stock Watchdog Assembly`,
-      host_name: 'Parish Development Committee & Utility Desks',
+      title: `Grassroots Parish Water, Power & Community Clinic Drug Stock Watchdog Assembly`,
+      host_name: 'Local Development Committee & Utility Desks',
       host_title: 'Grassroots Citizen & Utility Liaison',
       dept_name: 'Water, Electricity & District Health Desk',
       dept_id: 'nwsc',
       category: 'near_me',
-      parish: 'Nakasero Parish',
+      parish: activeCountryCode === 'UG' ? 'Nakasero Parish' : `${activeCountryObj.name} Central Ward`,
       ward: 'Central Ward',
       country: activeCountryCode,
       listeners_count: 162,
@@ -4462,6 +4661,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveHashtagFilter,
         isCitizenSpeaking,
         setIsCitizenSpeaking,
+        countryLaunchStatus,
+        getCountryStatus,
+        setCountryGoLive,
+        resetCountryToBeta,
       }}
     >
       {children}

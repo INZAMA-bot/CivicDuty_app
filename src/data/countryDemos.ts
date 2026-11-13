@@ -1,6 +1,7 @@
 import { Post, CountryCode } from '../types';
 import { COUNTRIES, TERRITORY } from './countries';
 import { allDepts } from '../utils/helpers';
+import { getRegionEvidenceMedia } from './countryCurrency';
 
 /**
  * High-impact, country-specific Illustrative Demo Showcases ("Boutique Mannequins")
@@ -34,7 +35,7 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: '/evidence/water_main_burst.jpg',
+        url: '/evidence/ke_nairobi_sewer_repair.jpg?v=20261114',
         caption: 'Trunk sewer overflow along Kindaruma Road junction',
       },
     ],
@@ -188,6 +189,203 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
   },
 
   // ============================================================================
+  // RWANDA (RW) — KIGALI & NATIONAL ACCOUNTABILITY SHOWCASES
+  // ============================================================================
+  {
+    id: 'p-rw-demo-dossier-1',
+    country: 'RW',
+    dept: 'reg',
+    lane: 'civic',
+    territory: { district: 'gasabo', subcounty: 'remera', parish: 'rukiri_i' },
+    citizen_id: 'demo-rw-1',
+    citizen_name: 'Jean-Pierre Habimana',
+    citizen_rank: 'Watchdog',
+    author_profession: 'Electrical Engineer & Scout',
+    anonymous: false,
+    category: 'power',
+    title: 'High-Voltage Transformer Malfunction & Grid Tripping on KG 11 Ave',
+    body: 'Phase imbalance on the 15kV distribution step-down transformer outside Remera Commercial Complex. Voltage fluctuations are tripping medical cold-chain equipment and residential solar inverters across Rukiri I Cell.',
+    location: 'KG 11 Avenue, Remera Sector, Gasabo District, Kigali',
+    gps: { lat: '-1.9567', lng: '30.1124' },
+    source: 'web',
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/rw_reg_substation.jpg?v=20261114',
+        caption: 'REG distribution transformer panel inspection on KG 11 Ave',
+      },
+    ],
+    status: 'investigating',
+    gov_status: 'investigating',
+    created_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+    comments: [
+      {
+        id: 'c-rw-dossier-1',
+        sender: 'Rwanda Energy Group (REG / EUCL) Technical Command',
+        role: 'gov',
+        body: 'Dispatched Gasabo District rapid response crew with transformer diagnostic van. Secondary breaker replaced and phase voltages calibrated to 230V/400V standard. Power restored across Rukiri I.',
+        status_tag: 'investigating',
+        media: [],
+        created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+        helpful: 88,
+        not_helpful: 0,
+      },
+    ],
+    upvotes: 218,
+    citizen_satisfied: null,
+    escalated: false,
+    is_demo: true,
+    demo_highlight: 'STATUTORY GRID SLA · REG Emergency Dispatch Addressed Grid Anomaly in Remera Sector',
+  },
+  {
+    id: 'p-rw-demo-dossier-2',
+    country: 'RW',
+    dept: 'wasac',
+    lane: 'civic',
+    territory: { district: 'gasabo', subcounty: 'kimironko', parish: 'kibagabaga' },
+    citizen_id: 'demo-rw-2',
+    citizen_name: 'Marie-Claire Uwase',
+    citizen_rank: 'Frontline Scout',
+    author_profession: 'Market Trader & Cooperative Lead',
+    anonymous: false,
+    category: 'water',
+    title: 'High-Pressure Piped Water Main Burst at Kimironko Market Entrance',
+    body: 'Underground potable water supply pipe ruptured along KG 17 Ave near the public market gate. Significant water wastage and surface erosion developing near the taxi park entrance.',
+    location: 'KG 17 Avenue, Kimironko Sector, Gasabo District, Kigali',
+    gps: { lat: '-1.9421', lng: '30.1287' },
+    source: 'web',
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/rw_kigali_water_repair.jpg?v=20261114',
+        caption: 'Potable water leak on Kimironko market corridor',
+      },
+    ],
+    status: 'resolved',
+    gov_status: 'resolved',
+    created_at: new Date(Date.now() - 18 * 3600000).toISOString(),
+    comments: [
+      {
+        id: 'c-rw-dossier-2',
+        sender: 'Water and Sanitation Corporation (WASAC) Dispatch',
+        role: 'gov',
+        body: 'WASAC maintenance crew isolated the 160mm HDPE distribution main, replaced damaged compression sleeve, and restored treated water delivery. Road base resealed.',
+        status_tag: 'resolved',
+        media: [],
+        created_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+        helpful: 142,
+        not_helpful: 1,
+      },
+    ],
+    before_after: {
+      before_url: '/evidence/rw_kigali_water_repair.jpg?v=20261114',
+      after_url: '/evidence/kigali_asphalt_road_repair.jpg?v=20261114',
+      before_label: 'Main Pipe Rupture',
+      after_label: 'WASAC Replaced Sleeve & Road Resealed',
+      turnaround_hrs: '6h 15m',
+      gps_verified: true,
+      verified_by: 'Marie-Claire Uwase (Verified Scout)',
+    },
+    upvotes: 312,
+    citizen_satisfied: true,
+    escalated: false,
+    is_demo: true,
+    demo_highlight: 'CLOSED ACCOUNTABILITY LOOP · WASAC Sealed Water Main & Citizen Confirmed Fix',
+  },
+  {
+    id: 'p-rw-demo-dossier-3',
+    country: 'RW',
+    dept: 'cob_rw',
+    lane: 'civic',
+    territory: { district: 'nyarugenge', subcounty: 'nyamirambo', parish: 'cyivugiza' },
+    citizen_id: 'demo-rw-3',
+    citizen_name: 'Emmanuel Nshimiyimana',
+    citizen_rank: 'Guardian',
+    author_profession: 'Abamotari Motorcycle Cooperative Chairman',
+    anonymous: false,
+    category: 'transport',
+    title: 'Asphalt Road Sealing & Drainage De-silting on KN 1 Rd Nyabugogo Transit Hub',
+    body: 'City of Kigali (Umujyi wa Kigali) municipal public works engineers and road maintenance crew completed asphalt patching and de-silting of the transit channel culvert along the commercial hub.',
+    location: 'KN 1 Rd, Nyabugogo Hub, Nyarugenge District, Kigali',
+    gps: { lat: '-1.9380', lng: '30.0485' },
+    source: 'web',
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/kigali_asphalt_road_repair.jpg',
+        caption: 'Umujyi wa Kigali municipal public works crew executing road paving on KN 1 Rd',
+      },
+    ],
+    status: 'resolved',
+    gov_status: 'resolved',
+    created_at: new Date(Date.now() - 28 * 3600000).toISOString(),
+    comments: [
+      {
+        id: 'c-rw-dossier-3',
+        sender: 'City of Kigali (Umujyi wa Kigali) Infrastructure Unit',
+        role: 'gov',
+        body: 'Municipal public works teams completed asphalt patching and culvert de-silting with mechanical equipment. Road surface fully re-opened to commercial traffic in Nyabugogo.',
+        status_tag: 'resolved',
+        media: [],
+        created_at: new Date(Date.now() - 10 * 3600000).toISOString(),
+        helpful: 204,
+        not_helpful: 2,
+      },
+    ],
+    upvotes: 489,
+    citizen_satisfied: true,
+    escalated: false,
+    is_demo: true,
+    demo_highlight: 'PREVENTATIVE CIVIC INFRASTRUCTURE · City of Kigali Certified Culvert De-Silting & Asphalt Sealing',
+  },
+  {
+    id: 'p-rw-demo-dossier-4',
+    country: 'RW',
+    dept: 'rnp',
+    lane: 'civic',
+    territory: { district: 'gasabo', subcounty: 'remera', parish: 'rukiri_ii' },
+    citizen_id: 'demo-rw-4',
+    citizen_name: 'Claudine Mukamana',
+    citizen_rank: 'Sentinel',
+    author_profession: 'Aviation Logistics Coordinator',
+    anonymous: false,
+    category: 'transport',
+    title: 'Traffic Safety Restored: Fluid Hazard Neutralized on KG 1 Ave Airport Corridor',
+    body: 'Heavy commercial carrier experienced hydraulic leakage across the high-speed bend leading to Kigali International Airport. Reported via *3030*250# to prevent motorcycle and commuter skidding.',
+    location: 'KG 1 Ave, Airport Boulevard, Gasabo District, Kigali',
+    gps: { lat: '-1.9630', lng: '30.1280' },
+    source: 'ussd',
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/kigali_clean_corridor.jpg',
+        caption: 'Rwanda National Police (RNP) Traffic Division securing clean corridor on KG 1 Ave',
+      },
+    ],
+    status: 'resolved',
+    gov_status: 'resolved',
+    created_at: new Date(Date.now() - 14 * 3600000).toISOString(),
+    comments: [
+      {
+        id: 'c-rw-dossier-4',
+        sender: 'Rwanda National Police (RNP) Traffic Command',
+        role: 'gov',
+        body: 'RNP traffic patrol arrived within 8 minutes. Sand absorbent applied, disabled truck towed, and street surface cleared. Full arterial transit safely maintained.',
+        status_tag: 'resolved',
+        media: [],
+        created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
+        helpful: 176,
+        not_helpful: 0,
+      },
+    ],
+    upvotes: 367,
+    citizen_satisfied: true,
+    escalated: false,
+    is_demo: true,
+    demo_highlight: 'RAPID PUBLIC SAFETY · Rwanda National Police (RNP) Cleared Airport Arterial in 8 Minutes',
+  },
+
+  // ============================================================================
   // NIGERIA (NG) — LAGOS & FEDERAL ACCOUNTABILITY SHOWCASES
   // ============================================================================
   {
@@ -210,7 +408,7 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: '/evidence/sidewalk_damage.jpg',
+        url: '/evidence/ng_lagos_drainage_flood.jpg?v=20261114',
         caption: 'Blocked drainage channel along hospital emergency corridor',
       },
     ],
@@ -389,7 +587,7 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     media: [
       {
         type: 'image',
-        url: '/evidence/power_transformer_repair.jpg',
+        url: '/evidence/gh_accra_power_repair.jpg?v=20261114',
         caption: 'ECG rapid response bucket truck re-tensioning Kaneshie feeder',
       },
     ],
@@ -549,7 +747,13 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     location: 'Region E (Alexandra / Sandton), City of Johannesburg',
     gps: { lat: '-26.1036', lng: '28.0978' },
     source: 'web',
-    media: [],
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/za_eskom_substation_repair.jpg?v=20261114',
+        caption: 'Eskom Gauteng high-voltage substation restoration crew on site in Alexandra–Sandton',
+      },
+    ],
     status: 'investigating',
     gov_status: 'investigating',
     created_at: new Date(Date.now() - 15 * 3600000).toISOString(),
@@ -784,7 +988,13 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     location: 'Brooklyn Community Board 2, New York City',
     gps: { lat: '40.6884', lng: '-73.9857' },
     source: 'web',
-    media: [],
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/us_street_water_main.jpg?v=20261114',
+        caption: 'NYC DEP emergency crew isolating ruptured urban water main in Brooklyn',
+      },
+    ],
     status: 'resolved',
     gov_status: 'resolved',
     created_at: new Date(Date.now() - 14 * 3600000).toISOString(),
@@ -813,7 +1023,13 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     location: 'Kentish Town Ward, London Borough of Camden',
     gps: { lat: '51.5504', lng: '-0.1406' },
     source: 'web',
-    media: [],
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/eu_water_main_break.jpg?v=20261114',
+        caption: 'Thames Water utility response isolating Victorian trunk main on Kentish Town Road',
+      },
+    ],
     status: 'resolved',
     gov_status: 'resolved',
     created_at: new Date(Date.now() - 18 * 3600000).toISOString(),
@@ -842,7 +1058,13 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     location: 'Connaught Place Ward, New Delhi District',
     gps: { lat: '28.6315', lng: '77.2167' },
     source: 'web',
-    media: [],
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/asia_urban_water_break.jpg?v=20261114',
+        caption: 'Delhi Jal Board maintenance crew flushing Connaught Place feeder line',
+      },
+    ],
     status: 'resolved',
     gov_status: 'resolved',
     created_at: new Date(Date.now() - 16 * 3600000).toISOString(),
@@ -871,7 +1093,13 @@ export const MULTI_COUNTRY_DEMO_POSTS: Post[] = [
     location: 'Central Municipal Ward, Germany',
     gps: { lat: '52.5200', lng: '13.4050' },
     source: 'web',
-    media: [],
+    media: [
+      {
+        type: 'image',
+        url: '/evidence/eu_water_main_break.jpg?v=20261114',
+        caption: 'Kommunale Stadtwerke emergency utility crew repairing street grid conduit',
+      },
+    ],
     status: 'resolved',
     gov_status: 'resolved',
     created_at: new Date(Date.now() - 15 * 3600000).toISOString(),
@@ -933,8 +1161,8 @@ export function getDynamicCountryDemos(countryCode: CountryCode): Post[] {
       media: [
         {
           type: 'image',
-          url: '/evidence/pipe_repaired_nwsc.jpg',
-          caption: `${waterDept?.name || countryName} emergency repair crew restoring trunk main`,
+          url: getRegionEvidenceMedia(countryCode, 'water_repair'),
+          caption: `${waterDept?.name || countryName} emergency repair crew restoring infrastructure`,
         },
       ],
       status: 'resolved',
@@ -1005,7 +1233,7 @@ export function getDynamicCountryDemos(countryCode: CountryCode): Post[] {
       media: [
         {
           type: 'image',
-          url: '/evidence/unbuilt_road_site.jpg',
+          url: getRegionEvidenceMedia(countryCode, 'unbuilt_culvert'),
           caption: 'Geotagged site inspection showing unstarted civil works',
         },
       ],

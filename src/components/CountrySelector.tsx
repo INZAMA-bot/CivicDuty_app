@@ -138,14 +138,7 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
       return;
     }
 
-    // 3. If in Citizen Workspace and selecting another country not yet onboarded / authorized
-    if (code !== homeCountry && !authorizedForeign.includes(code)) {
-      setPendingForeignCode(code);
-      setForeignPermitNo('');
-      setNationalIdInput('');
-      return;
-    }
-
+    // 3. Citizen / Public Beta open navigation across jurisdictions
     completeCountrySwitch(code);
   };
 
@@ -813,6 +806,15 @@ export const CountrySelector: React.FC<CountrySelectorProps> = ({
                         className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
                       >
                         Full 3-Step Onboarding →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          completeCountrySwitch(pendingForeignCode);
+                        }}
+                        className="px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/40 hover:border-emerald-500 text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                      >
+                        Preview Public Beta →
                       </button>
                       <button
                         type="submit"

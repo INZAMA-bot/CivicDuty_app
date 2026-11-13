@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 
-export type PaymentProvider = 'mtn_momo' | 'airtel_money' | 'pesapal' | 'flutterwave' | 'stripe';
+export type PaymentProvider = 'mtn_momo' | 'airtel_money' | 'paypack' | 'pesapal' | 'flutterwave' | 'stripe';
 
 export interface PaymentInitiationParams {
   provider: PaymentProvider;
@@ -101,10 +101,14 @@ export async function initiatePaymentTransaction(
       currency: params.currency,
       status: data.transaction?.status || 'pending',
       instructions: data.transaction?.instructions || (
-        params.provider === 'pesapal'
+        params.provider === 'paypack'
+          ? `STK Push dispatched via Paypack Rwanda to ${params.payerPhoneOrEmail}. Confirm MTN MoMo (*182#) or Airtel Money PIN.`
+          : params.provider === 'flutterwave'
+          ? `Redirecting to Flutterwave 3D-Secure portal for ${params.payerPhoneOrEmail} (Supports Cards & RWF MoMo).`
+          : params.provider === 'pesapal'
           ? 'Redirecting to Pesapal multi-rail checkout portal (MoMo / Card / Bank).'
           : params.provider === 'mtn_momo'
-          ? `Prompt sent to ${params.payerPhoneOrEmail}. Dial *165*1# to approve PIN.`
+          ? `Prompt sent to ${params.payerPhoneOrEmail}. Dial *165*1# or *182# to approve PIN.`
           : params.provider === 'airtel_money'
           ? `USSD push sent to ${params.payerPhoneOrEmail}. Enter Airtel PIN.`
           : 'Approve authorization on your payment device.'
