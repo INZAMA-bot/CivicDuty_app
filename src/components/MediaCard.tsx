@@ -157,11 +157,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, countryCode
 
   const effectiveVoice = {
     duration: postVoiceNote?.duration || mediaVoice?.duration || '1:12',
-    language: postVoiceNote?.language || 'Vernacular Field Audio',
+    language: postVoiceNote?.language || mediaVoice?.caption || 'Vernacular Field Audio',
     transcript:
       postVoiceNote?.transcript ||
-      '“Verified citizen field audio testimony attached to this dispatch. Full voice waveform and statutory transcript archived on the public ledger.”',
-    audio_url: postVoiceNote?.audio_url,
+      (mediaVoice?.name && mediaVoice.name !== 'Live Witness Voice Testimony'
+        ? `Audio Evidence: ${mediaVoice.name}`
+        : '“Verified citizen field audio testimony attached to this dispatch. Full voice waveform and statutory transcript archived on the public ledger.”'),
+    audio_url: postVoiceNote?.audio_url || mediaVoice?.url,
     waveform:
       mediaVoice?.waveform || [
         4, 7, 5, 9, 6, 8, 4, 7, 10, 5, 8, 6, 9, 4, 7, 9, 5, 3, 7, 9, 6, 4, 8, 5, 10, 7, 4, 8, 6, 8, 5, 3, 7, 9, 4, 6,

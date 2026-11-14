@@ -105,7 +105,70 @@ function detectDevice(): 'mobile' | 'desktop' | 'tablet' {
   return 'desktop';
 }
 
+const CAMPAIGN_SESSION_KEY = 'civicduty_utm_attribution_v1';
+
+export interface CampaignAttribution {
+  sourceLabel: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  gclid?: string;
+}
+
+export function getSessionCampaignAttribution(): CampaignAttribution | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const utmSource = params.get('utm_source')?.trim().toLowerCase() || '';
+    const utmMedium = params.get('utm_medium')?.trim().toLowerCase() || '';
+    const utmCampaign = params.get('utm_campaign')?.trim() || '';
+    const gclid = params.get('gclid')?.trim() || '';
+
+    if (utmSource || gclid) {
+      let sourceLabel = 'Campaign Link';
+      if (utmSource.includes('google') || gclid) {
+        if (utmMedium.includes('discover') || utmMedium.includes('demand')) {
+          sourceLabel = 'Google Ads (Discover)';
+        } else if (utmMedium.includes('display')) {
+          sourceLabel = 'Google Ads (Display)';
+        } else {
+          sourceLabel = 'Google Ads (Search)';
+        }
+      } else if (utmSource.includes('x') || utmSource.includes('twitter')) {
+        sourceLabel = 'X (Twitter)';
+      } else if (utmSource.includes('linkedin')) {
+        sourceLabel = 'LinkedIn';
+      } else if (utmSource.includes('whatsapp')) {
+        sourceLabel = 'WhatsApp';
+      } else if (utmSource.includes('telegram')) {
+        sourceLabel = 'Telegram';
+      } else if (utmSource.includes('meta') || utmSource.includes('facebook') || utmSource.includes('ig')) {
+        sourceLabel = 'Meta / Facebook';
+      } else {
+        sourceLabel = `UTM: ${utmSource}`;
+      }
+      const attr: CampaignAttribution = {
+        sourceLabel,
+        utmSource: utmSource || undefined,
+        utmMedium: utmMedium || undefined,
+        utmCampaign: utmCampaign || undefined,
+        gclid: gclid || undefined,
+      };
+      sessionStorage.setItem(CAMPAIGN_SESSION_KEY, JSON.stringify(attr));
+      return attr;
+    }
+
+    const stored = sessionStorage.getItem(CAMPAIGN_SESSION_KEY);
+    return stored ? (JSON.parse(stored) as CampaignAttribution) : null;
+  } catch {
+    return null;
+  }
+}
+
 function cleanReferrer(): string {
+  const utm = getSessionCampaignAttribution();
+  if (utm?.sourceLabel) return utm.sourceLabel;
+
   if (typeof document === 'undefined' || !document.referrer) return 'Direct / Social Link';
   try {
     const url = new URL(document.referrer);
@@ -113,7 +176,8 @@ function cleanReferrer(): string {
     if (host.includes('t.co') || host.includes('twitter') || host.includes('x.com')) return 'X (Twitter)';
     if (host.includes('linkedin')) return 'LinkedIn';
     if (host.includes('facebook') || host.includes('fb.me')) return 'Facebook';
-    if (host.includes('google')) return 'Google Search';
+    if (host.includes('googleadservices') || host.includes('doubleclick')) return 'Google Ads';
+    if (host.includes('google')) return 'Google Search / Discover';
     if (host.includes('whatsapp')) return 'WhatsApp';
     return host;
   } catch {
@@ -217,10 +281,15 @@ export async function trackVisitorInteraction(
   meta?: Record<string, any>
 ): Promise<void> {
   const device = detectDevice();
+  const utmAttribution = getSessionCampaignAttribution();
   const referrer = cleanReferrer();
   const countryCode = ((meta?.countryCode as CountryCode) || getActiveCountryFallback()) as CountryCode;
   const { isNewSession, isNewCountryForSession } = getOrSetSessionId(countryCode);
   const now = new Date().toISOString();
+
+  const mergedMeta = utmAttribution?.utmCampaign
+    ? { ...(meta || {}), utmCampaign: utmAttribution.utmCampaign, utmMedium: utmAttribution.utmMedium }
+    : meta;
 
   const eventItem: VisitorInteractionEvent = {
     id: 'evt_' + Math.random().toString(36).substring(2, 8) + '_' + Date.now(),
@@ -233,7 +302,7 @@ export async function trackVisitorInteraction(
     device,
     path: typeof window !== 'undefined' ? window.location.pathname + window.location.hash : '/',
     timestamp: now,
-    meta,
+    meta: mergedMeta,
   };
 
   // 1. Update Local Analytics

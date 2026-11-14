@@ -53,8 +53,10 @@ import {
   Copy,
   Ticket,
   MessageCircle,
+  Heart,
 } from 'lucide-react';
 import { MediaCard } from '../components/MediaCard';
+import { DossierMultimediaUploader } from '../components/DossierMultimediaUploader';
 import { RichCivicText } from '../components/RichCivicText';
 import { DeptIcon } from '../components/DeptIcon';
 import { MediaItem } from '../types';
@@ -65,6 +67,12 @@ import { QrCodeModal } from '../components/QrCodeModal';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { StatutoryPipelineCard } from '../components/StatutoryPipelineCard';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { getCountryTransitSpecs } from '../data/promotionalAds';
+import {
+  getRankedDossierSubmissions,
+  getDossierCompiledCount,
+  buildDossierDigestText,
+} from '../utils/dossierEngine';
 
 export const PostDetailView: React.FC = () => {
   const {
@@ -88,6 +96,8 @@ export const PostDetailView: React.FC = () => {
     posts,
     projects,
     compileWitnessIntoPost,
+    dossierLikesMap,
+    toggleDossierSubmissionLike,
     mergeDuplicatePostsIntoDossier,
     setSocialModalPost,
     setSocialModalTab,
@@ -105,10 +115,13 @@ export const PostDetailView: React.FC = () => {
 
   const [showCompileDrawer, setShowCompileDrawer] = useState(false);
   const [showMergeDrawer, setShowMergeDrawer] = useState(false);
+  const [witnessTitle, setWitnessTitle] = useState('');
   const [witnessBody, setWitnessBody] = useState('');
+  const [witnessMedia, setWitnessMedia] = useState<MediaItem[]>([]);
   const [witnessProfession, setWitnessProfession] = useState('Road Scout / Commercial Rider');
   const [witnessAnon, setWitnessAnon] = useState(false);
   const [selectedDupId, setSelectedDupId] = useState('');
+  const [copiedDossierDigest, setCopiedDossierDigest] = useState(false);
 
   const [citizenReplyText, setCitizenReplyText] = useState('');
   const [stagedMedia, setStagedMedia] = useState<MediaItem[]>([]);
@@ -190,7 +203,8 @@ export const PostDetailView: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, postsList, hasNext, hasPrev]);
 
-  const compiledCount = p ? (p.compiled_count || (p.compiled_reports ? p.compiled_reports.length + 1 : 1)) : 1;
+  const compiledCount = p ? getDossierCompiledCount(p) : 1;
+  const rankedSubmissions = p ? getRankedDossierSubmissions(p) : [];
   const candidateDuplicatePosts = p
     ? posts.filter(
         (other) =>
@@ -212,6 +226,7 @@ export const PostDetailView: React.FC = () => {
 
   const postCountryCode = (p?.country || user?.country || 'UG').toUpperCase();
   const gov = getCountryGovernanceSchema(postCountryCode);
+  const transitSpec = getCountryTransitSpecs(postCountryCode);
   const isUgPost = postCountryCode === 'UG';
   const cryptoSeal = p?.crypto_seal_hash || (p ? generateCryptoSealSync(`TICKET:${p.id}:${p.title}`) : '');
 
@@ -1197,6 +1212,20 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                 <button
                   type="button"
                   onClick={() => {
+                    const digest = buildDossierDigestText(p, gov.tier3Short);
+                    navigator.clipboard?.writeText(digest);
+                    setCopiedDossierDigest(true);
+                    toast('Copied complete Master Dossier briefing & cryptographic ledger!', 'emerald');
+                    setTimeout(() => setCopiedDossierDigest(false), 2000);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {copiedDossierDigest ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                  <span>{copiedDossierDigest ? 'Copied Digest' : 'Digest'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     setShowCompileDrawer(!showCompileDrawer);
                     setShowMergeDrawer(false);
                   }}
@@ -1272,9 +1301,15 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                       onChange={(e) => setWitnessProfession(e.target.value)}
                       className="w-full text-xs font-bold bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2"
                     >
-                      <option value="Road Scout / Commercial Rider">{isUgPost ? 'Bodaboda Rider / Road Scout' : 'Delivery Rider / Road Scout'}</option>
-                      <option value="Commercial Transit Driver">Commercial Transit Driver</option>
-                      <option value="Market Vendor / Shop Owner">Market Vendor / Shop Owner</option>
+                      <option value={isUgPost ? 'Bodaboda Rider / Stage Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}>
+                        {isUgPost ? 'Bodaboda Rider / Road Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}
+                      </option>
+                      <option value={`${transitSpec.taxiTabLabel} Operator`}>
+                        {transitSpec.taxiTabLabel} Operator
+                      </option>
+                      <option value={`${transitSpec.marketTabLabel} / Shop Owner`}>
+                        {transitSpec.marketTabLabel} / Shop Owner
+                      </option>
                       <option value={isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health'}>
                         {isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health'}
                       </option>
@@ -1294,12 +1329,28 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                   </div>
                 </div>
 
+                <input
+                  type="text"
+                  value={witnessTitle}
+                  onChange={(e) => setWitnessTitle(e.target.value)}
+                  maxLength={140}
+                  placeholder="Optional headline for your witness report..."
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700"
+                />
+
                 <textarea
                   rows={3}
                   value={witnessBody}
                   onChange={(e) => setWitnessBody(e.target.value)}
                   placeholder="Describe what you witnessed at this site (e.g., severity, exact landmark, impact on commuters or households)..."
                   className="w-full text-xs p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700"
+                />
+
+                <DossierMultimediaUploader
+                  media={witnessMedia}
+                  onChange={setWitnessMedia}
+                  onNotify={(msg, tone) => toast(msg, tone)}
+                  compact
                 />
 
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1315,20 +1366,28 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                   <button
                     type="button"
                     onClick={() => {
-                      if (!witnessBody.trim()) {
-                        toast('Enter your corroborating witness observation first', 'red');
+                      if (!witnessBody.trim() && witnessMedia.length === 0) {
+                        toast('Enter your corroborating witness observation or attach evidence media', 'red');
                         return;
                       }
+                      const actor = user || ensureCitizenSession();
                       compileWitnessIntoPost(p.id, {
-                        citizen_id: user?.id || 'usr-citizen',
-                        citizen_name: witnessAnon ? 'Verified Citizen' : user?.name || 'Citizen Witness',
+                        citizen_id: actor.id || 'usr-citizen',
+                        citizen_name: witnessAnon ? 'Verified Citizen' : actor.name || 'Citizen Witness',
                         author_profession: witnessProfession,
                         anonymous: witnessAnon,
-                        body: witnessBody.trim(),
+                        title: witnessTitle.trim() || undefined,
+                        body:
+                          witnessBody.trim() ||
+                          witnessTitle.trim() ||
+                          `Attached ${witnessMedia.length} multimedia evidence file(s) from the site.`,
                         gps: acquiredGps || p.gps || null,
+                        media: witnessMedia.length > 0 ? witnessMedia : undefined,
                         source: 'web',
                       });
+                      setWitnessTitle('');
                       setWitnessBody('');
+                      setWitnessMedia([]);
                       setShowCompileDrawer(false);
                     }}
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] font-mono font-black flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -1386,10 +1445,10 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
               </div>
             )}
 
-            {/* Compiled Witness Reports Timeline */}
-            <div className="space-y-2">
-              <div className="text-[9.5px] font-mono font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                <span>Compiled Citizen Reports ({compiledCount} Total Witnesses)</span>
+            {/* Compiled Witness Reports Timeline (Ranked by Viewer Likes — #1 Featured on Frontpage) */}
+            <div className="space-y-2.5">
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between flex-wrap gap-2">
+                <span>Ranked Submissions ({rankedSubmissions.length} · Top Liked Features on Frontpage)</span>
                 {p.merged_from_ids && p.merged_from_ids.length > 0 && (
                   <span className="text-indigo-600 dark:text-indigo-400">
                     Includes {p.merged_from_ids.length} merged duplicate ticket(s)
@@ -1397,86 +1456,114 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                 )}
               </div>
 
-              {/* Witness #1: Primary Lead Filing */}
-              <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                <div className="flex items-center justify-between gap-2 flex-wrap text-[9px] font-mono">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-black">
-                      REPORT #1 (LEAD FILING)
+              {rankedSubmissions[0] && (
+                <div className="p-2.5 rounded-xl bg-emerald-500/8 dark:bg-emerald-500/12 border border-emerald-500/30 flex items-center justify-between gap-2 flex-wrap text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Award size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="font-semibold text-slate-900 dark:text-white truncate">
+                      Frontpage Featured #1: {rankedSubmissions[0].title}
                     </span>
-                    <span className="font-bold text-slate-900 dark:text-white inline-flex items-center gap-1">
-                      {p.anonymous ? (
-                        <>
-                          <Lock size={9} strokeWidth={1.75} />
-                          <span>Verified Citizen</span>
-                        </>
-                      ) : (
-                        p.citizen_name
-                      )}
-                    </span>
-                    {p.author_profession && (
-                      <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 font-bold">
-                        {p.author_profession}
-                      </span>
-                    )}
                   </div>
-                  <div className="flex items-center gap-1.5 text-slate-500">
-                    <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 font-bold">
-                      {srcLabel(p.source)}
-                    </span>
-                    <span>·</span>
-                    <span>{timeAgo(p.created_at)}</span>
-                  </div>
+                  <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
+                    {rankedSubmissions[0].likes} likes · {rankedSubmissions[0].rankLabel}
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">{p.body}</p>
-              </div>
+              )}
 
-              {/* Additional Compiled Witness Reports (#2..N) */}
-              {p.compiled_reports && p.compiled_reports.length > 0 ? (
-                p.compiled_reports.map((wr, idx) => (
-                  <div
-                    key={wr.id || idx}
-                    className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-indigo-200/80 dark:border-indigo-900/60 space-y-1"
-                  >
-                    <div className="flex items-center justify-between gap-2 flex-wrap text-[9px] font-mono">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 font-black border border-indigo-300 dark:border-indigo-800">
-                          REPORT #{idx + 2} (CORROBORATING WITNESS)
-                        </span>
-                        <span className="font-bold text-slate-900 dark:text-white inline-flex items-center gap-1">
-                          {wr.anonymous ? (
-                            <>
-                              <Lock size={9} strokeWidth={1.75} />
-                              <span>Verified Citizen</span>
-                            </>
-                          ) : (
-                            wr.citizen_name
-                          )}
-                        </span>
-                        {wr.author_profession && (
-                          <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                            {wr.author_profession}
-                          </span>
-                        )}
+              {(() => {
+                const activeActorId = (user || ensureCitizenSession()).id || 'usr-public-viewer';
+                const userLikes = dossierLikesMap[activeActorId] || {};
+
+                return rankedSubmissions.map((item, idx) => {
+                  const isTop = idx === 0;
+                  const isLiked = Boolean(userLikes[`${p.id}::${item.id}`]);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-xl border space-y-1.5 transition-colors ${
+                        isTop
+                          ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/40'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
+                            <span
+                              className={`px-1.5 py-0.5 rounded font-black ${
+                                isTop
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800'
+                              }`}
+                            >
+                              #{idx + 1} {isTop ? 'FEATURED' : ''} · {item.rankLabel.toUpperCase()}
+                            </span>
+                            <span className="font-bold text-slate-900 dark:text-white inline-flex items-center gap-1">
+                              {item.anonymous && <Lock size={10} />}
+                              <span>{item.citizen_name}</span>
+                            </span>
+                            {item.author_profession && (
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+                                {item.author_profession}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                            <span className="font-mono font-semibold">{srcLabel(item.source)}</span>
+                            {item.gps && (
+                              <>
+                                <span>·</span>
+                                <span className="text-emerald-700 dark:text-emerald-400 font-bold inline-flex items-center gap-0.5 font-mono">
+                                  <MapPin size={9} strokeWidth={1.75} />
+                                  <span>{item.gps.lat}, {item.gps.lng}</span>
+                                </span>
+                              </>
+                            )}
+                            <span>·</span>
+                            <span>{timeAgo(item.created_at)}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleDossierSubmissionLike(p.id, item.id)}
+                          aria-pressed={isLiked}
+                          className={`min-h-[38px] min-w-[64px] px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer tabular-nums ${
+                            isLiked
+                              ? 'bg-rose-600 border-rose-600 text-white'
+                              : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-rose-500 hover:text-rose-600'
+                          }`}
+                          title={isTop ? 'Currently #1 Featured Story' : 'Like to help promote this submission to #1 Featured Story'}
+                        >
+                          <Heart size={13} className={isLiked ? 'fill-current' : ''} />
+                          <span>{item.likes}</span>
+                        </button>
                       </div>
-                      <div className="flex items-center gap-1.5 text-slate-500">
-                        <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 font-bold">
-                          {srcLabel(wr.source)}
-                        </span>
-                        {wr.gps && (
-                          <span className="text-emerald-700 dark:text-emerald-400 font-bold inline-flex items-center gap-0.5">
-                            <MapPin size={9} strokeWidth={1.75} />
-                            <span>{wr.gps.lat}, {wr.gps.lng}</span>
-                          </span>
-                        )}
-                        <span>·</span>
-                        <span>{timeAgo(wr.created_at)}</span>
-                      </div>
+
+                      {!item.isLead && item.title && (
+                        <div className="text-xs font-bold text-slate-900 dark:text-white">
+                          {item.title}
+                        </div>
+                      )}
+
+                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{item.body}</p>
+
+                      {item.media && item.media.length > 0 && (
+                        <MediaCard
+                          media={item.media}
+                          postId={`${p.id}-detail-${item.id}`}
+                          countryCode={p.country}
+                          onToast={(msg) => toast(msg)}
+                        />
+                      )}
                     </div>
-                    <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">{wr.body}</p>
-                  </div>
-                ))
-              ) : (
+                  );
+                });
+              })()}
+
+              {(!p.compiled_reports || p.compiled_reports.length === 0) && (
                 <div className="text-[10.5px] text-slate-500 dark:text-slate-400 italic px-1">
                   No secondary witness reports compiled yet. Click &ldquo;Co-Sign &amp; Add My Report (+20 pts)&rdquo; above if you also witnessed this issue.
                 </div>

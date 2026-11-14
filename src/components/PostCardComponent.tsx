@@ -1,10 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { Post, LanguageCode } from '../types';
+import { Post, LanguageCode, MediaItem } from '../types';
 import { useApp } from '../context/AppContext';
 import { ALL_LANGUAGES } from '../data/translations';
-import { catByID, getDept, getPostGrassroots, pathStr, slaStatus, srcLabel, stripDecorativeEmojis } from '../utils/helpers';
+import { catByID, getDept, getPostGrassroots, pathStr, slaStatus, srcLabel, stripDecorativeEmojis, timeAgo as formatRelativeTimeAgo } from '../utils/helpers';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { getCountryTransitSpecs } from '../data/promotionalAds';
+import {
+  getRankedDossierSubmissions,
+  getDossierCompiledCount,
+  buildDossierDigestText,
+} from '../utils/dossierEngine';
 import { MediaCard } from '../components/MediaCard';
+import { DossierMultimediaUploader } from './DossierMultimediaUploader';
 import { QrCodeModal } from './QrCodeModal';
 import { RichCivicText } from './RichCivicText';
 import { DeptIcon } from './DeptIcon';
@@ -49,6 +56,8 @@ import {
   Check,
   CheckCheck,
   MessageCircle,
+  Heart,
+  Copy,
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 import { RewardModal } from './RewardModal';
@@ -99,6 +108,9 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
     setSearchQuery,
     setFeedTab,
     compileWitnessIntoPost,
+    dossierLikesMap,
+    toggleDossierSubmissionLike,
+    ensureCitizenSession,
     triggerManualEscalation,
     ratifyResolution,
     disputeResolution,
@@ -114,13 +126,17 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const [showStepperModal, setShowStepperModal] = useState<boolean>(false);
   const [showLadderModal, setShowLadderModal] = useState<boolean>(false);
   const [showDossierModal, setShowDossierModal] = useState<boolean>(false);
+  const [witnessTitle, setWitnessTitle] = useState<string>('');
   const [witnessObservation, setWitnessObservation] = useState<string>('');
+  const [witnessMedia, setWitnessMedia] = useState<MediaItem[]>([]);
   const [witnessRole, setWitnessRole] = useState<string>(
     (post?.country || user?.country || 'UG').toUpperCase() === 'UG'
-      ? 'Bodaboda Rider / Cyclist'
+      ? 'Bodaboda Rider / Stage Scout'
       : 'Road Scout / Commercial Rider'
   );
   const [witnessAnon, setWitnessAnon] = useState<boolean>(false);
+  const [expandedModalReports, setExpandedModalReports] = useState<Record<string, boolean>>({});
+  const [copiedDossierDigest, setCopiedDossierDigest] = useState<boolean>(false);
 
   // 72-Hour Citizen Ratification Loop inline states
   const [showRatifyInline, setShowRatifyInline] = useState<boolean>(false);
@@ -147,16 +163,20 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
   const isUserDownvoted = user ? !!downvotesMap[user.id]?.[post.id] : false;
 
   const totalVotes = (post.upvotes || 0) + (post.downvotes || 0);
-  const compiledCount = post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1);
+  const compiledCount = getDossierCompiledCount(post);
   const isMasterDossier = Boolean(post.is_master_dossier || compiledCount > 1);
+  const rankedDossierSubmissions = isMasterDossier ? getRankedDossierSubmissions(post) : [];
+  const topRankedSubmission = rankedDossierSubmissions[0] || null;
 
   const hrsElapsed = Math.max(1, (Date.now() - new Date(post.created_at).getTime()) / 3600000);
   const slaLimit = d.sla || 48;
   const hoursLeft = Math.max(0, slaLimit - hrsElapsed);
   const currentTier = post.escalation_tier || (hrsElapsed > 144 ? 'tier4_ministry' : hrsElapsed > 96 ? 'tier3_district_cao' : hrsElapsed > 48 ? 'tier2_subcounty' : 'tier1_parish');
 
-  const postGov = getCountryGovernanceSchema((post.country || user?.country || 'UG').toUpperCase());
-  const isPostUg = (post.country || user?.country || 'UG').toUpperCase() === 'UG';
+  const postCountryCode = (post.country || user?.country || 'UG').toUpperCase();
+  const postGov = getCountryGovernanceSchema(postCountryCode);
+  const transitSpec = getCountryTransitSpecs(postCountryCode);
+  const isPostUg = postCountryCode === 'UG';
   const statutoryTiers = isPostUg
     ? [
         { id: 'tier1_parish', level: 1, title: 'Parish Chief & Ward Committee', officer: 'Parish Chief / Local CDO', window: '0h – 48h' },
@@ -342,20 +362,20 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onFocus={() => onActivateFocus?.(post.id)}
-      className={`rounded-xl border transition-all duration-200 overflow-hidden mb-3.5 shadow-2xs hover:shadow-sm scroll-mt-16 ${
+      className={`rounded-xl border transition-all duration-200 mb-3.5 shadow-2xs hover:shadow-sm scroll-mt-16 ${
         isFocused
           ? 'bg-white dark:bg-[#161a22] border-emerald-500/70 dark:border-emerald-500/60 ring-2 ring-emerald-500/15'
           : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-300 dark:hover:border-slate-600'
       }`}
     >
       {/* 1. TOP DEPARTMENT WALL BANNER (Department Page / Section Aesthetic) */}
-      <div className="px-4 py-2.5 sm:px-5 sm:py-3 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2.5 flex-wrap">
+      <div className="px-4 py-2.5 sm:px-5 sm:py-3 bg-[#f8f9fa] dark:bg-[#0e1116] border-b border-[#e3e6ea] dark:border-[#262b36] rounded-t-xl flex items-start sm:items-center justify-between gap-2">
         {/* Left: Department Icon & Identity */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-center shrink-0 shadow-2xs">
             <DeptIcon dept={d} size={15} className="text-slate-800 dark:text-slate-200" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
                 {d.name}
@@ -370,11 +390,11 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
           </div>
         </div>
 
-        {/* Right: Traffic Signal Bulbs & Status Badge */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: Traffic Signal Bulbs, Status Badge & Aligned Actions Menu */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {post.is_test_post && !post.is_demo && (
             <span
-              className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-[#e3e6ea] dark:border-[#262b36] text-[9.5px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300"
+              className="hidden xs:inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-[#e3e6ea] dark:border-[#262b36] text-[9.5px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300"
               title="Created during Public Beta — automatically removed when this country goes Live"
             >
               TEST POST
@@ -399,7 +419,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             </span>
           </div>
 
-          {/* More Menu */}
+          {/* More Menu — Mobile Safe Bottom Sheet + Aligned Desktop Popover */}
           <div className="relative">
             <button
               type="button"
@@ -407,131 +427,144 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
                 e.stopPropagation();
                 setMenuOpen(!menuOpen);
               }}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
-              title="More actions"
+              aria-expanded={menuOpen}
+              aria-label="Open docket tools and escalation menu"
+              className="min-h-[34px] min-w-[34px] p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 flex items-center justify-center transition cursor-pointer"
+              title="Docket tools & escalation"
             >
-              <MoreHorizontal size={15} />
+              <MoreHorizontal size={16} />
             </button>
 
             {menuOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 top-full mt-1 w-56 rounded-2xl bg-white dark:bg-[#161a22] border border-slate-200 dark:border-slate-800 shadow-2xl z-30 py-1.5 text-xs animate-fade-in"
-              >
-                <div className="px-3 py-1 text-[9.5px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Audits &amp; Escalation
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-slate-950/35 sm:bg-transparent"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                  }}
+                />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="fixed inset-x-3 bottom-20 sm:inset-x-auto sm:bottom-auto sm:absolute sm:right-0 sm:top-full sm:mt-1.5 sm:w-64 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] shadow-2xl z-50 py-2 text-xs animate-fade-in"
+                >
+                  <div className="px-3.5 py-1.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/70 sm:hidden">
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Docket Tools &amp; Audits
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setMenuOpen(false)}
+                      className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <div className="px-3.5 pt-2 pb-1 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                    Audits &amp; Escalation
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowStepperModal(true);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <ShieldCheck size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="font-medium">3-Signal Sovereign Stepper</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLadderModal(true);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <Clock size={15} className="text-amber-500 shrink-0" />
+                    <span className="font-medium">Statutory 4-Tier SLA Ladder</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDossierModal(true);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <Layers size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="font-medium">Master Dossier ({compiledCount})</span>
+                  </button>
+
+                  <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
+
+                  <div className="px-3.5 pt-1 pb-1 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                    Community &amp; Verification
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSocialModalTab('quote');
+                      setSocialModalPost(post);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <Repeat2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="font-medium">Quote-Dispatch</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSocialModalTab('note');
+                      setSocialModalPost(post);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <FileCheck2 size={15} className="text-amber-500 shrink-0" />
+                    <span className="font-medium">Add Community Note</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowQr(true);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <QrCode size={15} className="text-slate-500 dark:text-slate-400 shrink-0" />
+                    <span className="font-medium">Docket QR Verification</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleBookmark(post.id);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-800 dark:text-slate-200 cursor-pointer"
+                  >
+                    <Bookmark size={15} className={`shrink-0 ${isBookmarked ? 'fill-amber-500 text-amber-500' : 'text-slate-500 dark:text-slate-400'}`} />
+                    <span className="font-medium">{isBookmarked ? 'Remove Bookmark' : 'Save to Bookmarks'}</span>
+                  </button>
+
+                  <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deletePost(post.id);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 flex items-center gap-3 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 cursor-pointer"
+                  >
+                    <Trash2 size={15} className="shrink-0" />
+                    <span className="font-medium">Delete Post</span>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowStepperModal(true);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
-                >
-                  <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>3-Signal Sovereign Stepper</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLadderModal(true);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
-                >
-                  <Clock size={14} className="text-amber-500 shrink-0" />
-                  <span>Statutory 4-Tier SLA Ladder</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDossierModal(true);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
-                >
-                  <Layers size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  <span>Master Dossier ({compiledCount})</span>
-                </button>
-
-                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-
-                <div className="px-3 py-1 text-[9.5px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                  Community &amp; Actions
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSocialModalTab('quote');
-                    setSocialModalPost(post);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
-                >
-                  <Repeat2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Quote-Dispatch</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSocialModalTab('note');
-                    setSocialModalPost(post);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
-                >
-                  <FileCheck2 size={14} className="text-amber-500 shrink-0" />
-                  <span>+ Community Note</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowQr(true);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
-                >
-                  <QrCode size={14} className="shrink-0" />
-                  <span>Docket QR Verification</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRewardOpen(true);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 cursor-pointer"
-                >
-                  <Gift size={14} className="shrink-0" />
-                  <span>Peer Gratitude Reward (Tip)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleBookmark(post.id);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-[#1e232d] text-slate-700 dark:text-slate-200 cursor-pointer"
-                >
-                  <Bookmark size={14} className={`shrink-0 ${isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
-                  <span>{isBookmarked ? 'Remove Bookmark' : 'Save to Bookmarks'}</span>
-                </button>
-
-                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    deletePost(post.id);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 flex items-center gap-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 cursor-pointer"
-                >
-                  <Trash2 size={14} className="shrink-0" />
-                  <span>Delete Post</span>
-                </button>
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -668,6 +701,28 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
           >
             {stripDecorativeEmojis(post.title)}
           </h3>
+        )}
+
+        {/* Dynamic Community-Elected #1 Witness Lead Callout when a witness submission overtakes Lead */}
+        {isMasterDossier && topRankedSubmission && !topRankedSubmission.isLead && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDossierModal(true);
+            }}
+            className="w-full text-left px-3 py-2 rounded-xl bg-emerald-500/8 dark:bg-emerald-500/12 border border-emerald-500/25 hover:border-emerald-500/50 transition-colors flex items-center justify-between gap-2 cursor-pointer"
+          >
+            <div className="min-w-0 flex items-center gap-2 text-xs">
+              <Heart size={13} className="text-rose-500 fill-current shrink-0" />
+              <span className="font-semibold text-slate-900 dark:text-white truncate">
+                Top-Liked Angle ({topRankedSubmission.likes}): {topRankedSubmission.title}
+              </span>
+            </div>
+            <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
+              View Dossier
+            </span>
+          </button>
         )}
 
         {/* Post Body (With RichCivicText and Multi-Language Translation Dropdown) */}
@@ -1015,7 +1070,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
       </div>
 
       {/* 3. HIGH-ERGONOMICS REACTION BAR ("EASY TO REACT TO") */}
-      <div className="px-4 py-3 sm:px-5 bg-[#f8f9fa] dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+      <div className="px-4 py-3 sm:px-5 bg-[#f8f9fa] dark:bg-[#0e1116] border-t border-[#e3e6ea] dark:border-[#262b36] rounded-b-xl flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
           {/* Corroborate / Upvote Button (Green Affirmation Arrow Up) */}
           <button
@@ -1063,7 +1118,7 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             </span>
           </button>
 
-          {/* 1. Public Discussion & Official Response ONLY */}
+          {/* 1. Public Discussion & Official Response */}
           <button
             type="button"
             onClick={(e) => {
@@ -1079,6 +1134,20 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
             <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono">
               {post.comments?.length || 0}
             </span>
+          </button>
+
+          {/* Visible Peer Gratitude Reward (Tip) Action Button beneath the post */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRewardOpen(true);
+            }}
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-sans font-semibold bg-amber-50 dark:bg-amber-950/35 border border-amber-300/80 dark:border-amber-700/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
+            title="Send peer gratitude reward / tip to this citizen reporter"
+          >
+            <Gift size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>Reward</span>
           </button>
 
           {/* Bookmark Button */}
@@ -1275,120 +1344,283 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
           onClick={() => setShowDossierModal(false)}
         >
           <div
-            className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-4 space-y-3.5"
+            className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-4 sm:p-5 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2.5">
-              <div className="flex items-center gap-2">
-                <Layers size={18} className="text-indigo-600 dark:text-indigo-400" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white font-mono">
-                  Master Dossier Compilation &amp; Witness Locker
-                </h3>
+            <div className="flex items-center justify-between gap-2 border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Layers size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    Master Dossier &amp; Witness Locker
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    Like any submission below to promote it to #1 Featured Story
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowDossierModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-              >
-                <X size={16} />
-              </button>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const digest = buildDossierDigestText(post, postGov.tier3Short);
+                    navigator.clipboard?.writeText(digest);
+                    setCopiedDossierDigest(true);
+                    toast('Copied complete Master Dossier briefing & cryptographic digest!', 'emerald');
+                    setTimeout(() => setCopiedDossierDigest(false), 2000);
+                  }}
+                  className="min-h-[36px] px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] hover:border-emerald-500 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1 cursor-pointer"
+                  title="Copy full timestamped dossier digest"
+                >
+                  {copiedDossierDigest ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                  <span>{copiedDossierDigest ? 'Copied' : 'Digest'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDossierModal(false)}
+                  className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
 
-            {/* Critical Mass Progress Bar */}
-            <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-mono font-bold">
-                <span className="text-indigo-900 dark:text-indigo-300">
+            {/* Localized Critical Mass Progress Bar */}
+            <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
+              <div className="flex items-center justify-between gap-2 text-xs font-semibold tabular-nums flex-wrap">
+                <span className="text-slate-800 dark:text-slate-200">
                   Critical Mass Auto-Escalation ({Math.min(5, compiledCount)} / 5 Witnesses)
                 </span>
-                <span className={compiledCount >= 5 ? 'text-rose-600 font-bold' : 'text-indigo-600'}>
-                  {compiledCount >= 5 ? 'Threshold Reached — Auto-Escalated to CAO' : `${5 - compiledCount} more to auto-escalate`}
+                <span className={compiledCount >= 5 ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-emerald-700 dark:text-emerald-400 font-bold'}>
+                  {compiledCount >= 5
+                    ? `Threshold Reached — Auto-Escalated to ${postGov.tier3Short}`
+                    : `${5 - compiledCount} more to auto-escalate`}
                 </span>
               </div>
               <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full ${compiledCount >= 5 ? 'bg-rose-600' : 'bg-indigo-600'}`}
+                  className={`h-full rounded-full transition-all duration-300 ${compiledCount >= 5 ? 'bg-rose-600' : 'bg-emerald-600'}`}
                   style={{ width: `${Math.min(100, (compiledCount / 5) * 100)}%` }}
                 />
               </div>
             </div>
 
-            {/* Compiled Reports List */}
-            <div className="space-y-2">
-              <div className="text-[10px] font-mono font-bold uppercase text-slate-500">
-                Compiled Citizen Reports ({compiledCount} Total Witnesses)
-              </div>
-              {/* Lead filing */}
-              <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {post.anonymous ? 'Protected Citizen' : post.citizen_name} (Lead Filing)
-                  </span>
-                  <span className="text-[9px] font-mono text-slate-400">{grassroots.parish}</span>
-                </div>
-                <p className="text-slate-600 dark:text-slate-300 line-clamp-2">{stripDecorativeEmojis(post.body)}</p>
+            {/* Ranked Compiled Reports List (Most-liked leads #1) */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span>Ranked Submissions ({rankedDossierSubmissions.length})</span>
+                <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                  #1 stays featured on Frontpage
+                </span>
               </div>
 
-              {post.compiled_reports?.map((wr, idx) => (
-                <div key={wr.id || idx} className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 dark:text-white">
-                      Witness #{idx + 2}: {wr.citizen_name} ({wr.author_profession || 'Citizen Scout'})
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-400">Co-Signed</span>
-                  </div>
-                  <p className="text-slate-600 dark:text-slate-300 line-clamp-2">{wr.body}</p>
-                </div>
-              ))}
+              {(() => {
+                const activeActorId = (user || ensureCitizenSession()).id || 'usr-public-viewer';
+                const userLikes = dossierLikesMap[activeActorId] || {};
+
+                return rankedDossierSubmissions.map((item, idx) => {
+                  const isTop = idx === 0;
+                  const isLiked = Boolean(userLikes[`${post.id}::${item.id}`]);
+                  const isExpanded = Boolean(expandedModalReports[item.id]);
+                  const isLong = item.body.length > 135;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-xl border space-y-2 transition-colors ${
+                        isTop
+                          ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/40'
+                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                            <span className={`font-mono font-bold ${isTop ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500'}`}>
+                              #{idx + 1}
+                            </span>
+                            {isTop && (
+                              <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                                Featured Main Story ·
+                              </span>
+                            )}
+                            <span className="font-bold text-slate-900 dark:text-white inline-flex items-center gap-1">
+                              {item.anonymous && <Lock size={11} className="text-slate-400" />}
+                              {item.citizen_name}
+                            </span>
+                          </div>
+
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                            <span>{item.rankLabel}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{item.author_profession}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{srcLabel(item.source)}</span>
+                            <span aria-hidden="true">·</span>
+                            <span>{formatRelativeTimeAgo(item.created_at)}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleDossierSubmissionLike(post.id, item.id)}
+                          aria-pressed={isLiked}
+                          className={`min-h-[40px] min-w-[64px] px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer tabular-nums ${
+                            isLiked
+                              ? 'bg-rose-600 border-rose-600 text-white'
+                              : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 hover:border-rose-500 hover:text-rose-600'
+                          }`}
+                          title={isTop ? 'Currently #1 Featured Story' : 'Like to promote this submission to #1'}
+                        >
+                          <Heart size={14} className={isLiked ? 'fill-current' : ''} />
+                          <span>{item.likes}</span>
+                        </button>
+                      </div>
+
+                      {!item.isLead && item.title && (
+                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          {item.title}
+                        </div>
+                      )}
+
+                      <p className={`text-xs text-slate-700 dark:text-slate-300 leading-relaxed ${!isExpanded && isLong ? 'line-clamp-2' : ''}`}>
+                        {item.body}
+                      </p>
+
+                      {item.media && item.media.length > 0 && (
+                        <MediaCard
+                          media={item.media}
+                          postId={`${post.id}-${item.id}`}
+                          countryCode={post.country}
+                          onToast={(msg) => toast(msg)}
+                        />
+                      )}
+
+                      {(isLong || item.gps) && (
+                        <div className="flex items-center justify-between gap-2 text-[11px]">
+                          {item.gps ? (
+                            <span className="font-mono text-slate-500 dark:text-slate-400 inline-flex items-center gap-1 tabular-nums">
+                              <MapPin size={11} className="text-emerald-600 dark:text-emerald-400" />
+                              <span>{item.gps.lat}, {item.gps.lng}</span>
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                          {isLong && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedModalReports((prev) => ({
+                                  ...prev,
+                                  [item.id]: !prev[item.id],
+                                }))
+                              }
+                              className="font-semibold text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <span>{isExpanded ? 'Show less' : 'Read full report'}</span>
+                              {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             {/* Quick Co-Sign Testimony Box */}
-            <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2">
-              <div className="text-[10px] font-mono font-bold uppercase text-indigo-700 dark:text-indigo-400">
+            <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+              <div className="text-xs font-bold text-slate-900 dark:text-white">
                 + Co-Sign &amp; Add My Witness Testimony (+20 pts)
               </div>
+
+              <input
+                type="text"
+                value={witnessTitle}
+                onChange={(e) => setWitnessTitle(e.target.value)}
+                maxLength={140}
+                placeholder="Optional headline for your angle..."
+                className="w-full px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs focus:outline-none focus:border-emerald-500"
+              />
+
               <textarea
-                rows={2}
+                rows={3}
                 value={witnessObservation}
                 onChange={(e) => setWitnessObservation(e.target.value)}
-                placeholder="Describe what you observed on ground at this site..."
-                className="w-full p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs focus:outline-none focus:border-indigo-500"
+                placeholder="Describe what you observed on the ground at this site..."
+                className="w-full p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs focus:outline-none focus:border-emerald-500"
               />
-              <div className="flex items-center justify-between gap-2">
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <select
                   value={witnessRole}
                   onChange={(e) => setWitnessRole(e.target.value)}
-                  className="px-2 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono"
+                  className="min-h-[40px] px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs"
                 >
-                  <option value="Bodaboda Rider / Cyclist">Bodaboda Road Scout</option>
-                  <option value="Commercial Transit Driver">Transit Driver</option>
-                  <option value="Market Vendor / Local Trader">Market Vendor / Trader</option>
-                  <option value="Local Parish Resident">Local Parish Resident</option>
+                  <option value={isPostUg ? 'Bodaboda Rider / Stage Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}>
+                    {isPostUg ? 'Bodaboda Road Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}
+                  </option>
+                  <option value={`${transitSpec.taxiTabLabel} Operator`}>
+                    {transitSpec.taxiTabLabel} Operator
+                  </option>
+                  <option value={`${transitSpec.marketTabLabel} / Trader`}>
+                    {transitSpec.marketTabLabel} / Trader
+                  </option>
+                  <option value={`Local ${postGov.tier1UnitLabel} Resident`}>
+                    Local {postGov.tier1UnitLabel} Resident
+                  </option>
                 </select>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!witnessObservation.trim()) {
-                      toast('Enter your witness observation', 'amber');
-                      return;
-                    }
-                    compileWitnessIntoPost(post.id, {
-                      citizen_id: user?.id || 'usr-citizen',
-                      citizen_name: witnessAnon ? 'Verified Citizen' : user?.name || 'Citizen Witness',
-                      author_profession: witnessRole,
-                      anonymous: witnessAnon,
-                      body: witnessObservation.trim(),
-                      source: 'web',
-                    });
-                    setWitnessObservation('');
-                    setShowDossierModal(false);
-                    toast('Your testimony was compiled into the Master Dossier (+20 pts)!', 'emerald');
-                  }}
-                  className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-mono font-bold text-xs cursor-pointer"
-                >
-                  Compile Testimony
-                </button>
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={witnessAnon}
+                    onChange={(e) => setWitnessAnon(e.target.checked)}
+                  />
+                  <span>Mask identity</span>
+                </label>
               </div>
+
+              <DossierMultimediaUploader
+                media={witnessMedia}
+                onChange={setWitnessMedia}
+                onNotify={(msg, tone) => toast(msg, tone)}
+                compact
+              />
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!witnessObservation.trim() && witnessMedia.length === 0) {
+                    toast('Enter your witness observation or attach evidence media', 'amber');
+                    return;
+                  }
+                  const actor = user || ensureCitizenSession();
+                  compileWitnessIntoPost(post.id, {
+                    citizen_id: actor.id || 'usr-citizen',
+                    citizen_name: witnessAnon ? 'Verified Citizen' : actor.name || 'Citizen Witness',
+                    author_profession: witnessRole,
+                    anonymous: witnessAnon,
+                    title: witnessTitle.trim() || undefined,
+                    body:
+                      witnessObservation.trim() ||
+                      witnessTitle.trim() ||
+                      `Attached ${witnessMedia.length} multimedia evidence file(s) from the site.`,
+                    gps: post.gps || null,
+                    media: witnessMedia.length > 0 ? witnessMedia : undefined,
+                    source: 'web',
+                  });
+                  setWitnessTitle('');
+                  setWitnessObservation('');
+                  setWitnessMedia([]);
+                }}
+                className="w-full min-h-[44px] py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs cursor-pointer transition-colors"
+              >
+                Compile Testimony into Dossier
+              </button>
             </div>
           </div>
         </div>

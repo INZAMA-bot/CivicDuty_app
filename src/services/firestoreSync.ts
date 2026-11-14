@@ -28,6 +28,46 @@ import {
 } from '../types';
 import { INITIAL_POSTS } from '../data/initialData';
 
+function sanitizeWitnessMedia(media?: CompiledWitnessReport['media']) {
+  if (!Array.isArray(media) || media.length === 0) return [];
+  return media.slice(0, 6).map((m) => {
+    const safeUrl =
+      m.url && !m.url.startsWith('blob:') && m.url.length <= 250_000
+        ? m.url
+        : undefined;
+    return {
+      type: m.type,
+      ...(safeUrl ? { url: safeUrl } : {}),
+      ...(m.caption ? { caption: m.caption.slice(0, 160) } : {}),
+      ...(m.duration ? { duration: m.duration.slice(0, 24) } : {}),
+      ...(m.name ? { name: m.name.slice(0, 128) } : {}),
+      ...(m.size ? { size: m.size.slice(0, 32) } : {}),
+      ...(m.mimeType ? { mimeType: m.mimeType.slice(0, 64) } : {}),
+      ...(Array.isArray(m.waveform) ? { waveform: m.waveform.slice(0, 40) } : {}),
+    };
+  });
+}
+
+function sanitizeCompiledReports(reports?: CompiledWitnessReport[]) {
+  return (reports || []).slice(0, 50).map((r) => {
+    const sanitizedMedia = sanitizeWitnessMedia(r.media);
+    return {
+      id: r.id,
+      citizen_id: r.citizen_id,
+      citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
+      author_profession: (r.author_profession || '').slice(0, 128),
+      anonymous: Boolean(r.anonymous),
+      title: (r.title || '').slice(0, 200),
+      body: (r.body || '').slice(0, 2000),
+      gps: r.gps || null,
+      ...(sanitizedMedia.length > 0 ? { media: sanitizedMedia } : {}),
+      created_at: r.created_at,
+      source: r.source || 'web',
+      likes: Number(r.likes || 0),
+    };
+  });
+}
+
 function buildPostPayload(post: Post) {
   return {
     id: post.id,
@@ -52,19 +92,7 @@ function buildPostPayload(post: Post) {
     downvotes: Number(post.downvotes || 0),
     author_profession: post.author_profession || '',
     crypto_seal_hash: post.crypto_seal_hash || '',
-    compiled_reports: (post.compiled_reports || []).slice(0, 50).map((r) => ({
-      id: r.id,
-      citizen_id: r.citizen_id,
-      citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
-      author_profession: (r.author_profession || '').slice(0, 128),
-      anonymous: Boolean(r.anonymous),
-      title: (r.title || '').slice(0, 200),
-      body: (r.body || '').slice(0, 2000),
-      gps: r.gps || null,
-      created_at: r.created_at,
-      source: r.source || 'web',
-      likes: Number(r.likes || 0),
-    })),
+    compiled_reports: sanitizeCompiledReports(post.compiled_reports),
     compiled_count: Number(post.compiled_count || (post.compiled_reports ? post.compiled_reports.length + 1 : 1)),
     lead_likes: Number(post.lead_likes || 0),
     featured_submission_id: (post.featured_submission_id || 'lead').slice(0, 128),
@@ -455,19 +483,7 @@ export async function updatePostCompilationInCloud(
       return;
     }
     await updateDoc(docRef, {
-      compiled_reports: compiledReports.slice(0, 50).map((r) => ({
-        id: r.id,
-        citizen_id: r.citizen_id,
-        citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
-        author_profession: (r.author_profession || '').slice(0, 128),
-        anonymous: Boolean(r.anonymous),
-        title: (r.title || '').slice(0, 200),
-        body: (r.body || '').slice(0, 2000),
-        gps: r.gps || null,
-        created_at: r.created_at,
-        source: r.source || 'web',
-        likes: Number(r.likes || 0),
-      })),
+      compiled_reports: sanitizeCompiledReports(compiledReports),
       compiled_count: Number(compiledCount),
       upvotes: Number(upvotes),
       escalated: Boolean(escalated),
@@ -493,19 +509,7 @@ export async function updateDossierSubmissionLikesInCloud(
   try {
     const docRef = doc(db, 'posts', postId);
     const snap = await getDoc(docRef);
-    const sanitizedReports = compiledReports.slice(0, 50).map((r) => ({
-      id: r.id,
-      citizen_id: r.citizen_id,
-      citizen_name: r.anonymous ? 'Verified Citizen' : (r.citizen_name || 'Citizen').slice(0, 128),
-      author_profession: (r.author_profession || '').slice(0, 128),
-      anonymous: Boolean(r.anonymous),
-      title: (r.title || '').slice(0, 200),
-      body: (r.body || '').slice(0, 2000),
-      gps: r.gps || null,
-      created_at: r.created_at,
-      source: r.source || 'web',
-      likes: Number(r.likes || 0),
-    }));
+    const sanitizedReports = sanitizeCompiledReports(compiledReports);
 
     if (!snap.exists()) {
       const seed = fullPost || INITIAL_POSTS.find((p) => p.id === postId);

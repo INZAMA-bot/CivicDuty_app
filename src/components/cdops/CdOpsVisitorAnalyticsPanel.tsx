@@ -17,6 +17,9 @@ import {
   Search,
   CheckCircle2,
   AlertTriangle,
+  Download,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   loadLocalAnalytics,
@@ -51,6 +54,7 @@ export const CdOpsVisitorAnalyticsPanel: React.FC = () => {
   const [confirmPurgeCountry, setConfirmPurgeCountry] = useState<CountryCode | null>(null);
   const [purgingCode, setPurgingCode] = useState<CountryCode | null>(null);
   const [confirmResetLocal, setConfirmResetLocal] = useState(false);
+  const [copiedUtm, setCopiedUtm] = useState(false);
 
   useEffect(() => {
     const unsubLocal = subscribeAnalytics((next) => {
@@ -239,7 +243,49 @@ export const CdOpsVisitorAnalyticsPanel: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                const utmLink = 'https://civicduty.site/?utm_source=google&utm_medium=discover&utm_campaign=public_beta';
+                navigator.clipboard?.writeText(utmLink);
+                setCopiedUtm(true);
+                toast('Copied Google Ads Discover URL (CivicDuty.site + UTM tracking)!', 'emerald');
+                setTimeout(() => setCopiedUtm(false), 2200);
+              }}
+              className="min-h-[38px] px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Copy tagged CivicDuty.site link for Google Ads Demand Gen / Discover"
+            >
+              {copiedUtm ? <Check size={13} /> : <Copy size={13} />}
+              <span>{copiedUtm ? 'Copied Ads Link' : 'Google Ads Link'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const report = {
+                  exportedAt: new Date().toISOString(),
+                  summary: mergedSummary,
+                  countryMetrics: mergedCountryMetrics,
+                  testerFeedback: feedbackItems,
+                  recentEvents: mergedSummary.recentEvents,
+                };
+                const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `civicduty-beta-analytics-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast('Downloaded full Public Beta Analytics & UX Feedback report (JSON)!', 'emerald');
+              }}
+              className="min-h-[38px] px-3 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 hover:border-emerald-500 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Download full analytics & public feedback snapshot"
+            >
+              <Download size={13} />
+              <span>Export Report</span>
+            </button>
+
             <button
               type="button"
               onClick={handleRefreshCloud}

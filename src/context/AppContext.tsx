@@ -562,12 +562,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  const VIEW_TO_PATH: Partial<Record<ViewType, string>> = {
+    splash: '/',
+    feed: '/feed',
+    depts: '/departments',
+    dept_wall: '/departments',
+    compose: '/speak',
+    profile: '/profile',
+    perk_vault: '/perks',
+    docs: '/docs',
+    ussd: '/ussd',
+    entity_register: '/register',
+    entity_gateway: '/subscribe',
+    entity_done: '/subscription-confirmed',
+    gov_partnership: '/partnership',
+  };
+
   const [view, setView] = useState<ViewType>(() => {
     if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname.replace(/\/+$/, '').toLowerCase() || '/';
       const hash = window.location.hash.replace('#', '');
-      // Public citizen routes open to all:
-      if (hash === 'feed') return 'feed';
-      if (hash === 'docs') return 'docs';
+      // Public citizen routes open to all (pathname or hash):
+      if (pathname === '/feed' || hash === 'feed') return 'feed';
+      if (pathname === '/subscription-confirmed' || pathname === '/confirmed') return 'entity_done';
+      if (pathname === '/perks') return 'perk_vault';
+      if (pathname === '/departments') return 'depts';
+      if (pathname === '/speak') return 'compose';
+      if (pathname === '/register') return 'entity_register';
+      if (pathname === '/subscribe') return 'entity_gateway';
+      if (pathname === '/partnership') return 'gov_partnership';
+      if (pathname === '/ussd') return 'ussd';
+      if (pathname === '/docs' || hash === 'docs') return 'docs';
       if (hash.startsWith('track-') || hash.startsWith('post-')) return 'post_detail';
       // Administrative consoles requiring master key authorization:
       if (isPlatformUnlocked()) {
@@ -1592,6 +1617,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setPrevView(view);
     setView(v);
+    if (typeof window !== 'undefined') {
+      const nextPath = VIEW_TO_PATH[v];
+      if (nextPath && window.location.pathname !== nextPath) {
+        try {
+          window.history.replaceState(null, '', `${nextPath}${window.location.search}${window.location.hash}`);
+        } catch {}
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
