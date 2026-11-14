@@ -1450,7 +1450,7 @@ export const DeptWallView: React.FC = () => {
                 <button
                   onClick={() => {
                     const code = `<div class="civicduty-badge" data-entity="${d.id}" data-trust="${d.trustScore || 94}%">\n  <span class="shield">[VERIFIED]</span> Verified by CivicDuty · ${d.trustScore || 94}% Trust Index\n</div>`;
-                    navigator.clipboard.writeText(code);
+                    navigator.clipboard?.writeText(code)?.catch?.(() => {});
                     setCopiedBadge(true);
                     toast('Badge code copied to clipboard!', 'emerald');
                     setTimeout(() => setCopiedBadge(false), 3000);

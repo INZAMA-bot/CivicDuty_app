@@ -140,10 +140,11 @@ export function getPostGrassroots(country: CountryCode, p: Post) {
   const t = p.territory;
   const dist = TERRITORY[country]?.find((x) => x.id === t?.district || x.name === t?.district);
   const rawDistrict = dist?.name || t?.district || (country === 'UG' ? 'Kampala' : gov.sampleJurisdictions[0] || gov.countryName);
+  const isCityNode = /\bcity\b/i.test(rawDistrict);
   const cleanDistrict = toTitleCase(rawDistrict.replace(/district$/i, '').trim());
   const districtName = country === 'UG'
-    ? (cleanDistrict ? `${cleanDistrict} District` : 'National District')
-    : (rawDistrict.toLowerCase().includes(gov.grassrootsUnits.tier3Suffix.toLowerCase())
+    ? (cleanDistrict ? (isCityNode ? cleanDistrict : `${cleanDistrict} District`) : 'National District')
+    : (rawDistrict.toLowerCase().includes(gov.grassrootsUnits.tier3Suffix.toLowerCase()) || isCityNode
         ? toTitleCase(rawDistrict)
         : cleanDistrict ? `${cleanDistrict} (${gov.grassrootsUnits.tier3Suffix})` : `${gov.countryName}`);
 

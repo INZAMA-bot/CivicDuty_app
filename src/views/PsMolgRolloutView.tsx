@@ -1928,7 +1928,7 @@ export const PsMolgRolloutView: React.FC = () => {
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(issuedStaffCode);
+                      navigator.clipboard?.writeText(issuedStaffCode)?.catch?.(() => {});
                       toast('Access code copied to clipboard', 'emerald');
                     }}
                     className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-emerald-600 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 cursor-pointer"

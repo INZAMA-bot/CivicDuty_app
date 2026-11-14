@@ -588,6 +588,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (pathname === '/perks') return 'perk_vault';
       if (pathname === '/departments') return 'depts';
       if (pathname === '/speak') return 'compose';
+      if (pathname === '/profile') return 'profile';
+      if (pathname === '/verify') return 'verify';
       if (pathname === '/register') return 'entity_register';
       if (pathname === '/subscribe') return 'entity_gateway';
       if (pathname === '/partnership') return 'gov_partnership';
@@ -1624,8 +1626,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           window.history.replaceState(null, '', `${nextPath}${window.location.search}${window.location.hash}`);
         } catch {}
       }
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch {
+        try {
+          window.scrollTo(0, 0);
+        } catch {}
+      }
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const logAudit = (action: string, ticketId: string, detail: string, country?: CountryCode, dept?: string) => {

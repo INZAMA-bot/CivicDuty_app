@@ -144,10 +144,11 @@ export const GovProjectsView: React.FC = () => {
       ? allAreas
           .filter(
             (n) =>
-              n.name.toLowerCase().includes(searchAreaQuery.trim().toLowerCase()) &&
+              (n.name.toLowerCase().includes(searchAreaQuery.trim().toLowerCase()) ||
+                n.path.toLowerCase().includes(searchAreaQuery.trim().toLowerCase())) &&
               !selectedUnits.some((u) => u.id === n.id)
           )
-          .slice(0, 5)
+          .slice(0, 12)
       : [];
 
   const handleAddUnit = (unit: { id: string; name: string; path: string }) => {

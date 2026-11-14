@@ -1,4 +1,5 @@
 import { CountryCode, CountryInfo, Department, TerritoryNode } from '../types';
+import { UG_ADDITIONAL_TERRITORY_NODES } from './ugandaDistrictsAndCities';
 export { getDept, allDepts } from '../utils/helpers';
 
 export const COUNTRIES: Record<string, CountryInfo> = {
@@ -226,6 +227,7 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
     {
       id: 'kla',
       name: 'Kampala District',
+      region: 'CENTRAL',
       children: [
         {
           id: 'nakawa',
@@ -362,6 +364,7 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
     {
       id: 'wjk',
       name: 'Wakiso District',
+      region: 'CENTRAL',
       children: [
         {
           id: 'kira_tc',
@@ -408,6 +411,7 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
       id: 'mbarara_c',
       name: 'Mbarara City',
       variant: 'city',
+      region: 'WESTERN',
       children: [
         {
           id: 'kakoba',
@@ -438,6 +442,7 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
     {
       id: 'gulu_d',
       name: 'Gulu District',
+      region: 'NORTHERN',
       children: [
         {
           id: 'unyama_s',
@@ -469,6 +474,7 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
       id: 'gulu_c',
       name: 'Gulu City',
       variant: 'city',
+      region: 'NORTHERN',
       children: [
         {
           id: 'bardege',
@@ -491,6 +497,7 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
     {
       id: 'kayunga',
       name: 'Kayunga District',
+      region: 'CENTRAL',
       children: [
         {
           id: 'ntenjeru_s',
@@ -511,6 +518,7 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
         },
       ],
     },
+    ...UG_ADDITIONAL_TERRITORY_NODES,
   ],
   KE: [
     {
@@ -824,6 +832,158 @@ export const TERRITORY: Record<CountryCode, TerritoryNode[]> = {
     },
   ],
 };
+
+// Auto-populate additional sub-national territories for Kenya (47 Counties), Rwanda (30 Districts), Nigeria, Ghana, Tanzania, South Africa, US, GB, IN
+const KE_EXTRA_COUNTIES: { id: string; name: string; region: string; subs: string[] }[] = [
+  { id: 'mombasa', name: 'Mombasa County', region: 'COAST', subs: ['Mvita Sub-County', 'Nyali Sub-County', 'Kisauni Sub-County', 'Likoni Sub-County', 'Changamwe Sub-County', 'Jomvu Sub-County'] },
+  { id: 'kisumu', name: 'Kisumu County', region: 'NYANZA', subs: ['Kisumu Central', 'Kisumu East', 'Kisumu West', 'Seme Sub-County', 'Nyando Sub-County', 'Muhoroni Sub-County'] },
+  { id: 'nakuru', name: 'Nakuru County', region: 'RIFT VALLEY', subs: ['Nakuru Town East', 'Nakuru Town West', 'Naivasha Sub-County', 'Molo Sub-County', 'Gilgil Sub-County'] },
+  { id: 'uasin_gishu', name: 'Uasin Gishu County (Eldoret)', region: 'RIFT VALLEY', subs: ['Ainabkoi Sub-County', 'Kapseret Sub-County', 'Kesses Sub-County', 'Moiben Sub-County', 'Soy Sub-County', 'Turbo Sub-County'] },
+  { id: 'kiambu', name: 'Kiambu County', region: 'CENTRAL', subs: ['Thika Town', 'Ruiru', 'Juja', 'Kikuyu', 'Kiambu Town', 'Limuru'] },
+  { id: 'machakos', name: 'Machakos County', region: 'EASTERN', subs: ['Machakos Town', 'Mavoko', 'Kangundo', 'Kathiani', 'Mwala'] },
+  { id: 'kajiado', name: 'Kajiado County', region: 'RIFT VALLEY', subs: ['Kajiado North', 'Kajiado Central', 'Kajiado East', 'Kajiado West'] },
+  { id: 'kilifi', name: 'Kilifi County', region: 'COAST', subs: ['Kilifi North', 'Kilifi South', 'Malindi', 'Magarini', 'Kaloleni'] },
+  { id: 'kwale', name: 'Kwale County', region: 'COAST', subs: ['Msambweni', 'Matuga', 'Kinango', 'Lunga Lunga'] },
+  { id: 'nyeri', name: 'Nyeri County', region: 'CENTRAL', subs: ['Nyeri Town', 'Mathira', 'Tetu', 'Othaya', 'Kieni'] },
+  { id: 'muranga', name: "Murang'a County", region: 'CENTRAL', subs: ['Kiharu', 'Kandara', 'Gatanga', 'Maragwa', 'Kangema'] },
+  { id: 'kirinyaga', name: 'Kirinyaga County', region: 'CENTRAL', subs: ['Kirinyaga Central', 'Mwea', 'Gichugu', 'Ndia'] },
+  { id: 'nyandarua', name: 'Nyandarua County', region: 'CENTRAL', subs: ['Ol Kalou', 'Kinangop', 'Kipipiri', 'Ndaragwa'] },
+  { id: 'meru', name: 'Meru County', region: 'EASTERN', subs: ['Imenti North', 'Imenti South', 'Tigania West', 'Igembe South'] },
+  { id: 'embu', name: 'Embu County', region: 'EASTERN', subs: ['Manyatta', 'Runyenjes', 'Mbeere North', 'Mbeere South'] },
+  { id: 'kitui', name: 'Kitui County', region: 'EASTERN', subs: ['Kitui Central', 'Mwingi Central', 'Kitui South', 'Kitui West'] },
+  { id: 'makueni', name: 'Makueni County', region: 'EASTERN', subs: ['Makueni', 'Kibwezi West', 'Kibwezi East', 'Kaiti', 'Kilome'] },
+  { id: 'kakamega', name: 'Kakamega County', region: 'WESTERN', subs: ['Lurambi', 'Shinyalu', 'Mumias West', 'Lugari', 'Butere'] },
+  { id: 'bungoma', name: 'Bungoma County', region: 'WESTERN', subs: ['Kanduyi', 'Webuye East', 'Kimilili', 'Bumula', 'Sirisia'] },
+  { id: 'vihiga', name: 'Vihiga County', region: 'WESTERN', subs: ['Sabatia', 'Vihiga', 'Hamisi', 'Luanda', 'Emuhaya'] },
+  { id: 'busia_ke', name: 'Busia County', region: 'WESTERN', subs: ['Matayos', 'Teso North', 'Teso South', 'Butula', 'Funyula'] },
+  { id: 'kisii', name: 'Kisii County', region: 'NYANZA', subs: ['Kitutu Chache South', 'Nyaribari Chache', 'Bobasi', 'Bomachoge'] },
+  { id: 'nyamira', name: 'Nyamira County', region: 'NYANZA', subs: ['West Mugirango', 'North Mugirango', 'Borabu', 'Kitutu Masaba'] },
+  { id: 'siaya', name: 'Siaya County', region: 'NYANZA', subs: ['Alego Usonga', 'Bondo', 'Gem', 'Ugenya', 'Rarieda'] },
+  { id: 'homa_bay', name: 'Homa Bay County', region: 'NYANZA', subs: ['Homa Bay Town', 'Ndhiwa', 'Mbita', 'Rachuonyo North'] },
+  { id: 'migori', name: 'Migori County', region: 'NYANZA', subs: ['Suna East', 'Rongo', 'Awendo', 'Kuria West', 'Uriri'] },
+  { id: 'kericho', name: 'Kericho County', region: 'RIFT VALLEY', subs: ['Ainamoi', 'Bureti', 'Belgut', 'Kipkelion East'] },
+  { id: 'bomet', name: 'Bomet County', region: 'RIFT VALLEY', subs: ['Bomet Central', 'Sotik', 'Chepalungu', 'Konoin'] },
+  { id: 'narok', name: 'Narok County', region: 'RIFT VALLEY', subs: ['Narok North', 'Narok South', 'Narok West', 'Transmara'] },
+  { id: 'nandi', name: 'Nandi County', region: 'RIFT VALLEY', subs: ['Emgwen', 'Chesumei', 'Mosop', 'Aldai', 'Tinderet'] },
+  { id: 'trans_nzoia', name: 'Trans Nzoia County', region: 'RIFT VALLEY', subs: ['Kiminini', 'Saboti', 'Cherangany', 'Endebess', 'Kwanza'] },
+  { id: 'elgeyo_marakwet', name: 'Elgeyo-Marakwet County', region: 'RIFT VALLEY', subs: ['Keiyo North', 'Keiyo South', 'Marakwet East', 'Marakwet West'] },
+  { id: 'baringo', name: 'Baringo County', region: 'RIFT VALLEY', subs: ['Baringo Central', 'Eldama Ravine', 'Mogotio', 'Baringo North'] },
+  { id: 'laikipia', name: 'Laikipia County', region: 'RIFT VALLEY', subs: ['Laikipia East', 'Laikipia West', 'Laikipia North'] },
+  { id: 'turkana', name: 'Turkana County', region: 'RIFT VALLEY', subs: ['Turkana Central', 'Loima', 'Turkana West', 'Turkana South'] },
+  { id: 'west_pokot', name: 'West Pokot County', region: 'RIFT VALLEY', subs: ['Kapenguria', 'Sigor', 'Kacheliba', 'Pokot South'] },
+  { id: 'samburu', name: 'Samburu County', region: 'RIFT VALLEY', subs: ['Samburu West', 'Samburu North', 'Samburu East'] },
+  { id: 'garissa', name: 'Garissa County', region: 'NORTH EASTERN', subs: ['Garissa Township', 'Dadaab', 'Balambala', 'Lagdera'] },
+  { id: 'wajir', name: 'Wajir County', region: 'NORTH EASTERN', subs: ['Wajir East', 'Wajir West', 'Wajir North', 'Wajir South'] },
+  { id: 'mandera', name: 'Mandera County', region: 'NORTH EASTERN', subs: ['Mandera East', 'Mandera North', 'Mandera South', 'Banissa'] },
+  { id: 'marsabit', name: 'Marsabit County', region: 'EASTERN', subs: ['Saku', 'Moyale', 'North Horr', 'Laisamis'] },
+  { id: 'isiolo', name: 'Isiolo County', region: 'EASTERN', subs: ['Isiolo North', 'Isiolo South', 'Garbatulla'] },
+  { id: 'tharaka_nithi', name: 'Tharaka-Nithi County', region: 'EASTERN', subs: ['Chuka', 'Maara', 'Tharaka'] },
+  { id: 'taita_taveta', name: 'Taita-Taveta County', region: 'COAST', subs: ['Voi', 'Wundanyi', 'Mwatate', 'Taveta'] },
+  { id: 'tana_river', name: 'Tana River County', region: 'COAST', subs: ['Galole', 'Garsen', 'Bura'] },
+  { id: 'lamu', name: 'Lamu County', region: 'COAST', subs: ['Lamu East', 'Lamu West'] },
+];
+
+KE_EXTRA_COUNTIES.forEach((c) => {
+  TERRITORY.KE.push({
+    id: `ke_${c.id}`,
+    name: c.name,
+    region: c.region,
+    children: c.subs.map((sName, idx) => ({
+      id: `ke_${c.id}_s${idx + 1}`,
+      name: sName,
+      children: [
+        { id: `ke_${c.id}_s${idx + 1}_w1`, name: `${sName} Central Ward` },
+        { id: `ke_${c.id}_s${idx + 1}_w2`, name: `${sName} Township Ward` },
+      ],
+    })),
+  });
+});
+
+const RW_EXTRA_DISTRICTS: { id: string; name: string; region: string; subs: string[] }[] = [
+  { id: 'gasabo_d', name: 'Gasabo District', region: 'KIGALI', subs: ['Remera Sector', 'Kimironko Sector', 'Kacyiru Sector', 'Gisozi Sector', 'Kinyinya Sector'] },
+  { id: 'kicukiro_d', name: 'Kicukiro District', region: 'KIGALI', subs: ['Niboye Sector', 'Kanombe Sector', 'Nyarugunga Sector', 'Gikondo Sector'] },
+  { id: 'nyarugenge_d', name: 'Nyarugenge District', region: 'KIGALI', subs: ['Nyarugenge Sector', 'Muhima Sector', 'Nyamirambo Sector', 'Kimisagara Sector'] },
+  { id: 'musanze_d', name: 'Musanze District', region: 'NORTHERN', subs: ['Muhoza Sector', 'Cyuve Sector', 'Kinigi Sector'] },
+  { id: 'burera_d', name: 'Burera District', region: 'NORTHERN', subs: ['Cyanika Sector', 'Butaro Sector', 'Cyeru Sector'] },
+  { id: 'gakenke_d', name: 'Gakenke District', region: 'NORTHERN', subs: ['Gakenke Sector', 'Nemba Sector', 'Ruli Sector'] },
+  { id: 'gicumbi_d', name: 'Gicumbi District', region: 'NORTHERN', subs: ['Byumba Sector', 'Kageyo Sector', 'Rukomo Sector'] },
+  { id: 'rulindo_d', name: 'Rulindo District', region: 'NORTHERN', subs: ['Base Sector', 'Bushoki Sector', 'Shyorongi Sector'] },
+  { id: 'huye_d', name: 'Huye District', region: 'SOUTHERN', subs: ['Ngoma Sector', 'Tumba Sector', 'Mbazi Sector'] },
+  { id: 'muhanga_d', name: 'Muhanga District', region: 'SOUTHERN', subs: ['Nyamabuye Sector', 'Cyeza Sector', 'Shyogwe Sector'] },
+  { id: 'nyanza_d', name: 'Nyanza District', region: 'SOUTHERN', subs: ['Busasamana Sector', 'Rwabicuma Sector', 'Kigoma Sector'] },
+  { id: 'gisagara_d', name: 'Gisagara District', region: 'SOUTHERN', subs: ['Ndora Sector', 'Save Sector', 'Kigembe Sector'] },
+  { id: 'kamonyi_d', name: 'Kamonyi District', region: 'SOUTHERN', subs: ['Runda Sector', 'Gacurabwenge Sector', 'Musambira Sector'] },
+  { id: 'nyamagabe_d', name: 'Nyamagabe District', region: 'SOUTHERN', subs: ['Gasaka Sector', 'Kaduha Sector', 'Kitabi Sector'] },
+  { id: 'nyaruguru_d', name: 'Nyaruguru District', region: 'SOUTHERN', subs: ['Kibeho Sector', 'Munini Sector', 'Ngoma Sector'] },
+  { id: 'ruhango_d', name: 'Ruhango District', region: 'SOUTHERN', subs: ['Ruhango Sector', 'Byimana Sector', 'Kinazi Sector'] },
+  { id: 'rwamagana_d', name: 'Rwamagana District', region: 'EASTERN', subs: ['Kigabiro Sector', 'Muhazi Sector', 'Mwulire Sector'] },
+  { id: 'bugesera_d', name: 'Bugesera District', region: 'EASTERN', subs: ['Nyamata Sector', 'Ntarama Sector', 'Mayange Sector'] },
+  { id: 'gatsibo_d', name: 'Gatsibo District', region: 'EASTERN', subs: ['Kabarore Sector', 'Kiramuruzi Sector', 'Muhura Sector'] },
+  { id: 'kayonza_d', name: 'Kayonza District', region: 'EASTERN', subs: ['Mukarange Sector', 'Gahini Sector', 'Kabarondo Sector'] },
+  { id: 'kirehe_d', name: 'Kirehe District', region: 'EASTERN', subs: ['Kigarama Sector', 'Nyamugari Sector', 'Mahama Sector'] },
+  { id: 'ngoma_d', name: 'Ngoma District', region: 'EASTERN', subs: ['Kibungo Sector', 'Mugesera Sector', 'Sake Sector'] },
+  { id: 'nyagatare_d', name: 'Nyagatare District', region: 'EASTERN', subs: ['Nyagatare Sector', 'Karangazi Sector', 'Mimuri Sector'] },
+  { id: 'rubavu_d', name: 'Rubavu District', region: 'WESTERN', subs: ['Gisenyi Sector', 'Rubavu Sector', 'Nyundo Sector'] },
+  { id: 'rusizi_d', name: 'Rusizi District', region: 'WESTERN', subs: ['Kamembe Sector', 'Gihundwe Sector', 'Bugarama Sector'] },
+  { id: 'karongi_d', name: 'Karongi District', region: 'WESTERN', subs: ['Bwishyura Sector', 'Rubengera Sector', 'Mubuga Sector'] },
+  { id: 'ngororero_d', name: 'Ngororero District', region: 'WESTERN', subs: ['Ngororero Sector', 'Kabaya Sector', 'Muhanda Sector'] },
+  { id: 'nyabihu_d', name: 'Nyabihu District', region: 'WESTERN', subs: ['Mukamira Sector', 'Jenda Sector', 'Bigogwe Sector'] },
+  { id: 'nyamasheke_d', name: 'Nyamasheke District', region: 'WESTERN', subs: ['Kagano Sector', 'Kanjongo Sector', 'Shangi Sector'] },
+  { id: 'rutsiro_d', name: 'Rutsiro District', region: 'WESTERN', subs: ['Gihango Sector', 'Kivumu Sector', 'Boneza Sector'] },
+];
+
+RW_EXTRA_DISTRICTS.forEach((d) => {
+  TERRITORY.RW.push({
+    id: `rw_${d.id}`,
+    name: d.name,
+    region: d.region,
+    children: d.subs.map((sec, idx) => ({
+      id: `rw_${d.id}_s${idx + 1}`,
+      name: sec,
+      children: [
+        { id: `rw_${d.id}_s${idx + 1}_c1`, name: `${sec.replace(/\s*Sector$/i, '').trim()} Central Cell` },
+        { id: `rw_${d.id}_s${idx + 1}_c2`, name: `${sec.replace(/\s*Sector$/i, '').trim()} Market Cell` },
+      ],
+    })),
+  });
+});
+
+// Enrich additional major launch countries with key regions/states/cities
+[
+  { code: 'NG', id: 'ng_fct', name: 'Abuja (FCT)', region: 'NORTH CENTRAL', sub: 'Abuja Municipal Area Council (AMAC)', wards: ['Wuse Ward', 'Garki Ward', 'Maitama Ward'] },
+  { code: 'NG', id: 'ng_rivers', name: 'Rivers State', region: 'SOUTH SOUTH', sub: 'Port Harcourt LGA', wards: ['Old GRA Ward', 'Diobu Ward'] },
+  { code: 'NG', id: 'ng_kano', name: 'Kano State', region: 'NORTH WEST', sub: 'Kano Municipal LGA', wards: ['Kano Central Ward', 'Sabon Gari Ward'] },
+  { code: 'NG', id: 'ng_oyo', name: 'Oyo State', region: 'SOUTH WEST', sub: 'Ibadan North LGA', wards: ['Bodija Ward', 'Agodi Ward'] },
+  { code: 'TZ', id: 'tz_arusha', name: 'Arusha Region', region: 'NORTHERN', sub: 'Arusha City Council', wards: ['Sekei Ward', 'Kaloleni Ward'] },
+  { code: 'TZ', id: 'tz_mwanza', name: 'Mwanza Region', region: 'LAKE', sub: 'Nyamagana MC', wards: ['Pamba Ward', 'Nyamagana Ward'] },
+  { code: 'TZ', id: 'tz_dodoma', name: 'Dodoma Region', region: 'CENTRAL', sub: 'Dodoma City Council', wards: ['Majengo Ward', 'Makole Ward'] },
+  { code: 'TZ', id: 'tz_mbeya', name: 'Mbeya Region', region: 'SOUTHERN HIGHLANDS', sub: 'Mbeya City Council', wards: ['Iyunga Ward', 'Sisimba Ward'] },
+  { code: 'GH', id: 'gh_western', name: 'Western Region', region: 'WESTERN', sub: 'Sekondi-Takoradi Metro', wards: ['Takoradi Central', 'Sekondi Ward'] },
+  { code: 'GH', id: 'gh_northern', name: 'Northern Region', region: 'NORTHERN', sub: 'Tamale Metropolitan', wards: ['Tamale Central', 'Sagnarigu'] },
+  { code: 'ZA', id: 'za_wc', name: 'Western Cape', region: 'WESTERN CAPE', sub: 'City of Cape Town Metro', wards: ['CBD Ward 115', 'Khayelitsha Ward 90'] },
+  { code: 'ZA', id: 'za_kzn', name: 'KwaZulu-Natal', region: 'KZN', sub: 'eThekwini Metro (Durban)', wards: ['Durban Central Ward 26', 'Umhlanga Ward 35'] },
+  { code: 'US', id: 'us_ca', name: 'California', region: 'WEST', sub: 'Los Angeles County', wards: ['Downtown LA District', 'Hollywood / Central'] },
+  { code: 'US', id: 'us_tx', name: 'Texas', region: 'SOUTH', sub: 'Travis County (Austin)', wards: ['Austin District 9', 'Austin District 1'] },
+  { code: 'US', id: 'us_dc', name: 'District of Columbia', region: 'CAPITAL', sub: 'Washington D.C.', wards: ['Ward 1 (Columbia Heights)', 'Ward 2 (Downtown)'] },
+  { code: 'GB', id: 'gb_manchester', name: 'Greater Manchester', region: 'NORTH WEST', sub: 'Manchester City Council', wards: ['Deansgate Ward', 'Ancoats & Beswick'] },
+  { code: 'GB', id: 'gb_birmingham', name: 'West Midlands', region: 'MIDLANDS', sub: 'Birmingham City Council', wards: ['Ladywood Ward', 'Edgbaston Ward'] },
+  { code: 'IN', id: 'in_maharashtra', name: 'Maharashtra', region: 'WEST', sub: 'Mumbai City District', wards: ['Colaba Ward A', 'Bandra West Ward H'] },
+  { code: 'IN', id: 'in_karnataka', name: 'Karnataka', region: 'SOUTH', sub: 'Bengaluru Urban District', wards: ['Shivajinagar Ward', 'Koramangala Ward'] },
+].forEach((item) => {
+  if (!TERRITORY[item.code as CountryCode]) TERRITORY[item.code as CountryCode] = [];
+  TERRITORY[item.code as CountryCode].push({
+    id: item.id,
+    name: item.name,
+    region: item.region,
+    children: [
+      {
+        id: `${item.id}_sub`,
+        name: item.sub,
+        children: item.wards.map((w, idx) => ({ id: `${item.id}_w${idx + 1}`, name: w })),
+      },
+    ],
+  });
+});
 
 // Auto-populate a 3-tier territorial tree for every global country in COUNTRIES not explicitly defined above
 Object.entries(COUNTRIES).forEach(([code, info]) => {

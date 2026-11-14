@@ -24,6 +24,7 @@ import {
 import { VoucherPassModal } from '../components/VoucherPassModal';
 import { VoucherScannerModal } from '../components/VoucherScannerModal';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { SearchableSelect } from '../components/SearchableSelect';
 import {
   ArrowLeft,
   Upload,
@@ -530,7 +531,7 @@ export const PerkVaultView: React.FC = () => {
       });
     });
     const combined = Array.from(new Set([perkProfile.defaultParish, ...fromPosts, ...fromTree]));
-    if (combined.length > 0) return combined.slice(0, 18);
+    if (combined.length > 0) return combined;
     return [perkProfile.defaultParish];
   }, [posts, selectedCountry, perkProfile.defaultParish]);
 
@@ -3364,17 +3365,19 @@ ${selectedCountry}-TRN-9005,${perkProfile.transitBrand},transit_credit,${transit
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <select
+                      <SearchableSelect
                         value={selectedParish}
-                        onChange={(e) => setSelectedParish(e.target.value)}
-                        className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-1.5 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                      >
-                        {parishOptions.map((par) => (
-                          <option key={par} value={par}>
-                            {par} {par === userHomeParish ? '(Your Home Parish)' : ''}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder={`Select ${lowestMeta.unitName}...`}
+                        searchPlaceholder={`Search ${lowestMeta.unitName.toLowerCase()} across nation...`}
+                        allowCustom
+                        customLabelPrefix={`Use ${lowestMeta.unitName}:`}
+                        options={parishOptions.map((par) => ({
+                          value: par,
+                          label: `${par}${par === userHomeParish ? ' (Your Home Parish)' : ''}`,
+                        }))}
+                        onChange={(val) => setSelectedParish(val)}
+                        triggerClassName="bg-white dark:bg-[#161a22] px-3 py-1.5 font-semibold"
+                      />
                       <div className="p-2 rounded bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-[10px] font-mono text-amber-900 dark:text-amber-300 leading-relaxed">
                         <strong>External Patron Notice:</strong> Depositing into {selectedParish}. By sovereign bylaws, only verified local residents and ward whistleblowers registered in {selectedParish} can receive this monthly payout.
                       </div>
@@ -3388,17 +3391,17 @@ ${selectedCountry}-TRN-9005,${perkProfile.transitBrand},transit_credit,${transit
                   <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
                     Select Private Provider / Shop Jurisdiction
                   </label>
-                  <select
+                  <SearchableSelect
                     value={selectedProviderDept}
-                    onChange={(e) => setSelectedProviderDept(e.target.value)}
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    {providerOptions.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.full})
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select Provider / Shop..."
+                    searchPlaceholder="Search provider or utility..."
+                    options={providerOptions.map((d) => ({
+                      value: d.id,
+                      label: `${d.name} (${d.full})`,
+                    }))}
+                    onChange={(val) => setSelectedProviderDept(val)}
+                    triggerClassName="bg-white dark:bg-[#161a22] px-3 py-2 font-semibold"
+                  />
                 </>
               )}
 
@@ -3407,17 +3410,17 @@ ${selectedCountry}-TRN-9005,${perkProfile.transitBrand},transit_credit,${transit
                   <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
                     Select Public Works Contract Jurisdiction
                   </label>
-                  <select
+                  <SearchableSelect
                     value={selectedContractId}
-                    onChange={(e) => setSelectedContractId(e.target.value)}
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    {contractOptions.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        [{c.code || c.id}] {c.title} — {c.contractor}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select Public Works Contract..."
+                    searchPlaceholder="Search contract title or contractor..."
+                    options={contractOptions.map((c) => ({
+                      value: c.id,
+                      label: `[${c.code || c.id}] ${c.title} — ${c.contractor}`,
+                    }))}
+                    onChange={(val) => setSelectedContractId(val)}
+                    triggerClassName="bg-white dark:bg-[#161a22] px-3 py-2 font-semibold"
+                  />
                 </>
               )}
 
@@ -3464,10 +3467,15 @@ ${selectedCountry}-TRN-9005,${perkProfile.transitBrand},transit_credit,${transit
                   <label className="text-[9.5px] font-mono font-bold uppercase text-slate-500 dark:text-slate-400 block">
                     Pick Great Feed Post to Reward (Or Enter Citizen Below)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={individualTargetPostId}
-                    onChange={(e) => {
-                      const pid = e.target.value;
+                    placeholder="Pick Feed Post to Reward..."
+                    searchPlaceholder="Search citizen name or post headline..."
+                    options={countryFeedPosts.map((p) => ({
+                      value: p.id,
+                      label: `${p.anonymous ? 'Verified Citizen' : p.citizen_name}: ${p.title.slice(0, 48)}`,
+                    }))}
+                    onChange={(pid) => {
                       setIndividualTargetPostId(pid);
                       const found = countryFeedPosts.find((p) => p.id === pid);
                       if (found) {
@@ -3475,14 +3483,8 @@ ${selectedCountry}-TRN-9005,${perkProfile.transitBrand},transit_credit,${transit
                         setIndividualCitationNote(`Rewarding your great post: "${found.title}"`);
                       }
                     }}
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    {countryFeedPosts.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.anonymous ? 'Verified Citizen' : p.citizen_name}: {p.title.slice(0, 48)}
-                      </option>
-                    ))}
-                  </select>
+                    triggerClassName="bg-white dark:bg-[#161a22] px-3 py-2 font-semibold"
+                  />
                 </>
               )}
             </div>

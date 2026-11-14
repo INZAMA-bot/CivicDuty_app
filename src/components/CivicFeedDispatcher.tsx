@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from './TrafficSignalHUD';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
+import { SearchableSelect } from './SearchableSelect';
 import {
   FrontlineScoutCategory,
   FRONTLINE_CATEGORIES,
@@ -194,8 +195,43 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
     return depts.find((d) => d.id === dept) || depts[0] || { id: 'kcca', name: 'City Authority', sla: 48 };
   }, [depts, dept]);
 
-  const subcounties = district ? territory.find((d) => d.id === district)?.children || [] : [];
-  const parishes = subcounty ? subcounties.find((s) => s.id === subcounty)?.children || [] : [];
+  const selectedDistrictNode = useMemo(() => {
+    if (!district) return undefined;
+    const q = district.toLowerCase();
+    return territory.find((d) => d.id.toLowerCase() === q || d.name.toLowerCase() === q);
+  }, [territory, district]);
+
+  const subcounties = selectedDistrictNode?.children || [];
+
+  const selectedSubcountyNode = useMemo(() => {
+    if (!subcounty) return undefined;
+    const q = subcounty.toLowerCase();
+    return subcounties.find((s) => s.id.toLowerCase() === q || s.name.toLowerCase() === q);
+  }, [subcounties, subcounty]);
+
+  const parishes = selectedSubcountyNode?.children || [];
+
+  const selectedParishNode = useMemo(() => {
+    if (!parish) return undefined;
+    const q = parish.toLowerCase();
+    return parishes.find((p) => p.id.toLowerCase() === q || p.name.toLowerCase() === q);
+  }, [parishes, parish]);
+
+  const resolvedDistrictName = selectedDistrictNode?.name || district || fallbackDistrict;
+  const resolvedSubcountyName = selectedSubcountyNode?.name || subcounty || fallbackSubcounty;
+  const resolvedParishName = selectedParishNode?.name || parish || fallbackParish;
+
+  React.useEffect(() => {
+    // Keep location aligned when user switches active country
+    const d0 = territory[0];
+    const s0 = d0?.children?.[0];
+    const p0 = s0?.children?.[0];
+    if (d0 && !territory.some((d) => d.id === district || d.name.toLowerCase() === district.toLowerCase())) {
+      setDistrict(d0.id);
+      setSubcounty(s0?.id || '');
+      setParish(p0?.id || '');
+    }
+  }, [country, territory]);
 
   const filteredWalls = useMemo(() => {
     const q = wallSearchQuery.trim().toLowerCase();
@@ -534,22 +570,26 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         }
       }
 
+      const effectiveDistrictVal = selectedDistrictNode?.id || district || fallbackDistrict;
+      const effectiveSubcountyVal = selectedSubcountyNode?.id || subcounty || fallbackSubcounty;
+      const effectiveParishVal = selectedParishNode?.id || parish || fallbackParish;
+
       const newPost: Post = {
         id: postId,
         country,
         dept,
         lane: 'civic',
         territory: {
-          district: district || fallbackDistrict,
-          subcounty: subcounty || fallbackSubcounty,
-          parish: parish || fallbackParish,
-          ward: subcounty || fallbackSubcounty,
+          district: effectiveDistrictVal,
+          subcounty: effectiveSubcountyVal,
+          parish: effectiveParishVal,
+          ward: resolvedSubcountyName,
           village: grassroot || fallbackGrassroot,
           cell: grassroot || fallbackGrassroot,
           grassroot: grassroot || fallbackGrassroot,
         },
-        ward: subcounty || fallbackSubcounty,
-        parish: parish || fallbackParish,
+        ward: resolvedSubcountyName,
+        parish: resolvedParishName,
         village: grassroot || fallbackGrassroot,
         cell: grassroot || fallbackGrassroot,
         grassroot: grassroot || fallbackGrassroot,
@@ -561,7 +601,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         category: postCategory,
         title: derivedTitle,
         body: trimmedBody,
-        location: `${grassroot ? `${grassroot}, ` : ''}${parish}, ${district}`,
+        location: `${grassroot ? `${grassroot}, ` : ''}${resolvedParishName}, ${resolvedDistrictName}`,
         gps: gps || { lat: '0.3162', lng: '32.5781' },
         source: 'web',
         media: finalMedia.length > 0 ? finalMedia : undefined,
@@ -681,8 +721,8 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   return (
     <div
       id="civic-feed-dispatcher"
-      className={`rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] shadow-2xs overflow-hidden transition-all ${
-        expanded ? 'max-h-[85vh] overflow-y-auto' : ''
+      className={`rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#161a22] shadow-2xs transition-all ${
+        expanded ? 'max-h-[85vh] overflow-y-auto overflow-x-visible' : 'overflow-hidden'
       } ${className}`}
     >
       {!expanded ? (
@@ -913,10 +953,10 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                   <MapPin size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {parish} · {subcounty}
+                      {resolvedParishName || 'Select Parish'} · {resolvedSubcountyName || 'Select Sub-county'}
                     </div>
                     <div className="text-[10px] font-mono text-slate-500 truncate">
-                      {district} · Grassroots Dispatch Desk
+                      {resolvedDistrictName || 'Select District'} · Grassroots Dispatch Desk ({territory.length} found)
                     </div>
                   </div>
                 </div>
@@ -931,55 +971,77 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
               </div>
 
               {showLocationPicker && (
-                <div className="p-2.5 bg-white dark:bg-[#161a22] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] animate-fade-in space-y-2">
+                <div className="p-2.5 bg-white dark:bg-[#161a22] rounded-lg border border-[#e3e6ea] dark:border-[#262b36] animate-fade-in space-y-2 pb-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <select
-                      value={district}
-                      onChange={(e) => {
-                        setDistrict(e.target.value);
-                        setSubcounty('');
-                        setParish('');
-                      }}
-                      className="bg-white dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-md px-2 py-1.5 text-xs font-mono"
-                    >
-                      <option value="">Select District...</option>
-                      {territory.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label className="text-[9.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                        1. District / City ({territory.length})
+                      </label>
+                      <SearchableSelect
+                        value={selectedDistrictNode?.id || district}
+                        placeholder="Select District..."
+                        searchPlaceholder="Search district or city..."
+                        allowCustom
+                        customLabelPrefix="Use district:"
+                        options={territory.map((d) => ({
+                          value: d.id,
+                          label: d.name,
+                          sublabel: d.region ? `${d.region} Region · ${d.children?.length || 0} sub-units` : undefined,
+                          keywords: `${d.region || ''} ${d.variant || ''}`,
+                        }))}
+                        onChange={(val) => {
+                          const matched = territory.find((d) => d.id === val || d.name.toLowerCase() === val.toLowerCase());
+                          setDistrict(val);
+                          const firstS = matched?.children?.[0];
+                          const firstP = firstS?.children?.[0];
+                          setSubcounty(firstS?.id || '');
+                          setParish(firstP?.id || '');
+                        }}
+                      />
+                    </div>
 
-                    <select
-                      value={subcounty}
-                      disabled={!district}
-                      onChange={(e) => {
-                        setSubcounty(e.target.value);
-                        setParish('');
-                      }}
-                      className="bg-white dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-md px-2 py-1.5 text-xs font-mono"
-                    >
-                      <option value="">Select Sub-county...</option>
-                      {subcounties.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label className="text-[9.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                        2. Sub-county / Division ({subcounties.length})
+                      </label>
+                      <SearchableSelect
+                        value={selectedSubcountyNode?.id || subcounty}
+                        disabled={!district}
+                        placeholder="Select Sub-county..."
+                        searchPlaceholder="Search division / sub-county..."
+                        allowCustom
+                        customLabelPrefix="Use sub-county:"
+                        options={subcounties.map((s) => ({
+                          value: s.id,
+                          label: s.name,
+                          sublabel: s.children ? `${s.children.length} parishes / wards` : undefined,
+                        }))}
+                        onChange={(val) => {
+                          const matched = subcounties.find((s) => s.id === val || s.name.toLowerCase() === val.toLowerCase());
+                          setSubcounty(val);
+                          setParish(matched?.children?.[0]?.id || '');
+                        }}
+                      />
+                    </div>
 
-                    <select
-                      value={parish}
-                      disabled={!subcounty}
-                      onChange={(e) => setParish(e.target.value)}
-                      className="bg-white dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-md px-2 py-1.5 text-xs font-mono"
-                    >
-                      <option value="">Select Parish...</option>
-                      {parishes.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div>
+                      <label className="text-[9.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                        3. Parish / Ward ({parishes.length})
+                      </label>
+                      <SearchableSelect
+                        value={selectedParishNode?.id || parish}
+                        disabled={!subcounty && subcounties.length > 0}
+                        placeholder="Select Parish..."
+                        searchPlaceholder="Search parish / ward..."
+                        allowCustom
+                        customLabelPrefix="Use parish:"
+                        options={parishes.map((p) => ({
+                          value: p.id,
+                          label: p.name,
+                        }))}
+                        onChange={(val) => setParish(val)}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

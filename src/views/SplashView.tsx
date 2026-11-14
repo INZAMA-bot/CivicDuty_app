@@ -65,6 +65,16 @@ export const SplashView: React.FC = () => {
     };
 
     window.addEventListener('civicduty_open_master_auth', handleExternalOpenAuth);
+
+    const pendingTarget = (window as any).__cdPendingMasterAuth;
+    if (pendingTarget) {
+      delete (window as any).__cdPendingMasterAuth;
+      setPendingRoute(pendingTarget);
+      setAccessCodeInput('');
+      setAccessError(null);
+      setShowAccessModal(true);
+    }
+
     return () => {
       window.removeEventListener('civicduty_open_master_auth', handleExternalOpenAuth);
     };

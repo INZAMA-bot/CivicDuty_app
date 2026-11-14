@@ -25,6 +25,7 @@ import { useApp } from '../../context/AppContext';
 import { GOV_CODES } from '../../data/tiers';
 import { COUNTRIES } from '../../data/countries';
 import { GovCodeData, CountryCode } from '../../types';
+import { SearchableSelect } from '../SearchableSelect';
 
 export const CdOpsAccessCodesVault: React.FC = () => {
   const { customGovCodes, mintGovAccessCode, revokeGovAccessCode, directLoginWithGovCode, toast } = useApp();
@@ -363,18 +364,23 @@ CivicDuty Platform Operations (CD-Ops)`;
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Country Filter */}
-            <select
-              value={selectedCountryFilter}
-              onChange={(e) => setSelectedCountryFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
-            >
-              <option value="ALL">All Countries (Global)</option>
-              {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
-                <option key={cCode} value={cCode}>
-                  [{cCode}] {cInfo.name}
-                </option>
-              ))}
-            </select>
+            <div className="min-w-[200px]">
+              <SearchableSelect
+                value={selectedCountryFilter}
+                onChange={(val) => setSelectedCountryFilter(val || 'ALL')}
+                placeholder="All Countries (Global)"
+                searchPlaceholder="Search country..."
+                options={[
+                  { value: 'ALL', label: 'All Countries (Global)' },
+                  ...Object.entries(COUNTRIES).map(([cCode, cInfo]) => ({
+                    value: cCode,
+                    label: `[${cCode}] ${cInfo.name}`,
+                    keywords: `${cInfo.name} ${cCode}`,
+                  })),
+                ]}
+                triggerClassName="!rounded-xl !py-1.5"
+              />
+            </div>
 
             {/* Search */}
             <input
@@ -529,17 +535,18 @@ CivicDuty Platform Operations (CD-Ops)`;
                   <label className="text-[11px] mono font-bold uppercase text-slate-600 dark:text-slate-400">
                     Sovereign Country
                   </label>
-                  <select
+                  <SearchableSelect
                     value={mintCountry}
-                    onChange={(e) => setMintCountry(e.target.value as CountryCode)}
-                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden"
-                  >
-                    {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
-                      <option key={cCode} value={cCode}>
-                        [{cCode}] {cInfo.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setMintCountry(val as CountryCode)}
+                    placeholder="Select country..."
+                    searchPlaceholder="Search country..."
+                    options={Object.entries(COUNTRIES).map(([cCode, cInfo]) => ({
+                      value: cCode,
+                      label: `[${cCode}] ${cInfo.name}`,
+                      keywords: `${cInfo.name} ${cCode}`,
+                    }))}
+                    triggerClassName="!rounded-xl !px-3.5 !py-2"
+                  />
                 </div>
 
                 <div className="space-y-1.5">

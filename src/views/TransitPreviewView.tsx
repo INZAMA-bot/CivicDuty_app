@@ -576,7 +576,7 @@ export const TransitPreviewView: React.FC = () => {
                           const posterText = isUganda
                             ? `CIVICDUTY BODABODA STAGE POSTER SCRIPT\nHEADLINE (Luganda): BODA MAN: GWE BOSS W’OLUGUUDO!\nHEADLINE (English): YOUR STAGE. YOUR ROAD. YOUR POWER. SPEAK DIRECTLY TO GOVERNMENT WITH ZERO INTERNET.\nSUB-HEADLINE: Tokyakaaba Potholes oba Bribes mu Kifuba. Speak · Serve · Be Heard.`
                             : `CIVICDUTY ${transitSpec.countryName.toUpperCase()} FRONTLINE SCOUTS POSTER SCRIPT\nHEADLINE: ${transitSpec.localSlogan}\nAUDIENCE: ${transitSpec.stageTransportName}\nSUB-HEADLINE: SPEAK. SERVE. BE HEARD. Report potholes, hazards & outages directly to ${transitSpec.municipalAuthority} (${transitSpec.ussdCode}).`;
-                          navigator.clipboard.writeText(posterText);
+                          navigator.clipboard?.writeText(posterText)?.catch?.(() => {});
                           setCopiedScript('poster');
                           setTimeout(() => setCopiedScript(null), 2500);
                         }}
@@ -702,7 +702,7 @@ export const TransitPreviewView: React.FC = () => {
                       const radioText = isUganda
                         ? `[SOUND EFFECT: Motorcycle engine revving - Bajaj Boxer - followed by sudden loud tire screech and clunk into a pothole]\nVOICEOVER: "Koona *3030# kati. CIVICDUTY: Speak, Serve, Be Heard!"`
                         : `[SOUND EFFECT: Crisp urban street traffic fading into the CivicDuty 3-Signal chime]\nVOICEOVER: "${transitSpec.localSlogan} Reach ${transitSpec.municipalAuthority} directly via ${transitSpec.ussdCode} or civicduty.site. CIVICDUTY: Speak, Serve, Be Heard!"`;
-                      navigator.clipboard.writeText(radioText);
+                      navigator.clipboard?.writeText(radioText)?.catch?.(() => {});
                       setCopiedScript('radio');
                       setTimeout(() => setCopiedScript(null), 2500);
                     }}

@@ -17,6 +17,7 @@ import {
 } from '../data/tiers';
 import { CountryCode, RoleType, TeamMember } from '../types';
 import { NoteBox } from '../components/NoteBox';
+import { SearchableSelect } from '../components/SearchableSelect';
 import {
   Copy,
   Upload,
@@ -565,7 +566,18 @@ export const GovTeamView: React.FC = () => {
     jurisdictionDesignations.find((d) => d.title.toLowerCase() === inviteTitle.toLowerCase().trim());
 
   if (!user || (!['node_admin', 'platform_admin', 'spokesperson'].includes(user.role) && !user.is_admin)) {
-    return null;
+    return (
+      <div className="p-6 max-w-md mx-auto mt-10 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center space-y-3 shadow-xs">
+        <p className="text-xs font-mono text-slate-600 dark:text-slate-300">Official Personnel &amp; Roster Clearance Required</p>
+        <button
+          type="button"
+          onClick={() => go('ob2')}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer"
+        >
+          Go to Official Desk Login
+        </button>
+      </div>
+    );
   }
 
   const handleIssueInvite = () => {
@@ -1258,60 +1270,67 @@ export const GovTeamView: React.FC = () => {
 
                     <div className="space-y-1.5">
                       {/* Tier 3 Selection */}
-                      <select
-                        className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white disabled:opacity-75"
+                      <SearchableSelect
                         disabled={tier <= 3}
                         value={district}
-                        onChange={(e) => {
-                          setDistrict(e.target.value);
+                        placeholder={`Select ${gov.tier3UnitLabel}…`}
+                        searchPlaceholder={`Search ${gov.tier3UnitLabel.toLowerCase()}…`}
+                        emptyOptionLabel={`Select ${gov.tier3UnitLabel}…`}
+                        options={dists.map((x) => ({
+                          value: x.id,
+                          label: `${x.name}${tier <= 3 && x.id === districtObj?.id ? ` (Your ${gov.tier3UnitLabel})` : ''}`,
+                          sublabel: x.region ? `${x.region} Region` : undefined,
+                          keywords: x.region,
+                        }))}
+                        onChange={(val) => {
+                          setDistrict(val);
                           setSubcounty('');
                           setParish('');
                         }}
-                      >
-                        <option value="">Select {gov.tier3UnitLabel}…</option>
-                        {dists.map((x) => (
-                          <option key={x.id} value={x.id}>
-                            {x.name} {tier <= 3 && x.id === districtObj?.id ? `(Your ${gov.tier3UnitLabel})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        triggerClassName="rounded-xl p-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      />
 
                       {/* Tier 2 Selection */}
-                      <select
-                        className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white disabled:opacity-75"
+                      <SearchableSelect
                         disabled={tier <= 2 || !district}
                         value={subcounty}
-                        onChange={(e) => {
-                          setSubcounty(e.target.value);
+                        placeholder={
+                          tier <= 2 ? subcountyObj?.name || `${gov.tier2UnitLabel} Jurisdiction` : `Select ${gov.tier2UnitLabel}…`
+                        }
+                        searchPlaceholder={`Search ${gov.tier2UnitLabel.toLowerCase()}…`}
+                        emptyOptionLabel={
+                          tier <= 2 ? subcountyObj?.name || `${gov.tier2UnitLabel} Jurisdiction` : `Select ${gov.tier2UnitLabel}…`
+                        }
+                        options={subs.map((x) => ({
+                          value: x.id,
+                          label: x.name,
+                          sublabel: x.children ? `${x.children.length} units` : undefined,
+                        }))}
+                        onChange={(val) => {
+                          setSubcounty(val);
                           setParish('');
                         }}
-                      >
-                        <option value="">
-                          {tier <= 2 ? subcountyObj?.name || `${gov.tier2UnitLabel} Jurisdiction` : `Select ${gov.tier2UnitLabel}…`}
-                        </option>
-                        {subs.map((x) => (
-                          <option key={x.id} value={x.id}>
-                            {x.name}
-                          </option>
-                        ))}
-                      </select>
+                        triggerClassName="rounded-xl p-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      />
 
                       {/* Tier 1 Selection */}
-                      <select
-                        className="w-full text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white disabled:opacity-75"
+                      <SearchableSelect
                         disabled={tier === 1 || !subcounty}
                         value={parish}
-                        onChange={(e) => setParish(e.target.value)}
-                      >
-                        <option value="">
-                          {tier === 1 ? parishObj?.name || `${gov.tier1UnitLabel} Field Desk` : `Select ${gov.tier1UnitLabel} (Optional)…`}
-                        </option>
-                        {parishes.map((x) => (
-                          <option key={x.id} value={x.id}>
-                            {x.name}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder={
+                          tier === 1 ? parishObj?.name || `${gov.tier1UnitLabel} Field Desk` : `Select ${gov.tier1UnitLabel} (Optional)…`
+                        }
+                        searchPlaceholder={`Search ${gov.tier1UnitLabel.toLowerCase()}…`}
+                        emptyOptionLabel={
+                          tier === 1 ? parishObj?.name || `${gov.tier1UnitLabel} Field Desk` : `Select ${gov.tier1UnitLabel} (Optional)…`
+                        }
+                        options={parishes.map((x) => ({
+                          value: x.id,
+                          label: x.name,
+                        }))}
+                        onChange={(val) => setParish(val)}
+                        triggerClassName="rounded-xl p-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      />
                     </div>
                   </div>
 

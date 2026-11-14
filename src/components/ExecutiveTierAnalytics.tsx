@@ -8,6 +8,7 @@ import { getRolloutNodesForCountry, getSisterMinistriesForCountry, RolloutDistri
 import { OfficialQueryDispatchModal } from './OfficialQueryDispatchModal';
 import { OfficialQueryDossierModal } from './OfficialQueryDossierModal';
 import { UnitAuditTrailModal } from './UnitAuditTrailModal';
+import { SearchableSelect } from './SearchableSelect';
 import {
   TrendingUp,
   BarChart3,
@@ -307,22 +308,27 @@ Civic Duty Sovereign Digital Infrastructure`;
             </span>
 
             {/* District Selector (Locked to own district for Tier 3 CAO; selectable only for Tier 4 National Superadmin) */}
-            <div className="flex items-center gap-1.5">
-              <Building2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+            <div className="flex items-center gap-1.5 min-w-[200px]">
+              <Building2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               {effectiveTier >= 4 ? (
-                <select
+                <SearchableSelect
                   value={selectedDistrictId}
-                  onChange={(e) => {
-                    setSelectedDistrictId(e.target.value);
-                    const newD = districts.find(d => d.id === e.target.value);
+                  placeholder="Select District / City..."
+                  searchPlaceholder="Search district or city..."
+                  options={districts.map((d) => ({
+                    value: d.id,
+                    label: d.name,
+                    sublabel: d.region ? `${d.region} Region` : undefined,
+                    keywords: d.region,
+                  }))}
+                  onChange={(val) => {
+                    setSelectedDistrictId(val);
+                    const newD = districts.find((d) => d.id === val);
                     setSelectedSubcountyId(newD?.children?.[0]?.id || '');
                   }}
-                  className="bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none"
-                >
-                  {districts.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+                  className="flex-1 min-w-[180px]"
+                  triggerClassName="bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 font-bold"
+                />
               ) : (
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono font-bold text-xs">
                   {currentDistrictObj?.name || user?.scope_label || user?.scope} · Locked
@@ -332,17 +338,20 @@ Civic Duty Sovereign Digital Infrastructure`;
 
             {/* Subcounty Selector (Within the CAO's own locked district) */}
             {subcounties.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <MapPin size={14} className="text-teal-600 dark:text-teal-400" />
-                <select
+              <div className="flex items-center gap-1.5 min-w-[180px]">
+                <MapPin size={14} className="text-teal-600 dark:text-teal-400 shrink-0" />
+                <SearchableSelect
                   value={selectedSubcountyId}
-                  onChange={(e) => setSelectedSubcountyId(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none"
-                >
-                  {subcounties.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                  placeholder="Select Subcounty / Division..."
+                  searchPlaceholder="Search subcounty / division..."
+                  options={subcounties.map((s) => ({
+                    value: s.id,
+                    label: s.name,
+                  }))}
+                  onChange={(val) => setSelectedSubcountyId(val)}
+                  className="flex-1 min-w-[170px]"
+                  triggerClassName="bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 font-bold"
+                />
               </div>
             )}
           </div>

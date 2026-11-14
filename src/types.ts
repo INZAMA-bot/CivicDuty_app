@@ -122,6 +122,7 @@ export interface TerritoryNode {
   id: string;
   name: string;
   variant?: 'city' | 'municipal' | 'capital';
+  region?: string;
   children?: TerritoryNode[];
 }
 

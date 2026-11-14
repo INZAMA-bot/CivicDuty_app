@@ -44,7 +44,8 @@ import { PostCardComponent } from '../components/PostCardComponent';
 import { MasterDossierDisplayer } from '../components/MasterDossierDisplayer';
 import { CivicFeedDispatcher } from '../components/CivicFeedDispatcher';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
-import { COUNTRIES, allDepts } from '../data/countries';
+import { COUNTRIES, TERRITORY, allDepts } from '../data/countries';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { DeptIcon, CategoryIcon } from '../components/DeptIcon';
 import { GeospatialSignalMap } from '../components/GeospatialSignalMap';
 import { TrafficSignalHUD, SignalGlyphRed, SignalGlyphAmber, SignalGlyphGreen } from '../components/TrafficSignalHUD';
@@ -105,6 +106,8 @@ export const FeedView: React.FC = () => {
   const [activeParish, setActiveParish] = useState<string>(() => user?.parish || user?.parish_ward || 'Nakasero Parish');
   const [activeWard, setActiveWard] = useState<string>(() => user?.ward || 'Central Ward');
   const [activeGrassroot, setActiveGrassroot] = useState<string>(() => user?.grassroot || user?.village || 'Lumumba Cell');
+  const [grassrootsDistId, setGrassrootsDistId] = useState<string>('');
+  const [grassrootsSubId, setGrassrootsSubId] = useState<string>('');
   const [showGrassrootsModal, setShowGrassrootsModal] = useState<boolean>(false);
   const [remindedBarazas, setRemindedBarazas] = useState<Record<string, boolean>>(() => {
     try {
@@ -128,17 +131,23 @@ export const FeedView: React.FC = () => {
 
   // Preserve & Restore Feed Scroll Position
   useEffect(() => {
-    const saved = sessionStorage.getItem('civic_feed_scroll');
-    if (saved) {
-      const y = parseInt(saved, 10);
-      if (!isNaN(y) && y > 0) {
-        setTimeout(() => {
-          window.scrollTo({ top: y, behavior: 'instant' });
-        }, 30);
+    try {
+      const saved = sessionStorage.getItem('civic_feed_scroll');
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) {
+          setTimeout(() => {
+            try {
+              window.scrollTo(0, y);
+            } catch {}
+          }, 30);
+        }
       }
-    }
+    } catch {}
     const handleScroll = () => {
-      sessionStorage.setItem('civic_feed_scroll', String(window.scrollY));
+      try {
+        sessionStorage.setItem('civic_feed_scroll', String(window.scrollY));
+      } catch {}
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -1479,6 +1488,74 @@ export const FeedView: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            {/* Search Any District / Subcounty / Parish Nationwide */}
+            {(() => {
+              const nationDists = TERRITORY[activeJurisdiction] || [];
+              const selDist = nationDists.find((d) => d.id === grassrootsDistId) || nationDists[0];
+              const nationSubs = selDist?.children || [];
+              const selSub = nationSubs.find((s) => s.id === grassrootsSubId) || nationSubs[0];
+              const nationParishes = selSub?.children || [];
+
+              return (
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
+                    Search Nationwide Registry ({nationDists.length} {gov.tier3Plural}):
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <SearchableSelect
+                      value={selDist?.id || ''}
+                      placeholder={`Select ${gov.tier3UnitLabel}...`}
+                      searchPlaceholder={`Search ${gov.tier3UnitLabel.toLowerCase()}...`}
+                      options={nationDists.map((d) => ({
+                        value: d.id,
+                        label: d.name,
+                        sublabel: d.region ? `${d.region} Region` : undefined,
+                        keywords: d.region,
+                      }))}
+                      onChange={(val) => {
+                        setGrassrootsDistId(val);
+                        const dObj = nationDists.find((d) => d.id === val);
+                        const s0 = dObj?.children?.[0];
+                        const p0 = s0?.children?.[0];
+                        setGrassrootsSubId(s0?.id || '');
+                        if (s0?.name) setActiveWard(s0.name);
+                        if (p0?.name) setActiveParish(p0.name);
+                      }}
+                    />
+                    <SearchableSelect
+                      value={selSub?.id || ''}
+                      disabled={nationSubs.length === 0}
+                      placeholder={`Select ${gov.tier2UnitLabel}...`}
+                      searchPlaceholder={`Search ${gov.tier2UnitLabel.toLowerCase()}...`}
+                      options={nationSubs.map((s) => ({
+                        value: s.id,
+                        label: s.name,
+                      }))}
+                      onChange={(val) => {
+                        setGrassrootsSubId(val);
+                        const sObj = nationSubs.find((s) => s.id === val);
+                        if (sObj?.name) setActiveWard(sObj.name);
+                        if (sObj?.children?.[0]?.name) setActiveParish(sObj.children[0].name);
+                      }}
+                    />
+                    <SearchableSelect
+                      value={activeParish}
+                      disabled={nationParishes.length === 0}
+                      placeholder={`Select ${gov.tier1UnitLabel}...`}
+                      searchPlaceholder={`Search ${gov.tier1UnitLabel.toLowerCase()}...`}
+                      allowCustom
+                      customLabelPrefix={`Use ${gov.tier1UnitLabel}:`}
+                      options={nationParishes.map((p) => ({
+                        value: p.name,
+                        label: p.name,
+                      }))}
+                      onChange={(val) => setActiveParish(val)}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Custom Inputs */}
             <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">

@@ -39,6 +39,7 @@ import { CdOpsOfficialDirectiveCard } from '../components/cdops/CdOpsOfficialDir
 import { CdOpsRosterPanel } from '../components/cdops/CdOpsRosterPanel';
 import { CdOpsDispatchMatrix } from '../components/cdops/CdOpsDispatchMatrix';
 import { CdOpsAccessCodesVault } from '../components/cdops/CdOpsAccessCodesVault';
+import { SearchableSelect } from '../components/SearchableSelect';
 import {
   validateMasterKey,
   unlockPlatform,
@@ -719,19 +720,21 @@ export const CompanyManagementView: React.FC = () => {
                 />
               </div>
 
-              <div className="sm:w-44">
-                <select
+              <div className="sm:w-52">
+                <SearchableSelect
                   value={filterCountry}
-                  onChange={(e) => setFilterCountry(e.target.value)}
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-2 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-                >
-                  <option value="ALL">All Partner Nations</option>
-                  {Object.entries(COUNTRIES).map(([code, c]) => (
-                    <option key={code} value={code}>
-                      [{code}] {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFilterCountry(val || 'ALL')}
+                  placeholder="All Partner Nations"
+                  searchPlaceholder="Search country..."
+                  options={[
+                    { value: 'ALL', label: 'All Partner Nations' },
+                    ...Object.entries(COUNTRIES).map(([code, c]) => ({
+                      value: code,
+                      label: `[${code}] ${c.name}`,
+                      keywords: `${c.name} ${code}`,
+                    })),
+                  ]}
+                />
               </div>
 
               <div className="sm:w-40">

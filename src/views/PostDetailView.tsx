@@ -154,13 +154,21 @@ export const PostDetailView: React.FC = () => {
     commentId?: string;
   }>({ name: '', phone: '' });
 
-  useEffect(() => {
-    if (!activePost) {
-      go(prevView || 'feed');
-    }
-  }, [activePost, prevView, go]);
+  const hashPostId =
+    typeof window !== 'undefined'
+      ? window.location.hash.replace(/^#(?:track-|post-)/, '').trim()
+      : '';
+  const hashMatchedPost = hashPostId ? posts.find((item) => item.id === hashPostId) || null : null;
 
-  const p = activePost ? (posts.find((item) => item.id === activePost.id) || activePost) : (posts[0] || null);
+  useEffect(() => {
+    if (!activePost && hashMatchedPost) {
+      setActivePost(hashMatchedPost);
+    }
+  }, [activePost, hashMatchedPost, setActivePost]);
+
+  const p = activePost
+    ? posts.find((item) => item.id === activePost.id) || activePost
+    : hashMatchedPost || posts[0] || null;
 
   // Active post list for Next / Prev navigation within the active feed/country
   const postsList = p ? posts.filter((item) => item.country === p.country) : [];
@@ -241,6 +249,7 @@ export const PostDetailView: React.FC = () => {
   };
 
   const handleCopyCitation = () => {
+    if (!p) return;
     const citation = `CIVIC COMMENDATION & MERITED SERVICE CITATION
 Record Dispatch: #${p.id.slice(-8).toUpperCase()}
 Honouree / Service Details: ${p.title}
@@ -249,7 +258,7 @@ Merit Classification: 100% Green Signal · Merited Public Integrity
 Cryptographic Digest: SHA256-HONOURS-${p.id.slice(-6).toUpperCase()}
 Summary: ${p.body}
 Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
-    navigator.clipboard.writeText(citation);
+    navigator.clipboard?.writeText(citation)?.catch?.(() => {});
     toast('Official Commendation Citation copied to clipboard!', 'emerald');
   };
 
@@ -319,12 +328,12 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
     return <span className={`chip ${m[s] || 'ch-pending'}`}>{l[s] || s}</span>;
   };
 
-  const hrsElapsed = Math.max(1, (Date.now() - new Date(p.created_at).getTime()) / 3600000);
+  const hrsElapsed = p ? Math.max(1, (Date.now() - new Date(p.created_at).getTime()) / 3600000) : 1;
   const slaLimit = d.sla || 48;
   const hoursLeft = Math.max(0, slaLimit - hrsElapsed);
 
   // 4-Tier Statutory Escalation Ladder
-  const currentTier = p.escalation_tier || (hrsElapsed > 144 ? 'tier4_ministry' : hrsElapsed > 96 ? 'tier3_district_cao' : hrsElapsed > 48 ? 'tier2_subcounty' : 'tier1_parish');
+  const currentTier = p?.escalation_tier || (hrsElapsed > 144 ? 'tier4_ministry' : hrsElapsed > 96 ? 'tier3_district_cao' : hrsElapsed > 48 ? 'tier2_subcounty' : 'tier1_parish');
 
   const statutoryTiers = [
     {
@@ -480,7 +489,23 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
     go('verify');
   };
 
-  if (!activePost || !p) return null;
+  if (!p) {
+    return (
+      <div className="p-6 max-w-md mx-auto mt-10 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center space-y-3 shadow-xs">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Dispatch Record Unavailable</h2>
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          This civic dossier could not be located or was archived. Return to the public accountability feed to inspect active records.
+        </p>
+        <button
+          type="button"
+          onClick={() => go('feed')}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer transition-colors"
+        >
+          Back to Public Feed
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -2331,7 +2356,7 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                               <button
                                 type="button"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(c.courtesy_voucher?.voucherCode || '');
+                                  navigator.clipboard?.writeText(c.courtesy_voucher?.voucherCode || '')?.catch?.(() => {});
                                   toast(`Voucher code ${c.courtesy_voucher?.voucherCode} copied!`, 'emerald');
                                 }}
                                 className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 cursor-pointer border border-emerald-500/25"

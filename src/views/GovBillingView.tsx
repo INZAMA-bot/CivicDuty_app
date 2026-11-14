@@ -73,7 +73,18 @@ export const GovBillingView: React.FC = () => {
   }, [user, go]);
 
   if (!user || !['node_admin', 'platform_admin'].includes(user.role)) {
-    return null;
+    return (
+      <div className="p-6 max-w-md mx-auto mt-10 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center space-y-3 shadow-xs">
+        <p className="text-xs font-mono text-slate-600 dark:text-slate-300">Authorized Accounting Officer Access Required</p>
+        <button
+          type="button"
+          onClick={() => go('ob2')}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer"
+        >
+          Official Desk Login
+        </button>
+      </div>
+    );
   }
 
   const d = getDept(user.country, user.dept || gov.superadminDeptId || 'molg');
@@ -84,7 +95,7 @@ export const GovBillingView: React.FC = () => {
   );
 
   const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard?.writeText(text)?.catch?.(() => {});
     setCopiedSnippet(label);
     toast(`Copied ${label} to clipboard`, 'emerald');
     setTimeout(() => setCopiedSnippet(null), 2500);

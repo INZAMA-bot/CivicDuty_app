@@ -643,7 +643,9 @@ export function subscribeCloudAnalyticsBundle(
 }
 
 export function resetLocalAnalytics() {
-  localStorage.removeItem(LOCAL_STORAGE_KEY);
-  localStorage.removeItem('civicduty_visitor_analytics_v1');
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    localStorage.removeItem('civicduty_visitor_analytics_v1');
+  } catch {}
   notifyListeners({ ...initialSummary, referrers: {}, countryMetrics: {}, recentEvents: [] });
 }

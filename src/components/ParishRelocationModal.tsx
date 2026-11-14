@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MapPin, X, Check, ArrowRight, History, Home, Lock, Building, Navigation } from 'lucide-react';
 import { UserSession, ParishRelocationRecord } from '../types';
 import { TERRITORY } from '../data/countries';
+import { SearchableSelect } from './SearchableSelect';
 
 interface ParishRelocationModalProps {
   isOpen: boolean;
@@ -192,17 +193,19 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
                   <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
                     1. Select District / Local Government ({nationalDistricts.length} Nationwide)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={selectedDistrictId}
-                    onChange={(e) => setSelectedDistrictId(e.target.value)}
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    {nationalDistricts.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select District..."
+                    searchPlaceholder="Search district or city..."
+                    options={nationalDistricts.map((d) => ({
+                      value: d.id,
+                      label: d.name,
+                      sublabel: d.region ? `${d.region} Region · ${d.children?.length || 0} sub-units` : undefined,
+                      keywords: d.region,
+                    }))}
+                    onChange={(val) => setSelectedDistrictId(val)}
+                    triggerClassName="rounded-xl px-3 py-2 font-bold bg-white dark:bg-[#161a22]"
+                  />
                 </div>
 
                 {/* Layer 2: Sub-County / Division */}
@@ -210,18 +213,19 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
                   <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
                     2. Select Sub-County / Municipal Division ({availableSubcounties.length} Available)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={selectedSubcountyId}
-                    onChange={(e) => setSelectedSubcountyId(e.target.value)}
                     disabled={availableSubcounties.length === 0}
-                    className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                  >
-                    {availableSubcounties.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select Sub-County / Division..."
+                    searchPlaceholder="Search sub-county or division..."
+                    options={availableSubcounties.map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                      sublabel: s.children ? `${s.children.length} grassroots units` : undefined,
+                    }))}
+                    onChange={(val) => setSelectedSubcountyId(val)}
+                    triggerClassName="rounded-xl px-3 py-2 font-bold bg-white dark:bg-[#161a22]"
+                  />
                 </div>
 
                 {/* Layer 3: Parish / Ward */}
@@ -229,18 +233,20 @@ export const ParishRelocationModal: React.FC<ParishRelocationModalProps> = ({
                   <label className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
                     3. Select Destination Parish / Ward ({availableParishes.length} Grassroots Units)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={selectedParishName}
-                    onChange={(e) => setSelectedParishName(e.target.value)}
                     disabled={availableParishes.length === 0}
-                    className="w-full bg-white dark:bg-[#161a22] border-2 border-emerald-500/50 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                  >
-                    {availableParishes.map((p) => (
-                      <option key={p.id} value={p.name}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select Parish / Ward..."
+                    searchPlaceholder="Search parish or ward..."
+                    allowCustom
+                    customLabelPrefix="Use parish:"
+                    options={availableParishes.map((p) => ({
+                      value: p.name,
+                      label: p.name,
+                    }))}
+                    onChange={(val) => setSelectedParishName(val)}
+                    triggerClassName="rounded-xl px-3 py-2 font-bold bg-white dark:bg-[#161a22] border-2 border-emerald-500/50"
+                  />
                 </div>
 
                 <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-[10px] flex items-center justify-between">

@@ -26,6 +26,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { DeptIcon } from '../components/DeptIcon';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { trackVisitorInteraction } from '../services/analyticsService';
 
 const FOREIGN_DOCUMENT_OPTIONS: {
@@ -621,7 +622,7 @@ export const OnboardingCitizenView: React.FC = () => {
   };
 
   // STEP 1: Verify Identity
-  if (view === 'ob1') {
+  if (view === 'ob1' || view === 'onboarding_citizen') {
     return (
       <div className="px-3.5 sm:px-5 pt-4 pb-16 animate-fade-in max-w-lg mx-auto text-slate-900 dark:text-slate-100">
         <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl overflow-hidden">
@@ -880,21 +881,22 @@ export const OnboardingCitizenView: React.FC = () => {
                       <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold mb-1">
                         {loginCitizenshipMode === 'citizen' ? 'Citizen Home Country' : 'Host Country to Enter'}
                       </label>
-                      <select
+                      <SearchableSelect
                         value={loginCountry}
-                        onChange={(e) => {
-                          const nextC = e.target.value as CountryCode;
+                        placeholder="Select Country..."
+                        searchPlaceholder="Search country or code (e.g. Uganda, KE)..."
+                        options={(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => ({
+                          value: k,
+                          label: `[${k}] ${v.name}`,
+                          keywords: `${k} ${v.name} ${v.currency || ''}`,
+                        }))}
+                        onChange={(val) => {
+                          const nextC = val as CountryCode;
                           setLoginCountry(nextC);
                           setSelectedCountry(nextC);
                         }}
-                        className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
-                      >
-                        {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
-                          <option key={k} value={k}>
-                            [{k}] {v.name}
-                          </option>
-                        ))}
-                      </select>
+                        triggerClassName="bg-white dark:bg-[#161a22] px-3 py-2"
+                      />
                     </div>
 
                     {loginCitizenshipMode === 'foreign_resident' && (
@@ -902,17 +904,18 @@ export const OnboardingCitizenView: React.FC = () => {
                         <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold mb-1">
                           Country of Origin (Passport)
                         </label>
-                        <select
+                        <SearchableSelect
                           value={loginOriginCountry}
-                          onChange={(e) => setLoginOriginCountry(e.target.value as CountryCode)}
-                          className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-amber-500"
-                        >
-                          {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
-                            <option key={k} value={k}>
-                              [{k}] {v.name}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="Select Origin Country..."
+                          searchPlaceholder="Search country or code..."
+                          options={(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => ({
+                            value: k,
+                            label: `[${k}] ${v.name}`,
+                            keywords: `${k} ${v.name}`,
+                          }))}
+                          onChange={(val) => setLoginOriginCountry(val as CountryCode)}
+                          triggerClassName="bg-white dark:bg-[#161a22] px-3 py-2"
+                        />
                       </div>
                     )}
                   </div>
@@ -1158,17 +1161,18 @@ export const OnboardingCitizenView: React.FC = () => {
                         <label className="text-[10px] font-mono text-slate-500 uppercase block font-semibold mb-1">
                           Country of Citizenship (Origin)
                         </label>
-                        <select
+                        <SearchableSelect
                           value={originCountry}
-                          onChange={(e) => setOriginCountry(e.target.value as CountryCode)}
-                          className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-slate-100 text-xs font-mono"
-                        >
-                          {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
-                            <option key={k} value={k}>
-                              [{k}] {v.name}
-                            </option>
-                          ))}
-                        </select>
+                          placeholder="Select Origin Country..."
+                          searchPlaceholder="Search country or code..."
+                          options={(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => ({
+                            value: k,
+                            label: `[${k}] ${v.name}`,
+                            keywords: `${k} ${v.name}`,
+                          }))}
+                          onChange={(val) => setOriginCountry(val as CountryCode)}
+                          triggerClassName="bg-white dark:bg-[#161a22] px-2.5 py-1.5"
+                        />
                       </div>
                     </div>
                   </div>
@@ -1180,22 +1184,23 @@ export const OnboardingCitizenView: React.FC = () => {
                     <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block font-semibold">
                       {citizenshipStatus === 'citizen' ? 'Sovereign Citizen Country' : 'Host Country Jurisdiction'}
                     </label>
-                    <select
+                    <SearchableSelect
                       value={country}
-                      onChange={(e) => {
-                        const nextC = e.target.value as CountryCode;
+                      placeholder="Select Country..."
+                      searchPlaceholder="Search country or code..."
+                      options={(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => ({
+                        value: k,
+                        label: `[${k}] ${v.name}`,
+                        keywords: `${k} ${v.name} ${v.currency || ''}`,
+                      }))}
+                      onChange={(val) => {
+                        const nextC = val as CountryCode;
                         setCountry(nextC);
                         setSelectedCountry(nextC);
                         setVerificationScanStatus('idle');
                       }}
-                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:border-emerald-500"
-                    >
-                      {(Object.entries(COUNTRIES) as [CountryCode, any][]).map(([k, v]) => (
-                        <option key={k} value={k}>
-                          [{k}] {v.name}
-                        </option>
-                      ))}
-                    </select>
+                      triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] px-3 py-2"
+                    />
                   </div>
 
                   <div className="space-y-1">
@@ -1364,12 +1369,17 @@ export const OnboardingCitizenView: React.FC = () => {
     const activeCountry = (country || 'UG') as CountryCode;
     const primaryUnitName = activeCountry === 'KE' ? 'ward' : activeCountry === 'RW' ? 'sector' : 'parish';
     const allNodes = primaryNodes(activeCountry, undefined);
+    const trimmedHomeSearch = homeSearch.trim().toLowerCase();
     const hits =
-      homeSearch.trim().length >= 1
+      trimmedHomeSearch.length >= 1
         ? allNodes
-            .filter((n) => n.name.toLowerCase().includes(homeSearch.trim().toLowerCase()))
-            .slice(0, 6)
-        : allNodes.slice(0, 5);
+            .filter(
+              (n) =>
+                n.name.toLowerCase().includes(trimmedHomeSearch) ||
+                n.path.toLowerCase().includes(trimmedHomeSearch)
+            )
+            .slice(0, 12)
+        : allNodes.slice(0, 8);
 
     return (
       <div className="px-3.5 sm:px-5 pt-4 pb-16 animate-fade-in max-w-lg mx-auto text-slate-900 dark:text-slate-100">

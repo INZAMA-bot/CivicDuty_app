@@ -34,6 +34,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { COUNTRIES } from '../../data/countries';
 import { CountryAnalyticsMetrics, CountryCode, TesterFeedbackCategory } from '../../types';
+import { SearchableSelect } from '../SearchableSelect';
 
 const FEEDBACK_CATEGORIES: Array<'ALL' | TesterFeedbackCategory> = [
   'ALL',
@@ -558,18 +559,22 @@ export const CdOpsVisitorAnalyticsPanel: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <select
-              value={feedbackCountryFilter}
-              onChange={(e) => setFeedbackCountryFilter(e.target.value)}
-              className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-800 dark:text-slate-200"
-            >
-              <option value="ALL">All Countries</option>
-              {(Array.from(new Set(feedbackItems.map((i) => i.countryCode))) as string[]).map((code) => (
-                <option key={code} value={code}>
-                  {code} · {COUNTRIES[code]?.name || code}
-                </option>
-              ))}
-            </select>
+            <div className="min-w-[180px]">
+              <SearchableSelect
+                value={feedbackCountryFilter}
+                onChange={(val) => setFeedbackCountryFilter(val || 'ALL')}
+                placeholder="All Countries"
+                searchPlaceholder="Search country..."
+                options={[
+                  { value: 'ALL', label: 'All Countries' },
+                  ...(Array.from(new Set(feedbackItems.map((i) => i.countryCode))) as string[]).map((code) => ({
+                    value: code,
+                    label: `${code} · ${COUNTRIES[code]?.name || code}`,
+                    keywords: `${COUNTRIES[code]?.name || ''} ${code}`,
+                  })),
+                ]}
+              />
+            </div>
             <select
               value={feedbackCategoryFilter}
               onChange={(e) => setFeedbackCategoryFilter(e.target.value as any)}

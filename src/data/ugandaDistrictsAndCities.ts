@@ -1,4 +1,5 @@
-import { RolloutDistrictNode } from './nationalRolloutNodes';
+import type { RolloutDistrictNode } from './nationalRolloutNodes';
+import type { TerritoryNode } from '../types';
 
 /**
  * STRATEGIC CITIES & METROPOLITAN AUTHORITIES (11 NATIONWIDE)
@@ -357,6 +358,7 @@ const DISTRICT_RAW_NAMES: { name: string; region: 'CENTRAL' | 'NORTHERN' | 'EAST
   { name: 'Kiboga', region: 'CENTRAL', cao: 'Robert Mugabe', parishes: 48, sla: 88.5 },
   { name: 'Kyankwanzi', region: 'CENTRAL', cao: 'Justus Tumwesigye', parishes: 52, sla: 86.9 },
   { name: 'Kassanda', region: 'CENTRAL', cao: 'Phoebe Namulondo', parishes: 57, sla: 89.0 },
+  { name: 'Bukomansimbi', region: 'CENTRAL', cao: 'Moses Ssekabira', parishes: 38, sla: 90.2 },
 
   // NORTHERN REGION (37 Districts)
   { name: 'Gulu District', region: 'NORTHERN', cao: 'Ismail Ochengel', parishes: 48, sla: 90.2 },
@@ -535,4 +537,107 @@ export const UG_DISTRICTS_LIST: RolloutDistrictNode[] = DISTRICT_RAW_NAMES.map((
 export const UG_TIER3_ACCOUNTING_OFFICERS: RolloutDistrictNode[] = [
   ...UG_CITIES_LIST,
   ...UG_DISTRICTS_LIST,
+];
+
+const ALREADY_DEFINED_UG_ROOT_KEYWORDS = new Set([
+  'kampala',
+  'wakiso',
+  'mbarara city',
+  'gulu district',
+  'gulu city',
+  'kayunga',
+]);
+
+function slugifyTerritory(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+/**
+ * Full nationwide 3-tier TerritoryNode tree for all remaining Ugandan Strategic Cities
+ * and District Local Governments beyond the 6 starter hubs in TERRITORY.UG.
+ */
+export const UG_ADDITIONAL_TERRITORY_NODES: TerritoryNode[] = [
+  ...UG_CITIES_LIST.filter((c) => !ALREADY_DEFINED_UG_ROOT_KEYWORDS.has(c.name.toLowerCase().replace(/\s*local government$/i, '').trim()))
+    .filter((c) => {
+      const clean = c.name.toLowerCase().replace(/\s*local government$/i, '').trim();
+      return !clean.includes('kampala') && clean !== 'mbarara city' && clean !== 'gulu city';
+    })
+    .map((c) => {
+      const displayName = c.name
+        .replace(/\s*Local Government$/i, '')
+        .replace(/\s*Authority$/i, '')
+        .trim();
+      const baseSlug = slugifyTerritory(displayName);
+      const rosterWards = c.chiefsRoster.map((ch) => ch.ward);
+      return {
+        id: `ug_city_${baseSlug}`,
+        name: displayName,
+        variant: 'city' as const,
+        region: c.region,
+        children: c.subCounties.map((scName, scIdx) => {
+          const scSlug = slugifyTerritory(`${baseSlug}_${scName}`);
+          const wardCandidates = Array.from(
+            new Set([
+              ...(scIdx === 0 ? rosterWards : rosterWards.slice(scIdx % rosterWards.length)),
+              `${scName.replace(/\s*Division$/i, '').trim()} Central Ward`,
+              `${scName.replace(/\s*Division$/i, '').trim()} Market Ward`,
+              `${scName.replace(/\s*Division$/i, '').trim()} North Ward`,
+            ])
+          ).slice(0, 5);
+          return {
+            id: scSlug,
+            name: scName,
+            children: wardCandidates.map((wName, wIdx) => ({
+              id: `${scSlug}_w${wIdx + 1}`,
+              name: wName,
+            })),
+          };
+        }),
+      };
+    }),
+  ...UG_DISTRICTS_LIST.filter((d) => {
+    const clean = d.name
+      .toLowerCase()
+      .replace(/\s*local government$/i, '')
+      .replace(/\s*district$/i, '')
+      .trim();
+    return !['wakiso', 'kayunga', 'gulu'].includes(clean);
+  }).map((d) => {
+    const cleanBase = d.name
+      .replace(/\s*Local Government$/i, '')
+      .trim();
+    const displayName = cleanBase.toLowerCase().includes('district')
+      ? cleanBase
+      : `${cleanBase} District`;
+    const shortBase = cleanBase.replace(/\s*District$/i, '').trim();
+    const baseSlug = slugifyTerritory(displayName);
+    const rosterWards = d.chiefsRoster.map((ch) => ch.ward);
+    return {
+      id: `ug_dist_${baseSlug}`,
+      name: displayName,
+      region: d.region,
+      children: d.subCounties.map((scName, scIdx) => {
+        const scSlug = slugifyTerritory(`${baseSlug}_${scName}`);
+        const wardCandidates = Array.from(
+          new Set([
+            ...(scIdx === 0 ? rosterWards : []),
+            `${shortBase} ${scIdx === 0 ? 'Central' : scIdx === 1 ? 'Main' : scIdx === 2 ? 'East' : 'Rural'} Parish`,
+            `${scName.replace(/\s*(Town Council|Sub-County)$/i, '').trim()} Ward I`,
+            `${scName.replace(/\s*(Town Council|Sub-County)$/i, '').trim()} Ward II`,
+          ])
+        ).slice(0, 4);
+        return {
+          id: scSlug,
+          name: scName,
+          children: wardCandidates.map((wName, wIdx) => ({
+            id: `${scSlug}_p${wIdx + 1}`,
+            name: wName,
+          })),
+        };
+      }),
+    };
+  }),
 ];

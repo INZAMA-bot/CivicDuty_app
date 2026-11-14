@@ -5,6 +5,7 @@ import { COUNTRIES, TERRITORY } from '../data/countries';
 import { primaryNodes, primaryUnit, tiersFor, GOV_CODES, getBusinessTitlePresets } from '../data/tiers';
 import { copyToClipboard } from '../utils/helpers';
 import { getCurrencyForCountry, getUsdRateForCurrency } from '../data/countryCurrency';
+import { SearchableSelect } from '../components/SearchableSelect';
 import {
   ChevronLeft,
   Search,
@@ -298,7 +299,13 @@ export const EntityRegisterView: React.FC = () => {
 
   const searchHits =
     searchQuery.trim().length >= 2
-      ? primaryNodesList.filter((n) => n.name.toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 5)
+      ? primaryNodesList
+          .filter(
+            (n) =>
+              n.name.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+              n.path.toLowerCase().includes(searchQuery.trim().toLowerCase())
+          )
+          .slice(0, 10)
       : [];
 
   const pickPrimaryNode = (id: string) => {
@@ -913,59 +920,64 @@ export const EntityRegisterView: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <select
-                  className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                <SearchableSelect
                   value={district}
-                  onChange={(e) => {
-                    setDistrict(e.target.value);
+                  placeholder={`Select ${l1Name}...`}
+                  searchPlaceholder={`Search ${l1Name.toLowerCase()}...`}
+                  emptyOptionLabel={`All / Select ${l1Name}...`}
+                  options={dists.map((x) => ({
+                    value: x.id,
+                    label: x.name,
+                    sublabel: x.region ? `${x.region} Region · ${x.children?.length || 0} sub-units` : undefined,
+                    keywords: x.region,
+                  }))}
+                  onChange={(val) => {
+                    setDistrict(val);
                     setSubcounty('');
                     setParish('');
                     setManualUnitsOverride(null);
                     setSearchQuery('');
                   }}
-                >
-                  <option value="">Select {l1Name}...</option>
-                  {dists.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </select>
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] px-3 py-2"
+                />
 
-                <select
-                  className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40"
-                  disabled={!district}
+                <SearchableSelect
                   value={subcounty}
-                  onChange={(e) => {
-                    setSubcounty(e.target.value);
+                  disabled={!district}
+                  placeholder={`Select ${l2Name}...`}
+                  searchPlaceholder={`Search ${l2Name.toLowerCase()}...`}
+                  emptyOptionLabel={`Select ${l2Name}...`}
+                  options={subs.map((x) => ({
+                    value: x.id,
+                    label: x.name,
+                    sublabel: x.children ? `${x.children.length} units` : undefined,
+                  }))}
+                  onChange={(val) => {
+                    setSubcounty(val);
                     setParish('');
                     setManualUnitsOverride(null);
                   }}
-                >
-                  <option value="">Select {l2Name}...</option>
-                  {subs.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </select>
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] px-3 py-2"
+                />
 
-                <select
-                  className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 disabled:opacity-40"
-                  disabled={!subcounty}
+                <SearchableSelect
                   value={parish}
-                  onChange={(e) => {
-                    setParish(e.target.value);
+                  disabled={!subcounty}
+                  placeholder={`Select ${primaryUnitName}...`}
+                  searchPlaceholder={`Search ${primaryUnitName}...`}
+                  emptyOptionLabel={`Select ${primaryUnitName}...`}
+                  allowCustom
+                  customLabelPrefix={`Use ${primaryUnitName}:`}
+                  options={parishes.map((x) => ({
+                    value: x.id,
+                    label: x.name,
+                  }))}
+                  onChange={(val) => {
+                    setParish(val);
                     setManualUnitsOverride(null);
                   }}
-                >
-                  <option value="">Select {primaryUnitName}...</option>
-                  {parishes.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </select>
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] px-3 py-2"
+                />
               </div>
             </div>
 

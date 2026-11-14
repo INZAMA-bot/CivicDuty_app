@@ -983,7 +983,7 @@ export const ProfileView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(v.code);
+                          navigator.clipboard?.writeText(v.code)?.catch?.(() => {});
                           toast(`Voucher code ${v.code} copied to clipboard!`, 'emerald');
                         }}
                         className="p-1 rounded text-slate-400 hover:text-emerald-600 transition"
@@ -1274,7 +1274,7 @@ export const ProfileView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(selectedVoucherPass.code);
+                      navigator.clipboard?.writeText(selectedVoucherPass.code)?.catch?.(() => {});
                       toast('Code copied to clipboard!', 'emerald');
                     }}
                     className="text-xs font-mono text-emerald-600 hover:underline cursor-pointer"

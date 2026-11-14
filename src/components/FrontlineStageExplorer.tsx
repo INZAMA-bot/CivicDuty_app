@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { CountryCode } from '../types';
+import { SearchableSelect } from './SearchableSelect';
 import {
   getCountryPerkProfile,
   getCurrencyForCountry,
@@ -267,18 +268,21 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
             />
           </div>
 
-          <select
+          <SearchableSelect
             value={parishFilter}
-            onChange={(e) => setParishFilter(e.target.value)}
-            className="px-2.5 py-1.5 text-xs font-mono bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-700 dark:text-slate-300 focus:outline-none"
-          >
-            <option value="all">All Parishes / Wards</option>
-            {uniqueParishes.map((p) => (
-              <option key={p} value={p}>
-                Parish: {p}
-              </option>
-            ))}
-          </select>
+            placeholder="All Parishes / Wards"
+            searchPlaceholder="Search parish or ward..."
+            options={[
+              { value: 'all', label: 'All Parishes / Wards' },
+              ...uniqueParishes.map((p) => ({
+                value: p,
+                label: `Parish: ${p}`,
+              })),
+            ]}
+            onChange={(val) => setParishFilter(val || 'all')}
+            className="w-44 sm:w-52 shrink-0"
+            triggerClassName="px-2.5 py-1.5 bg-white dark:bg-[#161a22]"
+          />
         </div>
       </div>
 

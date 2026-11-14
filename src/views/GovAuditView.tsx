@@ -316,7 +316,20 @@ export const GovAuditView: React.FC = () => {
     });
   }, [countryAudit, filterType, searchQuery]);
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="p-6 max-w-md mx-auto mt-10 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center space-y-3 shadow-xs">
+        <p className="text-xs font-mono text-slate-600 dark:text-slate-300">Official Desk Session Required</p>
+        <button
+          type="button"
+          onClick={() => go('ob2')}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer"
+        >
+          Go to Official Desk Login
+        </button>
+      </div>
+    );
+  }
 
   const toAuditCsv = (rows: typeof audit) => {
     const header = [

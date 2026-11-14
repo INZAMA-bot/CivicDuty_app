@@ -5,6 +5,7 @@ import { NoteBox } from '../components/NoteBox';
 import { ExecutiveTierAnalytics } from '../components/ExecutiveTierAnalytics';
 import { BarChart3, Download, ArrowLeft } from 'lucide-react';
 import { CountryCode } from '../types';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 export const PsOpmAnalyticsView: React.FC = () => {
   const { user, go, toast } = useApp();
@@ -17,7 +18,18 @@ export const PsOpmAnalyticsView: React.FC = () => {
   }, [user, go]);
 
   if (!user || (user.role !== 'platform_admin' && user.role !== 'node_admin')) {
-    return null;
+    return (
+      <div className="p-6 max-w-md mx-auto mt-10 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center space-y-3 shadow-xs">
+        <p className="text-xs font-mono text-slate-600 dark:text-slate-300">Official Supervisory Clearance Required</p>
+        <button
+          type="button"
+          onClick={() => go('ob2')}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer"
+        >
+          Go to Official Desk Login
+        </button>
+      </div>
+    );
   }
 
   // Derive default supervisory tier from user's rank
@@ -43,18 +55,19 @@ export const PsOpmAnalyticsView: React.FC = () => {
         </div>
 
         {/* Country Selector for Executive Scope */}
-        <div className="flex items-center gap-2">
-          <select
+        <div className="min-w-[200px]">
+          <SearchableSelect
             value={selectedCountry}
-            onChange={(e) => setSelectedCountry(e.target.value as CountryCode)}
-            className="bg-white dark:bg-zinc-900 text-xs font-mono font-bold py-1.5 px-3 rounded-xl border border-slate-300 dark:border-zinc-700 focus:outline-none shadow-2xs"
-          >
-            {Object.entries(COUNTRIES).map(([code, c]) => (
-              <option key={code} value={code}>
-                [{code}] {c.name}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedCountry(val as CountryCode)}
+            placeholder="Select nation..."
+            searchPlaceholder="Search nation or code..."
+            options={Object.entries(COUNTRIES).map(([code, c]) => ({
+              value: code,
+              label: `[${code}] ${c.name}`,
+              keywords: `${c.name} ${code}`,
+            }))}
+            triggerClassName="!rounded-xl !py-1.5 !px-3"
+          />
         </div>
       </div>
 

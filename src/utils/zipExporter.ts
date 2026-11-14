@@ -3,27 +3,28 @@ import JSZip from 'jszip';
 export async function exportLiveZip(onProgress?: (pct: number, status: string) => void): Promise<Blob> {
   if (onProgress) onProgress(10, 'Initializing ZIP archive & database snapshots...');
 
-  // Capture current state from localStorage
-  const currentPosts = localStorage.getItem('cd_posts') || '[]';
-  const currentProfiles = localStorage.getItem('cd_profiles') || '{}';
-  const currentAudit = localStorage.getItem('cd_audit') || '[]';
-  const currentSubscriptions = localStorage.getItem('cd_subscriptions') || '[]';
-  const currentInvoices = localStorage.getItem('cd_invoices') || '[]';
-  const currentProjects = localStorage.getItem('cd_projects') || '[]';
-  const currentTeam = localStorage.getItem('cd_team') || '[]';
+  // Capture current state safely from localStorage
+  const readSafeTable = (key: string, fallbackJson: string) => {
+    try {
+      const raw = localStorage.getItem(key) || fallbackJson;
+      return JSON.parse(raw);
+    } catch {
+      return JSON.parse(fallbackJson);
+    }
+  };
 
   const fullDatabaseSnapshot = {
     exported_at: new Date().toISOString(),
     version: '14.1.0',
     platform: 'CivicDuty Sovereign National Ledger',
     tables: {
-      posts: JSON.parse(currentPosts),
-      profiles: JSON.parse(currentProfiles),
-      audit: JSON.parse(currentAudit),
-      subscriptions: JSON.parse(currentSubscriptions),
-      invoices: JSON.parse(currentInvoices),
-      projects: JSON.parse(currentProjects),
-      team: JSON.parse(currentTeam),
+      posts: readSafeTable('cd_posts', '[]'),
+      profiles: readSafeTable('cd_profiles', '{}'),
+      audit: readSafeTable('cd_audit', '[]'),
+      subscriptions: readSafeTable('cd_subscriptions', '[]'),
+      invoices: readSafeTable('cd_invoices', '[]'),
+      projects: readSafeTable('cd_projects', '[]'),
+      team: readSafeTable('cd_team', '[]'),
     },
   };
 

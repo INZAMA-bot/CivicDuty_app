@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ViewType, MinisterialDirective, CountryCode } from '../types';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { TERRITORY } from '../data/countries';
+import { SearchableSelect } from '../components/SearchableSelect';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -373,17 +375,28 @@ export const MinisterialCommandView: React.FC = () => {
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Target {gov.tier3UnitLabel} / Jurisdiction
                   </label>
-                  <select
+                  <SearchableSelect
                     value={targetDistrict}
-                    onChange={(e) => setTargetDistrict(e.target.value)}
-                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-slate-100"
-                  >
-                    {gov.sampleJurisdictions.map((jur) => (
-                      <option key={jur} value={jur}>
-                        {jur}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setTargetDistrict(val)}
+                    placeholder={`Select ${gov.tier3UnitLabel}...`}
+                    searchPlaceholder={`Search all ${gov.tier3Plural.toLowerCase()}...`}
+                    allowCustom
+                    customLabelPrefix="Target custom jurisdiction:"
+                    options={Array.from(
+                      new Set([
+                        ...(TERRITORY[activeCountry] || []).map((d) => d.name),
+                        ...gov.sampleJurisdictions,
+                      ])
+                    ).map((jur) => {
+                      const matchedNode = (TERRITORY[activeCountry] || []).find((d) => d.name === jur);
+                      return {
+                        value: jur,
+                        label: jur,
+                        sublabel: matchedNode?.region || undefined,
+                      };
+                    })}
+                    triggerClassName="!rounded-xl !p-2.5 !bg-slate-50 dark:!bg-slate-900/60"
+                  />
                 </div>
               </div>
 

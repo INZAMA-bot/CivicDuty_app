@@ -59,6 +59,7 @@ import { OfflineSyncHUD } from './components/OfflineSyncHUD';
 import { TesterFeedbackWidget } from './components/TesterFeedbackWidget';
 import { isPlatformUnlocked } from './constants/masterAuth';
 import { ViewType } from './types';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const StudioRightInspector: React.FC = () => {
   const { user, ensureCitizenSession, posts, go, trafficSignalFilter, setTrafficSignalFilter } = useApp();
@@ -252,8 +253,15 @@ const AppContent: React.FC = () => {
   const DESK_ONLY_VIEWS: ViewType[] = [
     'gov_inbox',
     'gov_reply',
+    'gov_audit',
+    'gov_team',
+    'gov_bulk',
+    'gov_billing',
     'gov_projects',
     'gov_admin',
+    'entity_team',
+    'ps_opm_analytics',
+    'ps_molg_rollout',
     'ministerial_command',
     'ps_executive_desk',
   ];
@@ -263,10 +271,10 @@ const AppContent: React.FC = () => {
       go('splash');
       return;
     }
-    if (!isPlatformUnlocked() && !isGov && DESK_ONLY_VIEWS.includes(view)) {
+    if (!isPlatformUnlocked() && !isGov && !isPrivateProvider && DESK_ONLY_VIEWS.includes(view)) {
       go('ob2');
     }
-  }, [view, isGov, go]);
+  }, [view, isGov, isPrivateProvider, go]);
 
   const renderView = () => {
     switch (view) {
@@ -398,7 +406,9 @@ const AppContent: React.FC = () => {
                 isFullWidthView ? 'max-w-6xl' : 'max-w-3xl'
               }`}
             >
-              {renderView()}
+              <ErrorBoundary resetKey={view} onResetToHome={() => go('feed')}>
+                {renderView()}
+              </ErrorBoundary>
             </main>
             <Footer />
           </div>
@@ -417,9 +427,11 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <ErrorBoundary onResetToHome={() => { window.location.href = '/'; }}>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
 

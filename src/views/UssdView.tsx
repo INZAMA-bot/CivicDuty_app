@@ -17,6 +17,7 @@ import {
 import { Post, CountryCode } from '../types';
 import { COUNTRIES, allDepts } from '../data/countries';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 export const UssdView: React.FC = () => {
   const { user, selectedCountry, setSelectedCountry, go, toast, addPost, posts, setActivePost } = useApp();
@@ -255,24 +256,26 @@ export const UssdView: React.FC = () => {
               Inclusive access for citizens across all {Object.keys(COUNTRIES).length} global nations using standard GSM feature phones without internet.
             </p>
           </div>
-          <select
-            value={activeCountry}
-            onChange={(e) => {
-              const c = e.target.value as CountryCode;
-              setSelectedCountry(c);
-              setSession(false);
-              setStep(0);
-              toast(`Switched USSD Telecom Gateway to ${COUNTRIES[c]?.name || c}`, 'emerald');
-            }}
-            aria-label="Select Country for USSD Simulator"
-            className="px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer"
-          >
-            {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
-              <option key={cCode} value={cCode}>
-                [{cCode}] {cInfo.name}
-              </option>
-            ))}
-          </select>
+          <div className="min-w-[210px]">
+            <SearchableSelect
+              value={activeCountry}
+              onChange={(val) => {
+                const c = val as CountryCode;
+                setSelectedCountry(c);
+                setSession(false);
+                setStep(0);
+                toast(`Switched USSD Telecom Gateway to ${COUNTRIES[c]?.name || c}`, 'emerald');
+              }}
+              ariaLabel="Select Country for USSD Simulator"
+              placeholder="Select country..."
+              searchPlaceholder="Search nation or code..."
+              options={Object.entries(COUNTRIES).map(([cCode, cInfo]) => ({
+                value: cCode,
+                label: `[${cCode}] ${cInfo.name}`,
+                keywords: `${cInfo.name} ${cCode}`,
+              }))}
+            />
+          </div>
         </div>
       </div>
 

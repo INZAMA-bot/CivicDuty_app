@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { getDept, copyToClipboard } from '../utils/helpers';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { EnterpriseBranch, BranchTeam, EntityCustomRole, EntityRolePermissions, RoleType, TeamMember } from '../types';
+import { SearchableSelect } from '../components/SearchableSelect';
 import {
   loadAllBranches,
   saveAllBranches,
@@ -194,7 +195,18 @@ export const EntityTeamView: React.FC = () => {
   }, [user, go]);
 
   if (!user) {
-    return null;
+    return (
+      <div className="p-6 max-w-md mx-auto mt-10 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-center space-y-3 shadow-xs">
+        <p className="text-xs font-mono text-slate-600 dark:text-slate-300">Provider Desk Session Required</p>
+        <button
+          type="button"
+          onClick={() => go('entity_gateway')}
+          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold cursor-pointer"
+        >
+          Open Provider Gateway
+        </button>
+      </div>
+    );
   }
 
   const orgName = user.organization_name || user.dept_label || 'Service Provider Desk';
@@ -1220,12 +1232,20 @@ export const EntityTeamView: React.FC = () => {
                           <span className="text-[9px] font-mono text-amber-600 font-bold uppercase">Locked</span>
                         )}
                       </div>
-                      <select
+                      <SearchableSelect
                         disabled={providerPlanKey === 'cluster' || providerPlanKey === 'district'}
                         value={selectedDistrictId}
-                        onChange={(e) => {
-                          setSelectedDistrictId(e.target.value);
-                          const dist = countryTerritories.find((d: any) => d.id === e.target.value);
+                        placeholder="Select District / City..."
+                        searchPlaceholder="Search district or city..."
+                        options={countryTerritories.map((d: any) => ({
+                          value: d.id,
+                          label: d.name,
+                          sublabel: d.region ? `${d.region} Region` : undefined,
+                          keywords: d.region,
+                        }))}
+                        onChange={(val) => {
+                          setSelectedDistrictId(val);
+                          const dist = countryTerritories.find((d: any) => d.id === val);
                           if (dist && dist.children && dist.children[0]) {
                             setSelectedSubcountyId(dist.children[0].id);
                             if (dist.children[0].children && dist.children[0].children[0]) {
@@ -1233,16 +1253,10 @@ export const EntityTeamView: React.FC = () => {
                             }
                           }
                         }}
-                        className={`w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white ${
-                          providerPlanKey === 'cluster' || providerPlanKey === 'district' ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''
+                        triggerClassName={`px-2.5 py-2 font-semibold ${
+                          providerPlanKey === 'cluster' || providerPlanKey === 'district' ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'
                         }`}
-                      >
-                        {countryTerritories.map((d: any) => (
-                          <option key={d.id} value={d.id}>
-                            {d.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     <div>
@@ -1254,43 +1268,45 @@ export const EntityTeamView: React.FC = () => {
                           <span className="text-[9px] font-mono text-amber-600 font-bold uppercase">Locked</span>
                         )}
                       </div>
-                      <select
+                      <SearchableSelect
                         disabled={providerPlanKey === 'cluster'}
                         value={selectedSubcountyId}
-                        onChange={(e) => {
-                          setSelectedSubcountyId(e.target.value);
-                          const sub = subcountyNodes.find((s: any) => s.id === e.target.value);
+                        placeholder="Select Subcounty / Division..."
+                        searchPlaceholder="Search subcounty or division..."
+                        options={subcountyNodes.map((s: any) => ({
+                          value: s.id,
+                          label: s.name,
+                        }))}
+                        onChange={(val) => {
+                          setSelectedSubcountyId(val);
+                          const sub = subcountyNodes.find((s: any) => s.id === val);
                           if (sub && sub.children && sub.children[0]) {
                             setSelectedParishName(sub.children[0].name);
                           }
                         }}
-                        className={`w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white ${
-                          providerPlanKey === 'cluster' ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : ''
+                        triggerClassName={`px-2.5 py-2 font-semibold ${
+                          providerPlanKey === 'cluster' ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'
                         }`}
-                      >
-                        {subcountyNodes.map((s: any) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     <div>
                       <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
                         3. LC2 Parish (Local Desk)
                       </label>
-                      <select
+                      <SearchableSelect
                         value={selectedParishName}
-                        onChange={(e) => setSelectedParishName(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 dark:text-white"
-                      >
-                        {parishNodes.map((p: any) => (
-                          <option key={p.id} value={p.name}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Select Parish..."
+                        searchPlaceholder="Search parish or ward..."
+                        allowCustom
+                        customLabelPrefix="Use parish:"
+                        options={parishNodes.map((p: any) => ({
+                          value: p.name,
+                          label: p.name,
+                        }))}
+                        onChange={(val) => setSelectedParishName(val)}
+                        triggerClassName="px-2.5 py-2 font-semibold bg-white dark:bg-slate-900"
+                      />
                     </div>
                   </div>
                 </div>

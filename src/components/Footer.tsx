@@ -4,6 +4,7 @@ import {
   Lock,
   ShieldCheck,
 } from 'lucide-react';
+import { isPlatformUnlocked } from '../constants/masterAuth';
 
 interface FooterProps {
   isSplash?: boolean;
@@ -79,7 +80,19 @@ export const Footer: React.FC<FooterProps> = ({ isSplash = false }) => {
             <span className="text-slate-300 dark:text-slate-700" aria-hidden="true">·</span>
             <button
               type="button"
-              onClick={() => go('company_management')}
+              onClick={() => {
+                if (isPlatformUnlocked()) {
+                  go('company_management');
+                } else {
+                  (window as any).__cdPendingMasterAuth = 'company_management';
+                  go('splash');
+                  setTimeout(() => {
+                    window.dispatchEvent(
+                      new CustomEvent('civicduty_open_master_auth', { detail: { target: 'company_management' } })
+                    );
+                  }, 40);
+                }
+              }}
               className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors flex items-center gap-1 cursor-pointer font-medium py-1"
               title="Open Launch Countdown & Restricted CivicDuty Internal Ops (CD-Ops)"
             >
