@@ -32,6 +32,7 @@ import {
   QrCode,
   ChevronDown,
   ChevronUp,
+  HardHat,
 } from 'lucide-react';
 import { DeptIcon } from '../components/DeptIcon';
 import { ProviderClaimModal } from '../components/ProviderClaimModal';
@@ -274,6 +275,18 @@ export const DepartmentsView: React.FC = () => {
             >
               <Landmark size={13} className="text-amber-600 dark:text-amber-400" />
               <span>Partnership Hub</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => go('gov_projects')}
+              className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-mono font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              title="Inspect geotagged public works & ongoing civil contracts near you"
+            >
+              <HardHat size={13} />
+              <span>
+                Public Works Near Me (
+                {projects.filter((p) => (!p.country || p.country === country) && p.visibilityScope !== 'private_facility').length})
+              </span>
             </button>
             <button
               type="button"

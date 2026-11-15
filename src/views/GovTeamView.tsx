@@ -160,20 +160,21 @@ function getSupervisoryJurisdiction(
   let subcountyObj: any = null;
   let parishObj: any = null;
 
-  if (userScope && userScope.toUpperCase() !== country.toUpperCase()) {
-    const directD = dists.find((d) => d.id.toLowerCase() === userScope.toLowerCase());
+  const scopeLower = (userScope || '').toLowerCase();
+  if (scopeLower && scopeLower !== (country || 'UG').toLowerCase()) {
+    const directD = dists.find((d) => (d?.id || '').toLowerCase() === scopeLower);
     if (directD) {
       districtObj = directD;
     } else {
       for (const d of dists) {
-        const foundSub = d.children?.find((s) => s.id.toLowerCase() === userScope.toLowerCase());
+        const foundSub = d.children?.find((s) => (s?.id || '').toLowerCase() === scopeLower);
         if (foundSub) {
           districtObj = d;
           subcountyObj = foundSub;
           break;
         }
         for (const s of d.children || []) {
-          const foundP = s.children?.find((p) => p.id.toLowerCase() === userScope.toLowerCase());
+          const foundP = s.children?.find((p) => (p?.id || '').toLowerCase() === scopeLower);
           if (foundP) {
             districtObj = d;
             subcountyObj = s;
@@ -206,7 +207,7 @@ function getSupervisoryJurisdiction(
  * Checks whether a candidate officer's geographic scope is within the supervisor's jurisdiction
  */
 function isScopeUnderSupervisor(
-  candidateScope: string,
+  candidateScope: string | undefined,
   supervisorTier: number,
   supervisorDistrictId?: string,
   supervisorSubcountyId?: string,
@@ -214,17 +215,20 @@ function isScopeUnderSupervisor(
   country: CountryCode = 'UG'
 ): boolean {
   if (supervisorTier >= 4) return true; // Apex Ministry sees all in sovereign country
+  const cand = (candidateScope || '').toLowerCase();
+  if (!cand) return true;
   const dists = TERRITORY[country] || [];
 
   if (supervisorTier === 3) {
     // CAO: Candidate must be in the CAO's district
     if (!supervisorDistrictId) return true;
-    if (candidateScope === supervisorDistrictId) return true;
-    const dist = dists.find((d) => d.id.toLowerCase() === supervisorDistrictId.toLowerCase());
+    const supDistLower = supervisorDistrictId.toLowerCase();
+    if (cand === supDistLower) return true;
+    const dist = dists.find((d) => (d?.id || '').toLowerCase() === supDistLower);
     if (!dist) return true;
-    if (dist.children?.some((s) => s.id.toLowerCase() === candidateScope.toLowerCase())) return true;
+    if (dist.children?.some((s) => (s?.id || '').toLowerCase() === cand)) return true;
     for (const s of dist.children || []) {
-      if (s.children?.some((p) => p.id.toLowerCase() === candidateScope.toLowerCase())) return true;
+      if (s.children?.some((p) => (p?.id || '').toLowerCase() === cand)) return true;
     }
     return false;
   }
@@ -232,11 +236,12 @@ function isScopeUnderSupervisor(
   if (supervisorTier === 2) {
     // Sub-County Chief: Candidate must be in this Sub-County
     if (!supervisorSubcountyId) return true;
-    if (candidateScope === supervisorSubcountyId) return true;
+    const supSubLower = supervisorSubcountyId.toLowerCase();
+    if (cand === supSubLower) return true;
     for (const d of dists) {
-      const sub = d.children?.find((s) => s.id.toLowerCase() === supervisorSubcountyId.toLowerCase());
+      const sub = d.children?.find((s) => (s?.id || '').toLowerCase() === supSubLower);
       if (sub) {
-        if (sub.children?.some((p) => p.id.toLowerCase() === candidateScope.toLowerCase())) return true;
+        if (sub.children?.some((p) => (p?.id || '').toLowerCase() === cand)) return true;
       }
     }
     return false;
@@ -244,7 +249,7 @@ function isScopeUnderSupervisor(
 
   if (supervisorTier === 1) {
     // Parish Chief: Candidate must match this Parish
-    return candidateScope.toLowerCase() === (supervisorParishId || '').toLowerCase();
+    return cand === (supervisorParishId || '').toLowerCase();
   }
 
   return true;
@@ -290,11 +295,18 @@ export const GovTeamView: React.FC = () => {
 
   const { tier, districtObj, subcountyObj, parishObj } = jurisdiction;
 
+  const ombudsmanShortLower = (gov?.ombudsman?.shortName || 'igg').toLowerCase();
+  const utilityShortLower = (
+    (gov?.utilityAgency as { shortName?: string } | undefined)?.shortName ||
+    ''
+  ).toLowerCase();
+  const userDeptLower = (user?.dept || '').toLowerCase();
+
   const isOmbudsman = Boolean(
-    user?.dept === 'igg' ||
-    user?.dept === gov.ombudsman.shortName.toLowerCase() ||
+    userDeptLower === 'igg' ||
+    (ombudsmanShortLower && userDeptLower === ombudsmanShortLower) ||
     user?.real_title_short?.toLowerCase().includes('igg') ||
-    user?.real_title_short?.toLowerCase().includes(gov.ombudsman.shortName.toLowerCase()) ||
+    (ombudsmanShortLower && user?.real_title_short?.toLowerCase().includes(ombudsmanShortLower)) ||
     user?.real_title_short?.toLowerCase().includes('ombudsman') ||
     user?.role_label?.toLowerCase().includes('ombudsman') ||
     user?.role_label?.toLowerCase().includes('inspector general') ||
@@ -302,12 +314,13 @@ export const GovTeamView: React.FC = () => {
     user?.organization_name?.toLowerCase().includes('anti-corruption')
   );
 
+  const knownAgencyDepts = ['nwsc', 'unra', 'ura', 'nema', 'caa', 'era', 'ucc', utilityShortLower].filter(Boolean);
   const isStatutoryAgency = Boolean(
     !isOmbudsman && (
       tier === 4 ||
       user?.hierarchy_level === 'tier4_agency' ||
       user?.is_utility ||
-      ['nwsc', 'unra', 'ura', 'nema', 'caa', 'era', 'ucc', gov.utilityAgency.shortName.toLowerCase()].includes(user?.dept || '') ||
+      knownAgencyDepts.includes(userDeptLower) ||
       user?.organization_name?.toLowerCase().includes('corporation') ||
       user?.organization_name?.toLowerCase().includes('authority')
     )
@@ -431,10 +444,10 @@ export const GovTeamView: React.FC = () => {
     if (statusFilter === 'stood_down' && m.active) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    const station = scopeName(user.country, m.scope).toLowerCase();
+    const station = (scopeName(user?.country || 'UG', m.scope || '') || '').toLowerCase();
     return (
-      m.name.toLowerCase().includes(q) ||
-      m.title.toLowerCase().includes(q) ||
+      (m.name || '').toLowerCase().includes(q) ||
+      (m.title || '').toLowerCase().includes(q) ||
       station.includes(q) ||
       (m.contact_phone && m.contact_phone.includes(q))
     );
@@ -1830,7 +1843,7 @@ export const GovTeamView: React.FC = () => {
             {filteredTeam.map((m, idx) => {
               const isDirectSubordinate =
                 tier === 5 ||
-                (tier === 3 && m.scope.toUpperCase() !== country.toUpperCase() && m.role !== 'platform_admin') ||
+                (tier === 3 && (m.scope || '').toUpperCase() !== (country || 'UG').toUpperCase() && m.role !== 'platform_admin') ||
                 (tier === 2 && m.role === 'spokesperson' && m.scope !== districtObj?.id);
 
               return (

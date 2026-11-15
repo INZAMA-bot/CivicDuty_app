@@ -39,6 +39,7 @@ import {
   CreditCard,
   Building2,
   SlidersHorizontal,
+  HardHat,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { MasterDossierDisplayer } from '../components/MasterDossierDisplayer';
@@ -701,6 +702,17 @@ export const FeedView: React.FC = () => {
           >
             <Bookmark size={11} className={showBookmarksOnly ? 'text-white' : 'text-slate-400'} />
             <span>Saved ({(bookmarks || []).length})</span>
+          </button>
+
+          {/* Works Near Me */}
+          <button
+            type="button"
+            onClick={() => go('gov_projects')}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-semibold shrink-0 transition cursor-pointer bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20"
+            title="View geotagged public contracts and civil works near your parish"
+          >
+            <HardHat size={12} className="text-amber-600 dark:text-amber-400" />
+            <span>Works Near Me</span>
           </button>
 
           {/* Demos Toggle */}

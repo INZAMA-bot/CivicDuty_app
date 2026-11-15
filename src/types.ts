@@ -817,10 +817,39 @@ export interface ProjectMilestone {
   contractorVerified?: boolean;
   contractorSignedBy?: string;
   contractorSignedAt?: string;
+  grassrootsVerified?: boolean;
+  grassrootsSignedBy?: string;
+  grassrootsSignedAt?: string;
+  grassrootsNote?: string;
   evidenceImages?: MilestoneEvidenceImage[];
   contractorNotes?: string;
   ipcNumber?: string;
   awarderAuditNotes?: string;
+}
+
+export interface ProjectGeotagCoverage {
+  districtIds?: string[];
+  districtNames?: string[];
+  subcountyIds?: string[];
+  subcountyNames?: string[];
+  parishIds?: string[];
+  parishNames?: string[];
+  villages?: string[]; // LC1 / Cell names
+  corridorType?: 'point_site' | 'multi_parish_corridor';
+  gpsPoint?: { lat: number; lng: number; accuracyMeters?: number; label?: string };
+  corridorEndGps?: { lat: number; lng: number; label?: string };
+}
+
+export interface ProjectGrassrootsAttestation {
+  id: string;
+  level: 'lc1' | 'parish_chief' | 'subcounty';
+  officerName: string;
+  roleTitle: string;
+  unitName: string;
+  status: 'on_site_confirmed' | 'stalled_flagged' | 'needs_review';
+  note: string;
+  attestedAt: string;
+  gps?: string;
 }
 
 export interface DefectItem {
@@ -856,6 +885,7 @@ export interface ContractorCsrDisbursement {
 export interface Project {
   id: string;
   dept?: string;
+  loc?: string;
   contractor: string;
   title: string;
   tender?: string;
@@ -867,6 +897,10 @@ export interface Project {
   status: 'active' | 'completed' | 'defects' | 'closed' | 'abandoned';
   code: string;
   country?: CountryCode;
+  visibilityScope?: 'public_sovereign' | 'private_facility';
+  ownerOrgName?: string;
+  geotag?: ProjectGeotagCoverage;
+  grassrootsAttestations?: ProjectGrassrootsAttestation[];
   milestones?: ProjectMilestone[];
   defects?: DefectItem[];
   retentionFundReleased?: boolean;

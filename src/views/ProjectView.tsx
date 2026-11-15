@@ -38,6 +38,12 @@ import {
   Clock,
   Layers,
   QrCode,
+  MapPin,
+  Compass,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Navigation as NavPin,
 } from 'lucide-react';
 import { PostCardComponent } from '../components/PostCardComponent';
 import { RewardModal } from '../components/RewardModal';
@@ -45,16 +51,25 @@ import { DefectsLiabilityPanel } from '../components/DefectsLiabilityPanel';
 import { ContractorCsrModal } from '../components/ContractorCsrModal';
 import { SiteDepotBranchesCard } from '../components/SiteDepotBranchesCard';
 import { PrintableTreasuryWarrantModal } from '../components/PrintableTreasuryWarrantModal';
-import { ProjectMilestone, MilestoneEvidenceImage, Post, ContractorCsrDisbursement } from '../types';
+import {
+  ProjectMilestone,
+  MilestoneEvidenceImage,
+  Post,
+  ContractorCsrDisbursement,
+  ProjectGrassrootsAttestation,
+} from '../types';
 import { saveFiscalVoucherToCloud } from '../services/firestoreSync';
 import { getCountryCapacityPresets } from '../data/tiers';
+import { getProjectCoverageSummary, resolveUserProjectPerspective } from '../utils/projectCoverage';
 
 export const ProjectView: React.FC = () => {
-  const { activeProject, projects, posts, user, go, setActiveProject, toast, addPost } = useApp();
+  const { activeProject, projects, posts, user, go, setActiveProject, updateProject, toast, addPost } = useApp();
 
   const proj = activeProject || projects[0];
   const countryCode = proj?.country || user?.country || 'UG';
   const capacityPresets = getCountryCapacityPresets(countryCode);
+  const perspective = resolveUserProjectPerspective(user);
+  const coverage = proj ? getProjectCoverageSummary(proj) : null;
 
   const [commentText, setCommentText] = useState('');
   const [inspectorCapacity, setInspectorCapacity] = useState(capacityPresets[4] || capacityPresets[0] || 'Local Resident / Community Watchdog');
@@ -184,9 +199,29 @@ export const ProjectView: React.FC = () => {
     return proj?.milestones && proj.milestones.length > 0 ? proj.milestones : defaultMilestones;
   });
 
-  const [signingRole, setSigningRole] = useState<'awarder' | 'contractor'>('awarder');
+  const [demoSimulationActive, setDemoSimulationActive] = useState(false);
+  const [showSandbox, setShowSandbox] = useState(false);
+  const [signingRole, setSigningRole] = useState<'awarder' | 'contractor'>(() =>
+    perspective.canSignContractor ? 'contractor' : 'awarder'
+  );
   const [newWallMilestoneTitle, setNewWallMilestoneTitle] = useState('');
   const [newWallMilestoneDate, setNewWallMilestoneDate] = useState('');
+
+  // Grassroots LC1 / Parish Chief Attestation Form State
+  const [attestLevel, setAttestLevel] = useState<'lc1' | 'parish_chief' | 'subcounty'>(() =>
+    perspective.perspective === 'gov_lc1'
+      ? 'lc1'
+      : perspective.perspective === 'gov_subcounty'
+      ? 'subcounty'
+      : 'parish_chief'
+  );
+  const [attestStatus, setAttestStatus] = useState<'on_site_confirmed' | 'stalled_flagged' | 'needs_review'>(
+    'on_site_confirmed'
+  );
+  const [attestUnit, setAttestUnit] = useState(
+    user?.village || user?.parish || user?.scope || proj?.geotag?.parishNames?.[0] || ''
+  );
+  const [attestNote, setAttestNote] = useState('');
 
   // Milestone Evidence Modal States
   const [selectedMilestoneForEvidence, setSelectedMilestoneForEvidence] = useState<ProjectMilestone | null>(null);
@@ -242,9 +277,40 @@ export const ProjectView: React.FC = () => {
     } else {
       setMilestones(defaultMilestones);
     }
+    setAttestUnit(user?.village || user?.parish || user?.scope || proj?.geotag?.parishNames?.[0] || '');
   }, [proj?.id]);
 
-  const canUpdateProject = user && (user.role === 'node_admin' || user.role === 'spokesperson' || user.role === 'platform_admin' || user.is_utility);
+  const isPrivateOwnFacility = Boolean(
+    coverage?.visibilityScope === 'private_facility' &&
+      perspective.isPrivateProvider &&
+      ((user?.dept && proj?.dept === user.dept) ||
+        (user?.organization_name && proj?.ownerOrgName?.toLowerCase() === user.organization_name.toLowerCase()))
+  );
+
+  const effectiveCanSignAwarder = demoSimulationActive
+    ? signingRole === 'awarder'
+    : Boolean(perspective.canSignAwarder && (coverage?.visibilityScope !== 'private_facility' || isPrivateOwnFacility));
+
+  const effectiveCanSignContractor = demoSimulationActive ? signingRole === 'contractor' : perspective.canSignContractor;
+  const effectiveCanAttestGrassroots = demoSimulationActive ? true : perspective.canAttestGrassroots;
+  const effectiveSigningRole: 'awarder' | 'contractor' = effectiveCanSignContractor ? 'contractor' : 'awarder';
+
+  const canUpdateProject = Boolean(
+    demoSimulationActive ||
+      effectiveCanSignAwarder ||
+      isPrivateOwnFacility ||
+      (user && (user.role === 'node_admin' || user.role === 'spokesperson' || user.role === 'platform_admin' || user.is_utility))
+  );
+
+  const syncMilestones = (updater: ProjectMilestone[] | ((prev: ProjectMilestone[]) => ProjectMilestone[])) => {
+    setMilestones((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (proj?.id) {
+        updateProject(proj.id, { milestones: next });
+      }
+      return next;
+    });
+  };
 
   if (!proj) {
     return (
@@ -409,8 +475,8 @@ export const ProjectView: React.FC = () => {
 
   const handleToggleAwarder = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (signingRole !== 'awarder') {
-      toast('ACCESS DENIED: Contractor Executives/Engineers CANNOT sign the Procuring Entity slot!', 'amber');
+    if (!effectiveCanSignAwarder) {
+      toast('LOCKED: Only authorized Procuring Entity / Supervising Officers (or Preview Simulation Mode) can sign this slot.', 'amber');
       return;
     }
     const target = milestones.find((m) => m.id === id);
@@ -423,7 +489,7 @@ export const ProjectView: React.FC = () => {
       return;
     }
 
-    setMilestones((prev) =>
+    syncMilestones((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m;
         const nextAwarder = !m.awarderVerified;
@@ -448,8 +514,8 @@ export const ProjectView: React.FC = () => {
 
   const handleToggleContractor = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (signingRole !== 'contractor') {
-      toast('ACCESS DENIED: Government Officials CANNOT sign the Contractor Executive slot!', 'amber');
+    if (!effectiveCanSignContractor) {
+      toast('LOCKED: Only the appointed Contractor Site Engineer (or Preview Simulation Mode) can sign the Contractor slot.', 'amber');
       return;
     }
     const target = milestones.find((m) => m.id === id);
@@ -462,7 +528,7 @@ export const ProjectView: React.FC = () => {
       return;
     }
 
-    setMilestones((prev) =>
+    syncMilestones((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m;
         const nextContractor = !m.contractorVerified;
@@ -483,6 +549,68 @@ export const ProjectView: React.FC = () => {
         };
       })
     );
+  };
+
+  const handleToggleGrassrootsMilestone = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!effectiveCanAttestGrassroots) {
+      toast('LOCKED: Only LC1 / Parish Chief / Sub-County officers (or Preview Simulation Mode) can log Ground Witness verification.', 'amber');
+      return;
+    }
+    syncMilestones((prev) =>
+      prev.map((m) => {
+        if (m.id !== id) return m;
+        const nextWitness = !m.grassrootsVerified;
+        const witnessLabel = user?.real_title_short
+          ? `${user.name || 'Ground Officer'} (${user.real_title_short})`
+          : 'LC1 / Parish Chief Ground Witness';
+        toast(
+          nextWitness
+            ? `LC1 / Parish Ground Witness logged on Phase`
+            : 'Grassroots Ground Witness signoff removed',
+          nextWitness ? 'emerald' : 'amber'
+        );
+        return {
+          ...m,
+          grassrootsVerified: nextWitness,
+          grassrootsSignedBy: nextWitness ? witnessLabel : undefined,
+          grassrootsSignedAt: nextWitness ? new Date().toISOString().split('T')[0] : undefined,
+        };
+      })
+    );
+  };
+
+  const handleSubmitGrassrootsAttestation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!effectiveCanAttestGrassroots) {
+      toast('Only LC1 Chairpersons, Parish Chiefs, or Sub-County officers can file official Ground Witness attestations.', 'amber');
+      return;
+    }
+    if (!attestNote.trim()) {
+      toast('Enter brief ground observation note before submitting attestation.', 'amber');
+      return;
+    }
+    const newAttest: ProjectGrassrootsAttestation = {
+      id: 'att-' + Date.now(),
+      level: attestLevel,
+      officerName: user?.name || (attestLevel === 'lc1' ? 'LC1 Chairperson' : 'Parish Chief'),
+      roleTitle:
+        user?.real_title_short ||
+        (attestLevel === 'lc1'
+          ? 'LC1 Chairperson'
+          : attestLevel === 'parish_chief'
+          ? 'Parish Chief'
+          : 'Sub-County SAS / Town Clerk'),
+      unitName: attestUnit.trim() || coverage?.parishNames?.[0] || proj.location || 'Local Site Unit',
+      status: attestStatus,
+      note: attestNote.trim(),
+      attestedAt: new Date().toISOString().split('T')[0],
+      gps: coverage?.hasGps ? coverage.gpsLabel : undefined,
+    };
+    const nextList = [newAttest, ...(proj.grassrootsAttestations || [])];
+    updateProject(proj.id, { grassrootsAttestations: nextList });
+    setAttestNote('');
+    toast('Ground Witness Attestation recorded — visible up the hierarchy to CAO & Permanent Secretary.', 'emerald');
   };
 
   const handleSaveContractorEvidenceAndSign = () => {
@@ -508,7 +636,7 @@ export const ProjectView: React.FC = () => {
       };
     });
 
-    setMilestones(updatedMilestones);
+    syncMilestones(updatedMilestones);
     setEvidenceModalMode(null);
     setSelectedMilestoneForEvidence(null);
     setUploadedImages([]);
@@ -536,7 +664,7 @@ export const ProjectView: React.FC = () => {
       };
     });
 
-    setMilestones(updatedMilestones);
+    syncMilestones(updatedMilestones);
     setEvidenceModalMode(null);
     setSelectedMilestoneForEvidence(null);
     toast(`Procuring Entity verified pictorial evidence & signed off milestone! Dual sign-off unlocked.`, 'emerald');
@@ -555,7 +683,7 @@ export const ProjectView: React.FC = () => {
       awarderVerified: false,
       contractorVerified: false,
     };
-    setMilestones((prev) => [...prev, item]);
+    syncMilestones((prev) => [...prev, item]);
     setNewWallMilestoneTitle('');
     setNewWallMilestoneDate('');
     toast('Milestone added to contract wall!', 'emerald');
@@ -582,130 +710,367 @@ export const ProjectView: React.FC = () => {
         <p className="text-[12px] mono text-slate-600 dark:text-slate-300 mt-1 font-semibold">{proj.contractor}</p>
       </div>
 
-      {/* Interactive 3-Role Contract & Supervision Activity Demo Console */}
-      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+      {/* Geotagged Corridor & Multi-Tier Government Coverage Matrix */}
+      {coverage && (
+        <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3 text-xs font-mono">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                <Compass size={12} />
+                {coverage.visibilityScope === 'private_facility'
+                  ? 'Private Facility Works · Restricted Scope'
+                  : 'Geotagged Public Works · Multi-Tier Gov Rollup'}
+              </span>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white font-sans mt-0.5">
+                Jurisdiction Footprint &amp; Leadership Chain
+              </h3>
+            </div>
+            <span className="text-[10px] px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-200 font-bold flex items-center gap-1">
+              <NavPin size={11} className="text-emerald-600 dark:text-emerald-400" />
+              {coverage.gpsLabel}
+            </span>
+          </div>
+
+          {coverage.corridorEndLabel && (
+            <div className="text-[10.5px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] px-2.5 py-1.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36]">
+              <MapPin size={11} className="text-amber-600 shrink-0" />
+              <span>Corridor End Coordinate: <strong>{coverage.corridorEndLabel}</strong></span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <span className="text-[9.5px] uppercase text-slate-400 block">District / City</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {coverage.districtNames.length > 0 ? coverage.districtNames.join(', ') : proj.location || 'National'}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <span className="text-[9.5px] uppercase text-slate-400 block">Sub-County / Division</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {coverage.subcountyNames.length > 0 ? coverage.subcountyNames.join(', ') : 'Assigned Division'}
+              </span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+              <span className="text-[9.5px] uppercase text-slate-400 block">
+                {coverage.parishNames.length > 1 ? `Multi-Parish Corridor (${coverage.parishNames.length})` : 'Parish / Ward'}
+              </span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                {coverage.parishNames.length > 0 ? coverage.parishNames.join(' · ') : (proj.units || []).join(' · ') || 'Site Corridor'}
+              </span>
+            </div>
+          </div>
+
+          {coverage.villages.length > 0 && (
+            <div className="text-[10.5px] text-slate-600 dark:text-slate-300 flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-slate-500 uppercase text-[9.5px]">LC1 / Villages:</span>
+              {coverage.villages.map((v) => (
+                <span
+                  key={v}
+                  className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 font-semibold"
+                >
+                  {v}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {coverage.visibilityScope === 'public_sovereign' ? (
+            <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 flex-wrap text-[10px]">
+              <span className="font-bold text-slate-700 dark:text-slate-300">Auto-Broadcast Oversight Chain:</span>
+              <div className="flex items-center gap-1.5 flex-wrap text-emerald-700 dark:text-emerald-400 font-bold">
+                <span>LC1 Village</span>
+                <span>→</span>
+                <span>Parish Chief (T1)</span>
+                <span>→</span>
+                <span>Sub-County (T2)</span>
+                <span>→</span>
+                <span>District CAO (T3)</span>
+                <span>→</span>
+                <span>Agency (T4)</span>
+                <span>→</span>
+                <span>PS / OPM (T5)</span>
+              </div>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] text-[10px] text-slate-500 dark:text-slate-400">
+              Owned &amp; signed internally by <strong>{proj.ownerOrgName || proj.dept.toUpperCase()}</strong> + appointed contractor <strong>{proj.contractor}</strong>.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* LC1 / Parish Chief Grassroots Ground Witness Attestations */}
+      <div className="p-4 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3 text-xs font-mono">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold block">
-              Interactive Contract &amp; Supervision Sandbox · 3 Live Perspectives
+            <span className="text-[10px] uppercase tracking-wider text-teal-600 dark:text-teal-400 font-bold flex items-center gap-1.5">
+              <Users size={12} /> Grassroots Ground Witness Verification (Anti-Ghost-Project Check)
             </span>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-              Test Every Contract Activity: Contractor, Appointed Supervisor &amp; Resident/Traveler
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white font-sans mt-0.5">
+              LC1 &amp; Parish Chief Physical Site Presence Log ({(proj.grassrootsAttestations || []).length})
             </h3>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-semibold">
-            1-Click Live Simulation
-          </span>
+          {!effectiveCanAttestGrassroots ? (
+            <span className="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-500 font-bold flex items-center gap-1">
+              <Lock size={11} /> Locked to LC1 / Parish / Sub-County Desk
+            </span>
+          ) : (
+            <span className="text-[10px] px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-700 dark:text-teal-300 font-bold">
+              Ground Witness Active
+            </span>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-          {/* Demo 1: Contractor */}
+        {(proj.grassrootsAttestations || []).length > 0 ? (
+          <div className="space-y-2">
+            {(proj.grassrootsAttestations || []).map((att) => (
+              <div
+                key={att.id}
+                className={`p-3 rounded-lg border text-[11px] space-y-1 ${
+                  att.status === 'stalled_flagged'
+                    ? 'bg-rose-500/10 border-rose-500/30'
+                    : att.status === 'needs_review'
+                    ? 'bg-amber-500/10 border-amber-500/30'
+                    : 'bg-emerald-500/10 border-emerald-500/30'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {att.officerName} · <span className="text-slate-600 dark:text-slate-300">{att.roleTitle}</span> ({att.unitName})
+                  </span>
+                  <span
+                    className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded border ${
+                      att.status === 'stalled_flagged'
+                        ? 'bg-rose-600 text-white border-rose-700'
+                        : att.status === 'needs_review'
+                        ? 'bg-amber-600 text-white border-amber-700'
+                        : 'bg-emerald-600 text-white border-emerald-700'
+                    }`}
+                  >
+                    {att.status === 'stalled_flagged'
+                      ? 'Stalled Flagged'
+                      : att.status === 'needs_review'
+                      ? 'Needs Review'
+                      : 'On-Site Confirmed'}
+                  </span>
+                </div>
+                <p className="font-sans text-slate-700 dark:text-slate-200">{att.note}</p>
+                <div className="text-[9.5px] text-slate-500 flex items-center justify-between gap-2">
+                  <span>Logged: {att.attestedAt}</span>
+                  {att.gps && <span>GPS: {att.gps}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-500 dark:text-slate-400">
+            No LC1 or Parish Chief physical ground check logged yet. When filed, it escalates immediately to Sub-County, CAO &amp; PS OPM.
+          </div>
+        )}
+
+        {effectiveCanAttestGrassroots && (
+          <form onSubmit={handleSubmitGrassrootsAttestation} className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <select
+                value={attestLevel}
+                onChange={(e) => setAttestLevel(e.target.value as any)}
+                className="px-2.5 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold"
+              >
+                <option value="lc1">LC1 / Village Chairperson</option>
+                <option value="parish_chief">Parish Chief / Ward Agent</option>
+                <option value="subcounty">Sub-County SAS / Clerk</option>
+              </select>
+              <select
+                value={attestStatus}
+                onChange={(e) => setAttestStatus(e.target.value as any)}
+                className="px-2.5 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold"
+              >
+                <option value="on_site_confirmed">On-Site Work Confirmed</option>
+                <option value="needs_review">Needs Technical Review</option>
+                <option value="stalled_flagged">Stalled / No Crew On-Site</option>
+              </select>
+              <input
+                type="text"
+                value={attestUnit}
+                onChange={(e) => setAttestUnit(e.target.value)}
+                placeholder="Parish / Village Cell name"
+                className="px-2.5 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs"
+              />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={attestNote}
+                onChange={(e) => setAttestNote(e.target.value)}
+                placeholder="Witness observation (e.g. Culvert crew active along chainage 1+400; 2 excavators on ground)..."
+                className="flex-1 px-3 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-sans"
+              />
+              <button
+                type="submit"
+                className="px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs cursor-pointer shrink-0"
+              >
+                Log Ground Witness
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Collapsible Interactive 3-Role Preview Simulation Sandbox */}
+      <div className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => {
-              setSigningRole('contractor');
-              setProgressPct((prev) => Math.min(100, prev + 10));
-              setMilestones((prev) =>
-                prev.map((m, idx) =>
-                  idx === 2
-                    ? {
-                        ...m,
-                        contractorVerified: true,
-                        contractorSignedBy: `${proj.contractor} Lead Site Engineer`,
-                        contractorSignedAt: new Date().toISOString().split('T')[0],
-                        done: Boolean(m.awarderVerified),
-                      }
-                    : m
-                )
-              );
-              setInspectorCapacity(`Lead Site Engineer — ${proj.contractor}`);
-              setCommentText(
-                `[CONTRACTOR BOQ & MILESTONE CLAIM] Phase 3 substructure drainage channel excavation and box culvert bedding completed per engineering drawings. Submitting IPC Certificate #03 for joint verification by the Appointed Supervising Engineer.`
-              );
-              toast('Contractor Demo loaded: Phase 3 signed by Contractor & BOQ claim prepared below!', 'emerald');
-            }}
-            className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
+            onClick={() => setShowSandbox((v) => !v)}
+            className="flex items-center gap-2 text-left cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                <HardHat size={12} /> 1. Contractor Demo
-              </span>
-              <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-amber-500">Run →</span>
-            </div>
-            <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
-              File BOQ Progress &amp; Sign Contractor Slot
-            </div>
-            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
-              Act as {proj.contractor} Site Engineer: advance completion %, sign Phase 3, and prepare Interim Payment Claim.
-            </p>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-bold">
+              Preview Simulation Mode
+            </span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white">
+              · {demoSimulationActive ? 'Sandbox Override ACTIVE' : `Locked to Real Account Role (${perspective.tierLabel})`}
+            </span>
+            {showSandbox ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
           </button>
 
-          {/* Demo 2: Appointed Supervision Official */}
-          <button
-            type="button"
-            onClick={() => {
-              setSigningRole('awarder');
-              setMilestones((prev) =>
-                prev.map((m, idx) =>
-                  idx === 2
-                    ? {
-                        ...m,
-                        awarderVerified: true,
-                        awarderSignedBy: 'Appointed District Supervising Engineer (Gov)',
-                        awarderSignedAt: new Date().toISOString().split('T')[0],
-                        done: Boolean(m.contractorVerified),
-                      }
-                    : m
-                )
-              );
-              setInspectorCapacity(capacityPresets[0] || 'Appointed Government Supervising Engineer / Clerk of Works');
-              setCommentText(
-                `[STATUTORY SUPERVISION AUDIT] Conducted on-site core-drilling and culvert concrete cube strength test (C30 grade verified). Drainage gradient meets MoWT/PPDA specification. Cleared for Dual Sign-Off and Treasury Warrant minting.`
-              );
-              toast('Supervision Official Demo loaded: Gov Engineer verification & audit memo ready!', 'emerald');
-            }}
-            className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <ShieldCheck size={12} /> 2. Appointed Supervisor
-              </span>
-              <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-emerald-500">Run →</span>
-            </div>
-            <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
-              Official Technical Audit &amp; Dual Sign-Off
-            </div>
-            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
-              Act as Appointed Supervising Engineer / CAO Inspector: counter-sign milestone &amp; log technical quality clearance.
-            </p>
-          </button>
-
-          {/* Demo 3: Resident / Traveler / Commuter */}
-          <button
-            type="button"
-            onClick={() => {
-              setInspectorCapacity('Local Resident & Daily Highway Traveler / Commuter Watchdog');
-              setCommentText(
-                `[RESIDENT & TRAVELER FIELD OBSERVATION] Passing through kilometer 4.2 of ${proj.title}: Concrete culverts are installed on the eastern shoulder, but reflective night hazard barriers are needed near the open trench for evening travelers and boda riders.`
-              );
-              toast('Resident / Traveler Supervision Demo loaded! Click "Log Site Inspection Memo" below to publish.', 'emerald');
-            }}
-            className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-indigo-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                <BadgeCheck size={12} /> 3. Resident / Traveler
-              </span>
-              <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-indigo-500">Run →</span>
-            </div>
-            <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
-              Citizen &amp; Traveler Eyewitness Audit
-            </div>
-            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
-              Act as a Local Resident or Road Traveler: file geo-tagged eyewitness supervision feedback &amp; qualify for Perks.
-            </p>
-          </button>
+          <div className="flex items-center gap-2">
+            {demoSimulationActive && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDemoSimulationActive(false);
+                  setSigningRole(perspective.canSignContractor ? 'contractor' : 'awarder');
+                  toast(`Returned to Strict Real Role Lock (${perspective.tierLabel})`, 'emerald');
+                }}
+                className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30 font-bold cursor-pointer"
+              >
+                Exit Sandbox · Enforce Real Lock
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowSandbox((v) => !v)}
+              className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-semibold cursor-pointer"
+            >
+              {showSandbox ? 'Hide Sandbox' : 'Open 3-Role Sandbox'}
+            </button>
+          </div>
         </div>
+
+        {showSandbox && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs pt-2 border-t border-[#e3e6ea] dark:border-[#262b36]">
+            {/* Demo 1: Contractor */}
+            <button
+              type="button"
+              onClick={() => {
+                setDemoSimulationActive(true);
+                setSigningRole('contractor');
+                setProgressPct((prev) => Math.min(100, prev + 10));
+                syncMilestones((prev) =>
+                  prev.map((m, idx) =>
+                    idx === 2
+                      ? {
+                          ...m,
+                          contractorVerified: true,
+                          contractorSignedBy: `${proj.contractor} Lead Site Engineer`,
+                          contractorSignedAt: new Date().toISOString().split('T')[0],
+                          done: Boolean(m.awarderVerified),
+                        }
+                      : m
+                  )
+                );
+                setInspectorCapacity(`Lead Site Engineer — ${proj.contractor}`);
+                setCommentText(
+                  `[CONTRACTOR BOQ & MILESTONE CLAIM] Phase 3 substructure drainage channel excavation and box culvert bedding completed per engineering drawings. Submitting IPC Certificate #03 for joint verification by the Appointed Supervising Engineer.`
+                );
+                toast('Contractor Demo loaded: Phase 3 signed by Contractor & BOQ claim prepared below!', 'emerald');
+              }}
+              className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-amber-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <HardHat size={12} /> 1. Contractor Demo
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-amber-500">Run →</span>
+              </div>
+              <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
+                File BOQ Progress &amp; Sign Contractor Slot
+              </div>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                Simulate {proj.contractor} Site Engineer: sign Phase 3 and unlock Contractor upload controls.
+              </p>
+            </button>
+
+            {/* Demo 2: Appointed Supervision Official */}
+            <button
+              type="button"
+              onClick={() => {
+                setDemoSimulationActive(true);
+                setSigningRole('awarder');
+                syncMilestones((prev) =>
+                  prev.map((m, idx) =>
+                    idx === 2
+                      ? {
+                          ...m,
+                          awarderVerified: true,
+                          awarderSignedBy: 'Appointed District Supervising Engineer (Gov)',
+                          awarderSignedAt: new Date().toISOString().split('T')[0],
+                          done: Boolean(m.contractorVerified),
+                        }
+                      : m
+                  )
+                );
+                setInspectorCapacity(capacityPresets[0] || 'Appointed Government Supervising Engineer / Clerk of Works');
+                setCommentText(
+                  `[STATUTORY SUPERVISION AUDIT] Conducted on-site core-drilling and culvert concrete cube strength test (C30 grade verified). Drainage gradient meets MoWT/PPDA specification. Cleared for Dual Sign-Off and Treasury Warrant minting.`
+                );
+                toast('Supervision Official Demo loaded: Gov Engineer verification & audit memo ready!', 'emerald');
+              }}
+              className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <ShieldCheck size={12} /> 2. Appointed Supervisor
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-emerald-500">Run →</span>
+              </div>
+              <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
+                Official Technical Audit &amp; Dual Sign-Off
+              </div>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                Simulate Appointed Supervising Engineer / CAO Inspector: counter-sign milestone &amp; log technical clearance.
+              </p>
+            </button>
+
+            {/* Demo 3: Resident / Traveler / Commuter */}
+            <button
+              type="button"
+              onClick={() => {
+                setDemoSimulationActive(false);
+                setInspectorCapacity('Local Resident & Daily Highway Traveler / Commuter Watchdog');
+                setCommentText(
+                  `[RESIDENT & TRAVELER FIELD OBSERVATION] Passing through kilometer 4.2 of ${proj.title}: Concrete culverts are installed on the eastern shoulder, but reflective night hazard barriers are needed near the open trench for evening travelers and boda riders.`
+                );
+                toast('Resident / Traveler Supervision Demo loaded! Real role lock active — log eyewitness memo below.', 'emerald');
+              }}
+              className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-indigo-500/60 border border-[#e3e6ea] dark:border-[#262b36] text-left space-y-1.5 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono font-bold uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  <BadgeCheck size={12} /> 3. Resident / Traveler
+                </span>
+                <span className="text-[9.5px] font-mono text-slate-400 group-hover:text-indigo-500">Run →</span>
+              </div>
+              <div className="font-bold text-slate-900 dark:text-white text-[11.5px]">
+                Citizen &amp; Traveler Eyewitness Audit
+              </div>
+              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                Simulate Local Resident or Road Traveler: file geo-tagged eyewitness supervision feedback &amp; qualify for Perks.
+              </p>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Progress Completion Indicator */}
@@ -886,7 +1251,7 @@ export const ProjectView: React.FC = () => {
       {lifecycleStage === 'defects' && (
         <DefectsLiabilityPanel
           project={proj}
-          signingRole={signingRole}
+          signingRole={effectiveSigningRole}
           user={user}
           posts={posts}
           toast={toast}
@@ -937,69 +1302,84 @@ export const ProjectView: React.FC = () => {
           </span>
         </div>
 
-        {/* Signing Duty Authority Switcher */}
+        {/* Signing Duty Authority Status & Strict Role Lock */}
         <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-2.5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5 mono">
-              <ShieldCheck size={14} className="text-amber-600 dark:text-amber-400" /> Active Signing Duty Authority:
+              <ShieldCheck size={14} className="text-amber-600 dark:text-amber-400" />
+              {demoSimulationActive ? 'Preview Simulation Authority:' : 'Real Account Authority Lock:'}
             </span>
-            <span className="text-[9px] mono text-slate-500 dark:text-slate-400">
-              Select official role to perform signoff
+            <span className="text-[9.5px] mono text-slate-500 dark:text-slate-400 font-semibold">
+              {demoSimulationActive ? 'Simulation Mode Active' : perspective.tierLabel}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mono">
-            <button
-              type="button"
-              onClick={() => {
-                setSigningRole('awarder');
-                toast('Active Duty set: Procuring Entity (Gov Supervising Engineer)', 'emerald');
-              }}
-              className={`p-2.5 rounded-lg border font-bold flex items-center justify-between transition-all ${
-                signingRole === 'awarder'
-                  ? 'bg-teal-50 border-teal-500 text-teal-900 dark:bg-teal-500/20 dark:border-teal-400 dark:text-teal-200 shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              <span className="flex items-center gap-1.5">
-                <Landmark size={13} strokeWidth={1.75} />
-                <span>Procuring Entity (Gov Authority)</span>
-              </span>
-              {signingRole === 'awarder' && <span className="text-[9px] bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950 px-1.5 py-0.5 rounded font-black">ACTIVE</span>}
-            </button>
+          {demoSimulationActive && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mono">
+              <button
+                type="button"
+                onClick={() => {
+                  setSigningRole('awarder');
+                  toast('Simulation Duty set: Procuring Entity (Gov Supervising Engineer)', 'emerald');
+                }}
+                className={`p-2.5 rounded-lg border font-bold flex items-center justify-between transition-all cursor-pointer ${
+                  signingRole === 'awarder'
+                    ? 'bg-teal-50 border-teal-500 text-teal-900 dark:bg-teal-500/20 dark:border-teal-400 dark:text-teal-200 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Landmark size={13} strokeWidth={1.75} />
+                  <span>Procuring Entity (Gov Authority)</span>
+                </span>
+                {signingRole === 'awarder' && (
+                  <span className="text-[9px] bg-teal-600 text-white dark:bg-teal-400 dark:text-slate-950 px-1.5 py-0.5 rounded font-black">
+                    ACTIVE
+                  </span>
+                )}
+              </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setSigningRole('contractor');
-                toast('Active Duty set: Contractor Executive / Site Engineer', 'amber');
-              }}
-              className={`p-2.5 rounded-lg border font-bold flex items-center justify-between transition-all ${
-                signingRole === 'contractor'
-                  ? 'bg-amber-600/15 border-amber-600/50 text-amber-900 dark:bg-amber-500/20 dark:border-amber-400 dark:text-amber-200 shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-              }`}
-            >
-              <span className="flex items-center gap-1.5">
-                <HardHat size={13} strokeWidth={1.75} />
-                <span>Contractor Executive (Site Engineer)</span>
-              </span>
-              {signingRole === 'contractor' && <span className="text-[9px] bg-amber-700 text-white dark:bg-amber-400 dark:text-slate-950 px-1.5 py-0.5 rounded font-black">ACTIVE</span>}
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSigningRole('contractor');
+                  toast('Simulation Duty set: Contractor Executive / Site Engineer', 'amber');
+                }}
+                className={`p-2.5 rounded-lg border font-bold flex items-center justify-between transition-all cursor-pointer ${
+                  signingRole === 'contractor'
+                    ? 'bg-amber-600/15 border-amber-600/50 text-amber-900 dark:bg-amber-500/20 dark:border-amber-400 dark:text-amber-200 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <HardHat size={13} strokeWidth={1.75} />
+                  <span>Contractor Executive (Site Engineer)</span>
+                </span>
+                {signingRole === 'contractor' && (
+                  <span className="text-[9px] bg-amber-700 text-white dark:bg-amber-400 dark:text-slate-950 px-1.5 py-0.5 rounded font-black">
+                    ACTIVE
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Strict Separation Notice */}
           <div className="text-[9.5px] mono text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/90 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-start gap-2">
             <AlertTriangle size={14} strokeWidth={1.75} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-amber-800 dark:text-amber-300 block mb-0.5">Strict Authority Isolation Enforced</span>
-              {signingRole === 'awarder' ? (
+              {effectiveCanSignAwarder && !effectiveCanSignContractor ? (
                 <span className="text-slate-600 dark:text-slate-300">
-                  You are currently acting as <strong>Procuring Entity (Gov Authority)</strong>. You can <strong>ONLY</strong> sign the Procuring Entity slot. The Contractor slot is strictly locked for you.
+                  Signed in as <strong>{perspective.tierLabel}</strong>. You can <strong>ONLY</strong> sign the Procuring Entity / Awarder slot. The Contractor slot is strictly locked.
+                </span>
+              ) : effectiveCanSignContractor && !effectiveCanSignAwarder ? (
+                <span className="text-slate-600 dark:text-slate-300">
+                  Signed in as <strong>Contractor Site Engineer</strong>. You can <strong>ONLY</strong> attach photo evidence &amp; sign the Contractor Exec slot. The Procuring Entity slot is locked.
                 </span>
               ) : (
                 <span className="text-slate-600 dark:text-slate-300">
-                  You are currently acting as <strong>Contractor Executive / Site Engineer</strong>. You can <strong>ONLY</strong> sign the Contractor Exec slot. The Procuring Entity slot is strictly locked for you.
+                  Your current role (<strong>{perspective.tierLabel}</strong>) has read-only milestone audit access{effectiveCanAttestGrassroots ? ' plus LC1/Parish Ground Witness signoff' : ' — citizens can log field eyewitness memos & defect alerts below'}. Use the <strong>Preview Simulation Mode</strong> card above to test signing roles.
                 </span>
               )}
             </div>
@@ -1085,7 +1465,7 @@ export const ProjectView: React.FC = () => {
                         <span>Inspect Photos</span>
                       </button>
 
-                      {signingRole === 'contractor' && (
+                      {effectiveCanSignContractor && (
                         <button
                           type="button"
                           onClick={() => handleOpenContractorEvidenceModal(m)}
@@ -1139,7 +1519,7 @@ export const ProjectView: React.FC = () => {
                       <span>
                         ⚠️ <strong>Procuring Entity Rule:</strong> Procuring entity cannot sign off this milestone without verified on-site photos of completed works.
                       </span>
-                      {signingRole === 'contractor' && (
+                      {effectiveCanSignContractor && (
                         <button
                           type="button"
                           onClick={() => handleOpenContractorEvidenceModal(m)}
@@ -1152,11 +1532,11 @@ export const ProjectView: React.FC = () => {
                   )}
                 </div>
 
-                {/* Interactive Dual Signoff Action Row */}
+                {/* Interactive Dual Signoff + LC1 Ground Witness Action Row */}
                 <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Tick 1: Procuring Entity / Supervising Officer */}
-                    {signingRole === 'awarder' ? (
+                    {effectiveCanSignAwarder ? (
                       m.evidenceImages && m.evidenceImages.length > 0 ? (
                         <button
                           type="button"
@@ -1192,7 +1572,7 @@ export const ProjectView: React.FC = () => {
                     )}
 
                     {/* Tick 2: Contractor Executive */}
-                    {signingRole === 'contractor' ? (
+                    {effectiveCanSignContractor ? (
                       <button
                         type="button"
                         onClick={(e) => handleToggleContractor(m.id, e)}
@@ -1210,6 +1590,22 @@ export const ProjectView: React.FC = () => {
                         <Lock size={11} />
                         <span>Contractor Slot Locked {contractorSigned ? '(Signed)' : ''}</span>
                       </div>
+                    )}
+
+                    {/* Tick 3: LC1 / Parish Chief Ground Witness Verification */}
+                    {effectiveCanAttestGrassroots && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleGrassrootsMilestone(m.id, e)}
+                        className={`px-2.5 py-1.5 rounded-lg border font-bold transition-all flex items-center gap-1 text-[10px] cursor-pointer ${
+                          m.grassrootsVerified
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900 dark:bg-emerald-500/20 dark:border-emerald-400 dark:text-emerald-200'
+                            : 'bg-white dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36] text-teal-700 dark:text-teal-300 hover:border-teal-500'
+                        }`}
+                      >
+                        <Users size={11} />
+                        <span>{m.grassrootsVerified ? 'Ground Witnessed' : 'Witness On-Site (LC1/Parish)'}</span>
+                      </button>
                     )}
                   </div>
 
@@ -1229,6 +1625,12 @@ export const ProjectView: React.FC = () => {
                       </span>
                     ) : (
                       <span className="text-slate-400 dark:text-slate-500 italic">Exec: Pending Claim</span>
+                    )}
+
+                    {m.grassrootsVerified && (
+                      <span className="text-emerald-800 dark:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60">
+                        LC1/Parish: {m.grassrootsSignedBy || 'On-Site Confirmed'} ({m.grassrootsSignedAt || 'Witnessed'})
+                      </span>
                     )}
 
                     {dualVerified && (
@@ -1950,7 +2352,7 @@ export const ProjectView: React.FC = () => {
                 Close Dossier
               </button>
 
-              {signingRole === 'awarder' && (
+              {effectiveCanSignAwarder && (
                 <button
                   type="button"
                   onClick={handleProcuringEntityVerifyEvidenceAndSign}

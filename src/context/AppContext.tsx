@@ -188,6 +188,7 @@ interface AppContextType {
   acceptInvite: (code: string) => TeamMember | null;
   revokeInvite: (code: string) => void;
   addProject: (prj: Project) => void;
+  updateProject: (projectId: string, updates: Partial<Project>) => void;
   addSubscription: (sub: Subscription) => void;
   addInvoice: (inv: Invoice) => void;
   recordPayment: (invoiceNo: string, amount: number, method: string, ref: string) => void;
@@ -2734,6 +2735,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProjects((prev) => [p, ...prev]);
   };
 
+  const updateProject = (projectId: string, updates: Partial<Project>) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === projectId ? { ...p, ...updates } : p))
+    );
+    setActiveProject((prev) =>
+      prev && prev.id === projectId ? { ...prev, ...updates } : prev
+    );
+  };
+
   const addSubscription = (sub: Subscription) => {
     const s = { ...sub, country: sub.country || user?.country || 'UG' };
     setSubscriptions((prev) => [...prev, s]);
@@ -4713,6 +4723,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         acceptInvite,
         revokeInvite,
         addProject,
+        updateProject,
         addSubscription,
         addInvoice,
         recordPayment,
