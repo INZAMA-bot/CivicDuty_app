@@ -37,8 +37,13 @@ import {
   Camera,
   Upload,
   Store,
+  Ticket,
+  ArrowRight,
+  Lock,
 } from 'lucide-react';
 import { getBranchesForDept } from '../data/enterpriseBranches';
+import { getStoredMerchantProducts } from '../data/merchantLoyaltyData';
+import { getLocalizedMerchantProductsForCountry } from '../data/countryCurrency';
 import { DeptIcon } from '../components/DeptIcon';
 import { AccountabilityDocket } from '../components/AccountabilityDocket';
 import { PostCardComponent } from '../components/PostCardComponent';
@@ -59,6 +64,7 @@ export const DeptWallView: React.FC = () => {
     projects,
     wallTab,
     setWallTab,
+    setPerkTab,
     go,
     setActiveProject,
     toast,
@@ -970,20 +976,27 @@ export const DeptWallView: React.FC = () => {
       </div>
 
       {/* Main Tabs: Posts, Announcements, Public Projects & Tenders, Loyalty Vouchers */}
-      <div className="border-t border-b border-slate-300 dark:border-slate-800 flex mt-3 bg-white dark:bg-slate-950 overflow-x-auto">
+      <div className="border-t border-b border-slate-300 dark:border-slate-800 flex mt-3 bg-white dark:bg-slate-950 overflow-x-auto scrollbar-none">
         {[
           { id: 'posts', label: `Public Reports (${deptPosts.length})` },
           { id: 'projects', label: `Capital Projects & Tenders (${deptProjects.length})` },
           { id: 'announcements', label: 'Gazette & Bulletins' },
-          { id: 'vouchers', label: isConsumer ? 'Merchant Studio & Cashier POS Desk' : 'Civic Perks & Vouchers' },
+          {
+            id: 'vouchers',
+            label: isDeskOwner
+              ? isConsumer
+                ? 'Merchant Studio & POS'
+                : 'Desk Perks & Vault Studio'
+              : 'Perks & Offers',
+          },
         ].map((t) => (
           <button
             key={t.id}
             onClick={() => setWallTab(t.id as any)}
-            className={`feed-tab flex-1 py-3 text-xs font-black mono transition-all ${
+            className={`feed-tab flex-1 min-w-fit px-3.5 py-3 text-xs font-black mono whitespace-nowrap transition-all cursor-pointer ${
               wallTab === t.id
                 ? 'border-b-2 border-emerald-600 text-emerald-800 dark:text-emerald-400 bg-emerald-50/50 dark:bg-slate-900'
-                : 'text-slate-600 dark:text-slate-400'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             {t.label}
@@ -1141,33 +1154,33 @@ export const DeptWallView: React.FC = () => {
             </div>
           </div>
         </div>
-      ) : (
-        /* Merchant Studio & POS Tab (Provider-Desk Reactive Loyalty Studio) */
+      ) : isDeskOwner ? (
+        /* Authorized Desk Manager Studio & POS */
         <div className="p-4 space-y-4">
           <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <Store size={18} className="text-emerald-600 dark:text-emerald-400" />
+                <Store size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <h3 className="text-sm font-black text-slate-950 dark:text-white">
-                  {d.name} · Merchant Studio &amp; Cashier POS Desk
+                  {displayWallName} · Merchant Studio &amp; Cashier POS Desk
                 </h3>
                 {isClaimed && (
-                  <span className="px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-emerald-600 text-white">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-600 text-white">
                     Desk Verified
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300">
-                Official store loyalty and cashier redemption desk for {d.name}. Scan or enter customer voucher PINs/QRs, create discount promotions, and manage partner perks with guaranteed 98% escrow payout.
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Authorized store loyalty and cashier redemption desk for {displayWallName}. Scan customer voucher QR passes, create promotions, and manage desk escrow with 98% payout.
               </p>
             </div>
             <button
               type="button"
-              onClick={() => go('vaults')}
-              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 shrink-0 cursor-pointer"
+              onClick={() => go('gov_inbox')}
+              className="min-h-[40px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Gift size={13} />
-              <span>Browse All Vaults &rarr;</span>
+              <span>Manage Desk Vaults →</span>
             </button>
           </div>
 
@@ -1176,11 +1189,186 @@ export const DeptWallView: React.FC = () => {
             activeMerchantDept={did}
             currentVouchers={wallVouchers}
             onSelectForVaultDeposit={(product) => {
-              go('vaults');
-              toast(`Redirecting to Sovereign Vault to fund ${product.merchantName} voucher!`, 'emerald');
+              go('gov_inbox');
+              toast(`Opening Desk Vaults to fund ${product.merchantName} voucher!`, 'emerald');
             }}
           />
         </div>
+      ) : (
+        /* Public Visitor View: Read-Only Customer Perks & Offers */
+        (() => {
+          const allLocalProducts = getStoredMerchantProducts().filter(
+            (p) => (p.country || 'UG').toUpperCase() === country.toUpperCase() && p.active
+          );
+          const fallbackLocalProducts =
+            allLocalProducts.length > 0
+              ? allLocalProducts
+              : getLocalizedMerchantProductsForCountry(country as any, [userParish]);
+
+          const deptFirstToken = d.name.toLowerCase().split(/\s+/)[0] || did.toLowerCase();
+          const entityOffers = fallbackLocalProducts.filter(
+            (p) =>
+              p.merchantId === did ||
+              p.merchantName.toLowerCase().includes(deptFirstToken) ||
+              (d.category === 'hospitality' && p.category === 'food_dining')
+          );
+          const visibleOffers = entityOffers.length > 0 ? entityOffers : fallbackLocalProducts.slice(0, 4);
+          const entityEscrowVouchers = wallVouchers
+            .filter(
+              (v) =>
+                v.status === 'escrow_unassigned' &&
+                (v.merchantId === did ||
+                  (v.brand || '').toLowerCase().includes(deptFirstToken))
+            )
+            .slice(0, 4);
+
+          return (
+            <div className="p-4 space-y-4">
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+                    <Ticket size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>{displayWallName} · Customer Perks &amp; Loyalty Offers</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Browse active vouchers and loyalty discounts redeemable at {displayWallName} counters using your Civic Points.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPerkTab('citizen_wallet');
+                      go('perk_vault');
+                    }}
+                    className="min-h-[40px] px-3.5 py-2 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                  >
+                    <span>My Wallet</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPerkTab('redeem_xp');
+                      go('perk_vault');
+                    }}
+                    className="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                  >
+                    <span>Redeem Points &amp; Shops</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {entityEscrowVouchers.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Ready-to-Claim Vouchers ({entityEscrowVouchers.length})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {entityEscrowVouchers.map((v) => (
+                      <div
+                        key={v.id}
+                        className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col justify-between gap-2.5"
+                      >
+                        <div className="space-y-1">
+                          <div className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                            {v.brand} · {v.currency} {Number(v.faceValue || 0).toLocaleString()}
+                          </div>
+                          <div className="text-xs font-bold text-slate-900 dark:text-white">{v.title}</div>
+                          {v.reimbursementFraming && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">{v.reimbursementFraming}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPerkTab('redeem_xp');
+                            go('perk_vault');
+                          }}
+                          className="min-h-[40px] w-full py-2 px-3 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                        >
+                          <span>Claim in Perks Store</span>
+                          <ArrowRight size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <h4 className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  {entityOffers.length > 0
+                    ? `Active Offers for ${displayWallName} (${visibleOffers.length})`
+                    : `Local Partner Offers in ${COUNTRIES[country]?.name || country} (${visibleOffers.length})`}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {visibleOffers.map((offer) => (
+                    <div
+                      key={offer.id}
+                      className="p-3.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col justify-between gap-3"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 truncate">
+                            {offer.merchantName}
+                          </span>
+                          <span className="shrink-0 font-bold text-slate-900 dark:text-white tabular-nums">
+                            {offer.currency} {Number(offer.voucherCost || offer.basePrice).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                          {offer.rewardHeadline || offer.title}
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
+                          {offer.rewardDescription}
+                        </p>
+                        <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                          <MapPin size={12} className="shrink-0" />
+                          <span className="truncate">{offer.address || `${offer.parish}, ${offer.district}`}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPerkTab('redeem_xp');
+                          go('perk_vault');
+                        }}
+                        className="min-h-[40px] w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+                      >
+                        <Ticket size={13} />
+                        <span>Redeem with Points</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <Lock size={14} className="text-slate-400 shrink-0" />
+                  <span>
+                    Store cashier scanner &amp; offer creation tools are restricted to authorized desk managers for {displayWallName}.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isClaimed) {
+                      setShowClaimModal(true);
+                    } else {
+                      go('gov_login');
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 hover:underline whitespace-nowrap shrink-0 cursor-pointer self-start sm:self-auto"
+                >
+                  {isClaimed ? 'Desk Manager Sign In →' : 'Claim This Desk →'}
+                </button>
+              </div>
+            </div>
+          );
+        })()
       )}
 
       {/* Reward Citizen Modal */}

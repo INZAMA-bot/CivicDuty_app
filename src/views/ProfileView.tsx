@@ -5,14 +5,11 @@ import { PostCardComponent } from '../components/PostCardComponent';
 import { DeptIcon } from '../components/DeptIcon';
 import {
   ShieldCheck,
-  Award,
   CheckCircle2,
   Camera,
   Edit3,
   MapPin,
   Calendar,
-  Share2,
-  Bookmark,
   Check,
   X,
   Building2,
@@ -34,22 +31,10 @@ import {
   ArrowRight,
   Ticket,
   Gift,
-  Zap,
-  Sparkles,
-  Clock,
-  Fuel,
-  ShoppingBag,
-  Wifi,
-  Droplets,
-  HeartPulse,
-  Scissors,
-  Store,
-  Tag,
 } from 'lucide-react';
 import { getCountryPerks } from '../data/countryPerks';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { COUNTRIES } from '../data/countries';
-import { INITIAL_MERCHANT_PRODUCTS } from '../data/merchantLoyaltyData';
 import { AvatarUploadModal } from '../components/AvatarUploadModal';
 import { ParishRelocationModal } from '../components/ParishRelocationModal';
 
@@ -61,6 +46,7 @@ export const ProfileView: React.FC = () => {
     profiles,
     posts,
     go,
+    setPerkTab,
     setActiveDept,
     setActiveDeptCountry,
     setActivePost,
@@ -75,7 +61,6 @@ export const ProfileView: React.FC = () => {
   const countryPerks = getCountryPerks(activeCountry);
   const gov = getCountryGovernanceSchema(activeCountry);
   const countryMeta = COUNTRIES[activeCountry];
-  const isUg = activeCountry === 'UG';
   const profile: any = (profiles && profiles[activeUser.id]) || {
     civic_score: 50,
     display_name: activeUser.name || 'Citizen Watchdog',
@@ -104,136 +89,17 @@ export const ProfileView: React.FC = () => {
   );
   const [isAnonMode, setIsAnonMode] = useState((activeUser as any).anon !== false);
 
-  const [activeTab, setActiveTab] = useState<'reports' | 'resolved' | 'praise' | 'saved' | 'vouchers'>('reports');
+  const [activeTab, setActiveTab] = useState<'reports' | 'resolved' | 'praise' | 'saved'>('reports');
   const [showCivicCardModal, setShowCivicCardModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showReputationRules, setShowReputationRules] = useState(false);
   const [showParishModal, setShowParishModal] = useState(false);
-  const [selectedVoucherPass, setSelectedVoucherPass] = useState<any | null>(null);
 
-  // Perk Categories and Merchant Directory State
-  const [selectedPerkCategory, setSelectedPerkCategory] = useState<string | null>(null);
-  const [showShopDirectoryModal, setShowShopDirectoryModal] = useState(false);
-  const [shopParishFilter, setShopParishFilter] = useState<'all' | 'my_parish'>('all');
-  const [claimedPasses, setClaimedPasses] = useState<any[]>([]);
-
-  const PERK_CATEGORIES = [
-    {
-      id: 'fuel_transport',
-      title: 'Fuel & Transport',
-      icon: Fuel,
-      matchCats: ['automotive_motorbikes', 'transport'],
-      baseXp: 25,
-      desc: isUg
-        ? 'Shell, TotalEnergies, bodaboda maintenance & transit vouchers'
-        : `Fuel pump rebates, local transit & commercial rider maintenance vouchers`,
-    },
-    {
-      id: 'groceries_food',
-      title: 'Groceries & Food',
-      icon: ShoppingBag,
-      matchCats: ['groceries_consumables', 'retail_shops'],
-      baseXp: 15,
-      desc: isUg
-        ? 'Quality Supermarket discounts, artisan bakeries & fresh market staples'
-        : 'Supermarket discounts, artisan bakeries & fresh market staples',
-    },
-    {
-      id: 'telecom_data',
-      title: 'Telecom & 5G Data',
-      icon: Wifi,
-      matchCats: ['services_digital_products', 'electronics'],
-      baseXp: 20,
-      desc: `${countryPerks.digitalPerks[0]?.brand || 'National Carrier'} data bundles & airtime recharges`,
-    },
-    {
-      id: 'water_solar',
-      title: 'Clean Water & Solar',
-      icon: Droplets,
-      matchCats: ['home_living', 'agriculture_industrial'],
-      baseXp: 30,
-      desc: 'Clean water vending tokens, solar lamps & home power units',
-    },
-    {
-      id: 'health_pharmacy',
-      title: 'Health & Pharmacy',
-      icon: HeartPulse,
-      matchCats: ['health_wellness'],
-      baseXp: 35,
-      desc: 'Prescription pharmacy credits, first aid & clinic subsidies',
-    },
-    {
-      id: 'personal_care',
-      title: 'Personal Care & Craft',
-      icon: Scissors,
-      matchCats: ['beauty_personal_care', 'fashion_apparel'],
-      baseXp: 10,
-      desc: 'Executive barbers, salons, tailoring & repair craft workshops',
-    },
-  ];
-
-  // User Civic Vouchers & Courtesy Goodwill Passes
-  const postCourtesyVouchers = (posts || []).flatMap((p) =>
-    (p.comments || [])
-      .filter((c) => c.courtesy_voucher)
-      .map((c) => ({
-        id: `post-cv-${c.id}`,
-        code: c.courtesy_voucher!.voucherCode,
-        title: c.courtesy_voucher!.title,
-        brand: c.courtesy_voucher!.brand,
-        faceValue: Number(c.courtesy_voucher!.faceValue || 5000),
-        currency: c.courtesy_voucher!.currency || gov.currency,
-        note: c.courtesy_voucher!.note || 'Issued in appreciation for verified civic feedback.',
-        source: `Official Desk · Dispatch #${p.id.slice(-6).toUpperCase()}`,
-        expires: 'Valid 60 Days',
-        status: 'active',
-        type: 'courtesy',
-      }))
+  // Count official courtesy vouchers earned directly from post resolution replies
+  const courtesyVoucherCount = (posts || []).reduce(
+    (sum, p) => sum + (p.comments || []).filter((c) => c.courtesy_voucher).length,
+    0
   );
-
-  const defaultCivicPasses = [
-    {
-      id: 'civic-pass-01',
-      code: `FUEL-${activeCountry}-7721`,
-      title: `${countryPerks.digitalPerks[0]?.brand || 'National Energy'} Frontline Fuel Pass`,
-      brand: countryPerks.digitalPerks[0]?.brand || 'National Fuel Partner',
-      faceValue: 40000,
-      currency: gov.currency,
-      note: 'Civic Watchdog Frontline Bounty · Redeemable at any certified pump station.',
-      source: 'Civic Watchdog Merit Escrow',
-      expires: 'Valid 45 Days',
-      status: 'active',
-      type: 'merit',
-    },
-    {
-      id: 'civic-pass-02',
-      code: `DATA-${activeCountry}-9012`,
-      title: `${countryPerks.digitalPerks[0]?.brand || 'National Telecom'} Watchdog Data Bundle`,
-      brand: `${countryMeta?.name || gov.countryName} Telecom Cooperative`,
-      faceValue: 25000,
-      currency: gov.currency,
-      note: 'Sponsored connectivity for verified on-ground GPS report transmission.',
-      source: 'Statutory Telecom CSR Allocation',
-      expires: 'Valid 30 Days',
-      status: 'active',
-      type: 'merit',
-    },
-    {
-      id: 'civic-pass-03',
-      code: `GROC-${activeCountry}-5510`,
-      title: 'Fresh Produce & Grocery Community Relief Pack',
-      brand: `${countryPerks.countryName} Community Grocery Alliance`,
-      faceValue: 30000,
-      currency: gov.currency,
-      note: 'Redeemable for fresh farm produce, staples, and household essentials.',
-      source: 'Neighborhood Trader Alliance',
-      expires: 'Valid 90 Days',
-      status: 'active',
-      type: 'merit',
-    },
-  ];
-
-  const allVouchers = [...claimedPasses, ...postCourtesyVouchers, ...defaultCivicPasses];
 
   const handleUpdateParish = (newParish: string, reason: string) => {
     const now = new Date().toISOString().split('T')[0];
@@ -755,98 +621,48 @@ export const ProfileView: React.FC = () => {
           </div>
         )}
 
-        {/* Civic Perks & Merchant Rewards Category Form with Notification Badges */}
-        <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <Sparkles size={13} className="text-emerald-600 dark:text-emerald-400" />
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-                Civic XP Perks &amp; Participating Merchant Shops
+        {/* Rewards & Active Passes Summary (Unified Routing to Perks Workspace) */}
+        <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
+              <Gift size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Rewards &amp; Active Passes</span>
+              <span className="text-slate-400 font-normal">·</span>
+              <span className="font-mono text-emerald-700 dark:text-emerald-400 tabular-nums">
+                {score} pts
               </span>
             </div>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-              {score} XP Balance
-            </span>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+              {courtesyVoucherCount > 0
+                ? `${courtesyVoucherCount} courtesy pass${courtesyVoucherCount > 1 ? 'es' : ''} in your wallet. Spend points at local shops inside Perks.`
+                : 'Spend your Civic Points on mobile data, fuel, groceries & water inside Perks.'}
+            </p>
           </div>
 
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-            Tap any category below to view certified shops in your parish and claim merchant voucher passes with your CivicScore balance.
-          </p>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {PERK_CATEGORIES.map((cat) => {
-              const matchedProducts = INITIAL_MERCHANT_PRODUCTS.filter((p) =>
-                cat.matchCats.includes(p.category) && (!p.country || p.country === activeCountry)
-              );
-              const totalCount = matchedProducts.length > 0 ? matchedProducts.length : 6;
-              const isEligible = score >= cat.baseXp;
-              const claimableCount = isEligible ? Math.min(totalCount, Math.max(1, Math.floor(score / cat.baseXp))) : 0;
-              const CatIcon = cat.icon;
-
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPerkCategory(cat.id);
-                    setShowShopDirectoryModal(true);
-                  }}
-                  className="p-2.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 dark:hover:border-emerald-500 transition-all text-left flex flex-col justify-between gap-2 cursor-pointer group shadow-2xs relative overflow-hidden"
-                >
-                  <div className="flex items-start justify-between gap-1 w-full">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      <CatIcon size={15} />
-                    </div>
-
-                    {/* Pop-up Notification Badge */}
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-white dark:bg-[#161a22] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36] shadow-2xs">
-                        {totalCount} Available
-                      </span>
-                      {claimableCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8.5px] font-mono font-bold bg-emerald-600 text-white shadow-xs animate-pulse">
-                          <span className="w-1 h-1 rounded-full bg-white" />
-                          <span>{claimableCount} Claimable</span>
-                        </span>
-                      ) : (
-                        <span className="text-[8.5px] font-mono text-slate-400">
-                          {cat.baseXp} XP min
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-tight truncate">
-                      {cat.title}
-                    </div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
-                      {cat.desc}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 pt-1 border-t border-[#e3e6ea]/60 dark:border-[#262b36]/60">
-                    <span>View Shops</span>
-                    <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                setPerkTab('citizen_wallet');
+                go('perk_vault');
+              }}
+              className="min-h-[40px] px-3 py-2 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] hover:border-emerald-500 text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
+            >
+              <Ticket size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span>My Wallet</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPerkTab('redeem_xp');
+                go('perk_vault');
+              }}
+              className="min-h-[40px] px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors shadow-xs"
+            >
+              <span>Redeem Points at Shops</span>
+              <ArrowRight size={13} />
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => go('perk_vault')}
-            className="w-full p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-[#f1f3f4] dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 text-left transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <Award size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                Open Sovereign Perk Escrow Vault &amp; Statutory Honours
-              </span>
-            </div>
-            <ArrowUpRight size={14} className="text-slate-400 shrink-0" />
-          </button>
         </div>
       </div>
 
@@ -895,7 +711,6 @@ export const ProfileView: React.FC = () => {
             { id: 'resolved', label: `Resolved (${myResolvedPosts.length})` },
             { id: 'praise', label: `Praise (${myPraisePosts.length})` },
             { id: 'saved', label: `Saved (${savedPosts.length})` },
-            { id: 'vouchers', label: `Passes & Vouchers (${allVouchers.length})` },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -915,99 +730,7 @@ export const ProfileView: React.FC = () => {
           })}
         </div>
 
-        {activeTab === 'vouchers' ? (
-          /* =========================================================================
-             CITIZEN VOUCHER & CIVIC PASS WALLET
-             ========================================================================= */
-          <div className="p-4 space-y-4 animate-fade-in">
-            {/* Wallet Balance & Escrow Banner */}
-            <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-600/15 via-emerald-500/10 to-amber-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Sovereign Citizen Perk &amp; Pass Wallet</span>
-                </div>
-                <div className="text-base sm:text-lg font-mono font-bold text-slate-900 dark:text-white mt-0.5">
-                  {allVouchers.reduce((acc, v) => acc + Number(v.faceValue || 0), 0).toLocaleString()} {gov.currency} Available
-                </div>
-                <p className="text-[10.5px] text-slate-600 dark:text-slate-400 mt-0.5">
-                  Secured by CivicDuty Sovereign Escrow. Present QR passes directly at cashier counters.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => go('perk_vault')}
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
-              >
-                <Plus size={12} />
-                <span>Browse Perk Vault</span>
-              </button>
-            </div>
-
-            {/* Vouchers Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {allVouchers.map((v) => (
-                <div
-                  key={v.id}
-                  className="rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] p-3.5 flex flex-col justify-between gap-3 hover:border-emerald-500/50 transition shadow-2xs"
-                >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-mono text-[9px] font-bold uppercase tracking-wider">
-                        {v.brand}
-                      </span>
-                      <span className="text-[9.5px] font-mono text-slate-400 dark:text-slate-500">
-                        {v.expires}
-                      </span>
-                    </div>
-
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-snug">
-                      {v.title}
-                    </h4>
-
-                    <div className="text-base font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {v.currency} {Number(v.faceValue).toLocaleString()} VALUE
-                    </div>
-
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                      {v.note}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] px-2 py-1 rounded select-all truncate">
-                        {v.code}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard?.writeText(v.code)?.catch?.(() => {});
-                          toast(`Voucher code ${v.code} copied to clipboard!`, 'emerald');
-                        }}
-                        className="p-1 rounded text-slate-400 hover:text-emerald-600 transition"
-                        title="Copy Code"
-                      >
-                        <Copy size={12} />
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedVoucherPass(v)}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10.5px] font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition"
-                    >
-                      <QrCode size={12} />
-                      <span>Show QR Pass</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
+        <div className="divide-y divide-[#e3e6ea] dark:divide-[#262b36]">
             {displayedPosts.length === 0 ? (
               <div className="p-8 text-center space-y-2.5">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -1027,8 +750,7 @@ export const ProfileView: React.FC = () => {
                 <PostCardComponent key={post.id} post={post} />
               ))
             )}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* 5. Parish Neighborhood & Relocation Docket */}
@@ -1209,275 +931,6 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* CASHIER COUNTERTOP QR PASS MODAL */}
-      {selectedVoucherPass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl shadow-2xl overflow-hidden animate-scale-up">
-            <div className="p-4 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <Ticket size={16} />
-                </div>
-                <div>
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-white">
-                    Cashier Redemption Pass
-                  </h4>
-                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                    CivicDuty Escrow Backed
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedVoucherPass(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="p-5 text-center space-y-4">
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block font-bold">
-                  {selectedVoucherPass.brand}
-                </span>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  {selectedVoucherPass.title}
-                </h3>
-                <div className="text-xl font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {selectedVoucherPass.currency} {Number(selectedVoucherPass.faceValue).toLocaleString()} VALUE
-                </div>
-              </div>
-
-              {/* High-Resolution Interactive Visual QR Pass */}
-              <div className="p-4 bg-white rounded-xl border-2 border-dashed border-emerald-500/40 inline-block shadow-inner mx-auto">
-                <div className="w-44 h-44 bg-slate-950 p-2 rounded-lg flex flex-col items-center justify-center text-white relative">
-                  {/* Outer Frame Corners */}
-                  <div className="absolute top-1 left-1 w-7 h-7 border-t-4 border-l-4 border-emerald-400" />
-                  <div className="absolute top-1 right-1 w-7 h-7 border-t-4 border-r-4 border-emerald-400" />
-                  <div className="absolute bottom-1 left-1 w-7 h-7 border-b-4 border-l-4 border-emerald-400" />
-                  <div className="absolute bottom-1 right-1 w-7 h-7 border-b-4 border-r-4 border-emerald-400" />
-                  <QrCode size={110} className="text-white" />
-                  <span className="text-[8.5px] font-mono tracking-widest text-emerald-400 mt-1 font-bold">
-                    SCAN AT TILL
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
-                  Alphanumeric Cashier PIN
-                </span>
-                <div className="text-base font-mono font-bold text-slate-900 dark:text-white bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] py-2 px-3 rounded-lg select-all flex items-center justify-between">
-                  <span>{selectedVoucherPass.code}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(selectedVoucherPass.code)?.catch?.(() => {});
-                      toast('Code copied to clipboard!', 'emerald');
-                    }}
-                    className="text-xs font-mono text-emerald-600 hover:underline cursor-pointer"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-sans">
-                Present this pass at any participating merchant or utility counter. The cashier scans the QR code or inputs the PIN into their CivicDuty terminal for instant credit redemption.
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setSelectedVoucherPass(null)}
-                className="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold cursor-pointer transition shadow-xs"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Participating Community Shops & Merchants Directory Modal */}
-      {showShopDirectoryModal && selectedPerkCategory && (() => {
-        const currentCat = PERK_CATEGORIES.find((c) => c.id === selectedPerkCategory) || PERK_CATEGORIES[0];
-        const CatIcon = currentCat.icon;
-        const allCatProducts = INITIAL_MERCHANT_PRODUCTS.filter((p) =>
-          currentCat.matchCats.includes(p.category) && (!p.country || p.country === activeCountry)
-        );
-        const myParishName = activeUser.parish || 'Kitintale Parish';
-        const filteredProducts =
-          shopParishFilter === 'my_parish'
-            ? allCatProducts.filter((p) => p.parish?.toLowerCase().includes(myParishName.toLowerCase().split(' ')[0]))
-            : allCatProducts;
-
-        const handleClaimMerchantVoucher = (product: any) => {
-          const voucherCode = `CD-${currentCat.id.slice(0, 4).toUpperCase()}-${Date.now().toString().slice(-4)}`;
-          const newVoucher = {
-            id: 'vch-' + Date.now(),
-            code: voucherCode,
-            title: product.rewardHeadline || product.title,
-            brand: product.merchantName,
-            faceValue: product.voucherCost || 20000,
-            currency: product.currency || gov.currency,
-            note: product.rewardDescription || 'Verified community merchant perk voucher.',
-            source: `Certified Merchant · ${product.parish || 'Parish'}`,
-            expires: 'Valid 60 Days',
-            status: 'active',
-            type: 'merit',
-          };
-          setClaimedPasses((prev) => [newVoucher, ...prev]);
-          setShowShopDirectoryModal(false);
-          setSelectedVoucherPass(newVoucher);
-          toast(`Claimed perk pass for ${product.merchantName}! Code: ${voucherCode}`, 'emerald');
-        };
-
-        return (
-          <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in">
-            <div className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-              {/* Modal Header */}
-              <div className="px-4 py-3.5 border-b border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                    <CatIcon size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                      {currentCat.title} · Certified Merchant Directory
-                    </div>
-                    <div className="text-[10.5px] font-mono text-emerald-600 dark:text-emerald-400">
-                      {filteredProducts.length} Verified Participating Outlets
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowShopDirectoryModal(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Parish Filter Tabs */}
-              <div className="px-4 py-2 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center gap-2 bg-slate-50 dark:bg-[#12151b]">
-                <button
-                  type="button"
-                  onClick={() => setShopParishFilter('all')}
-                  className={`px-3 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
-                    shopParishFilter === 'all'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36]'
-                  }`}
-                >
-                  All Outlets ({allCatProducts.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShopParishFilter('my_parish')}
-                  className={`px-3 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors cursor-pointer ${
-                    shopParishFilter === 'my_parish'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-white dark:bg-[#161a22] text-slate-600 dark:text-slate-400 border border-[#e3e6ea] dark:border-[#262b36]'
-                  }`}
-                >
-                  Near My Parish ({myParishName.split(' ')[0]})
-                </button>
-              </div>
-
-              {/* Shop List Body */}
-              <div className="p-4 overflow-y-auto space-y-3 flex-1">
-                {filteredProducts.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500 space-y-2">
-                    <Store size={28} className="mx-auto text-slate-400 opacity-60" />
-                    <div className="text-xs font-semibold">No merchants found in this parish view</div>
-                    <p className="text-[11px]">
-                      Switch to "All Outlets" above to explore verified merchants across {countryPerks.countryName}.
-                    </p>
-                  </div>
-                ) : (
-                  filteredProducts.map((p) => (
-                    <div
-                      key={p.id}
-                      className="p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] space-y-2.5 transition-colors hover:border-emerald-500/50"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                              {p.merchantName}
-                            </span>
-                            <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
-                          </div>
-                          <div className="text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
-                            <MapPin size={11} className="text-slate-400 shrink-0" />
-                            <span className="truncate">{p.address || `${p.parish}, ${p.district}`}</span>
-                          </div>
-                        </div>
-
-                        <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 shrink-0">
-                          {p.rewardType?.toUpperCase() || 'OFFER'}
-                        </span>
-                      </div>
-
-                      {/* Offer Description */}
-                      <div className="p-2.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-1">
-                        <div className="text-xs font-semibold text-slate-900 dark:text-white">
-                          {p.rewardHeadline || p.title}
-                        </div>
-                        <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-                          {p.rewardDescription}
-                        </p>
-                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-[#e3e6ea]/60 dark:border-[#262b36]/60">
-                          <span>USSD: {p.ussdCode || '*303*2040#'}</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                            Value: {p.currency} {Number(p.voucherCost || p.basePrice).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Claim Action */}
-                      <div className="flex items-center justify-between gap-2 pt-0.5">
-                        <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                          <span>Required: </span>
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                            {currentCat.baseXp} XP
-                          </span>
-                          <span className="text-slate-400"> (You have {score} XP)</span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleClaimMerchantVoucher(p)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                        >
-                          <Ticket size={12} />
-                          <span>Claim 1-Tap Voucher Pass</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="px-4 py-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] flex items-center justify-between text-[10px] font-mono text-slate-500">
-                <span>Certified Sovereign Merchant Alliance</span>
-                <button
-                  type="button"
-                  onClick={() => setShowShopDirectoryModal(false)}
-                  className="text-slate-700 dark:text-slate-300 font-bold hover:underline cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 };

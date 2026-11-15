@@ -54,6 +54,7 @@ import { tiersFor } from '../data/tiers';
 import { getCountryPerks } from '../data/countryPerks';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
+import { InstitutionalVaultsDesk } from '../components/InstitutionalVaultsDesk';
 import { DeptIcon } from '../components/DeptIcon';
 import { COUNTRIES } from '../data/countries';
 import { getBranchesForDept, loadAllBranches } from '../data/enterpriseBranches';
@@ -111,6 +112,9 @@ export const GovInboxView: React.FC = () => {
   const [complianceStatement, setComplianceStatement] = useState('');
   const [complianceStatus, setComplianceStatus] = useState<'compliant' | 'in_progress' | 'escalated_to_igg'>('in_progress');
   const [complianceSubmitting, setComplianceSubmitting] = useState(false);
+
+  // Government Desk Workspace Toggle (Accountability Inbox vs Perks & Desk Vaults)
+  const [govDeskSection, setGovDeskSection] = useState<'inbox' | 'perks_vaults'>('inbox');
 
   // Dedicated Private Provider Desk State (for Schools, Restaurants, Hospitals, Commercial Desks)
   const [providerDeskTab, setProviderDeskTab] = useState<
@@ -720,11 +724,11 @@ export const GovInboxView: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => go('perk_vault')}
-                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                onClick={() => setProviderDeskTab('perks')}
+                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors whitespace-nowrap shrink-0"
               >
                 <Award size={13} />
-                <span>5-Vault Perks</span>
+                <span>Perks &amp; Desk Vaults</span>
               </button>
               <button
                 type="button"
@@ -777,7 +781,7 @@ export const GovInboxView: React.FC = () => {
             { id: 'bulletins' as const, label: isSchool ? `School Circulars & Gazette (${bulletins.length})` : `Public Bulletins (${bulletins.length})`, icon: Bell },
             { id: 'projects' as const, label: isSchool ? `Campus Works & Upgrades (${sampleFacilityProjects.length})` : `Facility Projects (${sampleFacilityProjects.length})`, icon: Briefcase },
             { id: 'team' as const, label: isSchool ? `Academic Staff Roster (${myTeam.length})` : `Staff Roster (${myTeam.length})`, icon: Users },
-            { id: 'perks' as const, label: 'Monthly Merit Vault Rewards', icon: Award },
+            { id: 'perks' as const, label: 'Perks & Desk Vaults', icon: Award },
             { id: 'profile' as const, label: 'Profile & Institution Settings', icon: Layers },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1949,50 +1953,15 @@ export const GovInboxView: React.FC = () => {
         )}
 
         {/* ================================================================= */}
-        {/* TAB 6: MONTHLY MERIT PERK DISPATCH */}
+        {/* TAB 6: PERKS & INSTITUTIONAL DESK VAULTS                         */}
         {/* ================================================================= */}
         {providerDeskTab === 'perks' && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-3">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <Award size={18} className="text-emerald-600" />
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    {user.organization_name || d.name} · Monthly Top-3 Merit Vault Rewards
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Strictly locked against cherry-picking. Evaluates verified student, parent, or customer interactions and disburses an even 1/3 split across the Top 3.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => go('perk_vault')}
-                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Award size={13} />
-                <span>Open 5-Vault Console &rarr;</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono">
-              {[
-                { rank: 'Top 1 (33.3% Pool)', name: countryPerks.sampleCitizens[0]?.name || 'Civic Champion #1', role: `Lead Community Watchdog (${countryPerks.sampleCitizens[0]?.location || gov.tier1UnitLabel})`, reward: `${gov.currency} 100,000 Partner Voucher` },
-                { rank: 'Top 2 (33.3% Pool)', name: countryPerks.sampleCitizens[1]?.name || 'Civic Champion #2', role: `Verified Patron (${countryPerks.sampleCitizens[1]?.location || gov.tier1UnitLabel})`, reward: countryPerks.digitalPerks[0]?.name || '10GB Data Bundle' },
-                { rank: 'Top 3 (33.3% Pool)', name: countryPerks.sampleCitizens[2]?.name || 'Civic Champion #3', role: `Campus / Corridor Liaison (${countryPerks.sampleCitizens[2]?.location || gov.tier1UnitLabel})`, reward: `${gov.currency} 100,000 Partner Voucher` },
-              ].map((c, i) => (
-                <div key={i} className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/25 space-y-1.5">
-                  <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
-                    {c.rank}
-                  </span>
-                  <div className="font-bold text-slate-900 dark:text-white text-xs">{c.name}</div>
-                  <div className="text-[10px] text-slate-500">{c.role}</div>
-                  <div className="text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400 pt-1 border-t border-[#e3e6ea] dark:border-[#262b36]">
-                    {c.reward}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="animate-fade-in">
+            <InstitutionalVaultsDesk
+              deskMode="provider"
+              defaultDeptId={d.id}
+              onOpenMerchantPos={() => setProviderDeskTab('merchant_pos')}
+            />
           </div>
         )}
 
@@ -2620,18 +2589,48 @@ export const GovInboxView: React.FC = () => {
                 )}
                 <button
                   type="button"
-                  onClick={() => go('perk_vault')}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                  onClick={() => setGovDeskSection(govDeskSection === 'perks_vaults' ? 'inbox' : 'perks_vaults')}
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <Award size={11} />
-                  <span>5-Vault Monthly Perks →</span>
+                  <span>{govDeskSection === 'perks_vaults' ? '← Back to Inbox' : 'Perks & Desk Vaults'}</span>
                 </button>
               </div>
             </div>
           );
         })()}
 
-        {/* Entity Civic Perks & Rewards Dispatch Console (Updated with 5-Vault Monthly Top-3 Merit Architecture) */}
+        {/* Segmented Government Desk Workspace Switcher */}
+        <div className="mt-3 flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
+          <button
+            type="button"
+            onClick={() => setGovDeskSection('inbox')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
+              govDeskSection === 'inbox'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <MessageSquare size={14} />
+            <span>Accountability Inbox ({queue.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setGovDeskSection('perks_vaults')}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
+              govDeskSection === 'perks_vaults'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Award size={14} />
+            <span>Perks &amp; Desk Vaults</span>
+          </button>
+        </div>
+
+        {govDeskSection === 'inbox' && (
+          <>
+        {/* Entity Civic Perks & Rewards Dispatch Console */}
         <div className="mt-3 bg-white dark:bg-[#161a22] p-3.5 rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2.5">
           <div className="flex items-center justify-between border-b border-[#e3e6ea] dark:border-[#262b36] pb-2 flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -2669,11 +2668,11 @@ export const GovInboxView: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={() => go('perk_vault')}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                onClick={() => setGovDeskSection('perks_vaults')}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <Award size={12} />
-                <span>Open Monthly Top-3 Vaults</span>
+                <span>Open Desk Perks &amp; Vaults</span>
               </button>
             </div>
 
@@ -3131,8 +3130,16 @@ export const GovInboxView: React.FC = () => {
             </div>
           </div>
         )}
+          </>
+        )}
       </div>
 
+      {govDeskSection === 'perks_vaults' ? (
+        <div className="px-3.5 sm:px-5 pt-4 animate-fade-in">
+          <InstitutionalVaultsDesk deskMode="government" defaultDeptId={user.dept} />
+        </div>
+      ) : (
+        <>
       {/* Tabs Filter */}
       <div className="flex border-b border-slate-200 dark:border-slate-800/80 overflow-x-auto bg-slate-100 dark:bg-slate-950/80">
         {[
@@ -3350,6 +3357,8 @@ export const GovInboxView: React.FC = () => {
           })
         )}
       </div>
+        </>
+      )}
 
       {/* Interactive Entity Perks & Rewards Dispatch Modal */}
       {dispatchModal !== 'none' && (

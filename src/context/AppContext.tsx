@@ -152,6 +152,8 @@ interface AppContextType {
   setWallTab: (t: 'posts' | 'announcements' | 'projects' | 'vouchers') => void;
   govTab: 'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved';
   setGovTab: (t: 'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved') => void;
+  perkTab: 'citizen_wallet' | 'redeem_xp' | 'community_pools';
+  setPerkTab: (t: 'citizen_wallet' | 'redeem_xp' | 'community_pools') => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
 
@@ -1309,6 +1311,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [feedTab, setFeedTab] = useState<'following' | 'trending' | 'near_me'>('following');
   const [wallTab, setWallTab] = useState<'posts' | 'announcements' | 'projects' | 'vouchers'>('posts');
   const [govTab, setGovTab] = useState<'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved'>('all');
+  const [perkTab, setPerkTab] = useState<'citizen_wallet' | 'redeem_xp' | 'community_pools'>('citizen_wallet');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Persist state to local storage
@@ -4694,6 +4697,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setWallTab,
         govTab,
         setGovTab,
+        perkTab,
+        setPerkTab,
         searchQuery,
         setSearchQuery,
         ratifyResolution,

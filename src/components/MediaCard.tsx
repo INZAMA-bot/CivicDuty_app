@@ -784,244 +784,239 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, countryCode
         );
       })()}
 
-      {/* 4. FULL DOCUMENT DOSSIER READER & PREVIEWER */}
+      {/* 4. DOCUMENT ATTACHMENT CARD & PLAIN-LANGUAGE VIEWER */}
       {docs.map((m, i) => {
         const isExpanded = expandedDocIdx === i;
-        const docTitle = m.name || `Statutory_Evidence_Dossier_${postId.slice(-4).toUpperCase()}.pdf`;
+        const rawDocName = m.name || `Public_Record_${postId.slice(-4).toUpperCase()}.pdf`;
+        const cleanBaseName = rawDocName.replace(/\.(pdf|docx?|xlsx?|csv|txt)$/i, '');
+        const humanDocTitle = cleanBaseName
+          .replace(/[_-]+/g, ' ')
+          .replace(/\b\w/g, (ch) => ch.toUpperCase());
+        const fileExt = (rawDocName.match(/\.([a-z0-9]+)$/i)?.[1] || 'PDF').toUpperCase();
+        const activeDocMode = docViewMode[i] || 'abstract';
+
         return (
           <div
             key={i}
-            className="rounded-xl overflow-hidden border-2 border-amber-500/40 bg-amber-50/40 dark:bg-slate-900/90 shadow-2xs"
+            className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80"
           >
-            <div className="p-3 sm:p-4 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <FileText size={20} />
+            <div className="p-3.5 sm:p-4 space-y-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/12 border border-amber-500/25 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <FileText size={19} />
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white truncate">{docTitle}</span>
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[9px] font-mono font-bold uppercase">
-                      OFFICIAL DOCUMENT
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white leading-snug break-words">
+                    {humanDocTitle}
+                  </h4>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-emerald-700 dark:text-emerald-400 font-medium inline-flex items-center gap-1">
+                      <ShieldCheck size={12} />
+                      <span>Verified Document</span>
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[8.5px] font-mono font-semibold flex items-center gap-1">
-                      <CheckCircle2 size={9} /> Offline Cached
-                    </span>
-                  </div>
-                  <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span>{m.size || '1.2 MB'} · PDF / Statutory Record</span>
-                    <span>·</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
-                      <ShieldCheck size={11} /> SHA-256 Sealed
-                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{fileExt}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="tabular-nums">{m.size || '1.2 MB'}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>Ready offline</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => {
-                    const current = docViewMode[i] || 'abstract';
-                    setDocViewMode((prev) => ({ ...prev, [i]: current === 'abstract' && isExpanded ? 'pdf' : 'abstract' }));
-                    setExpandedDocIdx(isExpanded && (docViewMode[i] || 'abstract') === 'abstract' ? null : i);
+                    setDocViewMode((prev) => ({ ...prev, [i]: 'abstract' }));
+                    setExpandedDocIdx(isExpanded && activeDocMode === 'abstract' ? null : i);
                   }}
-                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors ${
-                    isExpanded && (docViewMode[i] || 'abstract') === 'abstract'
+                  className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
+                    isExpanded && activeDocMode === 'abstract'
                       ? 'bg-amber-600 text-white'
-                      : 'bg-amber-500/10 border border-amber-500/40 text-amber-800 dark:text-amber-300 hover:bg-amber-500/20'
+                      : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100 hover:border-amber-500'
                   }`}
-                  title="Instant 2KB Low-Data Abstract (Works on 2G)"
                 >
-                  <Zap size={11} />
-                  <span>Quick Abstract</span>
+                  <Zap size={13} />
+                  <span>Key Facts</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
                     setDocViewMode((prev) => ({ ...prev, [i]: 'pdf' }));
-                    setExpandedDocIdx(isExpanded && docViewMode[i] === 'pdf' ? null : i);
+                    setExpandedDocIdx(isExpanded && activeDocMode === 'pdf' ? null : i);
                   }}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                  className={`min-h-[40px] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap ${
+                    isExpanded && activeDocMode === 'pdf'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:opacity-90'
+                  }`}
                 >
-                  <Eye size={12} />
-                  <span>{isExpanded && docViewMode[i] === 'pdf' ? 'Hide Doc' : 'Read Full Document'}</span>
+                  <Eye size={13} />
+                  <span>{isExpanded && activeDocMode === 'pdf' ? 'Close File' : `Open ${fileExt}`}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setFullscreenDoc(m)}
-                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
+                  aria-label="Open full screen viewer"
+                  title="Expand full screen"
+                  className="min-h-[40px] min-w-[40px] px-2.5 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
                 >
-                  <Maximize2 size={11} />
-                  <span>Fullscreen</span>
+                  <Maximize2 size={14} />
                 </button>
               </div>
             </div>
 
-            {/* Inline Full Document Reader & Low-Data Abstract Sheet */}
+            {/* Inline Plain-Language Summary & File Viewer */}
             {isExpanded && (
-              <div className="p-4 bg-white dark:bg-slate-950 border-t border-amber-500/30 space-y-3 animate-fade-in">
-                {/* Segmented Mode Selector */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800 flex-wrap gap-2 text-xs">
-                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
+              <div className="p-3.5 sm:p-4 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-2.5 border-b border-slate-200 dark:border-slate-800">
+                  <div className="inline-flex p-0.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                     <button
                       type="button"
                       onClick={() => setDocViewMode((prev) => ({ ...prev, [i]: 'abstract' }))}
-                      className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold flex items-center gap-1 transition ${
-                        (docViewMode[i] || 'abstract') === 'abstract'
-                          ? 'bg-amber-600 text-white'
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                        activeDocMode === 'abstract'
+                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
                           : 'text-slate-600 dark:text-slate-400'
                       }`}
                     >
-                      <Zap size={10} />
-                      <span>⚡ Quick Abstract (2 KB · Rural Edge)</span>
+                      Key Facts
                     </button>
                     <button
                       type="button"
                       onClick={() => setDocViewMode((prev) => ({ ...prev, [i]: 'pdf' }))}
-                      className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold flex items-center gap-1 transition ${
-                        docViewMode[i] === 'pdf'
-                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                        activeDocMode === 'pdf'
+                          ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-2xs'
                           : 'text-slate-600 dark:text-slate-400'
                       }`}
                     >
-                      <FileText size={10} />
-                      <span>Full Scan / PDF Document</span>
+                      Full {fileExt}
                     </button>
                   </div>
 
-                  <span className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                    <ShieldCheck size={11} /> Cryptographically Sealed Record
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Original file: {rawDocName}
                   </span>
                 </div>
 
-                {(docViewMode[i] || 'abstract') === 'abstract' ? (
-                  /* 1. Low-Bandwidth Statutory Abstract (Instant 2KB display) */
-                  <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-slate-900/80 border border-amber-500/30 space-y-3 text-xs font-mono">
-                    <div className="flex items-center justify-between border-b border-amber-500/20 pb-2 text-[10px] text-amber-800 dark:text-amber-300 font-bold">
-                      <span>STATUTORY ABSTRACT · LOW-BANDWIDTH CITIZEN EXTRACT</span>
-                      <span>DOCKET #{postId.slice(-6).toUpperCase()}</span>
-                    </div>
-
+                {activeDocMode === 'abstract' ? (
+                  <div className="space-y-3 text-xs">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-800 dark:text-slate-200">
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Document Reference:</div>
-                        <div className="font-bold text-sm text-slate-950 dark:text-white mt-0.5">{docTitle}</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Document</div>
+                        <div className="font-semibold text-sm text-slate-950 dark:text-white mt-0.5">{humanDocTitle}</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Statutory Authority:</div>
-                        <div className="font-bold text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">District Works &amp; Engineering Directorate</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Issued By</div>
+                        <div className="font-semibold text-sm text-emerald-700 dark:text-emerald-400 mt-0.5">
+                          Works &amp; Procurement Office
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Legal &amp; Audit Reference:</div>
-                        <div className="text-xs font-medium mt-0.5">Public Procurement &amp; Disposal of Public Assets Act (S.68)</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">What It Covers</div>
+                        <div className="text-xs font-medium mt-0.5">
+                          Official contract terms, approved budget &amp; work deadlines
+                        </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase font-semibold">Offline Access Status:</div>
-                        <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">✓ Cached locally — Viewable with 0% data usage</div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Offline Access</div>
+                        <div className="text-xs font-medium text-emerald-700 dark:text-emerald-400 mt-0.5">
+                          Saved on device (works without data)
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-slate-950 border border-amber-500/20 text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
-                      <strong>Executive Summary:</strong> Official verified documentation attached to Dispatch #{postId.slice(-6).toUpperCase()}. Verifies engineering specifications, procurement authorization, and milestone sign-off criteria. Registered on the immutable public ledger for citizen oversight and supervisory audit.
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                      <strong className="text-slate-900 dark:text-white">Plain Summary:</strong> Official record attached to report #{postId.slice(-6).toUpperCase()}. Shows who approved the work, what standards were promised, and what residents can check on site.
                     </div>
                   </div>
                 ) : (
-                  /* 2. Full PDF / Stamped Paperwork Viewer & Download */
                   m.url ? (
                     isImageDoc(m) ? (
                       <div className="space-y-2 p-2.5 bg-slate-950 rounded-xl text-center border border-slate-800">
                         <img
                           src={m.url}
-                          alt={docTitle}
+                          alt={humanDocTitle}
                           className="max-w-full max-h-96 object-contain mx-auto rounded-lg shadow-md"
                         />
                         <div className="flex justify-between items-center flex-wrap gap-2 pt-2 px-1 text-slate-300">
-                          <span className="text-[10px] font-mono flex items-center gap-1 text-emerald-400">
-                            <CheckCircle2 size={12} /> Stamped Paperwork Photocopied Scan ({m.size || 'Cached'})
+                          <span className="text-xs flex items-center gap-1.5 text-emerald-400">
+                            <CheckCircle2 size={13} /> Scanned paper copy ({m.size || 'Cached'})
                           </span>
                           <a
                             href={m.url}
-                            download={docTitle}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                            download={rawDocName}
+                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                           >
-                            <Download size={12} />
-                            <span>Save Scan</span>
+                            <Download size={13} />
+                            <span>Save Image</span>
                           </a>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 rounded-xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/40 space-y-3">
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <FileText size={16} className="text-amber-600 dark:text-amber-400" />
-                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[260px]">
-                              {docTitle}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                              {humanDocTitle}
                             </span>
                           </div>
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-400">
-                            SHA-256 Verified
+                          <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-1">
+                            <ShieldCheck size={12} /> Verified File
                           </span>
                         </div>
 
-                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                          Official statutory record attached to Dispatch #{postId.slice(-6).toUpperCase()}. Open in your device&apos;s native viewer to review or print full paperwork.
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                          Attached to report #{postId.slice(-6).toUpperCase()}. Open it with your phone&apos;s PDF reader or download a copy below.
                         </p>
 
-                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <a
                             href={m.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 min-w-[180px] py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer"
+                            className="flex-1 min-w-[150px] py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                           >
                             <Eye size={13} />
-                            <span>Open PDF in Native Viewer ↗</span>
+                            <span>Open PDF</span>
                           </a>
                           <a
                             href={m.url}
-                            download={docTitle}
-                            className="py-2 px-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-mono font-bold flex items-center justify-center gap-1.5 shadow-xs transition cursor-pointer"
+                            download={rawDocName}
+                            className="py-2 px-3 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                           >
                             <Download size={13} />
-                            <span>Download ({m.size || 'PDF'})</span>
+                            <span>Save ({m.size || fileExt})</span>
                           </a>
                         </div>
 
-                        {/* Desktop Inline Object Embed */}
-                        <div className="hidden sm:block pt-2">
+                        <div className="hidden sm:block pt-1">
                           <object
                             data={m.url}
                             type="application/pdf"
                             className="w-full h-72 rounded-lg border border-slate-200 dark:border-slate-800 bg-white"
                           >
-                            <div className="p-3 text-center text-[10px] text-slate-400 font-mono">
-                              PDF viewable via &ldquo;Open PDF in Native Viewer&rdquo; above.
+                            <div className="p-3 text-center text-xs text-slate-400">
+                              Tap &ldquo;Open PDF&rdquo; above to read the full document.
                             </div>
                           </object>
                         </div>
                       </div>
                     )
                   ) : (
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2.5 font-mono text-xs">
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                        <span>CERTIFIED PUBLIC RECORD · DOCKET #{postId.slice(-6).toUpperCase()}</span>
-                        <span>VERIFIED ATTACHMENT</span>
-                      </div>
-                      <div className="font-sans text-xs text-slate-800 dark:text-slate-200 space-y-2 leading-relaxed">
-                        <p className="font-bold text-sm">{docTitle}</p>
-                        <p>
-                          This statutory document attachment has been cryptographically indexed to Dispatch{' '}
-                          <strong>#{postId.slice(-6).toUpperCase()}</strong> for public inspection, engineering verification,
-                          and audit trail compliance.
-                        </p>
-                        <div className="p-2.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400">
-                          <div>File Reference: {docTitle}</div>
-                          <div>File Size: {m.size || '1.2 MB'}</div>
-                          <div>Chain Custody: Immutable Public Ledger · Open Inspection Enabled</div>
-                        </div>
+                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                      <div className="font-semibold text-slate-900 dark:text-white">{humanDocTitle}</div>
+                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                        This notice is verified and attached to report <strong>#{postId.slice(-6).toUpperCase()}</strong>.
+                        Its full {m.size || '1.2 MB'} file reference is saved offline so citizens can inspect what was approved even on slow connections.
+                      </p>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-800">
+                        File: {rawDocName} · {m.size || '1.2 MB'} · Verified public attachment
                       </div>
                     </div>
                   )
@@ -1219,110 +1214,81 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, countryCode
                   </div>
                 </div>
               ) : (
-                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-amber-500/40 space-y-4 max-h-[75vh] overflow-y-auto">
+                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4 max-h-[75vh] overflow-y-auto">
                   <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <ShieldCheck size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <div>
-                        <span className="text-xs font-mono font-bold text-amber-950 dark:text-amber-200 uppercase block">
-                          Verified Sovereign Attachment · Docket #{postId.slice(-6).toUpperCase()}
+                      <div className="min-w-0">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white truncate block">
+                          {(fullscreenDoc.name || 'Public Record')
+                            .replace(/\.(pdf|docx?|xlsx?|csv|txt)$/i, '')
+                            .replace(/[_-]+/g, ' ')
+                            .replace(/\b\w/g, (ch) => ch.toUpperCase())}
                         </span>
-                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-100 truncate max-w-[280px] sm:max-w-md block">
-                          {fullscreenDoc.name || 'Statutory Evidence Document'}
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block">
+                          Verified Document · {fullscreenDoc.size || '1.2 MB'} · Ready offline
                         </span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-400">
-                      SHA-256 Ledger Sealed
-                    </span>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <div>
-                      <span className="text-slate-400 block uppercase">File Size</span>
-                      <strong className="text-slate-800 dark:text-slate-200">{fullscreenDoc.size || '1.2 MB'}</strong>
+                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 text-xs text-slate-800 dark:text-slate-200">
+                    <div className="font-semibold text-sm text-slate-950 dark:text-white">
+                      Plain Summary
                     </div>
-                    <div>
-                      <span className="text-slate-400 block uppercase">Format</span>
-                      <strong className="text-slate-800 dark:text-slate-200">PDF / Statutory Doc</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block uppercase">Offline Status</span>
-                      <strong className="text-emerald-600 dark:text-emerald-400">✓ Locally Cached</strong>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block uppercase">Jurisdiction</span>
-                      <strong className="text-slate-800 dark:text-slate-200">CivicDuty Sovereign Ledger</strong>
-                    </div>
-                  </div>
-
-                  {/* Guaranteed Readable In-App Statutory Document Extract */}
-                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/30 space-y-2.5 text-xs text-slate-800 dark:text-slate-200">
-                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400">
-                      <span>OFFICIAL DOCUMENT SUMMARY &amp; STATUTORY EXTRACT</span>
-                      <span>REF #{postId.slice(-6).toUpperCase()}</span>
-                    </div>
-                    <h4 className="font-bold text-sm text-slate-950 dark:text-white">
-                      {fullscreenDoc.name || 'Statutory Concept & Accountability Submission'}
-                    </h4>
                     <p className="leading-relaxed text-slate-700 dark:text-slate-300">
-                      Official sovereign dossier record registered under Docket #{postId.slice(-6).toUpperCase()}. This document establishes verified baseline evidence for public service monitoring, contractor accountability, procurement audit, and statutory 72-hour citizen ratification.
+                      Official record attached to report #{postId.slice(-6).toUpperCase()}. Confirms what work was approved, who is responsible, and what residents can verify on site.
                     </p>
-                    <div className="p-2.5 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-500/20 text-[11px] font-mono text-amber-900 dark:text-amber-200 space-y-1">
-                      <div className="font-bold flex items-center gap-1.5">
-                        <CheckCircle2 size={12} className="text-emerald-500" />
-                        <span>Statutory Verification Integrity:</span>
-                      </div>
-                      <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-normal">
-                        Immutable cryptographic hash registered to the national oversight database. Accessible for CAO, PS MoLG, and Auditor General forensic cross-matching.
-                      </p>
-                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <a
                       href={fullscreenDoc.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 min-w-[180px] py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                      className="flex-1 min-w-[160px] py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
                     >
                       <Eye size={15} />
-                      <span>Open PDF in Native Reader ↗</span>
+                      <span>Open Full File</span>
                     </a>
 
                     <a
                       href={fullscreenDoc.url}
-                      download={fullscreenDoc.name || 'Statutory_Document.pdf'}
-                      className="py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition cursor-pointer"
+                      download={fullscreenDoc.name || 'Public_Document.pdf'}
+                      className="py-2.5 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
                     >
                       <Download size={15} />
-                      <span>Download PDF</span>
+                      <span>Save Copy</span>
                     </a>
                   </div>
 
-                  {/* Desktop Object Viewer */}
                   <div className="hidden sm:block pt-1">
                     <object
                       data={fullscreenDoc.url}
                       type="application/pdf"
                       className="w-full h-72 rounded-xl border border-slate-200 dark:border-slate-800 bg-white"
                     >
-                      <div className="p-4 text-center text-xs text-slate-400 font-mono">
-                        Embedded preview available via Native Reader button above.
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        Use &ldquo;Open Full File&rdquo; above to read in your PDF viewer.
                       </div>
                     </object>
                   </div>
                 </div>
               )
             ) : (
-              <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3 text-xs text-slate-800 dark:text-slate-200">
-                <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase">
-                  OFFICIAL STATUTORY DOSSIER ATTACHMENT · #{postId.slice(-6).toUpperCase()}
+              <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs text-slate-800 dark:text-slate-200">
+                <div className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <ShieldCheck size={14} />
+                  <span>Verified Document · Report #{postId.slice(-6).toUpperCase()}</span>
                 </div>
-                <h4 className="text-base font-bold">{fullscreenDoc.name}</h4>
-                <p className="leading-relaxed">
-                  Certified public document attached to Dispatch #{postId.slice(-6).toUpperCase()}. Verified for public
-                  oversight, procurement transparency, and statutory SLA tracking.
+                <h4 className="text-base font-bold">
+                  {(fullscreenDoc.name || 'Public Document')
+                    .replace(/\.(pdf|docx?|xlsx?|csv|txt)$/i, '')
+                    .replace(/[_-]+/g, ' ')
+                    .replace(/\b\w/g, (ch) => ch.toUpperCase())}
+                </h4>
+                <p className="leading-relaxed text-slate-600 dark:text-slate-300">
+                  This official document is attached to report #{postId.slice(-6).toUpperCase()} so local residents and reviewers can verify approved project details even with slow internet.
                 </p>
               </div>
             )}
