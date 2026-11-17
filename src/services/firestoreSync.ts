@@ -100,6 +100,20 @@ function buildPostPayload(post: Post) {
     is_master_dossier: Boolean(post.is_master_dossier),
     is_test_post: Boolean(post.is_test_post),
     merged_from_ids: (post.merged_from_ids || []).slice(0, 50),
+    ...(post.frontline_scout && post.frontline_scout.is_scout
+      ? {
+          frontline_scout: {
+            is_scout: true,
+            category: post.frontline_scout.category,
+            category_label: (post.frontline_scout.category_label || '').slice(0, 64),
+            workstation_name: (post.frontline_scout.workstation_name || '').slice(0, 128),
+            stage_id: (post.frontline_scout.stage_id || '').slice(0, 128),
+            home_parish: (post.frontline_scout.home_parish || '').slice(0, 64),
+            consensus_verified: Boolean(post.frontline_scout.consensus_verified),
+            scout_count_at_report: Number(post.frontline_scout.scout_count_at_report || 1),
+          },
+        }
+      : {}),
   };
 }
 
@@ -851,3 +865,73 @@ export async function purgeCountryTestPostsInCloud(countryCode: CountryCode): Pr
     return 0;
   }
 }
+
+/**
+ * Persists a public Frontline Scout Workstation / Certified Stage document to Cloud Firestore
+ */
+export async function saveFrontlineStageToCloud(stage: any): Promise<void> {
+  if (!stage?.id) return;
+  const stageId = String(stage.id).replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
+  const path = `frontline_stages/${stageId}`;
+  try {
+    const payload = {
+      id: stageId,
+      name: String(stage.name || 'Frontline Stage').slice(0, 128),
+      normalizedName: String(stage.normalizedName || stage.name || '').toLowerCase().slice(0, 128),
+      category: stage.category || 'bodaboda',
+      categoryLabel: String(stage.categoryLabel || 'Mobility Stage').slice(0, 64),
+      categoryIcon: String(stage.categoryIcon || 'Bike').slice(0, 32),
+      country: String(stage.country || 'UG').slice(0, 8),
+      district: String(stage.district || 'Kampala').slice(0, 64),
+      subcounty: String(stage.subcounty || 'Central').slice(0, 64),
+      parish: String(stage.parish || 'Central Ward').slice(0, 64),
+      centerGps: stage.centerGps || { lat: 0.3162, lng: 32.5781 },
+      scoutCount: Number(stage.scoutCount || 0),
+      thresholdRequired: 15,
+      isCertified: Boolean(stage.isCertified),
+      officialLabel: String(stage.officialLabel || stage.name || '').slice(0, 160),
+      ...(stage.certifiedAt ? { certifiedAt: String(stage.certifiedAt).slice(0, 64) } : {}),
+      patronSponsorPoolUgx: Math.max(0, Number(stage.patronSponsorPoolUgx || 0)),
+      patronCount: Number(stage.patronCount || 0),
+      patrons: (Array.isArray(stage.patrons) ? stage.patrons : []).slice(0, 40),
+      topScouts: (Array.isArray(stage.topScouts) ? stage.topScouts : []).slice(0, 3),
+      members: (Array.isArray(stage.members) ? stage.members : []).slice(0, 150),
+      ...(Array.isArray(stage.scarcePerks) ? { scarcePerks: stage.scarcePerks.slice(0, 10) } : {}),
+      recentScouts: (Array.isArray(stage.recentScouts) ? stage.recentScouts : []).slice(0, 25),
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, 'frontline_stages', stageId), payload, { merge: true });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('offline') || msg.includes('unavailable') || msg.includes('Missing or insufficient permissions')) {
+      console.info(`[Firestore Sync] Frontline stage ${stageId} queued locally:`, msg);
+      return;
+    }
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+/**
+ * Subscribes to live Frontline Scout Workstations for a country across devices
+ */
+export function subscribeToFrontlineStagesFromCloud(
+  country: CountryCode,
+  onStagesReceived: (stages: any[]) => void
+): () => void {
+  const q = query(collection(db, 'frontline_stages'), where('country', '==', country));
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const stages: any[] = [];
+      snapshot.forEach((docSnap) => {
+        stages.push(docSnap.data());
+      });
+      onStagesReceived(stages);
+    },
+    (error) => {
+      handleSnapshotError(error, `frontline_stages/${country}`);
+    }
+  );
+  return unsubscribe;
+}
+

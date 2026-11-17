@@ -43,6 +43,7 @@ import {
   Compass,
   Eye,
 } from 'lucide-react';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { TrafficLightLogo } from '../components/TrafficLightLogo';
 
 export const PsExecutiveDeskView: React.FC = () => {
@@ -1472,21 +1473,22 @@ export const PsExecutiveDeskView: React.FC = () => {
                 <label className="text-[10.5px] font-mono uppercase tracking-wider font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                   Destination Ministry
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="Destination Ministry"
+                  placeholder="Select Sister Ministry..."
+                  searchPlaceholder="Search ministry or Permanent Secretary..."
                   value={referralTargetMinistry}
-                  onChange={(e) => setReferralTargetMinistry(e.target.value)}
-                  required
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none cursor-pointer"
-                >
-                  <option value="">Select Sister Ministry...</option>
-                  {lineMinistries
+                  onChange={setReferralTargetMinistry}
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg px-3 py-2 font-mono"
+                  options={lineMinistries
                     .filter((m) => m.id !== activeMinistry.id)
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.title} ({m.permSecretary})
-                      </option>
-                    ))}
-                </select>
+                    .map((m) => ({
+                      value: m.id,
+                      label: m.title,
+                      sublabel: m.permSecretary,
+                      keywords: `${m.title} ${m.permSecretary} ${m.id}`,
+                    }))}
+                />
               </div>
 
               <div>

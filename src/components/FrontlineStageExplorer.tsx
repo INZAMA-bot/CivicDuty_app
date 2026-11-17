@@ -12,10 +12,15 @@ import {
   FrontlineStage,
   FrontlineScoutCategory,
   FRONTLINE_CATEGORIES,
+  STAGES_UPDATED_EVENT,
   getStoredStages,
+  getActiveStageMembers,
+  isUserMemberOfStage,
+  syncStagesFromCloudSnapshot,
   contributePatronSponsorship,
   exitStageGroup,
 } from '../data/stageEstablishment';
+import { subscribeToFrontlineStagesFromCloud } from '../services/firestoreSync';
 import {
   Bike,
   Store,
@@ -24,21 +29,18 @@ import {
   GraduationCap,
   HardHat,
   MapPin,
-  ShieldCheck,
   Award,
   HeartHandshake,
   CheckCircle2,
   Users,
   Search,
-  Filter,
   DollarSign,
-  ChevronRight,
   Lock,
-  Globe,
-  Radio,
   X,
   LogOut,
-  Sparkles,
+  Trophy,
+  Eye,
+  PlusCircle,
 } from 'lucide-react';
 
 interface FrontlineStageExplorerProps {
@@ -48,36 +50,78 @@ interface FrontlineStageExplorerProps {
   compact?: boolean;
 }
 
+function formatRecency(iso?: string): string {
+  if (!iso) return 'Recently';
+  const ms = Date.now() - Date.parse(iso);
+  if (Number.isNaN(ms) || ms < 0) return 'Today';
+  const hrs = Math.floor(ms / (1000 * 60 * 60));
+  if (hrs < 1) return 'Just now';
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return '1 day ago';
+  return `${days}d ago`;
+}
+
 export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
   country = 'UG',
   selectedParish,
   onSelectStageForCompose,
-  compact = false,
 }) => {
-  const { toast, go, user } = useApp();
+  const { toast, user } = useApp();
   const [stages, setStages] = useState<FrontlineStage[]>(() => getStoredStages());
   const [selectedCategory, setSelectedCategory] = useState<FrontlineScoutCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [parishFilter, setParishFilter] = useState(selectedParish || 'all');
   const [sponsorModalStage, setSponsorModalStage] = useState<FrontlineStage | null>(null);
-
-  // Voluntary Exit Group Handler
-  const handleExitWorkstationGroup = (stageId: string, stageName: string) => {
-    const scoutId = user?.id || 'usr-9028-UG';
-    const scoutName = user?.name || 'Citizen Scout';
-    const res = exitStageGroup(stageId, scoutName);
-    if (res.success) {
-      setStages(getStoredStages());
-      toast(`Exited ${stageName}. Your slot has been freed.`, 'emerald');
-    } else {
-      toast(res.message, 'amber');
+  const [rosterModalStage, setRosterModalStage] = useState<FrontlineStage | null>(null);
+  const [highlightedStageId, setHighlightedStageId] = useState<string | null>(() => {
+    try {
+      const id = sessionStorage.getItem('cd_focus_stage_id');
+      if (id) {
+        sessionStorage.removeItem('cd_focus_stage_id');
+        return id;
+      }
+      return null;
+    } catch {
+      return null;
     }
-  };
+  });
 
   const cc = (country || 'UG').toUpperCase() as CountryCode;
   const activeCurrency = getCurrencyForCountry(cc);
   const currencyRate = getUsdRateForCurrency(activeCurrency);
   const perkProfile = useMemo(() => getCountryPerkProfile(cc), [cc]);
+
+  const currentScoutId = user?.id || 'usr-9028-UG';
+  const currentScoutName = user?.name || 'Citizen Observer';
+
+  // Sync live updates across tabs, local consensus writes, and Firestore
+  useEffect(() => {
+    const refresh = () => setStages(getStoredStages());
+    window.addEventListener(STAGES_UPDATED_EVENT, refresh);
+    const unsubCloud = subscribeToFrontlineStagesFromCloud(cc, (cloudStages) => {
+      if (cloudStages && cloudStages.length > 0) {
+        setStages(syncStagesFromCloudSnapshot(cloudStages as FrontlineStage[]));
+      }
+    });
+    return () => {
+      window.removeEventListener(STAGES_UPDATED_EVENT, refresh);
+      unsubCloud();
+    };
+  }, [cc]);
+
+  // If user navigated from a PostCard workstation badge, auto-open that roster if requested
+  useEffect(() => {
+    if (!highlightedStageId) return;
+    const match = stages.find((s) => s.id === highlightedStageId);
+    if (match) {
+      setParishFilter('all');
+      setSelectedCategory('all');
+      setRosterModalStage(match);
+      setHighlightedStageId(null);
+    }
+  }, [highlightedStageId, stages]);
+
   const presetSponsorAmounts = useMemo(
     () => [7, 14, 28, 70].map((usd) => roundFriendlyCurrencyAmount(usd * currencyRate, activeCurrency)),
     [currencyRate, activeCurrency]
@@ -87,7 +131,6 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     [currencyRate, activeCurrency]
   );
 
-  // Patron Sponsor Form State
   const [patronName, setPatronName] = useState('');
   const [diasporaCity, setDiasporaCity] = useState('');
   const [sponsorAmount, setSponsorAmount] = useState<number>(presetSponsorAmounts[1] || 50000);
@@ -98,8 +141,14 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     setSponsorAmount(presetSponsorAmounts[1] || 50000);
   }, [presetSponsorAmounts]);
 
-  const refreshStages = () => {
-    setStages(getStoredStages());
+  const handleExitWorkstationGroup = (stageId: string, stageName: string) => {
+    const res = exitStageGroup(stageId, currentScoutId, currentScoutName);
+    if (res.success) {
+      setStages(getStoredStages());
+      toast(res.message, 'emerald');
+    } else {
+      toast(res.message, 'amber');
+    }
   };
 
   const getCategoryIcon = (cat: FrontlineScoutCategory, size = 14) => {
@@ -121,19 +170,27 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     }
   };
 
-  const filteredStages = stages.filter((stage) => {
-    if (stage.country !== country) return false;
-    if (selectedCategory !== 'all' && stage.category !== selectedCategory) return false;
-    if (parishFilter !== 'all' && stage.parish.toLowerCase() !== parishFilter.toLowerCase()) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = stage.name.toLowerCase().includes(q);
-      const matchParish = stage.parish.toLowerCase().includes(q);
-      const matchSubcounty = stage.subcounty.toLowerCase().includes(q);
-      if (!matchName && !matchParish && !matchSubcounty) return false;
-    }
-    return true;
-  });
+  const countryStages = useMemo(
+    () => stages.filter((stage) => stage.country === cc),
+    [stages, cc]
+  );
+
+  const filteredStages = useMemo(() => {
+    return countryStages.filter((stage) => {
+      if (selectedCategory !== 'all' && stage.category !== selectedCategory) return false;
+      if (parishFilter !== 'all' && stage.parish.toLowerCase() !== parishFilter.toLowerCase()) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const activeRoster = getActiveStageMembers(stage);
+        const matchMember = activeRoster.some((m) => m.name.toLowerCase().includes(q));
+        const matchName = stage.name.toLowerCase().includes(q);
+        const matchParish = stage.parish.toLowerCase().includes(q);
+        const matchSubcounty = stage.subcounty.toLowerCase().includes(q);
+        if (!matchName && !matchParish && !matchSubcounty && !matchMember) return false;
+      }
+      return true;
+    });
+  }, [countryStages, selectedCategory, parishFilter, searchQuery]);
 
   const handleSponsorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +212,7 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     if (updated) {
       setStages(getStoredStages());
       setSponsorSuccessMessage(
-        `Successfully sponsored ${amount.toLocaleString()} ${activeCurrency} to ${updated.name}! Funds are locked to ${updated.parish} Top-3 scouts.`
+        `Sponsored ${amount.toLocaleString()} ${activeCurrency} to ${updated.name}. Top 3 active performers share 50% / 30% / 20%.`
       );
       toast(`Sponsored ${amount.toLocaleString()} ${activeCurrency} to ${updated.name}!`, 'emerald');
       setTimeout(() => {
@@ -168,85 +225,84 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
     }
   };
 
-  const uniqueParishes = Array.from(new Set(stages.filter((s) => s.country === country).map((s) => s.parish)));
+  const uniqueParishes = Array.from(new Set(countryStages.map((s) => s.parish)));
+
+  const rosterMembers = useMemo(() => {
+    if (!rosterModalStage) return [];
+    return getActiveStageMembers(rosterModalStage);
+  }, [rosterModalStage]);
 
   return (
     <div className="space-y-4 text-slate-900 dark:text-slate-100">
-      {/* Header & Mission Banner: Independent Platform Notice */}
-      <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 dark:from-[#0d1f18] dark:via-[#0e1f24] dark:to-[#1a1711] border border-emerald-500/20 text-slate-900 dark:text-slate-100 space-y-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs shrink-0">
-              <Bike size={18} />
+      {/* Header & Governance Rules Summary */}
+      <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <Users size={19} />
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-bold tracking-tight">
-                  Frontline Scout Workstations &amp; Certified Stages Hub
-                </h3>
-                <span className="px-2 py-0.5 rounded text-[9.5px] font-mono font-bold bg-emerald-600/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 uppercase">
-                  Consensus Establishment
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-mono">
-                Rule: &gt;15 scouts capturing matching workstation GPS within 2km auto-compiles &amp; certifies an official stage hub.
+            <div className="space-y-1">
+              <h3 className="text-sm sm:text-base font-bold tracking-tight text-slate-950 dark:text-white">
+                Public Frontline Workstations &amp; Certified Stages
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                Public rosters are open to everyone. Tag your workstation when filing a report to join —{' '}
+                <strong className="text-slate-900 dark:text-slate-200">15 active scouts</strong> on the same stage certify it as an official workstation. Exit anytime; Top 3 performers by score points earn all rewards.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 self-start sm:self-center">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-black/40 border border-[#e3e6ea] dark:border-[#262b36] text-[10.5px] font-mono font-semibold text-emerald-700 dark:text-emerald-400">
-              <Lock size={11} />
-              <span>Home Parish Lock Active</span>
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[10.5px] font-mono font-semibold text-amber-800 dark:text-amber-300">
-              <HeartHandshake size={11} />
-              <span>Patron Sponsoring Enabled</span>
-            </span>
-          </div>
+          {onSelectStageForCompose && (
+            <button
+              type="button"
+              onClick={() => onSelectStageForCompose(countryStages[0])}
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
+            >
+              <PlusCircle size={14} />
+              <span>Join / Report for a Stage</span>
+            </button>
+          )}
         </div>
 
-        {/* Third-Party Platform Transparency Notice */}
-        <div className="text-[10px] font-mono text-slate-600 dark:text-slate-400 pt-1.5 border-t border-emerald-500/15 flex items-start gap-1.5">
-          <span className="font-bold text-emerald-700 dark:text-emerald-400 uppercase shrink-0">
-            Platform Notice:
-          </span>
-          <span>
-            CivicDuty is an independent third-party civic oversight platform. CivicDuty does not operate or own commercial boda stages, markets, or schools; we empower frontline community workers to verify public service standards.
-          </span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] text-[11px] text-slate-500 dark:text-slate-400">
+          <span>Top 3 Reward Split: <strong className="text-slate-800 dark:text-slate-200">50% · 30% · 20%</strong></span>
+          <span aria-hidden="true">·</span>
+          <span>15 Active Members to Certify</span>
+          <span aria-hidden="true">·</span>
+          <span>Dormant accounts (&gt;30d inactive) hidden automatically</span>
         </div>
       </div>
 
-      {/* Category Pills & Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Category Filter Tabs & Search */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full scrollbar-none">
           <button
             type="button"
             onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+            className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
               selectedCategory === 'all'
-                ? 'bg-emerald-600 text-white shadow-xs'
+                ? 'bg-emerald-600 text-white'
                 : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span>All Stages ({stages.filter((s) => s.country === country).length})</span>
+            <span>All Workstations ({countryStages.length})</span>
           </button>
 
           {FRONTLINE_CATEGORIES.map((cat) => {
-            const count = stages.filter((s) => s.country === country && s.category === cat.id).length;
+            const count = countryStages.filter((s) => s.category === cat.id).length;
             const isSelected = selectedCategory === cat.id;
             return (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                className={`min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 ${
                   isSelected
-                    ? 'bg-emerald-600 text-white shadow-xs'
+                    ? 'bg-emerald-600 text-white'
                     : 'bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                {getCategoryIcon(cat.id, 12)}
+                {getCategoryIcon(cat.id, 13)}
                 <span>
                   {cat.label.split('(')[0].trim()} ({count})
                 </span>
@@ -256,238 +312,231 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
         </div>
 
         {/* Search & Parish Filter */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-48">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <div className="flex items-center gap-2 w-full lg:w-auto">
+          <div className="relative flex-1 sm:w-56">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search stage or parish..."
-              className="w-full pl-8 pr-3 py-1.5 text-xs font-mono bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              placeholder="Search stage, parish, or member..."
+              className="w-full min-h-[40px] pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
             />
           </div>
 
           <SearchableSelect
             value={parishFilter}
-            placeholder="All Parishes / Wards"
+            placeholder="All Parishes"
             searchPlaceholder="Search parish or ward..."
             options={[
               { value: 'all', label: 'All Parishes / Wards' },
               ...uniqueParishes.map((p) => ({
                 value: p,
-                label: `Parish: ${p}`,
+                label: p,
               })),
             ]}
             onChange={(val) => setParishFilter(val || 'all')}
-            className="w-44 sm:w-52 shrink-0"
-            triggerClassName="px-2.5 py-1.5 bg-white dark:bg-[#161a22]"
+            className="w-40 sm:w-48 shrink-0"
+            triggerClassName="px-3 py-2 bg-white dark:bg-[#161a22] rounded-xl"
           />
         </div>
       </div>
 
-      {/* Stages Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      {/* Workstations Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredStages.map((stage) => {
-          const isCertified = stage.isCertified || stage.scoutCount >= stage.thresholdRequired;
-          const progressPct = Math.min(100, Math.round((stage.scoutCount / stage.thresholdRequired) * 100));
+          const activeMembers = getActiveStageMembers(stage);
+          const activeCount = activeMembers.length;
+          const isCertified = activeCount >= stage.thresholdRequired;
+          const progressPct = Math.min(100, Math.round((activeCount / stage.thresholdRequired) * 100));
+          const userIsMember = isUserMemberOfStage(stage, currentScoutId, currentScoutName);
+          const myActiveRecord = userIsMember
+            ? activeMembers.find(
+                (m) =>
+                  m.id.toLowerCase() === currentScoutId.toLowerCase() ||
+                  m.name.toLowerCase() === currentScoutName.toLowerCase()
+              )
+            : undefined;
 
           return (
             <div
               key={stage.id}
-              className={`p-4 rounded-xl border bg-white dark:bg-[#12161f] transition-all space-y-3 ${
-                isCertified
-                  ? 'border-emerald-500/40 hover:border-emerald-500 shadow-xs'
-                  : 'border-[#e3e6ea] dark:border-[#262b36] border-dashed'
+              className={`p-4 rounded-2xl border bg-white dark:bg-[#161a22] transition-colors space-y-3.5 ${
+                userIsMember
+                  ? 'border-emerald-500 ring-1 ring-emerald-500/20'
+                  : isCertified
+                  ? 'border-emerald-500/35'
+                  : 'border-[#e3e6ea] dark:border-[#262b36]'
               }`}
             >
-              {/* Card Header: Category, Status, Parish Lock */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-start gap-2.5">
+              {/* Card Header */}
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-start gap-2.5 min-w-0">
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                       isCertified
-                        ? 'bg-emerald-600 text-white shadow-xs'
+                        ? 'bg-emerald-600 text-white'
                         : 'bg-amber-500/10 text-amber-600 border border-amber-500/30'
                     }`}
                   >
-                    {getCategoryIcon(stage.category, 18)}
+                    {getCategoryIcon(stage.category, 17)}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
-                        {stage.name}
-                      </h4>
-                      {isCertified ? (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                          <CheckCircle2 size={10} className="text-emerald-600" />
-                          <span>Certified Stage</span>
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                          Incubating ({stage.scoutCount}/{stage.thresholdRequired})
-                        </span>
+                  <div className="min-w-0 space-y-0.5">
+                    <h4 className="text-sm font-bold text-slate-950 dark:text-white tracking-tight truncate">
+                      {stage.name}
+                    </h4>
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className={isCertified ? 'text-emerald-700 dark:text-emerald-400 font-semibold' : 'text-amber-700 dark:text-amber-400 font-semibold'}>
+                        {isCertified ? 'Certified Stage' : `Incubating (${activeCount}/${stage.thresholdRequired})`}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span className="truncate">{stage.parish}, {stage.district}</span>
+                      {myActiveRecord && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="text-emerald-700 dark:text-emerald-300 font-semibold">
+                            You: #{myActiveRecord.rank} ({myActiveRecord.points} pts)
+                          </span>
+                        </>
                       )}
                     </div>
-                    <p className="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 pt-0.5">
-                      <Lock size={10} className="text-emerald-600 shrink-0" />
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">Home Parish:</span>{' '}
-                      {stage.parish} · {stage.subcounty}, {stage.district}
-                    </p>
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
-                  <div className="text-[10px] font-mono font-semibold text-slate-500">
-                    GPS Cluster: {stage.centerGps.lat.toFixed(3)}, {stage.centerGps.lng.toFixed(3)}
-                  </div>
-                  <div className="text-[9.5px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                    &lt; 2km radius
-                  </div>
-                </div>
+                {/* Exit button shown ONLY when current user is a member of this workstation */}
+                {userIsMember && (
+                  <button
+                    type="button"
+                    onClick={() => handleExitWorkstationGroup(stage.id, stage.name)}
+                    title="Voluntarily exit this workstation group anytime"
+                    className="min-h-[36px] px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/25 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shrink-0 whitespace-nowrap"
+                  >
+                    <LogOut size={12} />
+                    <span>Exit Group</span>
+                  </button>
+                )}
               </div>
 
-              {/* Consensus Meter */}
-              <div className="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono">
-                  <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                    <Users size={12} className="text-emerald-600" />
-                    <span>Scouts Consensus Count</span>
+              {/* Active Scouts Consensus Meter */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Active Group Consensus
                   </span>
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {stage.scoutCount} / {stage.thresholdRequired} Verified Scouts{' '}
-                    <span className="text-emerald-600 font-normal">
-                      ({progressPct}%)
-                    </span>
+                  <span className="font-mono font-bold tabular-nums text-slate-900 dark:text-white">
+                    {activeCount} / {stage.thresholdRequired} Active Scouts ({progressPct}%)
                   </span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                   <div
-                    className={`h-full transition-all duration-500 ${
+                    className={`h-full transition-all duration-300 ${
                       isCertified ? 'bg-emerald-600' : 'bg-amber-500'
                     }`}
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
                 {!isCertified && (
-                  <p className="text-[9.5px] font-mono text-amber-700 dark:text-amber-400">
-                    {stage.thresholdRequired - stage.scoutCount} more scout reports required within 2km to officially establish this stage.
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    {Math.max(0, stage.thresholdRequired - activeCount)} more active scout{stage.thresholdRequired - activeCount === 1 ? '' : 's'} needed within 2 km to certify this workstation.
                   </p>
                 )}
               </div>
 
-              {/* Patron Sponsoring Pool & Lion's Share Algorithmic Breakdown */}
-              <div className="space-y-2.5 pt-1.5 border-t border-[#e3e6ea] dark:border-[#262b36]">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <HeartHandshake size={13} className="text-amber-600 dark:text-amber-400" />
-                    <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">
-                      Station Vault Pool:
-                    </span>
-                    <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      {stage.patronSponsorPoolUgx.toLocaleString()} {activeCurrency}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setSponsorModalStage(stage)}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <DollarSign size={11} />
-                      <span>Deposit to Station Vault</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleExitWorkstationGroup(stage.id, stage.name)}
-                      title="Voluntarily exit this workstation virtual cluster at any time"
-                      className="px-2 py-1 rounded-lg hover:bg-rose-500/15 text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent hover:border-rose-500/30 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <LogOut size={10} />
-                      <span>Exit Group</span>
-                    </button>
+              {/* Station Vault Balance & Patron Funding */}
+              <div className="pt-2.5 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <div className="text-[11px] text-slate-500">Station Reward Pool</div>
+                  <div className="text-sm font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {stage.patronSponsorPoolUgx.toLocaleString()} {activeCurrency}
                   </div>
                 </div>
 
-                {/* Lion's Share Formula Notice */}
-                <div className="p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-[9.5px] font-mono text-slate-600 dark:text-slate-400 space-y-1">
-                  <div className="flex items-center justify-between font-bold text-emerald-800 dark:text-emerald-300">
-                    <span className="flex items-center gap-1">
-                      <Sparkles size={10} className="text-amber-500" />
-                      <span>CivicDuty Lion's Share Algorithm</span>
-                    </span>
-                    <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-emerald-500/20 uppercase font-black">
-                      Automated Dispatch
-                    </span>
-                  </div>
-                  <p>
-                    Rank 1: <strong>45% (Lion's Share)</strong> · Rank 2: <strong>25%</strong> · Rank 3: <strong>15%</strong> · Ranks 4+: <strong>15% shared</strong> (requires ≥1 monthly report to qualify).
-                  </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRosterModalStage(stage)}
+                    className="min-h-[40px] px-3 py-1.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] hover:bg-slate-100 dark:hover:bg-[#1e232d] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
+                  >
+                    <Eye size={13} className="text-emerald-600" />
+                    <span>Members ({activeCount})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSponsorModalStage(stage)}
+                    className="min-h-[40px] px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap"
+                  >
+                    <DollarSign size={13} />
+                    <span>Sponsor Pool</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Top 3 Performers Ranked Strictly by Score Points (50% / 30% / 20%) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Trophy size={12} className="text-amber-500" />
+                    <span>Top 3 Performers (Score Ranking)</span>
+                  </span>
+                  <span className="font-mono">50% · 30% · 20%</span>
                 </div>
 
-                {/* Top Scouts Rewards Breakdown */}
-                {stage.topScouts && stage.topScouts.length > 0 && (
-                  <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono">
+                {stage.topScouts && stage.topScouts.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
                     {stage.topScouts.slice(0, 3).map((scout, idx) => (
                       <div
-                        key={idx}
-                        className="p-1.5 rounded-md bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-0.5"
+                        key={scout.id || idx}
+                        className="p-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-0.5"
                       >
-                        <div className="flex items-center justify-between text-slate-500">
-                          <span className="font-bold text-emerald-600">
-                            #{idx + 1} {idx === 0 ? '(Lion 45%)' : idx === 1 ? '(25%)' : '(15%)'}
+                        <div className="flex items-center justify-between text-[11px] font-mono">
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                            #{idx + 1}
                           </span>
-                          <span className="text-[9px] truncate max-w-[55px]">{scout.points} pts</span>
+                          <span className="tabular-nums text-slate-500">{scout.points} pts</span>
                         </div>
-                        <div className="font-bold truncate text-slate-800 dark:text-slate-200" title={scout.name}>
+                        <div className="text-xs font-bold truncate text-slate-900 dark:text-slate-100" title={scout.name}>
                           {scout.name.split(' ')[0]}
                         </div>
-                        <div className="text-emerald-700 dark:text-emerald-400 font-bold text-[9.5px]">
+                        <div className="text-[11px] font-mono font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 truncate">
                           {scout.bountyShareUgx.toLocaleString()} {activeCurrency}
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-
-                {/* Scarce Perks (Limited Items Reserved Strictly for Top 3) */}
-                {stage.scarcePerks && stage.scarcePerks.length > 0 && (
-                  <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] font-mono space-y-1.5">
-                    <div className="flex items-center justify-between font-bold text-amber-800 dark:text-amber-300">
-                      <span className="flex items-center gap-1">
-                        <Award size={11} />
-                        <span>Scarce Physical Items Vault</span>
-                      </span>
-                      <span className="text-[8.5px] px-1.5 py-0.2 rounded bg-amber-500/20 uppercase font-black">
-                        Top-3 Only
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-[9px]">
-                      {stage.scarcePerks.map((perk) => (
-                        <div
-                          key={perk.id}
-                          className="p-1 rounded bg-white/70 dark:bg-black/30 border border-amber-500/20 text-slate-800 dark:text-slate-200 truncate"
-                          title={perk.title}
-                        >
-                          <strong>{perk.quantity}x</strong> {perk.title.split('(')[0]}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">No active reporters recorded in the last 30 days.</p>
                 )}
               </div>
 
-              {/* Action for Compose: Select this stage */}
+              {/* Scarce Physical Perks (Top-3 Only) */}
+              {stage.scarcePerks && stage.scarcePerks.length > 0 && (
+                <div className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] text-[11px] text-slate-600 dark:text-slate-400 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-300">
+                    <Award size={12} />
+                    <span>Top-3 Physical Gear:</span>
+                  </span>
+                  <span className="truncate">
+                    {stage.scarcePerks.map((p) => `${p.quantity}× ${p.title.split('(')[0].trim()}`).join(' · ')}
+                  </span>
+                </div>
+              )}
+
+              {/* Report / Join CTA */}
               {onSelectStageForCompose && (
                 <button
                   type="button"
                   onClick={() => onSelectStageForCompose(stage)}
-                  className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  className={`w-full min-h-[44px] py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                    userIsMember
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                      : 'bg-[#f8f9fa] hover:bg-emerald-600 text-slate-900 hover:text-white dark:bg-[#0e1116] dark:hover:bg-emerald-600 dark:text-slate-100 border border-[#e3e6ea] dark:border-[#262b36]'
+                  }`}
                 >
-                  <MapPin size={12} />
-                  <span>Report for this Workstation Stage</span>
+                  <MapPin size={13} />
+                  <span>
+                    {userIsMember ? 'File Report for This Workstation' : 'Report & Join This Workstation'}
+                  </span>
                 </button>
               )}
             </div>
@@ -496,14 +545,149 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
       </div>
 
       {filteredStages.length === 0 && (
-        <div className="p-8 text-center bg-white dark:bg-[#12161f] rounded-xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
+        <div className="p-8 text-center bg-white dark:bg-[#161a22] rounded-2xl border border-[#e3e6ea] dark:border-[#262b36] space-y-2">
           <Bike size={28} className="mx-auto text-slate-400" />
           <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-            No Workstations Found for this filter
+            No Workstations Match This Filter
           </h4>
-          <p className="text-xs text-slate-500 font-mono max-w-md mx-auto">
-            You can establish a new Frontline Scout workstation by reporting with an exact GPS pin and workstation name.
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            Create a new public Frontline Scout workstation by adding your stage name and GPS when filing a report.
           </p>
+        </div>
+      )}
+
+      {/* PUBLIC GROUP ROSTER MODAL (Dormant accounts automatically hidden) */}
+      {rosterModalStage && (
+        <div
+          onClick={() => setRosterModalStage(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-lg w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl p-5 space-y-4 shadow-2xl text-slate-900 dark:text-slate-100 max-h-[85vh] flex flex-col"
+          >
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#e3e6ea] dark:border-[#262b36]">
+              <div className="space-y-0.5 min-w-0">
+                <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                  Public Workstation Roster · {rosterMembers.length}/{rosterModalStage.thresholdRequired} Active
+                </div>
+                <h3 className="text-base font-bold text-slate-950 dark:text-white truncate">
+                  {rosterModalStage.name}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {rosterModalStage.parish}, {rosterModalStage.subcounty}, {rosterModalStage.district}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRosterModalStage(null)}
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                aria-label="Close public roster"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {rosterMembers.length === 0 ? (
+                <p className="text-xs text-slate-500 py-6 text-center">
+                  No active members in the last 30 days. File a report to activate this workstation.
+                </p>
+              ) : (
+                rosterMembers.map((member, idx) => {
+                  const isTop3 = idx < 3;
+                  const shareLabel = idx === 0 ? '50%' : idx === 1 ? '30%' : idx === 2 ? '20%' : null;
+                  const isCurrentUser =
+                    member.id.toLowerCase() === currentScoutId.toLowerCase() ||
+                    member.name.toLowerCase() === currentScoutName.toLowerCase();
+
+                  return (
+                    <div
+                      key={member.id}
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                        isCurrentUser
+                          ? 'bg-emerald-500/10 border-emerald-500/40'
+                          : isTop3
+                          ? 'bg-[#f8f9fa] dark:bg-[#0e1116] border-amber-500/30'
+                          : 'bg-[#f8f9fa] dark:bg-[#0e1116] border-[#e3e6ea] dark:border-[#262b36]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-mono font-bold tabular-nums shrink-0 ${
+                            idx === 0
+                              ? 'bg-amber-500 text-white'
+                              : idx === 1
+                              ? 'bg-slate-600 text-white'
+                              : idx === 2
+                              ? 'bg-amber-700 text-white'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          #{idx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-slate-950 dark:text-white truncate">
+                            {member.name} {isCurrentUser ? '(You)' : ''}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {member.monthlyReports} report{member.monthlyReports === 1 ? '' : 's'} · Active {formatRecency(member.lastActiveAt)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-bold font-mono tabular-nums text-slate-900 dark:text-white">
+                          {member.points} pts
+                        </div>
+                        {shareLabel ? (
+                          <div className="text-[11px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                            {shareLabel} · {member.bountyShareUgx.toLocaleString()} {activeCurrency}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-slate-500">Active Scout</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-3 border-t border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-[11px] text-slate-500">
+                Ranked strictly by score points. Dormant accounts (&gt;30d inactive) are hidden until they report again.
+              </p>
+              {isUserMemberOfStage(rosterModalStage, currentScoutId, currentScoutName) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleExitWorkstationGroup(rosterModalStage.id, rosterModalStage.name);
+                    setRosterModalStage(null);
+                  }}
+                  className="min-h-[40px] px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <LogOut size={13} />
+                  <span>Exit Group</span>
+                </button>
+              ) : (
+                onSelectStageForCompose && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = rosterModalStage;
+                      setRosterModalStage(null);
+                      onSelectStageForCompose(target);
+                    }}
+                    className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <PlusCircle size={13} />
+                    <span>Join via Report</span>
+                  </button>
+                )
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -517,15 +701,14 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
             onClick={(e) => e.stopPropagation()}
             className="relative max-w-md w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-2xl p-5 space-y-4 shadow-2xl text-slate-900 dark:text-slate-100"
           >
-            {/* Modal Header */}
             <div className="flex items-start justify-between gap-3 pb-3 border-b border-[#e3e6ea] dark:border-[#262b36]">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 flex items-center justify-center">
                   <HeartHandshake size={20} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-amber-700 dark:text-amber-400 font-bold">
-                    Patron / Diaspora Sponsoring
+                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    Patron / Community Sponsoring
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     {sponsorModalStage.name}
@@ -535,32 +718,31 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
               <button
                 type="button"
                 onClick={() => setSponsorModalStage(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
             {sponsorSuccessMessage ? (
-              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-mono space-y-2 text-center">
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs space-y-2 text-center">
                 <CheckCircle2 size={24} className="mx-auto text-emerald-600" />
                 <p className="font-bold">{sponsorSuccessMessage}</p>
               </div>
             ) : (
               <form onSubmit={handleSponsorSubmit} className="space-y-3.5">
-                <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-600 dark:text-slate-400 space-y-1">
+                <div className="p-3 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-600 dark:text-slate-400 space-y-1">
                   <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-bold">
                     <Lock size={12} className="text-emerald-600" />
                     <span>Home Parish Lock: {sponsorModalStage.parish}</span>
                   </div>
                   <p>
-                    <strong>Direct Workstation Vault Deposit:</strong> 100% of your funds are split algorithmically across members of this station based on rank and monthly engagement. Rank 1 receives the lion's share (45%), Rank 2 gets 25%, Rank 3 gets 15%, and remaining qualified members share 15% (requires ≥1 monthly report). Scarce physical items go strictly to the Top 3.
+                    100% of your sponsorship goes to this workstation's <strong>Top 3 active performers</strong> ranked by score points: <strong>#1 gets 50%</strong>, <strong>#2 gets 30%</strong>, and <strong>#3 gets 20%</strong>.
                   </p>
                 </div>
 
-                {/* Preset Amount Chips */}
                 <div>
-                  <label className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1.5">
+                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
                     Sponsor Amount ({activeCurrency})
                   </label>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -572,13 +754,13 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                           setSponsorAmount(amt);
                           setCustomAmount('');
                         }}
-                        className={`py-2 px-1 rounded-lg text-xs font-mono font-bold border transition ${
+                        className={`min-h-[40px] py-2 px-1 rounded-xl text-xs font-mono font-bold border transition cursor-pointer ${
                           sponsorAmount === amt && !customAmount
                             ? 'bg-amber-600 text-white border-amber-600'
                             : 'bg-white dark:bg-[#12161f] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300 hover:border-amber-500'
                         }`}
                       >
-                        {amt >= 10000 && amt % 1000 === 0 ? `${Math.round(amt / 1000)}k` : amt.toLocaleString()} {activeCurrency}
+                        {amt >= 10000 && amt % 1000 === 0 ? `${Math.round(amt / 1000)}k` : amt.toLocaleString()}
                       </button>
                     ))}
                   </div>
@@ -588,14 +770,13 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
                     placeholder={`Or enter custom amount (${activeCurrency})`}
-                    className="mt-2 w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    className="mt-2 w-full min-h-[40px] px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
-                {/* Patron Identification & Diaspora Origin */}
                 <div className="space-y-2">
                   <div>
-                    <label className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
                       Patron / Business Name (Optional)
                     </label>
                     <input
@@ -603,12 +784,12 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                       value={patronName}
                       onChange={(e) => setPatronName(e.target.value)}
                       placeholder={`e.g. ${perkProfile.sampleSponsor}`}
-                      className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                      className="w-full min-h-[40px] px-3 py-2 text-xs bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[10.5px] font-mono text-slate-500 uppercase tracking-wider font-semibold block mb-1">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
                       Diaspora Origin or Community Base
                     </label>
                     <input
@@ -616,14 +797,14 @@ export const FrontlineStageExplorer: React.FC<FrontlineStageExplorerProps> = ({
                       value={diasporaCity}
                       onChange={(e) => setDiasporaCity(e.target.value)}
                       placeholder={`e.g. London UK / ${perkProfile.countryName} Local`}
-                      className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                      className="w-full min-h-[40px] px-3 py-2 text-xs bg-white dark:bg-[#12161f] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-mono font-bold flex items-center justify-center gap-2 transition shadow-xs cursor-pointer"
+                  className="w-full min-h-[44px] py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer"
                 >
                   <DollarSign size={14} />
                   <span>

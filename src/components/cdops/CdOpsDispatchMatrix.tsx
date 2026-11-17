@@ -22,6 +22,7 @@ import {
   CdOpsStaffMember,
 } from '../../data/partnerships';
 import { COUNTRIES } from '../../data/countries';
+import { SearchableSelect } from '../SearchableSelect';
 
 export const CdOpsDispatchMatrix: React.FC = () => {
   const {
@@ -277,20 +278,21 @@ export const CdOpsDispatchMatrix: React.FC = () => {
                     <span className="text-[10.5px] mono font-bold text-slate-500">
                       Dispatched Engineer:
                     </span>
-                    <select
+                    <SearchableSelect
+                      ariaLabel="Dispatched Engineer"
+                      searchPlaceholder="Search engineer by name or role..."
+                      placeholder="Select Staff Member to Dispatch..."
                       value={msg.assignedStaff || ''}
-                      onChange={(e) => handleReassign(msg.id, e.target.value)}
-                      className="px-3 py-1 rounded-xl text-xs font-bold bg-amber-500/10 border border-amber-500/40 text-amber-900 dark:text-amber-300 focus:outline-hidden"
-                    >
-                      <option value="" disabled>
-                        Select Staff Member to Dispatch...
-                      </option>
-                      {cdOpsStaffList.map((st) => (
-                        <option key={st.id} value={st.name}>
-                          {st.name} ({st.role.split(' ')[0]}...) · {st.status.replace('_', ' ')}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => handleReassign(msg.id, val)}
+                      className="min-w-[230px]"
+                      triggerClassName="px-3 py-1 rounded-xl bg-amber-500/10 border-amber-500/40 font-bold"
+                      options={cdOpsStaffList.map((st) => ({
+                        value: st.name,
+                        label: `${st.name} (${st.role.split(' ')[0]}...)`,
+                        sublabel: st.status.replace('_', ' '),
+                        keywords: `${st.name} ${st.role} ${st.status}`,
+                      }))}
+                    />
                   </div>
 
                   <div className="flex items-center gap-2 text-[10px] mono text-slate-500">

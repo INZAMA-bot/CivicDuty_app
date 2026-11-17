@@ -48,6 +48,7 @@ import { RolloutSupervisionStructure } from '../components/RolloutSupervisionStr
 import { SovereignBatchCommissioning } from '../components/SovereignBatchCommissioning';
 import { getMinistriesForCountry } from '../data/countryMinistries';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 export const PsMolgRolloutView: React.FC = () => {
   const {
@@ -97,6 +98,7 @@ export const PsMolgRolloutView: React.FC = () => {
   const [auditingDistrict, setAuditingDistrict] = useState<any | null>(null);
   const [inspectingMinistry, setInspectingMinistry] = useState<any | null>(null);
   const [isTaskforceModalOpen, setIsTaskforceModalOpen] = useState(false);
+  const [taskforceTopic, setTaskforceTopic] = useState('Mandatory 48-Hour Cross-Ministry Red Signal Resolution');
   const [psSectorFilter, setPsSectorFilter] = useState<'ALL' | 'GOVERNANCE' | 'INFRASTRUCTURE' | 'FISCAL' | 'SOCIAL'>('ALL');
 
   // Grassroots Staff Appointment Modal
@@ -689,10 +691,12 @@ export const PsMolgRolloutView: React.FC = () => {
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Target Ministry
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="Target Ministry"
+                  searchPlaceholder="Search target ministry..."
                   value={enrollMinistryKey}
-                  onChange={(e) => {
-                    setEnrollMinistryKey(e.target.value);
+                  onChange={(val) => {
+                    setEnrollMinistryKey(val);
                     const map: Record<string, string> = {
                       mofped: 'Ministry of Finance, Planning & Economic Development',
                       mowt: 'Ministry of Works & Transport',
@@ -702,17 +706,18 @@ export const PsMolgRolloutView: React.FC = () => {
                       moict: 'Ministry of ICT & National Guidance',
                       opm: 'Office of the Prime Minister',
                     };
-                    setEnrollMinistryName(map[e.target.value] || e.target.value.toUpperCase());
+                    setEnrollMinistryName(map[val] || val.toUpperCase());
                   }}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold"
-                >
-                  <option value="mofped">Ministry of Finance, Planning &amp; Economic Development (MoFPED)</option>
-                  <option value="mowt">Ministry of Works &amp; Transport (MoWT)</option>
-                  <option value="moh">Ministry of Health (MoH)</option>
-                  <option value="moes">Ministry of Education &amp; Sports (MoES)</option>
-                  <option value="mowe">Ministry of Water &amp; Environment (MoWE)</option>
-                  <option value="moict">Ministry of ICT &amp; National Guidance (MoICT)</option>
-                </select>
+                  triggerClassName="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-semibold"
+                  options={[
+                    { value: 'mofped', label: 'Ministry of Finance, Planning & Economic Development (MoFPED)' },
+                    { value: 'mowt', label: 'Ministry of Works & Transport (MoWT)' },
+                    { value: 'moh', label: 'Ministry of Health (MoH)' },
+                    { value: 'moes', label: 'Ministry of Education & Sports (MoES)' },
+                    { value: 'mowe', label: 'Ministry of Water & Environment (MoWE)' },
+                    { value: 'moict', label: 'Ministry of ICT & National Guidance (MoICT)' },
+                  ]}
+                />
               </div>
 
               <div>
@@ -733,14 +738,17 @@ export const PsMolgRolloutView: React.FC = () => {
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Rank
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Rank"
+                    searchPlaceholder="Search ministerial rank..."
                     value={enrollRank}
-                    onChange={(e) => setEnrollRank(e.target.value as any)}
-                    className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-semibold"
-                  >
-                    <option value="cabinet_minister">Cabinet Minister (Art. 111)</option>
-                    <option value="minister_of_state">Minister of State (Art. 117)</option>
-                  </select>
+                    onChange={(val) => setEnrollRank(val as any)}
+                    triggerClassName="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-semibold"
+                    options={[
+                      { value: 'cabinet_minister', label: 'Cabinet Minister (Art. 111)' },
+                      { value: 'minister_of_state', label: 'Minister of State (Art. 117)' },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -1843,12 +1851,32 @@ export const PsMolgRolloutView: React.FC = () => {
 
             <div className="space-y-2 text-xs">
               <label className="font-black text-slate-900 dark:text-white">Taskforce Priority Topic</label>
-              <select className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-bold">
-                <option>Mandatory 48-Hour Cross-Ministry Red Signal Resolution</option>
-                <option>{gov.fiscalProgramName} Fund &amp; Escrow Clearance</option>
-                <option>{gov.tier3UnitLabel} Road Machinery Maintenance &amp; Fuel Telemetry</option>
-                <option>Primary Public Health Facility Essential Medicine Stock Emergency</option>
-              </select>
+              <SearchableSelect
+                ariaLabel="Taskforce Priority Topic"
+                searchPlaceholder="Search taskforce priority topic..."
+                allowCustom
+                value={taskforceTopic}
+                onChange={setTaskforceTopic}
+                triggerClassName="p-2.5 rounded-xl border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold"
+                options={[
+                  {
+                    value: 'Mandatory 48-Hour Cross-Ministry Red Signal Resolution',
+                    label: 'Mandatory 48-Hour Cross-Ministry Red Signal Resolution',
+                  },
+                  {
+                    value: `${gov.fiscalProgramName} Fund & Escrow Clearance`,
+                    label: `${gov.fiscalProgramName} Fund & Escrow Clearance`,
+                  },
+                  {
+                    value: `${gov.tier3UnitLabel} Road Machinery Maintenance & Fuel Telemetry`,
+                    label: `${gov.tier3UnitLabel} Road Machinery Maintenance & Fuel Telemetry`,
+                  },
+                  {
+                    value: 'Primary Public Health Facility Essential Medicine Stock Emergency',
+                    label: 'Primary Public Health Facility Essential Medicine Stock Emergency',
+                  },
+                ]}
+              />
             </div>
 
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-950 dark:text-emerald-200 font-semibold">
@@ -1968,19 +1996,22 @@ export const PsMolgRolloutView: React.FC = () => {
                   <label className="text-xs font-black text-slate-800 dark:text-slate-200">
                     Statutory Field Role *
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Statutory Field Role"
+                    searchPlaceholder="Search statutory field role..."
+                    allowCustom
                     value={staffRole}
-                    onChange={(e) => setStaffRole(e.target.value)}
-                    className="w-full text-xs font-bold px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-950 dark:text-white"
-                  >
-                    {(rolloutArrangement.lowestOfficerTeamRoles || []).map((tr, idx) => (
-                      <option key={idx} value={tr.role}>
-                        {tr.role}
-                      </option>
-                    ))}
-                    <option value="Grassroots Community Liaison">Grassroots Community Liaison</option>
-                    <option value="Field Inspection Officer">Field Inspection Officer</option>
-                  </select>
+                    onChange={setStaffRole}
+                    triggerClassName="px-3 py-2 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                    options={[
+                      ...(rolloutArrangement.lowestOfficerTeamRoles || []).map((tr) => ({
+                        value: tr.role,
+                        label: tr.role,
+                      })),
+                      { value: 'Grassroots Community Liaison', label: 'Grassroots Community Liaison' },
+                      { value: 'Field Inspection Officer', label: 'Field Inspection Officer' },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">

@@ -1483,15 +1483,19 @@ export const InstitutionalVaultsDesk: React.FC<InstitutionalVaultsDeskProps> = (
             </div>
 
             <div className="w-full lg:w-80 shrink-0 space-y-2">
-              <select
+              <SearchableSelect
                 value={selectedAwardMonth}
-                onChange={(e) => setSelectedAwardMonth(e.target.value as any)}
-                className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="2026-10">October 2026 Cycle (Active)</option>
-                <option value="2026-09">September 2026 Cycle</option>
-                <option value="2026-08">August 2026 Cycle</option>
-              </select>
+                onChange={(val) => setSelectedAwardMonth(val as any)}
+                ariaLabel="Award Cycle"
+                placeholder="Select cycle..."
+                searchPlaceholder="Search cycle..."
+                options={[
+                  { value: '2026-10', label: 'October 2026 Cycle (Active)' },
+                  { value: '2026-09', label: 'September 2026 Cycle' },
+                  { value: '2026-08', label: 'August 2026 Cycle' },
+                ]}
+                triggerClassName="bg-white dark:bg-[#161a22] font-mono font-semibold"
+              />
 
               {activeVaultKind === 'parish_vault' && (
                 <div className="space-y-1.5">
@@ -1896,17 +1900,21 @@ export const InstitutionalVaultsDesk: React.FC<InstitutionalVaultsDeskProps> = (
                 <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block mb-1">
                   Payment Method
                 </label>
-                <select
+                <SearchableSelect
                   value={payMethod}
-                  onChange={(e) => setPayMethod(e.target.value as any)}
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-3 py-2"
-                >
-                  <option value="momo">MTN MoMo</option>
-                  <option value="airtel">Airtel Money</option>
-                  <option value="mpesa">M-Pesa</option>
-                  <option value="card">Corporate / Visa Card</option>
-                  <option value="bank">Bank Escrow Transfer</option>
-                </select>
+                  onChange={(val) => setPayMethod(val as any)}
+                  ariaLabel="Payment Method"
+                  placeholder="Select payment method..."
+                  searchPlaceholder="Search payment method..."
+                  options={[
+                    { value: 'momo', label: 'MTN MoMo' },
+                    { value: 'airtel', label: 'Airtel Money' },
+                    { value: 'mpesa', label: 'M-Pesa' },
+                    { value: 'card', label: 'Corporate / Visa Card' },
+                    { value: 'bank', label: 'Bank Escrow Transfer' },
+                  ]}
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116]"
+                />
               </div>
               <div>
                 <label className="text-[10px] font-mono uppercase font-bold text-slate-500 block mb-1">
@@ -2176,16 +2184,21 @@ export const InstitutionalVaultsDesk: React.FC<InstitutionalVaultsDeskProps> = (
                 className="pl-8 pr-3 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl text-xs w-44"
               />
             </div>
-            <select
+            <SearchableSelect
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-xl px-2.5 py-1.5 text-xs font-mono font-semibold"
-            >
-              <option value="all">All Statuses</option>
-              <option value="escrow_unassigned">In Escrow</option>
-              <option value="dispatched">Dispatched</option>
-              <option value="redeemed">Redeemed</option>
-            </select>
+              onChange={(val) => setFilterStatus(val)}
+              ariaLabel="Voucher Status Filter"
+              placeholder="Filter status..."
+              searchPlaceholder="Search status..."
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'escrow_unassigned', label: 'In Escrow' },
+                { value: 'dispatched', label: 'Dispatched' },
+                { value: 'redeemed', label: 'Redeemed' },
+              ]}
+              className="w-40"
+              triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] py-1.5 font-mono font-semibold"
+            />
           </div>
         </div>
 

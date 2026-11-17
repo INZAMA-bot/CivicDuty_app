@@ -553,17 +553,20 @@ CivicDuty Platform Operations (CD-Ops)`;
                   <label className="text-[11px] mono font-bold uppercase text-slate-600 dark:text-slate-400">
                     Hierarchy Level
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Hierarchy Level"
+                    searchPlaceholder="Search hierarchy tier..."
                     value={mintHierarchy}
-                    onChange={(e) => setMintHierarchy(e.target.value as any)}
-                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden"
-                  >
-                    <option value="tier5_perm_sec">Tier 5 · Permanent Secretary (Apex)</option>
-                    <option value="tier4_agency">Tier 4 · Agency / Authority Lead</option>
-                    <option value="tier3_district_cao">Tier 3 · District CAO / Mayor</option>
-                    <option value="tier2_subcounty">Tier 2 · Sub-County / Town Clerk</option>
-                    <option value="tier1_parish">Tier 1 · Parish Chief</option>
-                  </select>
+                    onChange={(val) => setMintHierarchy(val as any)}
+                    triggerClassName="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                    options={[
+                      { value: 'tier5_perm_sec', label: 'Tier 5 · Permanent Secretary (Apex)' },
+                      { value: 'tier4_agency', label: 'Tier 4 · Agency / Authority Lead' },
+                      { value: 'tier3_district_cao', label: 'Tier 3 · District CAO / Mayor' },
+                      { value: 'tier2_subcounty', label: 'Tier 2 · Sub-County / Town Clerk' },
+                      { value: 'tier1_parish', label: 'Tier 1 · Parish Chief' },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -610,16 +613,19 @@ CivicDuty Platform Operations (CD-Ops)`;
                   <label className="text-[11px] mono font-bold uppercase text-slate-600 dark:text-slate-400">
                     Role Privilege
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Role Privilege"
+                    searchPlaceholder="Search role privilege..."
                     value={mintRole}
-                    onChange={(e) => setMintRole(e.target.value as any)}
-                    className="w-full px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden"
-                  >
-                    <option value="platform_admin">Platform Admin (National Superadmin)</option>
-                    <option value="node_admin">Node Admin (District / Regional)</option>
-                    <option value="spokesperson">Spokesperson (Local Desk)</option>
-                    <option value="read_only">Read-Only (Auditor General / Oversight)</option>
-                  </select>
+                    onChange={(val) => setMintRole(val as any)}
+                    triggerClassName="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                    options={[
+                      { value: 'platform_admin', label: 'Platform Admin (National Superadmin)' },
+                      { value: 'node_admin', label: 'Node Admin (District / Regional)' },
+                      { value: 'spokesperson', label: 'Spokesperson (Local Desk)' },
+                      { value: 'read_only', label: 'Read-Only (Auditor General / Oversight)' },
+                    ]}
+                  />
                 </div>
               </div>
 

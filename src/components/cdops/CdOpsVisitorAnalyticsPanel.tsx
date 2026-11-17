@@ -575,17 +575,18 @@ export const CdOpsVisitorAnalyticsPanel: React.FC = () => {
                 ]}
               />
             </div>
-            <select
+            <SearchableSelect
+              ariaLabel="Filter feedback category"
+              searchPlaceholder="Search category..."
               value={feedbackCategoryFilter}
-              onChange={(e) => setFeedbackCategoryFilter(e.target.value as any)}
-              className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-800 dark:text-slate-200"
-            >
-              {FEEDBACK_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat === 'ALL' ? 'All Categories' : cat}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFeedbackCategoryFilter(val as any)}
+              className="min-w-[160px]"
+              triggerClassName="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] font-mono"
+              options={FEEDBACK_CATEGORIES.map((cat) => ({
+                value: cat,
+                label: cat === 'ALL' ? 'All Categories' : cat,
+              }))}
+            />
           </div>
         </div>
 

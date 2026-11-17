@@ -15,6 +15,12 @@ import { DossierMultimediaUploader } from './DossierMultimediaUploader';
 import { QrCodeModal } from './QrCodeModal';
 import { RichCivicText } from './RichCivicText';
 import { DeptIcon } from './DeptIcon';
+import { SearchableSelect } from './SearchableSelect';
+import {
+  STAGES_UPDATED_EVENT,
+  getStoredStages,
+  isAuthorActiveInWorkstation,
+} from '../data/stageEstablishment';
 import {
   Shield,
   Clock,
@@ -114,7 +120,15 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
     triggerManualEscalation,
     ratifyResolution,
     disputeResolution,
+    setPerkTab,
   } = useApp();
+
+  const [stagesSnapshot, setStagesSnapshot] = useState(() => getStoredStages());
+  React.useEffect(() => {
+    const sync = () => setStagesSnapshot(getStoredStages());
+    window.addEventListener(STAGES_UPDATED_EVENT, sync);
+    return () => window.removeEventListener(STAGES_UPDATED_EVENT, sync);
+  }, []);
 
   const [showQr, setShowQr] = useState<boolean>(false);
   const [rewardOpen, setRewardOpen] = useState<boolean>(false);
@@ -609,8 +623,43 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
                 <span className="text-[11px] text-slate-400">·</span>
                 <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{timeAgo}</span>
               </div>
-              <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                {post.author_profession || post.citizen_rank || 'Verified Resident'}
+              <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                <span>{post.author_profession || post.citizen_rank || 'Verified Resident'}</span>
+                {!post.anonymous && post.frontline_scout?.workstation_name && (() => {
+                  const activeCheck = isAuthorActiveInWorkstation({
+                    stageId: post.frontline_scout?.stage_id,
+                    workstationName: post.frontline_scout?.workstation_name,
+                    scoutId: post.citizen_id,
+                    scoutName: post.citizen_name,
+                    stages: stagesSnapshot,
+                  });
+                  if (!activeCheck.active || !activeCheck.stage) return null;
+                  const st = activeCheck.stage;
+                  return (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          try {
+                            sessionStorage.setItem('cd_open_community_pool', 'scout_bounty_vault');
+                            sessionStorage.setItem('cd_focus_stage_id', st.id);
+                          } catch {}
+                          setPerkTab('community_pools');
+                          go('perks');
+                        }}
+                        className="text-emerald-700 dark:text-emerald-400 font-semibold hover:underline cursor-pointer inline-flex items-center gap-1"
+                        title="Open public Frontline Workstation roster"
+                      >
+                        <Users size={10} />
+                        <span>
+                          {st.name} ({st.isCertified ? 'Certified' : `${st.scoutCount}/${st.thresholdRequired}`})
+                        </span>
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -734,22 +783,20 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
                   <Globe size={11} className="text-emerald-600 dark:text-emerald-400" />
                   <span>Translated to {ALL_LANGUAGES.find((l) => l.code === selectedTargetLang)?.label}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <select
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <SearchableSelect
                     value={selectedTargetLang}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setSelectedTargetLang(e.target.value as LanguageCode);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="bg-white/80 dark:bg-[#111c18] border border-emerald-300/80 dark:border-emerald-800 rounded px-1.5 py-0.5 text-[8.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer"
-                  >
-                    {ALL_LANGUAGES.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
-                        {lang.code} · {lang.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedTargetLang(val as LanguageCode)}
+                    ariaLabel="Target Translation Language"
+                    placeholder="Language..."
+                    searchPlaceholder="Search language..."
+                    options={ALL_LANGUAGES.map((lang) => ({
+                      value: lang.code,
+                      label: `${lang.code} · ${lang.label}`,
+                    }))}
+                    className="w-28 shrink-0"
+                    triggerClassName="px-2 py-0.5 text-[9.5px] font-mono bg-white/80 dark:bg-[#111c18]"
+                  />
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1555,24 +1602,26 @@ export const PostCardComponent: React.FC<PostCardComponentProps> = ({
               />
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <select
+                <SearchableSelect
                   value={witnessRole}
-                  onChange={(e) => setWitnessRole(e.target.value)}
-                  className="min-h-[40px] px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs"
-                >
-                  <option value={isPostUg ? 'Bodaboda Rider / Stage Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}>
-                    {isPostUg ? 'Bodaboda Road Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}
-                  </option>
-                  <option value={`${transitSpec.taxiTabLabel} Operator`}>
-                    {transitSpec.taxiTabLabel} Operator
-                  </option>
-                  <option value={`${transitSpec.marketTabLabel} / Trader`}>
-                    {transitSpec.marketTabLabel} / Trader
-                  </option>
-                  <option value={`Local ${postGov.tier1UnitLabel} Resident`}>
-                    Local {postGov.tier1UnitLabel} Resident
-                  </option>
-                </select>
+                  onChange={(val) => setWitnessRole(val)}
+                  ariaLabel="Witness Role"
+                  placeholder="Select witness role..."
+                  searchPlaceholder="Search role..."
+                  allowCustom
+                  customLabelPrefix="Use role:"
+                  options={[
+                    {
+                      value: isPostUg ? 'Bodaboda Rider / Stage Scout' : `${transitSpec.scoutTabLabel} / Road Scout`,
+                      label: isPostUg ? 'Bodaboda Road Scout' : `${transitSpec.scoutTabLabel} / Road Scout`,
+                    },
+                    { value: `${transitSpec.taxiTabLabel} Operator`, label: `${transitSpec.taxiTabLabel} Operator` },
+                    { value: `${transitSpec.marketTabLabel} / Trader`, label: `${transitSpec.marketTabLabel} / Trader` },
+                    { value: `Local ${postGov.tier1UnitLabel} Resident`, label: `Local ${postGov.tier1UnitLabel} Resident` },
+                  ]}
+                  className="sm:w-64"
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116]"
+                />
 
                 <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
                   <input

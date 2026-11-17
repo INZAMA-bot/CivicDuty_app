@@ -949,17 +949,20 @@ export const EntityTeamView: React.FC = () => {
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
                       Squad Operational Category
                     </label>
-                    <select
+                    <SearchableSelect
+                      ariaLabel="Squad Operational Category"
+                      searchPlaceholder="Search squad category..."
                       value={newSubTeamCategory}
-                      onChange={(e) => setNewSubTeamCategory(e.target.value as any)}
-                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] focus:border-emerald-500 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
-                    >
-                      <option value="operations">Operations &amp; Production Crew</option>
-                      <option value="service">Customer Service &amp; Guest Care</option>
-                      <option value="logistics">Delivery Fleet, Dispatch &amp; Logistics</option>
-                      <option value="technical">Technical Repair &amp; Maintenance Squad</option>
-                      <option value="management">Shift Supervisors &amp; Inventory Triage</option>
-                    </select>
+                      onChange={(val) => setNewSubTeamCategory(val as any)}
+                      triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg px-3 py-2"
+                      options={[
+                        { value: 'operations', label: 'Operations & Production Crew' },
+                        { value: 'service', label: 'Customer Service & Guest Care' },
+                        { value: 'logistics', label: 'Delivery Fleet, Dispatch & Logistics' },
+                        { value: 'technical', label: 'Technical Repair & Maintenance Squad' },
+                        { value: 'management', label: 'Shift Supervisors & Inventory Triage' },
+                      ]}
+                    />
                   </div>
 
                   <div>
@@ -1342,17 +1345,20 @@ export const EntityTeamView: React.FC = () => {
                     <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
                       SLA Response Target (Hours)
                     </label>
-                    <select
-                      value={newBranchSlaHours}
-                      onChange={(e) => setNewBranchSlaHours(Number(e.target.value))}
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
-                    >
-                      <option value={4}>4 Hours (Emergency / High Priority)</option>
-                      <option value={6}>6 Hours (Hospital / Clinical Care)</option>
-                      <option value={12}>12 Hours (Dining / Retail)</option>
-                      <option value={24}>24 Hours (Standard Utility / School)</option>
-                      <option value={48}>48 Hours (General Institutional)</option>
-                    </select>
+                    <SearchableSelect
+                      ariaLabel="SLA Response Target (Hours)"
+                      searchPlaceholder="Search SLA target..."
+                      value={String(newBranchSlaHours)}
+                      onChange={(val) => setNewBranchSlaHours(Number(val))}
+                      triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2"
+                      options={[
+                        { value: '4', label: '4 Hours (Emergency / High Priority)' },
+                        { value: '6', label: '6 Hours (Hospital / Clinical Care)' },
+                        { value: '12', label: '12 Hours (Dining / Retail)' },
+                        { value: '24', label: '24 Hours (Standard Utility / School)' },
+                        { value: '48', label: '48 Hours (General Institutional)' },
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -1533,17 +1539,20 @@ export const EntityTeamView: React.FC = () => {
                             placeholder="Team Lead Name..."
                             className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white"
                           />
-                          <select
+                          <SearchableSelect
+                            ariaLabel="Team Operational Category"
+                            searchPlaceholder="Search team category..."
                             value={newSubTeamCategory}
-                            onChange={(e) => setNewSubTeamCategory(e.target.value as any)}
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
-                          >
-                            <option value="operations">Operations Crew</option>
-                            <option value="service">Customer Care</option>
-                            <option value="technical">Technical / Fleet</option>
-                            <option value="logistics">Logistics &amp; Delivery</option>
-                            <option value="management">Discipline / Management</option>
-                          </select>
+                            onChange={(val) => setNewSubTeamCategory(val as any)}
+                            triggerClassName="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5"
+                            options={[
+                              { value: 'operations', label: 'Operations Crew' },
+                              { value: 'service', label: 'Customer Care' },
+                              { value: 'technical', label: 'Technical / Fleet' },
+                              { value: 'logistics', label: 'Logistics & Delivery' },
+                              { value: 'management', label: 'Discipline / Management' },
+                            ]}
+                          />
                           <button
                             type="button"
                             onClick={() => handleAddSubTeam(branch.id)}
@@ -2395,19 +2404,22 @@ export const EntityTeamView: React.FC = () => {
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
                 Reason for Standing Down
               </label>
-              <select
+              <SearchableSelect
+                ariaLabel="Reason for Standing Down"
+                searchPlaceholder="Search stand-down reason..."
                 value={standDownTarget.reason}
-                onChange={(e) =>
-                  setStandDownTarget((prev) => (prev ? { ...prev, reason: e.target.value } : null))
+                onChange={(val) =>
+                  setStandDownTarget((prev) => (prev ? { ...prev, reason: val } : null))
                 }
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white outline-none"
-              >
-                <option value="contract_ended">Contract or Shift Ended</option>
-                <option value="transferred">Transferred to Other Branch</option>
-                <option value="disciplinary">Disciplinary Action / Suspended</option>
-                <option value="resigned">Resigned / Left Employment</option>
-                <option value="other">Other Administrative Reason</option>
-              </select>
+                triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2"
+                options={[
+                  { value: 'contract_ended', label: 'Contract or Shift Ended' },
+                  { value: 'transferred', label: 'Transferred to Other Branch' },
+                  { value: 'disciplinary', label: 'Disciplinary Action / Suspended' },
+                  { value: 'resigned', label: 'Resigned / Left Employment' },
+                  { value: 'other', label: 'Other Administrative Reason' },
+                ]}
+              />
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">

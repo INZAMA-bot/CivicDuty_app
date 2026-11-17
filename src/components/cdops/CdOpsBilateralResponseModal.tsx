@@ -24,6 +24,7 @@ import {
   CdOpsStaffMember,
 } from '../../data/partnerships';
 import { useApp } from '../../context/AppContext';
+import { SearchableSelect } from '../SearchableSelect';
 
 interface CdOpsBilateralResponseModalProps {
   message: GovFeedbackMessage | null;
@@ -285,57 +286,66 @@ export const CdOpsBilateralResponseModal: React.FC<CdOpsBilateralResponseModalPr
                 <label className="text-[9px] mono text-slate-500 uppercase block font-bold mb-1">
                   Resolution Action Type
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="Resolution Action Type"
+                  searchPlaceholder="Search resolution action..."
                   value={actionType}
-                  onChange={(e) => setActionType(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="SLA Window Calibrated">SLA Window Calibrated</option>
-                  <option value="Telecom Gateway Scaled">Telecom Gateway Scaled (*3030#)</option>
-                  <option value="Grassroots Field Sync Enabled">Grassroots Field Sync Enabled</option>
-                  <option value="Sovereign Audit Cert Minted">Sovereign Audit Cert Minted</option>
-                  <option value="Technical Evaluation In Progress">Technical Evaluation In Progress</option>
-                  <option value="Localization Engine Updated">Localization Engine Updated</option>
-                  <option value="Security Whitelist Deployed">Security Whitelist Deployed</option>
-                  <option value="Bilateral Working Group Convened">Bilateral Working Group Convened</option>
-                </select>
+                  onChange={setActionType}
+                  allowCustom
+                  triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-medium"
+                  options={[
+                    { value: 'SLA Window Calibrated', label: 'SLA Window Calibrated' },
+                    { value: 'Telecom Gateway Scaled', label: 'Telecom Gateway Scaled (*3030#)' },
+                    { value: 'Grassroots Field Sync Enabled', label: 'Grassroots Field Sync Enabled' },
+                    { value: 'Sovereign Audit Cert Minted', label: 'Sovereign Audit Cert Minted' },
+                    { value: 'Technical Evaluation In Progress', label: 'Technical Evaluation In Progress' },
+                    { value: 'Localization Engine Updated', label: 'Localization Engine Updated' },
+                    { value: 'Security Whitelist Deployed', label: 'Security Whitelist Deployed' },
+                    { value: 'Bilateral Working Group Convened', label: 'Bilateral Working Group Convened' },
+                  ]}
+                />
               </div>
 
               <div>
                 <label className="text-[9px] mono text-slate-500 uppercase block font-bold mb-1">
                   Ticket Status Progression
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="Ticket Status Progression"
+                  searchPlaceholder="Search ticket status..."
                   value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as any)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="actioned">Actioned &amp; Certified in Sovereign Ledger</option>
-                  <option value="reviewed_by_cd_ops">Under Technical Evaluation (In Progress)</option>
-                </select>
+                  onChange={(val) => setSelectedStatus(val as any)}
+                  triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold"
+                  options={[
+                    { value: 'actioned', label: 'Actioned & Certified in Sovereign Ledger' },
+                    { value: 'reviewed_by_cd_ops', label: 'Under Technical Evaluation (In Progress)' },
+                  ]}
+                />
               </div>
 
               <div>
                 <label className="text-[9px] mono text-slate-500 uppercase block font-bold mb-1">
                   CD-Ops Dispatching Officer
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="CD-Ops Dispatching Officer"
+                  searchPlaceholder="Search dispatching officer..."
                   value={activeCdOpsOperator.id}
-                  onChange={(e) => {
-                    const found = cdOpsStaffList.find((s) => s.id === e.target.value);
+                  onChange={(val) => {
+                    const found = cdOpsStaffList.find((s) => s.id === val);
                     if (found) {
                       setActiveCdOpsOperator(found);
                       setResponderTitle(`${found.name} (${found.role})`);
                     }
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-amber-500"
-                >
-                  {cdOpsStaffList.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.name} — {st.dutyStation.split('&')[0]}
-                    </option>
-                  ))}
-                </select>
+                  triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-medium"
+                  options={cdOpsStaffList.map((st) => ({
+                    value: st.id,
+                    label: `${st.name} — ${st.dutyStation.split('&')[0]}`,
+                    sublabel: st.role,
+                    keywords: `${st.name} ${st.role} ${st.dutyStation}`,
+                  }))}
+                />
               </div>
             </div>
 

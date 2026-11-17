@@ -25,6 +25,7 @@ import {
   Zap,
   Gift
 } from 'lucide-react';
+import { SearchableSelect } from '../SearchableSelect';
 
 export const CdOpsCampaignStudio: React.FC = () => {
   const {
@@ -393,10 +394,12 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 <label className="text-[10px] mono uppercase font-bold text-slate-500 block mb-1">
                   Advertising Category
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="Advertising Category"
+                  searchPlaceholder="Search ad category..."
                   value={category}
-                  onChange={(e) => {
-                    const cat = e.target.value as any;
+                  onChange={(val) => {
+                    const cat = val as any;
                     setCategory(cat);
                     const labels: Record<string, string> = {
                       bodaboda: transitSpec.scoutTabLabel,
@@ -409,16 +412,17 @@ export const CdOpsCampaignStudio: React.FC = () => {
                     };
                     setCategoryLabel(labels[cat] || 'Promotional Ad');
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
-                >
-                  <option value="bodaboda">{transitSpec.scoutTabLabel} Poster</option>
-                  <option value="bus">{isUganda ? 'Kayoola Electric Bus Full Wrap' : 'Transit Fleet Full Wrap'}</option>
-                  <option value="train">Commuter Railway Livery</option>
-                  <option value="terminal">Transit Terminal Digital Billboard</option>
-                  <option value="radio">Radio Sensitization Jingle</option>
-                  <option value="noticeboard">Community Noticeboard &amp; Association Poster</option>
-                  <option value="ussd">{transitSpec.ussdCode} Citizen Hotline Banner</option>
-                </select>
+                  triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 font-medium"
+                  options={[
+                    { value: 'bodaboda', label: `${transitSpec.scoutTabLabel} Poster` },
+                    { value: 'bus', label: isUganda ? 'Kayoola Electric Bus Full Wrap' : 'Transit Fleet Full Wrap' },
+                    { value: 'train', label: 'Commuter Railway Livery' },
+                    { value: 'terminal', label: 'Transit Terminal Digital Billboard' },
+                    { value: 'radio', label: 'Radio Sensitization Jingle' },
+                    { value: 'noticeboard', label: 'Community Noticeboard & Association Poster' },
+                    { value: 'ussd', label: `${transitSpec.ussdCode} Citizen Hotline Banner` },
+                  ]}
+                />
               </div>
             </div>
 
@@ -496,23 +500,26 @@ export const CdOpsCampaignStudio: React.FC = () => {
                 <label className="text-[10px] mono uppercase font-bold text-slate-500 block mb-1">
                   CTA Action Type
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="CTA Action Type"
+                  searchPlaceholder="Search action type..."
                   value={ctaType}
-                  onChange={(e) => {
-                    const ct = e.target.value as any;
+                  onChange={(val) => {
+                    const ct = val as any;
                     setCtaType(ct);
                     if (ct === 'ussd') setCallToAction(`Dial ${transitSpec.ussdCode} FREE`);
                     if (ct === 'specs') setCallToAction('Inspect Vehicle Specs & Livery');
                     if (ct === 'report') setCallToAction('File Road Defect Report');
                     if (ct === 'perks') setCallToAction('Open Escrow Perk Vault');
                   }}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-500"
-                >
-                  <option value="ussd">Citizen Shortcode ({transitSpec.ussdCode})</option>
-                  <option value="specs">Inspect Transit Blueprints</option>
-                  <option value="report">File Sovereign Report</option>
-                  <option value="perks">Perk Escrow Vault</option>
-                </select>
+                  triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 font-medium"
+                  options={[
+                    { value: 'ussd', label: `Citizen Shortcode (${transitSpec.ussdCode})` },
+                    { value: 'specs', label: 'Inspect Transit Blueprints' },
+                    { value: 'report', label: 'File Sovereign Report' },
+                    { value: 'perks', label: 'Perk Escrow Vault' },
+                  ]}
+                />
               </div>
 
               <div className="sm:col-span-2">

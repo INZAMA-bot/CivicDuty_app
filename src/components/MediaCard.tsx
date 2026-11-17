@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MediaItem, LanguageCode, CountryCode } from '../types';
 import { ALL_LANGUAGES } from '../data/translations';
 import { getRegionEvidenceMedia, isUgandaLegacyMediaUrl } from '../data/countryCurrency';
+import { SearchableSelect } from './SearchableSelect';
 import {
   Play,
   Pause,
@@ -720,22 +721,23 @@ export const MediaCard: React.FC<MediaCardProps> = ({ media, postId, countryCode
                       ))}
                     </div>
 
-                    {/* All Languages Dropdown */}
-                    <select
+                    {/* All Languages Searchable Dropdown */}
+                    <SearchableSelect
                       value={voiceLang}
-                      onChange={(e) => {
-                        setVoiceLang(e.target.value as LanguageCode);
+                      onChange={(val) => {
+                        setVoiceLang(val as LanguageCode);
                         setShowTranscript(true);
                       }}
-                      className="bg-white dark:bg-slate-800 border border-[#e3e6ea] dark:border-[#262b36] rounded px-1.5 py-0.5 text-[9.5px] font-mono text-slate-800 dark:text-slate-200 cursor-pointer max-w-[100px] truncate shrink-0"
-                      title="Select any language translation"
-                    >
-                      {ALL_LANGUAGES.map((l) => (
-                        <option key={l.code} value={l.code}>
-                          {l.code} · {l.label}
-                        </option>
-                      ))}
-                    </select>
+                      ariaLabel="Select Transcript Language"
+                      placeholder="Language..."
+                      searchPlaceholder="Search languages..."
+                      options={ALL_LANGUAGES.map((l) => ({
+                        value: l.code,
+                        label: `${l.code} · ${l.label}`,
+                      }))}
+                      className="w-28 shrink-0"
+                      triggerClassName="px-2 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-800 rounded"
+                    />
                   </div>
 
                   {/* Actions: Copy & Expand */}

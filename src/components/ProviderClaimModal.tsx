@@ -33,6 +33,7 @@ import {
   Search
 } from 'lucide-react';
 import { DeptIcon } from './DeptIcon';
+import { SearchableSelect } from './SearchableSelect';
 
 interface ProviderClaimModalProps {
   isOpen: boolean;
@@ -697,23 +698,26 @@ export const ProviderClaimModal: React.FC<ProviderClaimModalProps> = ({
                     {/* Filtered Dropdown Selector */}
                     {filteredDepts.length > 0 ? (
                       <div>
-                        <select
+                        <SearchableSelect
                           value={selectedDeptId}
-                          onChange={(e) => setSelectedDeptId(e.target.value)}
-                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 cursor-pointer"
-                        >
-                          {/* If current selection isn't in filtered list, keep it visible at top */}
-                          {!filteredDepts.some((d) => d.id === selectedDeptId) && currentDept && (
-                            <option value={currentDept.id}>
-                              Currently Selected: {currentDept.name} ({currentDept.category?.toUpperCase() || 'COMMERCIAL'})
-                            </option>
-                          )}
-                          {filteredDepts.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name} ({d.category?.toUpperCase() || 'COMMERCIAL'}) {isEntityClaimed(d.id) ? '[Claimed]' : '· Unclaimed'}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => setSelectedDeptId(val)}
+                          ariaLabel="Select Institution or Service Desk"
+                          placeholder="Select desk..."
+                          searchPlaceholder="Search organization, school, hospital, bank..."
+                          options={[
+                            ...(!filteredDepts.some((d) => d.id === selectedDeptId) && currentDept
+                              ? [{
+                                  value: currentDept.id,
+                                  label: `Currently Selected: ${currentDept.name} (${currentDept.category?.toUpperCase() || 'COMMERCIAL'})`,
+                                }]
+                              : []),
+                            ...filteredDepts.map((d) => ({
+                              value: d.id,
+                              label: `${d.name} (${d.category?.toUpperCase() || 'COMMERCIAL'}) ${isEntityClaimed(d.id) ? '[Claimed]' : '· Unclaimed'}`,
+                            })),
+                          ]}
+                          triggerClassName="bg-white dark:bg-slate-900 font-semibold"
+                        />
                       </div>
                     ) : (
                       <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl text-center space-y-1.5">

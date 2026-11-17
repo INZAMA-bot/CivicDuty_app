@@ -25,6 +25,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { CountryCode } from '../types';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 export const GovPartnershipView: React.FC = () => {
   const {
@@ -489,15 +490,18 @@ export const GovPartnershipView: React.FC = () => {
                     <label className="text-[10px] font-mono text-slate-500 uppercase block font-semibold mb-1">
                       Priority Level
                     </label>
-                    <select
+                    <SearchableSelect
+                      ariaLabel="Priority Level"
+                      searchPlaceholder="Search priority level..."
                       value={fPriority}
-                      onChange={(e) => setFPriority(e.target.value as any)}
-                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="routine">Routine Modification</option>
-                      <option value="urgent">Urgent SLA Calibration</option>
-                      <option value="statutory_directive">Statutory Mandate</option>
-                    </select>
+                      onChange={(val) => setFPriority(val as any)}
+                      triggerClassName="bg-white dark:bg-[#161a22] rounded-lg px-2.5 py-2 font-mono"
+                      options={[
+                        { value: 'routine', label: 'Routine Modification' },
+                        { value: 'urgent', label: 'Urgent SLA Calibration' },
+                        { value: 'statutory_directive', label: 'Statutory Mandate' },
+                      ]}
+                    />
                   </div>
                 </div>
 

@@ -40,6 +40,7 @@ import { QrCodeModal } from '../components/QrCodeModal';
 import { CustomerDefectionNotice } from '../components/CustomerDefectionNotice';
 import { CountrySelector } from '../components/CountrySelector';
 import { getCountryBranding } from '../data/countryBranding';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 const CATEGORY_TABS: { id: 'all' | EntityCategory | 'mystake'; label: string; icon: any; color: string }[] = [
   { id: 'all', label: 'All Providers', icon: Building2, color: 'text-slate-700 dark:text-slate-300' },
@@ -789,15 +790,18 @@ export const DepartmentsView: React.FC = () => {
                   <label className="block font-semibold text-slate-800 dark:text-slate-200 mb-1">
                     Expected SLA (Hours)
                   </label>
-                  <select
-                    value={newDeptSla}
-                    onChange={(e) => setNewDeptSla(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-900 dark:text-white font-medium focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value={24}>24 Hours (Emergency / Health)</option>
-                    <option value={48}>48 Hours (Standard SLA)</option>
-                    <option value={72}>72 Hours (Administrative)</option>
-                  </select>
+                  <SearchableSelect
+                    ariaLabel="Expected SLA (Hours)"
+                    searchPlaceholder="Search SLA hours..."
+                    value={String(newDeptSla)}
+                    onChange={(val) => setNewDeptSla(Number(val))}
+                    triggerClassName="p-2.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116]"
+                    options={[
+                      { value: '24', label: '24 Hours (Emergency / Health)' },
+                      { value: '48', label: '48 Hours (Standard SLA)' },
+                      { value: '72', label: '72 Hours (Administrative)' },
+                    ]}
+                  />
                 </div>
               </div>
 

@@ -61,6 +61,7 @@ import {
 import { StatutoryPipelineCard } from '../components/StatutoryPipelineCard';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { getCountryPerks } from '../data/countryPerks';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 export const DocsView: React.FC = () => {
   const { go, toast, user, logAudit, openLegalCenter } = useApp();
@@ -497,21 +498,23 @@ export const DocsView: React.FC = () => {
               <Globe size={13} className="text-emerald-600 dark:text-emerald-400" />
               <span>Pitching To:</span>
             </div>
-            <select
+            <SearchableSelect
+              ariaLabel="Target Government Country"
+              searchPlaceholder="Search country name or code..."
               value={pitchCountry}
-              onChange={(e) => {
-                setPitchCountry(e.target.value);
+              onChange={(val) => {
+                setPitchCountry(val);
                 setCurrentSlide(0);
-                toast(`Loaded pitch tailored for Government of ${COUNTRIES[e.target.value]?.name || 'Target Nation'}`);
+                toast(`Loaded pitch tailored for Government of ${COUNTRIES[val]?.name || 'Target Nation'}`);
               }}
-              className="bg-white dark:bg-[#161a22] text-slate-900 dark:text-slate-100 text-xs font-mono font-semibold py-1 px-2.5 rounded-lg border border-[#e3e6ea] dark:border-[#262b36] focus:outline-none focus:border-emerald-500 cursor-pointer"
-            >
-              {Object.entries(COUNTRIES).map(([code, c]) => (
-                <option key={code} value={code}>
-                  [{code}] {c.name}
-                </option>
-              ))}
-            </select>
+              className="min-w-[200px]"
+              triggerClassName="bg-white dark:bg-[#161a22] py-1 px-2.5 rounded-lg font-mono font-semibold"
+              options={Object.entries(COUNTRIES).map(([code, c]) => ({
+                value: code,
+                label: `[${code}] ${c.name}`,
+                keywords: `${code} ${c.name}`,
+              }))}
+            />
           </div>
         </div>
 
@@ -1189,49 +1192,58 @@ export const DocsView: React.FC = () => {
                   <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 font-semibold block">
                     Partnership Scope &amp; Objective
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Partnership Scope & Objective"
+                    searchPlaceholder="Search partnership scope..."
                     value={partnerScope}
-                    onChange={(e) => setPartnerScope(e.target.value)}
-                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-white text-xs rounded-lg p-2.5 font-mono focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="national">Whole-of-Government National Rollout</option>
-                    <option value="regional">City / Municipal Council Pilot</option>
-                    <option value="utility">Public Utility Integration ({countryData.agenciesUtility.slice(0, 2).join(', ')})</option>
-                    <option value="whistleblower">Anti-Corruption &amp; Whistleblower Pipeline ({gov.ombudsman.shortName})</option>
-                    <option value="briefing">Request Executive Ministerial Briefing</option>
-                  </select>
+                    onChange={setPartnerScope}
+                    triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg p-2.5 font-mono"
+                    options={[
+                      { value: 'national', label: 'Whole-of-Government National Rollout' },
+                      { value: 'regional', label: 'City / Municipal Council Pilot' },
+                      { value: 'utility', label: `Public Utility Integration (${countryData.agenciesUtility.slice(0, 2).join(', ')})` },
+                      { value: 'whistleblower', label: `Anti-Corruption & Whistleblower Pipeline (${gov.ombudsman.shortName})` },
+                      { value: 'briefing', label: 'Request Executive Ministerial Briefing' },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 font-semibold block">
                     Estimated Target Citizen Coverage
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Estimated Target Citizen Coverage"
+                    searchPlaceholder="Search coverage tier..."
                     value={partnerPopulation}
-                    onChange={(e) => setPartnerPopulation(e.target.value)}
-                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-white text-xs rounded-lg p-2.5 font-mono focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="500k-2m">500,000 – 2,000,000 (City / Metro)</option>
-                    <option value="2m-10m">2,000,000 – 10,000,000 (Regional State)</option>
-                    <option value="10m+">10,000,000+ (Whole Nation Rollout)</option>
-                    <option value="pilot">&lt; 500,000 (Targeted Parish/Ward Pilot)</option>
-                  </select>
+                    onChange={setPartnerPopulation}
+                    triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg p-2.5 font-mono"
+                    options={[
+                      { value: '500k-2m', label: '500,000 – 2,000,000 (City / Metro)' },
+                      { value: '2m-10m', label: '2,000,000 – 10,000,000 (Regional State)' },
+                      { value: '10m+', label: '10,000,000+ (Whole Nation Rollout)' },
+                      { value: 'pilot', label: '< 500,000 (Targeted Parish/Ward Pilot)' },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400 font-semibold block">
                     Implementation Timeline / Priority
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Implementation Timeline / Priority"
+                    searchPlaceholder="Search timeline..."
                     value={partnerTimeline}
-                    onChange={(e) => setPartnerTimeline(e.target.value)}
-                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-white text-xs rounded-lg p-2.5 font-mono focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="immediate">Immediate Fast-Track (30-Day Sandbox)</option>
-                    <option value="3months">Within 3 Months</option>
-                    <option value="fy2026">FY2026/2027 Annual Budget Cycle</option>
-                    <option value="exploratory">Exploratory Consultation</option>
-                  </select>
+                    onChange={setPartnerTimeline}
+                    triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg p-2.5 font-mono"
+                    options={[
+                      { value: 'immediate', label: 'Immediate Fast-Track (30-Day Sandbox)' },
+                      { value: '3months', label: 'Within 3 Months' },
+                      { value: 'fy2026', label: 'FY2026/2027 Annual Budget Cycle' },
+                      { value: 'exploratory', label: 'Exploratory Consultation' },
+                    ]}
+                  />
                 </div>
               </div>
 

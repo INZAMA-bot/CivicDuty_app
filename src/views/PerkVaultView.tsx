@@ -15,6 +15,13 @@ import {
   saveGatewayTransactionToCloud,
 } from '../services/firestoreSync';
 import { FrontlineStageExplorer } from '../components/FrontlineStageExplorer';
+import {
+  FrontlineStage,
+  STAGES_UPDATED_EVENT,
+  getStoredStages,
+  getUserActiveStage,
+  exitStageGroup,
+} from '../data/stageEstablishment';
 import { getStoredMerchantProducts } from '../data/merchantLoyaltyData';
 import {
   getCountryPerkProfile,
@@ -421,7 +428,51 @@ export const PerkVaultView: React.FC = () => {
   // Community Pools & Tipping State (Strictly Citizen/Community Pools: Parish, Frontline Scouts, Tip a Citizen)
   const [communityPoolTab, setCommunityPoolTab] = useState<
     'parish_vault' | 'scout_bounty_vault' | 'individual_vault'
-  >('parish_vault');
+  >(() => {
+    try {
+      const requested = sessionStorage.getItem('cd_open_community_pool');
+      if (requested === 'scout_bounty_vault' || requested === 'parish_vault' || requested === 'individual_vault') {
+        sessionStorage.removeItem('cd_open_community_pool');
+        return requested;
+      }
+    } catch {}
+    return 'parish_vault';
+  });
+  const [myActiveStageInfo, setMyActiveStageInfo] = useState(() =>
+    getUserActiveStage(user?.id || 'usr-9028-UG', user?.name || 'Citizen Observer')
+  );
+  const [countryStageCount, setCountryStageCount] = useState(() =>
+    getStoredStages().filter((s) => s.country === selectedCountry).length
+  );
+
+  useEffect(() => {
+    const syncStageState = () => {
+      setMyActiveStageInfo(
+        getUserActiveStage(user?.id || 'usr-9028-UG', user?.name || 'Citizen Observer')
+      );
+      setCountryStageCount(getStoredStages().filter((s) => s.country === selectedCountry).length);
+    };
+    syncStageState();
+    window.addEventListener(STAGES_UPDATED_EVENT, syncStageState);
+    return () => window.removeEventListener(STAGES_UPDATED_EVENT, syncStageState);
+  }, [user?.id, user?.name, selectedCountry]);
+
+  const handleOpenComposeForStage = (stage?: FrontlineStage) => {
+    try {
+      if (stage) {
+        sessionStorage.setItem(
+          'cd_prefill_workstation_stage',
+          JSON.stringify({
+            id: stage.id,
+            name: stage.name,
+            category: stage.category,
+            parish: stage.parish,
+          })
+        );
+      }
+    } catch {}
+    go('compose');
+  };
   const [selectedParish, setSelectedParish] = useState<string>(() => userHomeParish);
   const [selectedAwardMonth, setSelectedAwardMonth] = useState<'2026-10' | '2026-09' | '2026-08'>('2026-10');
   const [selectedScoutCorridor, setSelectedScoutCorridor] = useState<string>(
@@ -1261,18 +1312,20 @@ export const PerkVaultView: React.FC = () => {
                   {citizenXp.toLocaleString()} pts
                 </span>
               </div>
-              <select
+              <SearchableSelect
                 value={selectedCountry}
-                onChange={(e) => setSelectedCountry(e.target.value as CountryCode)}
-                aria-label="Country selector"
-                className="px-2.5 py-1.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
-              >
-                {Object.entries(COUNTRIES).map(([code, c]) => (
-                  <option key={code} value={code}>
-                    {c.flag} {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedCountry(val as CountryCode)}
+                ariaLabel="Country selector"
+                placeholder="Select country..."
+                searchPlaceholder="Search countries..."
+                options={Object.entries(COUNTRIES).map(([code, c]) => ({
+                  value: code,
+                  label: `${c.flag} ${c.name}`,
+                  keywords: `${code} ${c.name}`,
+                }))}
+                className="w-40 sm:w-44"
+                triggerClassName="px-2.5 py-1.5 bg-[#f8f9fa] dark:bg-[#0e1116]"
+              />
             </div>
           </div>
 
@@ -1723,7 +1776,7 @@ export const PerkVaultView: React.FC = () => {
                 {
                   id: 'scout_bounty_vault' as const,
                   title: 'Frontline Scouts',
-                  sub: `${scoutPoolCount} bounties · 8 Professions`,
+                  sub: `${countryStageCount} public stages · Top-3 Rewards`,
                   icon: Bike,
                 },
                 {
@@ -1768,15 +1821,20 @@ export const PerkVaultView: React.FC = () => {
                     </h2>
                     <p className="text-xs text-slate-500 mt-0.5">{lowestMeta.desc}</p>
                   </div>
-                  <select
+                  <SearchableSelect
                     value={selectedAwardMonth}
-                    onChange={(e) => setSelectedAwardMonth(e.target.value as any)}
-                    className="px-2.5 py-1.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold shrink-0 cursor-pointer"
-                  >
-                    <option value="2026-10">October 2026 Cycle</option>
-                    <option value="2026-09">September 2026 Cycle</option>
-                    <option value="2026-08">August 2026 Cycle</option>
-                  </select>
+                    onChange={(val) => setSelectedAwardMonth(val as any)}
+                    ariaLabel="Award Cycle"
+                    placeholder="Select cycle..."
+                    searchPlaceholder="Search cycle..."
+                    options={[
+                      { value: '2026-10', label: 'October 2026 Cycle' },
+                      { value: '2026-09', label: 'September 2026 Cycle' },
+                      { value: '2026-08', label: 'August 2026 Cycle' },
+                    ]}
+                    className="w-full sm:w-52 shrink-0"
+                    triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116]"
+                  />
                 </div>
 
                 <div>
@@ -1816,85 +1874,84 @@ export const PerkVaultView: React.FC = () => {
               </div>
             )}
 
-            {/* POOL 2: FRONTLINE SCOUTS & 8 PROFESSIONS */}
+            {/* POOL 2: FRONTLINE SCOUTS WORKSTATIONS & CERTIFIED STAGES */}
             {communityPoolTab === 'scout_bounty_vault' && (
               <div className="space-y-4">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] space-y-4">
-                  <div>
-                    <h2 className="text-sm sm:text-base font-bold text-slate-950 dark:text-white">
-                      Frontline Scouts &amp; Citizen Professions
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Top 3 verified frontline scouts in each profession split the monthly corridor pool evenly.
-                    </p>
-                  </div>
-
-                  {/* Corridor Picker */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-500 block mb-1">Active Corridor</label>
-                    <select
-                      value={selectedScoutCorridor}
-                      onChange={(e) => setSelectedScoutCorridor(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold cursor-pointer"
-                    >
-                      {scoutCorridorOptions.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.label} ({c.authority})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 8 Profession Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-                    {REPORTER_PROFESSION_CATEGORIES.map((prof) => {
-                      const Icon = prof.icon;
-                      const active = selectedScoutProfession === prof.id;
-                      return (
-                        <button
-                          key={prof.id}
-                          type="button"
-                          onClick={() => setSelectedScoutProfession(prof.id)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors ${
-                            active
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border border-[#e3e6ea] dark:border-[#262b36]'
-                          }`}
-                        >
-                          <Icon size={12} />
-                          <span>{prof.shortTitle}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Top 3 Scouts */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {communityTop3.map((c) => (
-                      <div
-                        key={c.rank}
-                        className="p-3.5 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-emerald-500/25 space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                            Scout #{c.rank}
-                          </span>
-                          <span className="text-xs font-bold font-mono tabular-nums text-slate-700 dark:text-slate-300">
-                            {c.score} pts
-                          </span>
+                {/* User Active Workstation Standing Bar */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {myActiveStageInfo ? (
+                    <>
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          Your Active Workstation · Rank #{myActiveStageInfo.member.rank} ({myActiveStageInfo.member.points} pts)
                         </div>
-                        <div className="text-sm font-bold text-slate-950 dark:text-white">{c.name}</div>
-                        <div className="text-[11px] text-slate-500">{c.roleOrProfession}</div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 leading-snug line-clamp-2 pt-1">
-                          {c.citationReason}
+                        <div className="text-sm font-bold text-slate-950 dark:text-white truncate">
+                          {myActiveStageInfo.stage.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {myActiveStageInfo.stage.scoutCount}/{myActiveStageInfo.stage.thresholdRequired} active scouts ·{' '}
+                          {myActiveStageInfo.member.rank <= 3
+                            ? `In Top 3 (${myActiveStageInfo.member.lionSharePct}% vault share)`
+                            : 'Keep reporting to climb into the Top 3 rewards'}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenComposeForStage(myActiveStageInfo.stage)}
+                          className="min-h-[40px] px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap"
+                        >
+                          File Workstation Report
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const res = exitStageGroup(
+                              myActiveStageInfo.stage.id,
+                              user?.id || 'usr-9028-UG',
+                              user?.name || 'Citizen Observer'
+                            );
+                            if (res.success) {
+                              setMyActiveStageInfo(null);
+                              toast(res.message, 'emerald');
+                            } else {
+                              toast(res.message, 'amber');
+                            }
+                          }}
+                          className="min-h-[40px] px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/25 text-xs font-semibold cursor-pointer transition-colors whitespace-nowrap"
+                        >
+                          Exit Group
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-0.5">
+                        <div className="text-sm font-bold text-slate-950 dark:text-white">
+                          Join a Public Workstation When Reporting
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Pick any workstation below or type your own stage name in Speak. 15 active scouts certify a stage; Top 3 by score earn all rewards.
                         </p>
                       </div>
-                    ))}
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenComposeForStage()}
+                        className="min-h-[44px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shrink-0 cursor-pointer transition-colors whitespace-nowrap"
+                      >
+                        Report &amp; Join a Group
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Live Frontline Stage Hubs Explorer */}
-                <FrontlineStageExplorer country={selectedCountry} selectedParish={selectedParish} compact />
+                <FrontlineStageExplorer
+                  country={selectedCountry}
+                  selectedParish={selectedParish}
+                  onSelectStageForCompose={handleOpenComposeForStage}
+                  compact
+                />
               </div>
             )}
 
@@ -1919,23 +1976,24 @@ export const PerkVaultView: React.FC = () => {
                     <label className="text-[11px] font-semibold text-slate-500 block mb-1">
                       Pick Recent Verified Post Author (Optional)
                     </label>
-                    <select
+                    <SearchableSelect
                       value={tipTargetPostId}
-                      onChange={(e) => {
-                        const post = countryFeedPosts.find((p) => p.id === e.target.value);
-                        setTipTargetPostId(e.target.value);
+                      onChange={(val) => {
+                        const post = countryFeedPosts.find((p) => p.id === val);
+                        setTipTargetPostId(val);
                         if (post) {
                           setTipRecipientName(post.anonymous ? 'Verified Citizen Author' : post.citizen_name);
                         }
                       }}
-                      className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs cursor-pointer"
-                    >
-                      {countryFeedPosts.slice(0, 10).map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.anonymous ? 'Anonymous Resident' : p.citizen_name} — {p.title.slice(0, 55)}
-                        </option>
-                      ))}
-                    </select>
+                      ariaLabel="Verified Post Author"
+                      placeholder="Select verified post author..."
+                      searchPlaceholder="Search author or post..."
+                      options={countryFeedPosts.slice(0, 20).map((p) => ({
+                        value: p.id,
+                        label: `${p.anonymous ? 'Anonymous Resident' : p.citizen_name} — ${p.title.slice(0, 55)}`,
+                      }))}
+                      triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116]"
+                    />
                   </div>
                 )}
 
@@ -2032,17 +2090,18 @@ export const PerkVaultView: React.FC = () => {
                     </div>
                     <div>
                       <label className="text-[11px] font-semibold text-slate-500 block mb-1">Voucher Bundle</label>
-                      <select
+                      <SearchableSelect
                         value={payPackage}
-                        onChange={(e) => setPayPackage(e.target.value as any)}
-                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs cursor-pointer"
-                      >
-                        {patronPackOptions.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.label} ({opt.currency} {opt.total.toLocaleString()})
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => setPayPackage(val as any)}
+                        ariaLabel="Voucher Bundle"
+                        placeholder="Select voucher bundle..."
+                        searchPlaceholder="Search bundles or brands..."
+                        options={patronPackOptions.map((opt) => ({
+                          value: opt.id,
+                          label: `${opt.label} (${opt.currency} ${opt.total.toLocaleString()})`,
+                        }))}
+                        triggerClassName="bg-white dark:bg-[#161a22]"
+                      />
                     </div>
                   </div>
 

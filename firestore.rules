@@ -321,6 +321,41 @@ service cloud.firestore {
         allow delete: if isValidId(handId);
       }
     }
+
+    // --- PUBLIC FRONTLINE SCOUT WORKSTATIONS & CERTIFIED STAGES ---
+    function isValidFrontlineStage(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 128
+        && data.normalizedName is string && data.normalizedName.size() <= 128
+        && data.category is string && (
+          data.category == 'bodaboda' || data.category == 'market' ||
+          data.category == 'taxi' || data.category == 'health' ||
+          data.category == 'teacher' || data.category == 'artisan'
+        )
+        && data.country is string && data.country.size() <= 8
+        && data.parish is string && data.parish.size() <= 64
+        && data.scoutCount is number && data.scoutCount >= 0 && data.scoutCount <= 5000
+        && data.thresholdRequired is number && data.thresholdRequired == 15
+        && data.isCertified is bool
+        && data.patronSponsorPoolUgx is number && data.patronSponsorPoolUgx >= 0;
+    }
+
+    match /frontline_stages/{stageId} {
+      allow get: if isValidId(stageId);
+      allow list: if true;
+      allow create: if isValidId(stageId) && isValidFrontlineStage(incoming());
+      allow update: if isValidId(stageId) && (
+        isAdmin() ||
+        (
+          isValidFrontlineStage(incoming()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'scoutCount', 'isCertified', 'officialLabel', 'certifiedAt',
+            'patronSponsorPoolUgx', 'patronCount', 'patrons',
+            'topScouts', 'members', 'recentScouts', 'centerGps', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isAdmin();
+    }
   }
 }
-

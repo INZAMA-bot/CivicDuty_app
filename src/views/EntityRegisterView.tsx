@@ -562,15 +562,19 @@ export const EntityRegisterView: React.FC = () => {
                   <label className="text-[10px] font-mono font-bold uppercase text-slate-600 dark:text-slate-300">
                     Published SLA:
                   </label>
-                  <select
-                    value={slaTargetHours}
-                    onChange={(e) => setSlaTargetHours(Number(e.target.value))}
-                    className="bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 dark:text-white"
-                  >
-                    <option value={12}>12h Rapid SLA</option>
-                    <option value={24}>24h Standard SLA</option>
-                    <option value={48}>48h Extended SLA</option>
-                  </select>
+                  <SearchableSelect
+                    ariaLabel="Published SLA"
+                    searchPlaceholder="Search SLA hours..."
+                    value={String(slaTargetHours)}
+                    onChange={(val) => setSlaTargetHours(Number(val))}
+                    className="w-44"
+                    triggerClassName="bg-white dark:bg-[#161a22] rounded-lg px-2.5 py-1.5 font-mono font-bold"
+                    options={[
+                      { value: '12', label: '12h Rapid SLA' },
+                      { value: '24', label: '24h Standard SLA' },
+                      { value: '48', label: '48h Extended SLA' },
+                    ]}
+                  />
                 </div>
               </div>
             )}

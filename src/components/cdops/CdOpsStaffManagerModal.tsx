@@ -21,6 +21,7 @@ import {
   CdOpsRoleDefinition,
 } from '../../data/partnerships';
 import { COUNTRIES } from '../../data/countries';
+import { SearchableSelect } from '../SearchableSelect';
 
 interface Props {
   isOpen: boolean;
@@ -375,22 +376,26 @@ export const CdOpsStaffManagerModal: React.FC<Props> = ({
               <span className="text-[9px] text-slate-400">Select or add any country</span>
             </label>
             <div className="flex items-center gap-2">
-              <select
+              <SearchableSelect
+                ariaLabel="Add Country Jurisdiction"
+                placeholder={`+ Search & toggle any of ${Object.keys(COUNTRIES).length} Global Countries...`}
+                searchPlaceholder="Search country name or code..."
                 value=""
-                onChange={(e) => {
-                  if (e.target.value) handleRegionToggle(e.target.value);
+                onChange={(val) => {
+                  if (val) handleRegionToggle(val);
                 }}
-                aria-label="Add Country Jurisdiction"
-                className="flex-1 px-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:border-amber-500 cursor-pointer"
-              >
-                <option value="">+ Select any of {Object.keys(COUNTRIES).length} Global Countries to Toggle...</option>
-                <option value="ALL">ALL GLOBAL JURISDICTIONS</option>
-                {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
-                  <option key={cCode} value={cCode}>
-                    [{cCode}] {cInfo.name} {handlingRegions.includes(cCode) ? '(Active)' : ''}
-                  </option>
-                ))}
-              </select>
+                className="flex-1"
+                triggerClassName="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700"
+                options={[
+                  { value: 'ALL', label: 'ALL GLOBAL JURISDICTIONS', keywords: 'all global world' },
+                  ...Object.entries(COUNTRIES).map(([cCode, cInfo]) => ({
+                    value: cCode,
+                    label: `[${cCode}] ${cInfo.name}`,
+                    sublabel: handlingRegions.includes(cCode) ? 'Active' : undefined,
+                    keywords: `${cCode} ${cInfo.name}`,
+                  })),
+                ]}
+              />
             </div>
             <div className="flex flex-wrap gap-1.5">
               {Array.from(new Set([...REGION_OPTIONS, ...handlingRegions])).map((code) => {

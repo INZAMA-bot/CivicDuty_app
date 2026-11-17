@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { LanguageCode } from '../types';
 import { ALL_LANGUAGES } from '../data/translations';
 import { CountrySelector } from './CountrySelector';
+import { SearchableSelect } from './SearchableSelect';
 import {
   Settings,
   MoreVertical,
@@ -144,23 +145,18 @@ export const HeaderSettingsMenu: React.FC<HeaderSettingsMenuProps> = ({ isSplash
               <Globe size={11} strokeWidth={1.75} />
               <span>2. Interface Language</span>
             </label>
-            <div className="relative">
-              <select
-                id="hp-lang-select"
-                value={language}
-                onChange={(e) => {
-                  setLanguage(e.target.value as LanguageCode);
-                }}
-                aria-label="Select Language"
-                className="w-full min-h-[40px] bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-800 dark:text-slate-200 font-mono font-medium text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 cursor-pointer"
-              >
-                {ALL_LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code} className="bg-white dark:bg-[#161a22] text-slate-800 dark:text-slate-200">
-                    {l.code} · {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              value={language}
+              onChange={(val) => setLanguage(val as LanguageCode)}
+              ariaLabel="Interface Language"
+              placeholder="Select language..."
+              searchPlaceholder="Search language or code..."
+              options={ALL_LANGUAGES.map((l) => ({
+                value: l.code,
+                label: `${l.code} · ${l.label}`,
+              }))}
+              triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] font-mono font-medium"
+            />
           </div>
 
           {/* 3. Appearance / Theme Mode */}

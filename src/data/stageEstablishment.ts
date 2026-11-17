@@ -1,4 +1,5 @@
 import { CountryCode } from '../types';
+import { saveFrontlineStageToCloud } from '../services/firestoreSync';
 
 export type FrontlineScoutCategory =
   | 'bodaboda'
@@ -28,8 +29,10 @@ export interface StageMember {
   rank: number;
   points: number;
   monthlyReports: number;
-  qualifiedForShare: boolean; // At least monthly engagement (>= 1 report)
+  qualifiedForShare: boolean;
   joinedAt: string;
+  lastActiveAt: string;
+  isDormant?: boolean;
   lionSharePct: number;
   bountyShareUgx: number;
 }
@@ -45,7 +48,7 @@ export interface ScarceWorkstationPerk {
 
 export interface FrontlineStage {
   id: string;
-  name: string; // e.g. "Equatorial Boda Stage"
+  name: string;
   normalizedName: string;
   category: FrontlineScoutCategory;
   categoryLabel: string;
@@ -53,14 +56,15 @@ export interface FrontlineStage {
   country: CountryCode;
   district: string;
   subcounty: string;
-  parish: string; // Home Parish Lock
+  parish: string;
   centerGps: { lat: number; lng: number };
-  scoutCount: number;
-  thresholdRequired: number; // 15 scouts within 2km
+  scoutCount: number; // Strictly active (non-dormant) member count
+  thresholdRequired: number; // 15 active scouts
   isCertified: boolean; // scoutCount >= 15
-  officialLabel: string; // e.g. "Certified Equatorial Bodaboda Stage"
+  officialLabel: string;
   certifiedAt?: string;
-  patronSponsorPoolUgx: number; // Dedicated Workstation Vault Pool
+  updatedAt?: string;
+  patronSponsorPoolUgx: number;
   patronCount: number;
   patrons: Array<{
     patronName: string;
@@ -69,6 +73,7 @@ export interface FrontlineStage {
     diasporaOrigin?: string;
   }>;
   topScouts: Array<{
+    id?: string;
     name: string;
     rank: number;
     points: number;
@@ -78,12 +83,17 @@ export interface FrontlineStage {
   members?: StageMember[];
   scarcePerks?: ScarceWorkstationPerk[];
   recentScouts: Array<{
+    scoutId?: string;
     scoutName: string;
     reportedAt: string;
     lat: number;
     lng: number;
   }>;
 }
+
+export const STAGE_CERTIFICATION_THRESHOLD = 15;
+export const DORMANCY_DAYS = 30;
+export const STAGES_UPDATED_EVENT = 'civicduty:stages-updated';
 
 export const FRONTLINE_CATEGORIES: Array<{
   id: FrontlineScoutCategory;
@@ -96,47 +106,47 @@ export const FRONTLINE_CATEGORIES: Array<{
   {
     id: 'bodaboda',
     label: 'Mobility Stage / Courier Stand (Road Safety & Transit Scout)',
-    workstationPlaceholder: 'Name of Rider Stage / Courier Hub (e.g. Central Station Hub, Northside Bike Stand)',
-    example: 'Central Station Mobility Hub',
+    workstationPlaceholder: 'Name of Rider Stage / Courier Hub (e.g. Equatorial Boda Stage)',
+    example: 'Equatorial Boda Stage',
     iconName: 'Bike',
     roleDescription: 'Road hazard, open trench, cycle lane & streetlight reporting',
   },
   {
     id: 'market',
     label: 'Market Vendor Hub (Public Market & Sanitation Scout)',
-    workstationPlaceholder: 'Name of Market / Stall Hall (e.g. Central Market Produce Hall, Westside Bazaar Row)',
-    example: 'Central Market Produce Section',
+    workstationPlaceholder: 'Name of Market / Stall Hall (e.g. Nakasero Market Central Hub)',
+    example: 'Nakasero Market Central Hub',
     iconName: 'Store',
     roleDescription: 'Drainage, garbage clearance & utility supply monitoring',
   },
   {
     id: 'taxi',
     label: 'Taxi / Commuter Rank (Highway & Transit Corridor Scout)',
-    workstationPlaceholder: 'Name of Taxi Rank / Transit Bay (e.g. Central Bus Terminal Bay 4, Union Station Cab Stand)',
-    example: 'Central Transit Terminal Bay 4',
+    workstationPlaceholder: 'Name of Taxi Rank / Transit Bay (e.g. Old Taxi Park Stage Bay 4)',
+    example: 'Old Taxi Park Stage Bay 4',
     iconName: 'Car',
     roleDescription: 'Highway blackspots, road washouts & route hazard alerts',
   },
   {
     id: 'health',
     label: 'Healthcare Station (Clinic & Public Health Monitor)',
-    workstationPlaceholder: 'Name of Clinic / Health Centre Station (e.g. District Community Clinic Gate, Ward 4 Station)',
-    example: 'District Community Clinic Station',
+    workstationPlaceholder: 'Name of Clinic / Health Centre Station (e.g. Mulago Ward 4 Station)',
+    example: 'Mulago Ward 4 Health Monitor Station',
     iconName: 'Stethoscope',
     roleDescription: 'Essential medicine stockouts, triage power & sanitation oversight',
   },
   {
     id: 'teacher',
     label: 'School Watch Station (Education & Youth Leader Scout)',
-    workstationPlaceholder: 'Name of School / Campus Watch (e.g. Central Primary Crosswalk, Civic High Gate)',
-    example: 'Central Primary Crosswalk Watch',
+    workstationPlaceholder: 'Name of School / Campus Watch (e.g. Kitante Primary Gate Watch)',
+    example: 'Kitante Primary Gate School Watch',
     iconName: 'GraduationCap',
     roleDescription: 'Dilapidated classrooms, crossing safety & learner welfare audits',
   },
   {
     id: 'artisan',
     label: 'Artisan Works Depot (Public Works & Infrastructure Inspector)',
-    workstationPlaceholder: 'Name of Works Depot / Project Site (e.g. East Culvert Civil Site, Municipal Bridge Depot)',
+    workstationPlaceholder: 'Name of Works Depot / Project Site (e.g. Municipal Culvert Works Depot)',
     example: 'Municipal Culvert Works Depot',
     iconName: 'HardHat',
     roleDescription: 'Substandard asphalt, unvibrated concrete & delayed culverts',
@@ -144,7 +154,7 @@ export const FRONTLINE_CATEGORIES: Array<{
 ];
 
 export function calculateGpsDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth radius in km
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -165,15 +175,182 @@ export function normalizeWorkstationName(name: string): string {
     .trim();
 }
 
-const STORAGE_KEY = 'civicduty_frontline_stages_v1';
+function daysAgoIso(daysAgo: number): string {
+  return new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+}
 
-export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
+function buildRoster(
+  prefix: string,
+  activeEntries: Array<[string, number, number, number]>, // [name, points, monthlyReports, lastActiveDaysAgo]
+  dormantEntries: Array<[string, number, number]> = [] // [name, points, lastActiveDaysAgo]
+): StageMember[] {
+  const active: StageMember[] = activeEntries.map(([name, points, monthlyReports, daysAgo], idx) => ({
+    id: `scout-${prefix}-${idx + 1}`,
+    name,
+    rank: idx + 1,
+    points,
+    monthlyReports,
+    qualifiedForShare: monthlyReports >= 1,
+    joinedAt: daysAgoIso(Math.max(daysAgo + 15, 25)),
+    lastActiveAt: daysAgoIso(daysAgo),
+    isDormant: false,
+    lionSharePct: 0,
+    bountyShareUgx: 0,
+  }));
+
+  const dormant: StageMember[] = dormantEntries.map(([name, points, daysAgo], idx) => ({
+    id: `scout-${prefix}-dormant-${idx + 1}`,
+    name,
+    rank: 0,
+    points,
+    monthlyReports: 0,
+    qualifiedForShare: false,
+    joinedAt: daysAgoIso(daysAgo + 30),
+    lastActiveAt: daysAgoIso(daysAgo),
+    isDormant: true,
+    lionSharePct: 0,
+    bountyShareUgx: 0,
+  }));
+
+  return [...active, ...dormant];
+}
+
+/**
+ * Activity & Dormancy Evaluator:
+ * An account is ACTIVE if they have at least 1 report within the last 30 days.
+ * Dormant accounts (0 activity for >30 days) are hidden from public rosters,
+ * post cards, and Top-3 rewards until they submit a new report.
+ */
+export function isStageMemberActive(member: Partial<StageMember>, nowMs = Date.now()): boolean {
+  if (!member) return false;
+  if (member.lastActiveAt) {
+    const parsed = Date.parse(member.lastActiveAt);
+    if (!Number.isNaN(parsed)) {
+      const ageDays = (nowMs - parsed) / (1000 * 60 * 60 * 24);
+      if (ageDays > DORMANCY_DAYS) return false;
+      return (member.monthlyReports ?? 1) >= 1;
+    }
+  }
+  if (typeof member.isDormant === 'boolean') return !member.isDormant && (member.monthlyReports ?? 1) >= 1;
+  return (member.monthlyReports ?? 0) >= 1;
+}
+
+export function getActiveStageMembers(stage: FrontlineStage, nowMs = Date.now()): StageMember[] {
+  const members = Array.isArray(stage.members) ? stage.members : [];
+  return members
+    .filter((m) => isStageMemberActive(m, nowMs))
+    .map((m) => ({ ...m, isDormant: false }))
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return (b.monthlyReports || 0) - (a.monthlyReports || 0);
+    });
+}
+
+/**
+ * Top-3 Performance Reward Formula (Strictly Top 3 by Score Points):
+ * - Dormant accounts are excluded.
+ * - Rank #1: 50% · Rank #2: 30% · Rank #3: 20%.
+ * - If fewer than 3 active members exist, shares scale proportionally across active Top-3 slots.
+ */
+export function distributeStageLionShare(
+  totalPoolUgx: number,
+  existingMembers?: StageMember[],
+  existingTopScouts?: Array<{ id?: string; name: string; rank: number; points: number; badge: string; bountyShareUgx: number }>
+): {
+  topScouts: Array<{ id?: string; name: string; rank: number; points: number; badge: string; bountyShareUgx: number }>;
+  members: StageMember[];
+} {
+  const nowMs = Date.now();
+  const cloned = (existingMembers || []).map((m) => ({ ...m }));
+
+  const active = cloned
+    .filter((m) => isStageMemberActive(m, nowMs))
+    .sort((a, b) => (b.points !== a.points ? b.points - a.points : b.monthlyReports - a.monthlyReports));
+
+  const dormant = cloned
+    .filter((m) => !isStageMemberActive(m, nowMs))
+    .map((m) => ({
+      ...m,
+      rank: 0,
+      isDormant: true,
+      qualifiedForShare: false,
+      lionSharePct: 0,
+      bountyShareUgx: 0,
+    }));
+
+  const rawWeights = active.length >= 3 ? [50, 30, 20] : active.length === 2 ? [62.5, 37.5] : active.length === 1 ? [100] : [];
+  const rankedActive: StageMember[] = active.map((m, idx) => {
+    const rank = idx + 1;
+    const sharePct = idx < 3 ? rawWeights[idx] : 0;
+    const bountyShareUgx = sharePct > 0 ? Math.round((totalPoolUgx * sharePct) / 100) : 0;
+    return {
+      ...m,
+      rank,
+      isDormant: false,
+      qualifiedForShare: idx < 3,
+      lionSharePct: sharePct,
+      bountyShareUgx,
+    };
+  });
+
+  const existingBadgeByName = new Map(
+    (existingTopScouts || []).map((t) => [t.name.toLowerCase(), t.badge])
+  );
+
+  const defaultBadges = [
+    'Top Stage Performer (50%)',
+    '2nd Rank Scout (30%)',
+    '3rd Rank Scout (20%)',
+  ];
+
+  const topScouts = rankedActive.slice(0, 3).map((m, idx) => ({
+    id: m.id,
+    name: m.name,
+    rank: idx + 1,
+    points: m.points,
+    badge: existingBadgeByName.get(m.name.toLowerCase()) || defaultBadges[idx] || 'Active Workstation Scout',
+    bountyShareUgx: m.bountyShareUgx,
+  }));
+
+  return {
+    topScouts,
+    members: [...rankedActive, ...dormant],
+  };
+}
+
+export function recomputeStageStandings(stage: FrontlineStage): FrontlineStage {
+  const threshold = STAGE_CERTIFICATION_THRESHOLD;
+  const { topScouts, members } = distributeStageLionShare(
+    stage.patronSponsorPoolUgx,
+    stage.members,
+    stage.topScouts
+  );
+  const activeCount = members.filter((m) => !m.isDormant).length;
+  const isCertified = activeCount >= threshold;
+  const baseName = stage.name.trim();
+
+  return {
+    ...stage,
+    thresholdRequired: threshold,
+    scoutCount: activeCount,
+    isCertified,
+    officialLabel: isCertified
+      ? `Certified ${baseName} Hub`
+      : `${baseName} (Incubating ${activeCount}/${threshold})`,
+    certifiedAt: isCertified ? stage.certifiedAt || new Date().toISOString().split('T')[0] : undefined,
+    topScouts,
+    members,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+const RAW_SEED_STAGES: FrontlineStage[] = [
   {
     id: 'stage-ug-equatorial-boda',
     name: 'Equatorial Boda Stage',
     normalizedName: 'equatorial boda stage',
     category: 'bodaboda',
-    categoryLabel: 'Bodaboda Stage',
+    categoryLabel: 'Mobility Stage',
     categoryIcon: 'Bike',
     country: 'UG',
     district: 'Kampala',
@@ -183,7 +360,7 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
     scoutCount: 17,
     thresholdRequired: 15,
     isCertified: true,
-    officialLabel: 'Certified Equatorial Bodaboda Stage Hub',
+    officialLabel: 'Certified Equatorial Boda Stage Hub',
     certifiedAt: '2026-09-18',
     patronSponsorPoolUgx: 550000,
     patronCount: 6,
@@ -193,28 +370,45 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { patronName: 'Sarah K. (Diaspora)', amountUgx: 200000, sponsoredAt: '2026-10-08', diasporaOrigin: 'Boston, USA' },
     ],
     topScouts: [
-      { name: 'Kato Paul (Stage Secretary)', rank: 1, points: 420, badge: 'Road Safety Champion', bountyShareUgx: 247500 },
-      { name: 'Ssemwogerere David', rank: 2, points: 340, badge: 'Pothole Watchdog', bountyShareUgx: 137500 },
-      { name: 'Okello Denis', rank: 3, points: 295, badge: 'Night Rider Scout', bountyShareUgx: 82500 },
+      { name: 'Kato Paul (Stage Secretary)', rank: 1, points: 420, badge: 'Road Safety Champion', bountyShareUgx: 275000 },
+      { name: 'Ssemwogerere David', rank: 2, points: 340, badge: 'Pothole Watchdog', bountyShareUgx: 165000 },
+      { name: 'Okello Denis', rank: 3, points: 295, badge: 'Night Rider Scout', bountyShareUgx: 110000 },
     ],
-    members: [
-      { id: 'scout-kato-paul', name: 'Kato Paul (Stage Secretary)', rank: 1, points: 420, monthlyReports: 14, qualifiedForShare: true, joinedAt: '2026-08-10', lionSharePct: 45, bountyShareUgx: 247500 },
-      { id: 'scout-ssemwogerere-david', name: 'Ssemwogerere David', rank: 2, points: 340, monthlyReports: 9, qualifiedForShare: true, joinedAt: '2026-08-15', lionSharePct: 25, bountyShareUgx: 137500 },
-      { id: 'scout-okello-denis', name: 'Okello Denis', rank: 3, points: 295, monthlyReports: 7, qualifiedForShare: true, joinedAt: '2026-08-20', lionSharePct: 15, bountyShareUgx: 82500 },
-      { id: 'scout-mugerwa-fred', name: 'Mugerwa Fred', rank: 4, points: 190, monthlyReports: 5, qualifiedForShare: true, joinedAt: '2026-09-01', lionSharePct: 5, bountyShareUgx: 27500 },
-      { id: 'scout-nabirye-grace', name: 'Nabirye Grace', rank: 5, points: 160, monthlyReports: 3, qualifiedForShare: true, joinedAt: '2026-09-05', lionSharePct: 5, bountyShareUgx: 27500 },
-      { id: 'scout-byaruhanga-sam', name: 'Byaruhanga Sam', rank: 6, points: 130, monthlyReports: 2, qualifiedForShare: true, joinedAt: '2026-09-12', lionSharePct: 5, bountyShareUgx: 27500 },
-      { id: 'scout-tumusiime-ben', name: 'Tumusiime Ben', rank: 7, points: 70, monthlyReports: 0, qualifiedForShare: false, joinedAt: '2026-09-25', lionSharePct: 0, bountyShareUgx: 0 },
-    ],
+    members: buildRoster(
+      'eq',
+      [
+        ['Kato Paul (Stage Secretary)', 420, 14, 1],
+        ['Ssemwogerere David', 340, 11, 2],
+        ['Okello Denis', 295, 9, 2],
+        ['Mugerwa Fred', 250, 7, 3],
+        ['Nabirye Grace', 225, 6, 4],
+        ['Byaruhanga Sam', 200, 5, 5],
+        ['Lubega Patrick', 185, 5, 6],
+        ['Nsereko Shafik', 170, 4, 7],
+        ['Kayongo Moses', 155, 4, 8],
+        ['Opio Emmanuel', 145, 3, 9],
+        ['Kasumba Martin', 130, 3, 10],
+        ['Bbosa Richard', 120, 3, 12],
+        ['Nsubuga Godfrey', 110, 2, 14],
+        ['Muwonge Hassan', 95, 2, 15],
+        ['Ssegawa Ivan', 85, 2, 18],
+        ['Kawuki Bosco', 75, 1, 20],
+        ['Kiggundu Umar', 65, 1, 22],
+      ],
+      [
+        ['Tumusiime Ben', 70, 44],
+        ['Kato Rogers', 45, 52],
+      ]
+    ),
     scarcePerks: [
       { id: 'sp-helmet-01', title: 'DOT-Certified Safety Helmet', quantity: 2, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2], icon: 'Bike' },
       { id: 'sp-jacket-02', title: 'High-Visibility Reflective Armor Jacket', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'ShieldCheck' },
       { id: 'sp-oil-03', title: 'TotalEnergies 4T Engine Oil Voucher', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'Award' },
     ],
     recentScouts: [
-      { scoutName: 'Kato Paul', reportedAt: '2 hours ago', lat: 0.3161, lng: 32.5782 },
-      { scoutName: 'Ssemwogerere David', reportedAt: '6 hours ago', lat: 0.3163, lng: 32.5779 },
-      { scoutName: 'Mugerwa Fred', reportedAt: 'Yesterday', lat: 0.316, lng: 32.5784 },
+      { scoutId: 'scout-eq-1', scoutName: 'Kato Paul (Stage Secretary)', reportedAt: '2 hours ago', lat: 0.3161, lng: 32.5782 },
+      { scoutId: 'scout-eq-2', scoutName: 'Ssemwogerere David', reportedAt: '6 hours ago', lat: 0.3163, lng: 32.5779 },
+      { scoutId: 'scout-eq-4', scoutName: 'Mugerwa Fred', reportedAt: 'Yesterday', lat: 0.316, lng: 32.5784 },
     ],
   },
   {
@@ -229,10 +423,10 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
     subcounty: 'Kampala Central',
     parish: 'Nakasero I',
     centerGps: { lat: 0.3129, lng: 32.5794 },
-    scoutCount: 19,
+    scoutCount: 16,
     thresholdRequired: 15,
     isCertified: true,
-    officialLabel: 'Certified Nakasero Market Vendor Hub',
+    officialLabel: 'Certified Nakasero Market Central Hub Hub',
     certifiedAt: '2026-09-10',
     patronSponsorPoolUgx: 750000,
     patronCount: 8,
@@ -241,25 +435,40 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { patronName: 'Nakasero Traders SACCO', amountUgx: 400000, sponsoredAt: '2026-10-06' },
     ],
     topScouts: [
-      { name: 'Mama Betty Nakato', rank: 1, points: 510, badge: 'Clean Drains Guardian', bountyShareUgx: 337500 },
-      { name: 'Hajjat Fatuma N.', rank: 2, points: 410, badge: 'Waste Disposal Auditor', bountyShareUgx: 187500 },
-      { name: 'Sula Kato', rank: 3, points: 360, badge: 'Cold Chain Watch', bountyShareUgx: 112500 },
+      { name: 'Mama Betty Nakato', rank: 1, points: 510, badge: 'Clean Drains Guardian', bountyShareUgx: 375000 },
+      { name: 'Hajjat Fatuma N.', rank: 2, points: 410, badge: 'Waste Disposal Auditor', bountyShareUgx: 225000 },
+      { name: 'Sula Kato', rank: 3, points: 360, badge: 'Cold Chain Watch', bountyShareUgx: 150000 },
     ],
-    members: [
-      { id: 'scout-mama-betty', name: 'Mama Betty Nakato', rank: 1, points: 510, monthlyReports: 16, qualifiedForShare: true, joinedAt: '2026-08-01', lionSharePct: 45, bountyShareUgx: 337500 },
-      { id: 'scout-fatuma-n', name: 'Hajjat Fatuma N.', rank: 2, points: 410, monthlyReports: 11, qualifiedForShare: true, joinedAt: '2026-08-04', lionSharePct: 25, bountyShareUgx: 187500 },
-      { id: 'scout-sula-kato', name: 'Sula Kato', rank: 3, points: 360, monthlyReports: 8, qualifiedForShare: true, joinedAt: '2026-08-10', lionSharePct: 15, bountyShareUgx: 112500 },
-      { id: 'scout-kibirige-r', name: 'Kibirige Ronald', rank: 4, points: 210, monthlyReports: 4, qualifiedForShare: true, joinedAt: '2026-08-20', lionSharePct: 7.5, bountyShareUgx: 56250 },
-      { id: 'scout-namatovu-j', name: 'Namatovu Jane', rank: 5, points: 180, monthlyReports: 3, qualifiedForShare: true, joinedAt: '2026-09-02', lionSharePct: 7.5, bountyShareUgx: 56250 },
-    ],
+    members: buildRoster(
+      'nak',
+      [
+        ['Mama Betty Nakato', 510, 16, 1],
+        ['Hajjat Fatuma N.', 410, 11, 2],
+        ['Sula Kato', 360, 9, 2],
+        ['Kibirige Ronald', 280, 7, 3],
+        ['Namatovu Jane', 240, 6, 4],
+        ['Nalubega Agnes', 210, 5, 5],
+        ['Mutyaba Steven', 190, 5, 6],
+        ['Nabwire Ruth', 175, 4, 8],
+        ['Bukenya Yusuf', 160, 4, 9],
+        ['Namaganda Sylvia', 145, 3, 10],
+        ['Ssemakula Charles', 135, 3, 11],
+        ['Nambi Justine', 120, 3, 13],
+        ['Kaggwa Andrew', 105, 2, 15],
+        ['Nakimuli Sarah', 95, 2, 17],
+        ['Mukasa Edward', 80, 1, 19],
+        ['Nakyanzi Irene', 70, 1, 21],
+      ],
+      [['Walusimbi Peter', 60, 42]]
+    ),
     scarcePerks: [
       { id: 'sp-apron-01', title: 'Heavy-Duty Waterproof Vendor Aprons', quantity: 2, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2], icon: 'Store' },
       { id: 'sp-scale-02', title: 'Digital Solar Produce Scale', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'Award' },
       { id: 'sp-clean-03', title: 'Commercial Sanitation Disinfectant Pack', quantity: 3, recipientEligibility: 'top_3_only', allocatedToRanks: [1, 2, 3], icon: 'ShieldCheck' },
     ],
     recentScouts: [
-      { scoutName: 'Mama Betty Nakato', reportedAt: '1 hour ago', lat: 0.313, lng: 32.5795 },
-      { scoutName: 'Kibirige Ronald', reportedAt: '4 hours ago', lat: 0.3128, lng: 32.5792 },
+      { scoutId: 'scout-nak-1', scoutName: 'Mama Betty Nakato', reportedAt: '1 hour ago', lat: 0.313, lng: 32.5795 },
+      { scoutId: 'scout-nak-4', scoutName: 'Kibirige Ronald', reportedAt: '4 hours ago', lat: 0.3128, lng: 32.5792 },
     ],
   },
   {
@@ -267,17 +476,17 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
     name: 'Bukoto Kisuule Boda Stage',
     normalizedName: 'bukoto kisuule boda stage',
     category: 'bodaboda',
-    categoryLabel: 'Bodaboda Stage',
+    categoryLabel: 'Mobility Stage',
     categoryIcon: 'Bike',
     country: 'UG',
     district: 'Kampala',
     subcounty: 'Kawempe',
     parish: 'Kisaasi',
     centerGps: { lat: 0.3541, lng: 32.5954 },
-    scoutCount: 16,
+    scoutCount: 15,
     thresholdRequired: 15,
     isCertified: true,
-    officialLabel: 'Certified Bukoto Kisuule Bodaboda Stage',
+    officialLabel: 'Certified Bukoto Kisuule Boda Stage Hub',
     certifiedAt: '2026-09-22',
     patronSponsorPoolUgx: 420000,
     patronCount: 4,
@@ -290,8 +499,25 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { name: 'Lule Gerald', rank: 2, points: 390, badge: 'Flash Flood Watch', bountyShareUgx: 126000 },
       { name: 'Kisekka Moses', rank: 3, points: 310, badge: 'Manhole Inspector', bountyShareUgx: 84000 },
     ],
+    members: buildRoster('buk', [
+      ['Ssemakula Ronald (Stage Chair)', 480, 12, 1],
+      ['Lule Gerald', 390, 9, 2],
+      ['Kisekka Moses', 310, 7, 3],
+      ['Mpagi Vincent', 245, 6, 4],
+      ['Turyahabwe Allan', 215, 5, 5],
+      ['Sserunjogi Umar', 190, 4, 6],
+      ['Matovu Joel', 175, 4, 7],
+      ['Kato Bashir', 160, 3, 9],
+      ['Nkwanga Robert', 145, 3, 11],
+      ['Oketcho Julius', 130, 3, 12],
+      ['Muyanja Dennis', 115, 2, 14],
+      ['Ssenabulya Simon', 100, 2, 16],
+      ['Kirunda Isaac', 90, 2, 18],
+      ['Waiswa Hamza', 75, 1, 20],
+      ['Baguma Francis', 60, 1, 23],
+    ]),
     recentScouts: [
-      { scoutName: 'Ssemakula Ronald', reportedAt: '3 hours ago', lat: 0.3542, lng: 32.5953 },
+      { scoutId: 'scout-buk-1', scoutName: 'Ssemakula Ronald (Stage Chair)', reportedAt: '3 hours ago', lat: 0.3542, lng: 32.5953 },
     ],
   },
   {
@@ -299,7 +525,7 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
     name: 'Old Taxi Park Stage Bay 4',
     normalizedName: 'old taxi park stage bay 4',
     category: 'taxi',
-    categoryLabel: 'Taxi / Matatu Stage',
+    categoryLabel: 'Taxi / Commuter Rank',
     categoryIcon: 'Car',
     country: 'UG',
     district: 'Kampala',
@@ -309,7 +535,7 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
     scoutCount: 15,
     thresholdRequired: 15,
     isCertified: true,
-    officialLabel: 'Certified Old Taxi Park Highway Corridor Hub',
+    officialLabel: 'Certified Old Taxi Park Stage Bay 4 Hub',
     certifiedAt: '2026-09-29',
     patronSponsorPoolUgx: 380000,
     patronCount: 3,
@@ -321,8 +547,25 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { name: 'Bwire Joseph', rank: 2, points: 330, badge: 'Extortion Alert Lead', bountyShareUgx: 114000 },
       { name: 'Wasswa Brian', rank: 3, points: 280, badge: 'Expressway Route Watch', bountyShareUgx: 76000 },
     ],
+    members: buildRoster('otp', [
+      ['Mukiibi Alex', 390, 11, 1],
+      ['Bwire Joseph', 330, 8, 2],
+      ['Wasswa Brian', 280, 6, 3],
+      ['Ssebugwawo Dan', 230, 5, 4],
+      ['Ochieng Samuel', 200, 4, 6],
+      ['Kyeyune Badru', 180, 4, 7],
+      ['Tamale Hassan', 165, 3, 9],
+      ['Katamba Steven', 150, 3, 10],
+      ['Baluku Nathan', 135, 3, 12],
+      ['Kizza Ronald', 120, 2, 13],
+      ['Semwogerere Paul', 105, 2, 15],
+      ['Ndyanabo Herbert', 95, 2, 17],
+      ['Mwesigwa Brian', 85, 1, 19],
+      ['Byakika Ibrahim', 75, 1, 21],
+      ['Lukwago Shafiq', 60, 1, 24],
+    ]),
     recentScouts: [
-      { scoutName: 'Mukiibi Alex', reportedAt: '5 hours ago', lat: 0.3134, lng: 32.5759 },
+      { scoutId: 'scout-otp-1', scoutName: 'Mukiibi Alex', reportedAt: '5 hours ago', lat: 0.3134, lng: 32.5759 },
     ],
   },
   {
@@ -337,10 +580,10 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
     subcounty: 'Kawempe',
     parish: 'Mulago II',
     centerGps: { lat: 0.3392, lng: 32.5761 },
-    scoutCount: 12, // Incubating!
+    scoutCount: 12,
     thresholdRequired: 15,
     isCertified: false,
-    officialLabel: 'Mulago Ward 4 Health Monitor Station (Incubating)',
+    officialLabel: 'Mulago Ward 4 Health Monitor Station (Incubating 12/15)',
     patronSponsorPoolUgx: 250000,
     patronCount: 2,
     patrons: [
@@ -351,8 +594,26 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { name: 'Dr. Mukasa Eric', rank: 2, points: 210, badge: 'Oxygen Supply Monitor', bountyShareUgx: 75000 },
       { name: 'Nabukeera Prossy', rank: 3, points: 180, badge: 'Triage Guardian', bountyShareUgx: 50000 },
     ],
+    members: buildRoster(
+      'mul',
+      [
+        ['Nurse Annet Namubiru', 260, 8, 1],
+        ['Dr. Mukasa Eric', 210, 6, 3],
+        ['Nabukeera Prossy', 180, 5, 4],
+        ['Sr. Atim Christine', 155, 4, 5],
+        ['Musoke Henry', 140, 3, 7],
+        ['Nakanjako Winnie', 120, 3, 9],
+        ['Kiconco Peace', 105, 2, 11],
+        ['Wamala Geoffrey', 95, 2, 13],
+        ['Namutebi Edith', 80, 2, 16],
+        ['Okumu Kenneth', 70, 1, 18],
+        ['Auma Beatrice', 60, 1, 21],
+        ['Ssenfuka Peter', 50, 1, 24],
+      ],
+      [['Mugisha Raymond', 85, 39]]
+    ),
     recentScouts: [
-      { scoutName: 'Nurse Annet Namubiru', reportedAt: 'Yesterday', lat: 0.3391, lng: 32.5762 },
+      { scoutId: 'scout-mul-1', scoutName: 'Nurse Annet Namubiru', reportedAt: 'Yesterday', lat: 0.3391, lng: 32.5762 },
     ],
   },
   {
@@ -367,10 +628,10 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
     subcounty: 'Kampala Central',
     parish: 'Nakasero II',
     centerGps: { lat: 0.3245, lng: 32.5852 },
-    scoutCount: 11, // Incubating!
+    scoutCount: 11,
     thresholdRequired: 15,
     isCertified: false,
-    officialLabel: 'Kitante Primary Gate School Watch (Incubating)',
+    officialLabel: 'Kitante Primary Gate School Watch (Incubating 11/15)',
     patronSponsorPoolUgx: 180000,
     patronCount: 2,
     patrons: [
@@ -381,21 +642,60 @@ export const SEED_FRONTLINE_STAGES: FrontlineStage[] = [
       { name: 'Okia Samuel (PTA Rep)', rank: 2, points: 195, badge: 'Safe Crossing Scout', bountyShareUgx: 54000 },
       { name: 'Nalwadda Joan', rank: 3, points: 150, badge: 'Drainage Alert Scout', bountyShareUgx: 36000 },
     ],
+    members: buildRoster('kit', [
+      ['Tr. Grace Akello', 240, 7, 1],
+      ['Okia Samuel (PTA Rep)', 195, 5, 3],
+      ['Nalwadda Joan', 150, 4, 4],
+      ['Opolot James', 130, 3, 6],
+      ['Nankya Brenda', 115, 3, 8],
+      ['Tusiime Juliet', 100, 2, 11],
+      ['Kaggwa Lawrence', 85, 2, 13],
+      ['Nantongo Rebecca', 75, 2, 15],
+      ['Kasozi Emmanuel', 65, 1, 18],
+      ['Babra Katushabe', 55, 1, 20],
+      ['Mwebaze Godfrey', 45, 1, 23],
+    ]),
     recentScouts: [
-      { scoutName: 'Tr. Grace Akello', reportedAt: '2 days ago', lat: 0.3246, lng: 32.5851 },
+      { scoutId: 'scout-kit-1', scoutName: 'Tr. Grace Akello', reportedAt: '2 days ago', lat: 0.3246, lng: 32.5851 },
     ],
   },
 ];
 
+export const SEED_FRONTLINE_STAGES: FrontlineStage[] = RAW_SEED_STAGES.map(recomputeStageStandings);
+
+const STORAGE_KEY = 'civicduty_frontline_stages_v2';
+const LEGACY_STORAGE_KEY = 'civicduty_frontline_stages_v1';
+
+function notifyStagesUpdated() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(STAGES_UPDATED_EVENT));
+  }
+}
+
 export function getStoredStages(): FrontlineStage[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_FRONTLINE_STAGES));
-      return SEED_FRONTLINE_STAGES;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(recomputeStageStandings);
+      }
     }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED_FRONTLINE_STAGES;
+    // Migrate custom user-created stages from legacy storage if present
+    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const seedIds = new Set(SEED_FRONTLINE_STAGES.map((s) => s.id));
+    let merged = [...SEED_FRONTLINE_STAGES];
+    if (legacyRaw) {
+      const legacyParsed = JSON.parse(legacyRaw);
+      if (Array.isArray(legacyParsed)) {
+        const customFromLegacy = legacyParsed
+          .filter((s: FrontlineStage) => s?.id && !seedIds.has(s.id))
+          .map((s: FrontlineStage) => recomputeStageStandings(s));
+        merged = [...customFromLegacy, ...SEED_FRONTLINE_STAGES];
+      }
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+    return merged;
   } catch {
     return SEED_FRONTLINE_STAGES;
   }
@@ -404,23 +704,113 @@ export function getStoredStages(): FrontlineStage[] {
 export function saveStoredStages(stages: FrontlineStage[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stages));
+    notifyStagesUpdated();
   } catch (err) {
     console.warn('Failed to save frontline stages to localStorage:', err);
   }
 }
 
+export function syncStagesFromCloudSnapshot(cloudStages: FrontlineStage[]): FrontlineStage[] {
+  if (!Array.isArray(cloudStages) || cloudStages.length === 0) {
+    return getStoredStages();
+  }
+  const current = getStoredStages();
+  const stageMap = new Map<string, FrontlineStage>();
+  current.forEach((s) => stageMap.set(s.id, s));
+  cloudStages.forEach((cs) => {
+    if (!cs?.id) return;
+    const local = stageMap.get(cs.id);
+    // Prefer whichever has newer updatedAt or richer member roster
+    const cloudTime = cs.updatedAt ? Date.parse(cs.updatedAt) : 0;
+    const localTime = local?.updatedAt ? Date.parse(local.updatedAt) : 0;
+    if (!local || cloudTime >= localTime) {
+      stageMap.set(cs.id, recomputeStageStandings({ ...(local || {}), ...cs }));
+    }
+  });
+  const merged = Array.from(stageMap.values());
+  saveStoredStages(merged);
+  return merged;
+}
+
+export function isUserMemberOfStage(stage: FrontlineStage, scoutId?: string, scoutName?: string): boolean {
+  const idLower = (scoutId || '').toLowerCase().trim();
+  const nameLower = (scoutName || '').toLowerCase().trim();
+  const members = stage.members || [];
+  return members.some((m) => {
+    const idMatch = idLower && m.id.toLowerCase() === idLower;
+    const nameMatch = nameLower && nameLower !== 'citizen observer' && m.name.toLowerCase() === nameLower;
+    return Boolean(idMatch || nameMatch);
+  });
+}
+
+export function getUserActiveStage(scoutId?: string, scoutName?: string): { stage: FrontlineStage; member: StageMember } | null {
+  const stages = getStoredStages();
+  const idLower = (scoutId || '').toLowerCase().trim();
+  const nameLower = (scoutName || '').toLowerCase().trim();
+  const nowMs = Date.now();
+  for (const stage of stages) {
+    const found = (stage.members || []).find((m) => {
+      const idMatch = idLower && m.id.toLowerCase() === idLower;
+      const nameMatch = nameLower && nameLower !== 'citizen observer' && m.name.toLowerCase() === nameLower;
+      return Boolean(idMatch || nameMatch) && isStageMemberActive(m, nowMs);
+    });
+    if (found) {
+      return { stage, member: found };
+    }
+  }
+  return null;
+}
+
+/**
+ * Checks whether a post author is CURRENTLY an active (non-dormant, non-exited)
+ * member of the workstation attached to a post. Dormant/exited accounts lose the
+ * active workstation badge on post cards, while the civic post itself stays visible.
+ */
+export function isAuthorActiveInWorkstation(params: {
+  stageId?: string;
+  workstationName?: string;
+  scoutId?: string;
+  scoutName?: string;
+  stages?: FrontlineStage[];
+}): { active: boolean; stage?: FrontlineStage; member?: StageMember } {
+  const list = params.stages || getStoredStages();
+  const normalizedName = params.workstationName ? normalizeWorkstationName(params.workstationName) : '';
+  const stage = list.find(
+    (s) =>
+      (params.stageId && s.id === params.stageId) ||
+      (normalizedName && s.normalizedName === normalizedName)
+  );
+  if (!stage) return { active: false };
+
+  const idLower = (params.scoutId || '').toLowerCase().trim();
+  const nameLower = (params.scoutName || '').toLowerCase().trim();
+  const nowMs = Date.now();
+
+  const member = (stage.members || []).find((m) => {
+    const idMatch = idLower && m.id.toLowerCase() === idLower;
+    const nameMatch =
+      nameLower &&
+      (m.name.toLowerCase() === nameLower ||
+        m.name.toLowerCase().startsWith(`${nameLower} (`));
+    return Boolean(idMatch || nameMatch);
+  });
+
+  if (!member) return { active: false, stage };
+  if (!isStageMemberActive(member, nowMs)) return { active: false, stage, member };
+  return { active: true, stage, member };
+}
+
 /**
  * Stage Establishment Consensus Algorithm:
- * - Checks if user provided GPS and workstation name.
- * - Finds existing stage cluster within 2km with matching/similar normalized name.
- * - If found:
- *   - Checks if this scout already recorded at this station; updates scout count.
- *   - If scoutCount >= 15 (more than 15, or threshold reached), auto-compiles and promotes stage to CERTIFIED.
- * - If not found:
- *   - Creates new incubator stage with 1 scout.
- * - Enforces Home Parish Lock.
+ * - Joining happens when reporting under a Frontline Workstation identity.
+ * - Matches existing stage by ID, or within 2km with similar name.
+ * - Enforces one active workstation per scout (automatically transfers out of previous stage if switching).
+ * - Deduplicates by unique scoutId (never double-counts multiple reports from the same scout).
+ * - Reactivates dormant members upon new report.
+ * - Certifies automatically at 15 active unique scouts.
  */
 export function registerScoutWorkstationConsensus(params: {
+  stageId?: string;
   category: FrontlineScoutCategory;
   workstationName: string;
   lat: number;
@@ -435,89 +825,162 @@ export function registerScoutWorkstationConsensus(params: {
 }): {
   stage: FrontlineStage;
   newlyCertified: boolean;
+  newlyEstablished: boolean;
+  joinedNewMember: boolean;
+  reactivatedMember: boolean;
+  switchedFromStage?: string;
+  pointsAwarded: number;
   distanceKmToCenter: number;
   scoutCount: number;
   consensusProgressPct: number;
 } {
-  const stages = getStoredStages();
+  let stages = getStoredStages();
   const normalizedInput = normalizeWorkstationName(params.workstationName);
+  const nowIso = new Date().toISOString();
+  const scoutIdLower = (params.scoutId || '').toLowerCase().trim();
+  const scoutNameLower = (params.scoutName || '').toLowerCase().trim();
 
-  // Find cluster within 2km and matching name
-  let targetStageIndex = stages.findIndex((s) => {
-    if (s.country !== params.country) return false;
-    if (s.category !== params.category) return false;
-    const dist = calculateGpsDistanceKm(s.centerGps.lat, s.centerGps.lng, params.lat, params.lng);
-    const nameMatch =
-      s.normalizedName === normalizedInput ||
-      s.normalizedName.includes(normalizedInput) ||
-      normalizedInput.includes(s.normalizedName);
-    return dist <= 2.0 && nameMatch;
+  // Locate target workstation (by explicit stageId first, otherwise GPS + name within 2km)
+  let targetStageIndex = params.stageId
+    ? stages.findIndex((s) => s.id === params.stageId)
+    : -1;
+
+  if (targetStageIndex < 0) {
+    targetStageIndex = stages.findIndex((s) => {
+      if (s.country !== params.country) return false;
+      if (s.category !== params.category) return false;
+      const dist = calculateGpsDistanceKm(s.centerGps.lat, s.centerGps.lng, params.lat, params.lng);
+      const nameMatch =
+        s.normalizedName === normalizedInput ||
+        s.normalizedName.includes(normalizedInput) ||
+        normalizedInput.includes(s.normalizedName);
+      return dist <= 2.0 && nameMatch;
+    });
+  }
+
+  const targetStageId = targetStageIndex >= 0 ? stages[targetStageIndex].id : null;
+  let switchedFromStage: string | undefined;
+
+  // One active workstation at a time: exit any OTHER workstation the scout belongs to
+  stages = stages.map((st) => {
+    if (st.id === targetStageId) return st;
+    if (!isUserMemberOfStage(st, params.scoutId, params.scoutName)) return st;
+    switchedFromStage = st.name;
+    const filteredMembers = (st.members || []).filter((m) => {
+      const idMatch = scoutIdLower && m.id.toLowerCase() === scoutIdLower;
+      const nameMatch = scoutNameLower && scoutNameLower !== 'citizen observer' && m.name.toLowerCase() === scoutNameLower;
+      return !(idMatch || nameMatch);
+    });
+    const updatedOther = recomputeStageStandings({
+      ...st,
+      members: filteredMembers,
+      recentScouts: st.recentScouts.filter((r) => r.scoutId !== params.scoutId && r.scoutName !== params.scoutName),
+    });
+    saveFrontlineStageToCloud(updatedOther).catch(() => {});
+    return updatedOther;
   });
 
-  let newlyCertified = false;
-  let distToCenter = 0;
+  // Re-resolve target index after any transfer
+  targetStageIndex = targetStageId ? stages.findIndex((s) => s.id === targetStageId) : -1;
 
   const categoryMeta =
     FRONTLINE_CATEGORIES.find((c) => c.id === params.category) || FRONTLINE_CATEGORIES[0];
 
   if (targetStageIndex >= 0) {
     const existing = stages[targetStageIndex];
-    distToCenter = calculateGpsDistanceKm(
+    const distToCenter = calculateGpsDistanceKm(
       existing.centerGps.lat,
       existing.centerGps.lng,
       params.lat,
       params.lng
     );
 
-    // Add scout if not already recorded recently
-    const alreadyLogged = existing.recentScouts.some(
-      (r) => r.scoutName.toLowerCase() === params.scoutName.toLowerCase()
-    );
+    const existingMembers = [...(existing.members || [])];
+    const memberIdx = existingMembers.findIndex((m) => {
+      const idMatch = scoutIdLower && m.id.toLowerCase() === scoutIdLower;
+      const nameMatch = scoutNameLower && scoutNameLower !== 'citizen observer' && m.name.toLowerCase() === scoutNameLower;
+      return Boolean(idMatch || nameMatch);
+    });
 
-    const updatedScoutCount = alreadyLogged ? existing.scoutCount : existing.scoutCount + 1;
-    const shouldCertify = updatedScoutCount >= existing.thresholdRequired;
-    if (!existing.isCertified && shouldCertify) {
-      newlyCertified = true;
+    let joinedNewMember = false;
+    let reactivatedMember = false;
+    let pointsAwarded = 35;
+
+    if (memberIdx >= 0) {
+      const prevMember = existingMembers[memberIdx];
+      reactivatedMember = !isStageMemberActive(prevMember);
+      pointsAwarded = reactivatedMember ? 40 : 35;
+      existingMembers[memberIdx] = {
+        ...prevMember,
+        id: params.scoutId || prevMember.id,
+        name: params.scoutName || prevMember.name,
+        points: prevMember.points + pointsAwarded,
+        monthlyReports: (prevMember.monthlyReports || 0) + 1,
+        lastActiveAt: nowIso,
+        isDormant: false,
+        qualifiedForShare: true,
+      };
+    } else {
+      joinedNewMember = true;
+      pointsAwarded = 40;
+      existingMembers.push({
+        id: params.scoutId,
+        name: params.scoutName,
+        rank: existingMembers.length + 1,
+        points: pointsAwarded,
+        monthlyReports: 1,
+        qualifiedForShare: true,
+        joinedAt: nowIso,
+        lastActiveAt: nowIso,
+        isDormant: false,
+        lionSharePct: 0,
+        bountyShareUgx: 0,
+      });
     }
 
-    const updatedStage: FrontlineStage = {
-      ...existing,
-      scoutCount: updatedScoutCount,
-      isCertified: existing.isCertified || shouldCertify,
-      officialLabel:
-        existing.isCertified || shouldCertify
-          ? `Certified ${existing.name} Hub`
-          : `${existing.name} (Incubating ${updatedScoutCount}/${existing.thresholdRequired})`,
-      certifiedAt: existing.certifiedAt || (newlyCertified ? new Date().toISOString().split('T')[0] : undefined),
-      recentScouts: [
-        {
-          scoutName: params.scoutName,
-          reportedAt: 'Just now',
-          lat: params.lat,
-          lng: params.lng,
-        },
-        ...existing.recentScouts.slice(0, 7),
-      ],
-      // Re-center GPS slightly
-      centerGps: {
-        lat: Number(((existing.centerGps.lat * existing.scoutCount + params.lat) / (existing.scoutCount + 1)).toFixed(5)),
-        lng: Number(((existing.centerGps.lng * existing.scoutCount + params.lng) / (existing.scoutCount + 1)).toFixed(5)),
+    const updatedRecent = [
+      {
+        scoutId: params.scoutId,
+        scoutName: params.scoutName,
+        reportedAt: 'Just now',
+        lat: params.lat,
+        lng: params.lng,
       },
-    };
+      ...existing.recentScouts.filter((r) => r.scoutId !== params.scoutId && r.scoutName !== params.scoutName),
+    ].slice(0, 12);
 
+    const countBase = Math.max(1, existing.scoutCount);
+    const updatedStage = recomputeStageStandings({
+      ...existing,
+      members: existingMembers,
+      recentScouts: updatedRecent,
+      centerGps: {
+        lat: Number(((existing.centerGps.lat * countBase + params.lat) / (countBase + 1)).toFixed(5)),
+        lng: Number(((existing.centerGps.lng * countBase + params.lng) / (countBase + 1)).toFixed(5)),
+      },
+    });
+
+    const newlyCertified = !existing.isCertified && updatedStage.isCertified;
     stages[targetStageIndex] = updatedStage;
     saveStoredStages(stages);
+    saveFrontlineStageToCloud(updatedStage).catch(() => {});
 
     return {
       stage: updatedStage,
       newlyCertified,
+      newlyEstablished: newlyCertified,
+      joinedNewMember,
+      reactivatedMember,
+      switchedFromStage,
+      pointsAwarded,
       distanceKmToCenter: distToCenter,
-      scoutCount: updatedScoutCount,
-      consensusProgressPct: Math.min(100, Math.round((updatedScoutCount / existing.thresholdRequired) * 100)),
+      scoutCount: updatedStage.scoutCount,
+      consensusProgressPct: Math.min(100, Math.round((updatedStage.scoutCount / updatedStage.thresholdRequired) * 100)),
     };
   } else {
-    // Create new incubating stage
-    const newStage: FrontlineStage = {
+    // Create new incubating stage with 1 active founding scout
+    const foundingPoints = 50;
+    const rawNewStage: FrontlineStage = {
       id: `stage-${params.country.toLowerCase()}-${Date.now()}`,
       name: params.workstationName.trim(),
       normalizedName: normalizedInput,
@@ -530,29 +993,37 @@ export function registerScoutWorkstationConsensus(params: {
       parish: params.parish || 'Central Ward',
       centerGps: { lat: params.lat, lng: params.lng },
       scoutCount: 1,
-      thresholdRequired: 15,
+      thresholdRequired: STAGE_CERTIFICATION_THRESHOLD,
       isCertified: false,
-      officialLabel: `${params.workstationName.trim()} (Incubating 1/15 Scouts)`,
-      patronSponsorPoolUgx: 50000, // Seed bootstrap sponsor pool
+      officialLabel: `${params.workstationName.trim()} (Incubating 1/${STAGE_CERTIFICATION_THRESHOLD})`,
+      patronSponsorPoolUgx: 50000,
       patronCount: 1,
       patrons: [
         {
           patronName: 'CivicDuty Community Seed Vault',
           amountUgx: 50000,
-          sponsoredAt: new Date().toISOString().split('T')[0],
+          sponsoredAt: nowIso.split('T')[0],
         },
       ],
-      topScouts: [
+      topScouts: [],
+      members: [
         {
+          id: params.scoutId,
           name: params.scoutName,
           rank: 1,
-          points: 100,
-          badge: 'Founding Stage Scout',
+          points: foundingPoints,
+          monthlyReports: 1,
+          qualifiedForShare: true,
+          joinedAt: nowIso,
+          lastActiveAt: nowIso,
+          isDormant: false,
+          lionSharePct: 100,
           bountyShareUgx: 50000,
         },
       ],
       recentScouts: [
         {
+          scoutId: params.scoutId,
           scoutName: params.scoutName,
           reportedAt: 'Just now',
           lat: params.lat,
@@ -561,87 +1032,24 @@ export function registerScoutWorkstationConsensus(params: {
       ],
     };
 
+    const newStage = recomputeStageStandings(rawNewStage);
     stages.unshift(newStage);
     saveStoredStages(stages);
+    saveFrontlineStageToCloud(newStage).catch(() => {});
 
     return {
       stage: newStage,
       newlyCertified: false,
+      newlyEstablished: false,
+      joinedNewMember: true,
+      reactivatedMember: false,
+      switchedFromStage,
+      pointsAwarded: foundingPoints,
       distanceKmToCenter: 0,
       scoutCount: 1,
-      consensusProgressPct: Math.round((1 / 15) * 100),
+      consensusProgressPct: Math.round((1 / STAGE_CERTIFICATION_THRESHOLD) * 100),
     };
   }
-}
-
-/**
- * Algorithmic Lion's Share Pool Distribution:
- * - Direct CSR profit sharing modeled after X/Twitter Creator monetization.
- * - Minimum monthly engagement: member must have at least 1 monthly report to qualify.
- * - Rank 1: 45% (The Lion's share)
- * - Rank 2: 25%
- * - Rank 3: 15%
- * - Rank 4+: Share remaining 15% equally or weighted across qualified active members.
- * - Limited items in workstation vault go strictly to Top 3 scouts.
- */
-export function distributeStageLionShare(
-  totalPoolUgx: number,
-  existingMembers?: StageMember[],
-  existingTopScouts?: Array<{ name: string; rank: number; points: number; badge: string; bountyShareUgx: number }>
-): {
-  topScouts: Array<{ name: string; rank: number; points: number; badge: string; bountyShareUgx: number }>;
-  members: StageMember[];
-} {
-  const members = (existingMembers || []).map((m) => ({ ...m }));
-  
-  // Sort members by points descending
-  members.sort((a, b) => b.points - a.points);
-
-  // Assign ranks
-  members.forEach((m, idx) => {
-    m.rank = idx + 1;
-    m.qualifiedForShare = m.monthlyReports >= 1;
-  });
-
-  const qualifiedLowerRankMembers = members.filter((m) => m.rank >= 4 && m.qualifiedForShare);
-  const lowerShareTotalPct = qualifiedLowerRankMembers.length > 0 ? 15 : 0;
-  const rank1Pct = qualifiedLowerRankMembers.length > 0 ? 45 : 53;
-  const rank2Pct = qualifiedLowerRankMembers.length > 0 ? 25 : 29;
-  const rank3Pct = qualifiedLowerRankMembers.length > 0 ? 15 : 18;
-
-  members.forEach((m) => {
-    if (!m.qualifiedForShare) {
-      m.lionSharePct = 0;
-      m.bountyShareUgx = 0;
-      return;
-    }
-    if (m.rank === 1) {
-      m.lionSharePct = rank1Pct;
-      m.bountyShareUgx = Math.round((totalPoolUgx * rank1Pct) / 100);
-    } else if (m.rank === 2) {
-      m.lionSharePct = rank2Pct;
-      m.bountyShareUgx = Math.round((totalPoolUgx * rank2Pct) / 100);
-    } else if (m.rank === 3) {
-      m.lionSharePct = rank3Pct;
-      m.bountyShareUgx = Math.round((totalPoolUgx * rank3Pct) / 100);
-    } else {
-      const perMemberPct = lowerShareTotalPct / Math.max(1, qualifiedLowerRankMembers.length);
-      m.lionSharePct = Number(perMemberPct.toFixed(1));
-      m.bountyShareUgx = Math.round((totalPoolUgx * perMemberPct) / 100);
-    }
-  });
-
-  const updatedTopScouts = (existingTopScouts || []).map((ts, idx) => {
-    const mem = members.find((m) => m.rank === idx + 1);
-    const shareRatio = idx === 0 ? rank1Pct / 100 : idx === 1 ? rank2Pct / 100 : rank3Pct / 100;
-    return {
-      ...ts,
-      rank: idx + 1,
-      bountyShareUgx: mem ? mem.bountyShareUgx : Math.round(totalPoolUgx * shareRatio),
-    };
-  });
-
-  return { topScouts: updatedTopScouts, members };
 }
 
 export function contributePatronSponsorship(
@@ -666,84 +1074,73 @@ export function contributePatronSponsorship(
     ...stage.patrons,
   ];
 
-  // Algorithmic Lion's Share Distribution (45% Rank 1, 25% Rank 2, 15% Rank 3, 15% Ranks 4+)
-  const { topScouts: updatedTopScouts, members: updatedMembers } = distributeStageLionShare(
-    updatedPool,
-    stage.members,
-    stage.topScouts
-  );
-
-  const updatedStage: FrontlineStage = {
+  const updatedStage = recomputeStageStandings({
     ...stage,
     patronSponsorPoolUgx: updatedPool,
     patronCount: stage.patronCount + 1,
     patrons: updatedPatrons,
-    topScouts: updatedTopScouts,
-    members: updatedMembers,
-  };
+  });
 
   stages[index] = updatedStage;
   saveStoredStages(stages);
+  saveFrontlineStageToCloud(updatedStage).catch(() => {});
   return updatedStage;
 }
 
 /**
- * Voluntary Exit from Workstation Virtual Group:
- * A boda stage, market, or hospital worker is free to exit their station cluster at any time.
+ * Voluntary Exit from Workstation Group:
+ * Only succeeds if the user is actually a member of this workstation.
+ * Removes them from the active roster, recalculates Top-3 rewards, and
+ * re-evaluates certification status if active scouts drop below 15.
  */
 export function exitStageGroup(
   stageId: string,
-  scoutIdOrName: string
+  scoutId: string,
+  scoutName?: string
 ): { success: boolean; stage?: FrontlineStage; message: string } {
   const stages = getStoredStages();
   const index = stages.findIndex((s) => s.id === stageId);
   if (index < 0) {
-    return { success: false, message: 'Workstation stage not found' };
+    return { success: false, message: 'Workstation stage not found.' };
   }
 
   const stage = stages[index];
   const currentMembers = stage.members || [];
-  const targetLower = scoutIdOrName.toLowerCase().trim();
+  const idLower = (scoutId || '').toLowerCase().trim();
+  const nameLower = (scoutName || '').toLowerCase().trim();
 
-  const remainingMembers = currentMembers.filter(
-    (m) => m.id.toLowerCase() !== targetLower && !m.name.toLowerCase().includes(targetLower)
-  );
+  const remainingMembers = currentMembers.filter((m) => {
+    const idMatch = idLower && m.id.toLowerCase() === idLower;
+    const nameMatch = nameLower && nameLower !== 'citizen observer' && m.name.toLowerCase() === nameLower;
+    return !(idMatch || nameMatch);
+  });
 
   if (remainingMembers.length === currentMembers.length) {
-    // If not found in members, remove from recentScouts
-    const remainingRecent = stage.recentScouts.filter(
-      (r) => !r.scoutName.toLowerCase().includes(targetLower)
-    );
-    const updatedCount = Math.max(1, stage.scoutCount - 1);
-    const updatedStage: FrontlineStage = {
-      ...stage,
-      scoutCount: updatedCount,
-      recentScouts: remainingRecent,
+    return {
+      success: false,
+      message: `You are not currently a member of ${stage.name}.`,
     };
-    stages[index] = updatedStage;
-    saveStoredStages(stages);
-    return { success: true, stage: updatedStage, message: `Successfully exited ${stage.name}.` };
   }
 
-  const newScoutCount = Math.max(1, stage.scoutCount - 1);
-  const { topScouts: updatedTopScouts, members: reCalculatedMembers } = distributeStageLionShare(
-    stage.patronSponsorPoolUgx,
-    remainingMembers,
-    stage.topScouts.filter((ts) => !ts.name.toLowerCase().includes(targetLower))
-  );
-
-  const updatedStage: FrontlineStage = {
+  const updatedStage = recomputeStageStandings({
     ...stage,
-    scoutCount: newScoutCount,
-    members: reCalculatedMembers,
-    topScouts: updatedTopScouts,
-  };
+    members: remainingMembers,
+    recentScouts: stage.recentScouts.filter(
+      (r) => r.scoutId !== scoutId && (!nameLower || r.scoutName.toLowerCase() !== nameLower)
+    ),
+  });
 
   stages[index] = updatedStage;
   saveStoredStages(stages);
+  saveFrontlineStageToCloud(updatedStage).catch(() => {});
+
+  const statusNote = updatedStage.isCertified
+    ? `${updatedStage.scoutCount}/${updatedStage.thresholdRequired} active scouts remain.`
+    : `Group is now Incubating (${updatedStage.scoutCount}/${updatedStage.thresholdRequired} active).`;
+
   return {
     success: true,
     stage: updatedStage,
-    message: `You have successfully exited ${stage.name}. Your workstation slot has been freed.`,
+    message: `Exited ${stage.name}. ${statusNote}`,
   };
 }

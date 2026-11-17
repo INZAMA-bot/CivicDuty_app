@@ -57,6 +57,7 @@ import {
   subscribeToTownHallHandsFromCloud,
   updateTownHallInCloud,
 } from '../services/firestoreSync';
+import { SearchableSelect } from './SearchableSelect';
 
 export const GlobalSocialModals: React.FC = () => {
   const {
@@ -2146,10 +2147,10 @@ export const GlobalSocialModals: React.FC = () => {
               <label className="text-[10px] font-mono uppercase font-semibold text-slate-500 dark:text-slate-400 block mb-1">
                 Convene As (Government / Grassroots Desk)
               </label>
-              <select
+              <SearchableSelect
                 value={conveningDeskRole}
-                onChange={(e) => {
-                  const role = e.target.value as any;
+                onChange={(val) => {
+                  const role = val as any;
                   setConveningDeskRole(role);
                   const hub0 = gov.sampleJurisdictions[0] || gov.countryName;
                   if (role === 'lc1') {
@@ -2174,14 +2175,18 @@ export const GlobalSocialModals: React.FC = () => {
                     setNewBarazaTitle(`${gov.tier3UnitLabel} Executive Public Accountability Hearing`);
                   }
                 }}
-                className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option value="lc1">{isUg ? 'LC1 Village Chairperson' : gov.grassrootsUnits.villageLabel} (Grassroots Council · Auto-Pins to Near Me)</option>
-                <option value="parish">{gov.tier1Label} / {gov.tier1UnitLabel} Agent (Statutory Accounting Desk)</option>
-                <option value="subcounty">{gov.tier2Label} / {gov.tier2UnitLabel} Administration</option>
-                <option value="district">{gov.tier3Label} ({gov.tier3Short}) / {gov.tier3UnitLabel} Desk</option>
-                <option value="citizen">Verified Citizen Watchdog / Community Convener</option>
-              </select>
+                ariaLabel="Convene As"
+                placeholder="Select convening authority..."
+                searchPlaceholder="Search authority level..."
+                options={[
+                  { value: 'lc1', label: `${isUg ? 'LC1 Village Chairperson' : gov.grassrootsUnits.villageLabel} (Grassroots Council · Auto-Pins to Near Me)` },
+                  { value: 'parish', label: `${gov.tier1Label} / ${gov.tier1UnitLabel} Agent (Statutory Accounting Desk)` },
+                  { value: 'subcounty', label: `${gov.tier2Label} / ${gov.tier2UnitLabel} Administration` },
+                  { value: 'district', label: `${gov.tier3Label} (${gov.tier3Short}) / ${gov.tier3UnitLabel} Desk` },
+                  { value: 'citizen', label: 'Verified Citizen Watchdog / Community Convener' },
+                ]}
+                triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] font-mono"
+              />
             </div>
             {/* Broadcast Timing: Live Now vs Scheduled */}
             <div className="flex items-center justify-between p-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">

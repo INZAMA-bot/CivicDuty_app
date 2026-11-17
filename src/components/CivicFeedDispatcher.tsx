@@ -41,7 +41,9 @@ import { SearchableSelect } from './SearchableSelect';
 import {
   FrontlineScoutCategory,
   FRONTLINE_CATEGORIES,
+  STAGES_UPDATED_EVENT,
   getStoredStages,
+  getUserActiveStage,
   registerScoutWorkstationConsensus,
 } from '../data/stageEstablishment';
 
@@ -129,11 +131,43 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
   const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
 
   // Frontline Scout Workstation State
+  const [availableStages, setAvailableStages] = useState(() => getStoredStages());
+  const [selectedStageId, setSelectedStageId] = useState<string>('');
   const [isFrontlineScout, setIsFrontlineScout] = useState(false);
   const [scoutCategory, setScoutCategory] = useState<FrontlineScoutCategory>('bodaboda');
   const [workstationName, setWorkstationName] = useState(
     country === 'RW' ? 'Kimironko Moto Stage' : country === 'UG' ? 'Equatorial Boda Stage' : 'Central Transit Hub'
   );
+
+  React.useEffect(() => {
+    const refreshStages = () => setAvailableStages(getStoredStages());
+    window.addEventListener(STAGES_UPDATED_EVENT, refreshStages);
+    return () => window.removeEventListener(STAGES_UPDATED_EVENT, refreshStages);
+  }, []);
+
+  // Pre-fill Frontline Workstation if launched from Perks Hub or default to user's active group
+  React.useEffect(() => {
+    try {
+      const rawPrefill = sessionStorage.getItem('cd_prefill_workstation_stage');
+      if (rawPrefill) {
+        sessionStorage.removeItem('cd_prefill_workstation_stage');
+        const parsed = JSON.parse(rawPrefill);
+        if (parsed?.name) {
+          setIsFrontlineScout(true);
+          setSelectedStageId(parsed.id || '');
+          setWorkstationName(parsed.name);
+          if (parsed.category) setScoutCategory(parsed.category);
+          return;
+        }
+      }
+    } catch {}
+    const existingActive = getUserActiveStage(activeUser?.id, activeUser?.name);
+    if (existingActive) {
+      setSelectedStageId(existingActive.stage.id);
+      setWorkstationName(existingActive.stage.name);
+      setScoutCategory(existingActive.stage.category);
+    }
+  }, [activeUser?.id, activeUser?.name]);
 
   // Media Staging
   const [stagedMedia, setStagedMedia] = useState<
@@ -549,20 +583,27 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
       const randomId = Math.floor(1000 + Math.random() * 9000);
       const postId = `cd-${Date.now()}-${randomId}`;
 
+      if (isFrontlineScout && !workstationName.trim()) {
+        toast('Please enter or select your Frontline Workstation name', 'amber');
+        setIsSubmitting(false);
+        return;
+      }
+
       let consensusResult: any = null;
-      if (isFrontlineScout && gps) {
-        const latNum = parseFloat(gps.lat);
-        const lngNum = parseFloat(gps.lng);
+      if (isFrontlineScout) {
+        const latNum = parseFloat(gps?.lat || '0.3162');
+        const lngNum = parseFloat(gps?.lng || '32.5781');
         if (!isNaN(latNum) && !isNaN(lngNum)) {
           consensusResult = registerScoutWorkstationConsensus({
+            stageId: selectedStageId || undefined,
             category: scoutCategory,
             workstationName: workstationName.trim(),
             lat: latNum,
             lng: lngNum,
             country,
-            parish: parish || fallbackParish,
-            subcounty: subcounty || fallbackSubcounty,
-            district: district || fallbackDistrict,
+            parish: resolvedParishName || fallbackParish,
+            subcounty: resolvedSubcountyName || fallbackSubcounty,
+            district: resolvedDistrictName || fallbackDistrict,
             scoutId: activeUser.id || 'usr-scout',
             scoutName: activeUser.name || 'Citizen Scout',
             reportSnippet: derivedTitle,
@@ -680,8 +721,14 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
         });
       }
 
-      if (consensusResult?.newlyEstablished) {
-        toast(`🎉 Stage Certified! ${consensusResult.stage.name} crossed 15 scouts within 2km!`, 'emerald');
+      if (consensusResult?.newlyCertified) {
+        toast(`Workstation Certified! ${consensusResult.stage.name} reached 15 active scouts!`, 'emerald');
+      } else if (consensusResult?.switchedFromStage) {
+        toast(`Joined ${consensusResult.stage.name} (+${consensusResult.pointsAwarded} pts · moved from ${consensusResult.switchedFromStage})`, 'emerald');
+      } else if (consensusResult?.joinedNewMember) {
+        toast(`Joined ${consensusResult.stage.name} (${consensusResult.scoutCount}/15 active · +${consensusResult.pointsAwarded} pts)`, 'emerald');
+      } else if (consensusResult) {
+        toast(`Logged report to ${consensusResult.stage.name} (+${consensusResult.pointsAwarded} workstation pts)`, 'emerald');
       }
 
       // Reset form and activate instant filing receipt docket modal
@@ -1386,6 +1433,98 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
               </div>
             )}
 
+            {/* Frontline Scout Workstation Membership (Prominent One-Tap Join/Log) */}
+            <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/25 space-y-2.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShieldCheck size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-white">
+                      Frontline Scouts Workstation (Optional)
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Add your stage identity when reporting to join a public group &amp; earn score rewards
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFrontlineScout(!isFrontlineScout)}
+                  className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer whitespace-nowrap ${
+                    isFrontlineScout
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  {isFrontlineScout ? 'Workstation Tagged' : '+ Tag Workstation'}
+                </button>
+              </div>
+
+              {isFrontlineScout && (
+                <div className="space-y-2.5 pt-1 animate-fade-in">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                      Pick Existing Workstation or Type a New Stage Name
+                    </label>
+                    <SearchableSelect
+                      value={selectedStageId || workstationName}
+                      placeholder="Select or type workstation name..."
+                      searchPlaceholder="Search stage or type a new stage name..."
+                      allowCustom
+                      customLabelPrefix="Start / Join Stage:"
+                      options={availableStages
+                        .filter((s) => s.country === country)
+                        .map((s) => ({
+                          value: s.id,
+                          label: `${s.name} · ${s.scoutCount}/${s.thresholdRequired} ${s.isCertified ? 'Certified' : 'Incubating'}`,
+                        }))}
+                      onChange={(val) => {
+                        const match = availableStages.find((s) => s.id === val);
+                        if (match) {
+                          setSelectedStageId(match.id);
+                          setWorkstationName(match.name);
+                          setScoutCategory(match.category);
+                        } else {
+                          setSelectedStageId('');
+                          setWorkstationName(val);
+                        }
+                      }}
+                      triggerClassName="bg-white dark:bg-[#161a22] rounded-xl"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {FRONTLINE_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setScoutCategory(cat.id);
+                          if (!selectedStageId && !workstationName.trim()) {
+                            setWorkstationName(cat.example);
+                          }
+                        }}
+                        className={`min-h-[36px] px-2.5 py-1.5 rounded-lg text-left border text-xs cursor-pointer truncate transition-colors ${
+                          scoutCategory === cat.id
+                            ? 'bg-emerald-600 text-white border-emerald-600 font-semibold'
+                            : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {cat.label.split('(')[0].trim()}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                    <Info size={12} className="text-emerald-600 shrink-0" />
+                    <span>
+                      15 active scouts on the same workstation certify it publicly. Top 3 members by score share 50% / 30% / 20% of the station vault.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Expandable Advanced Governance Suite Accordion */}
             <div>
               <button
@@ -1400,7 +1539,7 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <span>Advanced Governance Suite</span>
-                      {(isFrontlineScout || includePoll || includeBeforeAfter || anonymous) && (
+                      {(includePoll || includeBeforeAfter || anonymous) && (
                         <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                       )}
                     </div>
@@ -1421,92 +1560,27 @@ export const CivicFeedDispatcher: React.FC<CivicFeedDispatcherProps> = ({
                     <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold block">
                       Citizen Role / Trade
                     </label>
-                    <select
+                    <SearchableSelect
                       value={profession}
-                      onChange={(e) => setProfession(e.target.value)}
-                      className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2.5 py-1.5 text-xs font-mono"
-                    >
-                      <option value="General Resident / Commuter">General Resident / Commuter</option>
-                      <option value="Bodaboda Rider / Cyclist">Bodaboda Rider / Cyclist</option>
-                      <option value="Taxi / Matatu / Commercial Driver">Taxi / Matatu / Commercial Driver</option>
-                      <option value="Market Vendor / Local Trader">Market Vendor / Local Trader</option>
-                      <option value="Healthcare Worker / Nurse">Healthcare Worker / Nurse</option>
-                      <option value="Teacher / Student / Youth Leader">Teacher / Student / Youth Leader</option>
-                      <option value="Civil Servant / Public Officer">Civil Servant / Public Officer</option>
-                    </select>
+                      onChange={(val) => setProfession(val)}
+                      ariaLabel="Citizen Role or Trade"
+                      placeholder="Select role or trade..."
+                      searchPlaceholder="Search trade or profession..."
+                      allowCustom
+                      customLabelPrefix="Use role:"
+                      options={[
+                        { value: 'General Resident / Commuter', label: 'General Resident / Commuter' },
+                        { value: 'Bodaboda Rider / Cyclist', label: 'Bodaboda Rider / Cyclist' },
+                        { value: 'Taxi / Matatu / Commercial Driver', label: 'Taxi / Matatu / Commercial Driver' },
+                        { value: 'Market Vendor / Local Trader', label: 'Market Vendor / Local Trader' },
+                        { value: 'Healthcare Worker / Nurse', label: 'Healthcare Worker / Nurse' },
+                        { value: 'Teacher / Student / Youth Leader', label: 'Teacher / Student / Youth Leader' },
+                        { value: 'Civil Servant / Public Officer', label: 'Civil Servant / Public Officer' },
+                      ]}
+                      triggerClassName="bg-white dark:bg-[#161a22] font-mono"
+                    />
                   </div>
 
-                  {/* Frontline Scout Workstation */}
-                  <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 space-y-2.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-                        <ShieldCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
-                        <span>Frontline Scout Workstation &amp; Consensus Stage</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsFrontlineScout(!isFrontlineScout)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
-                          isFrontlineScout
-                            ? 'bg-emerald-600 text-white border-emerald-600'
-                            : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-600'
-                        }`}
-                      >
-                        {isFrontlineScout ? '✓ Scout Active' : 'Enable Scout'}
-                      </button>
-                    </div>
-
-                    {isFrontlineScout && (
-                      <div className="space-y-2 pt-1 animate-fade-in">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                          {FRONTLINE_CATEGORIES.map((cat) => (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => {
-                                setScoutCategory(cat.id);
-                                setWorkstationName(cat.example);
-                              }}
-                              className={`p-1.5 rounded text-left border text-[11px] font-mono cursor-pointer truncate ${
-                                scoutCategory === cat.id
-                                  ? 'bg-emerald-600 text-white border-emerald-600 font-bold'
-                                  : 'bg-white dark:bg-[#161a22] border-[#e3e6ea] dark:border-[#262b36] text-slate-700 dark:text-slate-300'
-                              }`}
-                            >
-                              {cat.label.split('(')[0]}
-                            </button>
-                          ))}
-                        </div>
-
-                        <input
-                          type="text"
-                          value={workstationName}
-                          onChange={(e) => setWorkstationName(e.target.value)}
-                          placeholder="e.g. Equatorial Boda Stage, Stall 4B"
-                          className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded px-2.5 py-1.5 text-xs font-mono"
-                        />
-
-                        {/* Frontline Scout Workstation Guidance */}
-                        <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 space-y-1.5 text-[10.5px]">
-                          <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300">
-                            <Info size={12} className="shrink-0" />
-                            <span>How a Frontline Stage Gets Certified on CivicDuty</span>
-                          </div>
-                          <ul className="space-y-1 text-slate-700 dark:text-slate-300 font-sans leading-relaxed list-disc pl-4">
-                            <li>
-                              <strong>Geotagged Workstation Name:</strong> Enter your stage or workshop name (e.g. <em>Equatorial Boda Stage</em>, <em>Nakasero Market Stall 12</em>). It anchors to your calibrated parish GPS.
-                            </li>
-                            <li>
-                              <strong>15-Scout Peer Consensus:</strong> When 15 frontline riders, drivers, or workers tag this workstation within a 2km radius, the stage is certified on the public ledger.
-                            </li>
-                            <li>
-                              <strong>Frontline Safety Bounties:</strong> Certified stages unlock monthly fuel e-vouchers, emergency airtime packs, and accelerated KCCA/police response SLAs.
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
                   {/* Referendum Poll */}
                   <div className="p-3 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] space-y-2">

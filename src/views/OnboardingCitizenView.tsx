@@ -949,17 +949,18 @@ export const OnboardingCitizenView: React.FC = () => {
                           <label className="text-[9.5px] font-mono text-slate-500 uppercase block mb-1">
                             Permit / Visa Category
                           </label>
-                          <select
+                          <SearchableSelect
+                            ariaLabel="Permit or Visa Category"
+                            searchPlaceholder="Search permit or visa category..."
                             value={loginForeignDocType}
-                            onChange={(e) => setLoginForeignDocType(e.target.value as IdentityDocumentType)}
-                            className="w-full bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-slate-100 text-[11px] font-mono"
-                          >
-                            {FOREIGN_DOCUMENT_OPTIONS.map((opt) => (
-                              <option key={opt.id} value={opt.id}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
+                            onChange={(val) => setLoginForeignDocType(val as IdentityDocumentType)}
+                            triggerClassName="bg-white dark:bg-[#161a22] rounded-lg px-2.5 py-1.5 font-mono text-[11px]"
+                            options={FOREIGN_DOCUMENT_OPTIONS.map((opt) => ({
+                              value: opt.id,
+                              label: opt.label,
+                              keywords: `${opt.id} ${opt.codePrefix || ''}`,
+                            }))}
+                          />
                         </div>
                         <div>
                           <label className="text-[9.5px] font-mono text-slate-500 uppercase block mb-1">

@@ -611,16 +611,20 @@ export const MinisterialCommandView: React.FC = () => {
                 />
               </div>
 
-              <select
+              <SearchableSelect
+                ariaLabel="Filter directive type"
+                searchPlaceholder="Search directive type..."
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="p-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300"
-              >
-                <option value="all">All Types</option>
-                <option value="anti_extortion_taskforce">Anti-Extortion</option>
-                <option value="surprise_field_audit">Field Audits</option>
-                <option value="pdm_ringfence">{gov.fiscalProgramName} Ringfence</option>
-              </select>
+                onChange={setFilterType}
+                className="min-w-[180px]"
+                triggerClassName="p-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                options={[
+                  { value: 'all', label: 'All Types' },
+                  { value: 'anti_extortion_taskforce', label: 'Anti-Extortion' },
+                  { value: 'surprise_field_audit', label: 'Field Audits' },
+                  { value: 'pdm_ringfence', label: `${gov.fiscalProgramName} Ringfence` },
+                ]}
+              />
             </div>
           </div>
 

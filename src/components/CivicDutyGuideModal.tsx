@@ -5,6 +5,7 @@ import { COUNTRIES } from '../data/countries';
 import { CountryCode } from '../types';
 import { getCountryBranding } from '../data/countryBranding';
 import { InteractiveRoleSandboxGrid } from './InteractiveRoleSandboxGrid';
+import { SearchableSelect } from './SearchableSelect';
 import {
   X,
   BookOpen,
@@ -136,18 +137,19 @@ export const CivicDutyGuideModal: React.FC<CivicDutyGuideModalProps> = ({
               <Globe size={13} className="text-emerald-600 dark:text-emerald-400" />
               <span>Jurisdiction ({Object.keys(COUNTRIES).length} Nations):</span>
             </div>
-            <select
+            <SearchableSelect
               value={guideCountry}
-              onChange={(e) => setGuideCountry(e.target.value as CountryCode)}
-              aria-label="Select Country for Field Manual"
-              className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer"
-            >
-              {Object.entries(COUNTRIES).map(([code, info]) => (
-                <option key={code} value={code}>
-                  {info.name} ({code})
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setGuideCountry(val as CountryCode)}
+              ariaLabel="Jurisdiction Country for Field Manual"
+              placeholder="Select country..."
+              searchPlaceholder="Search countries..."
+              options={Object.entries(COUNTRIES).map(([code, info]) => ({
+                value: code,
+                label: `${info.name} (${code})`,
+              }))}
+              className="w-52"
+              triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] font-mono font-semibold py-1.5"
+            />
           </div>
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             {QUICK_GUIDE_COUNTRIES.map((code) => {

@@ -8,6 +8,7 @@ import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
 import { TicketStatus } from '../types';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { getCountryPerks } from '../data/countryPerks';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 export const GovReplyView: React.FC = () => {
   const { user, activePost, go, addCommentToPost, updatePostStatus, logAudit, addPoints, toast, projects } = useApp();
@@ -566,20 +567,22 @@ export const GovReplyView: React.FC = () => {
             <label className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-semibold">
               Select Tender Contract / Project Docket
             </label>
-            <select
+            <SearchableSelect
+              ariaLabel="Select Tender Contract or Project Docket"
+              searchPlaceholder="Search contract code, title, or contractor..."
+              emptyOptionLabel="-- No Linked Capital Project (Independent Dispatch) --"
               value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-lg border border-[#e3e6ea] dark:border-[#262b36] bg-white dark:bg-[#0e1116] text-slate-900 dark:text-white font-mono focus:outline-none focus:border-teal-500 cursor-pointer"
-            >
-              <option value="">-- No Linked Capital Project (Independent Dispatch) --</option>
-              {(projects || [])
+              onChange={setSelectedProjectId}
+              triggerClassName="px-3 py-2 rounded-lg bg-white dark:bg-[#0e1116] font-mono"
+              options={(projects || [])
                 .filter((pr) => !pr.country || pr.country === user.country || pr.dept === user.dept)
-                .map((pr) => (
-                  <option key={pr.id} value={pr.id}>
-                    [{pr.code}] {pr.title} — {pr.contractor} ({pr.value})
-                  </option>
-                ))}
-            </select>
+                .map((pr) => ({
+                  value: pr.id,
+                  label: `[${pr.code}] ${pr.title}`,
+                  sublabel: `${pr.contractor} (${pr.value})`,
+                  keywords: `${pr.code} ${pr.title} ${pr.contractor} ${pr.value}`,
+                }))}
+            />
 
             {selectedProjectId && (() => {
               const prj = (projects || []).find((pr) => pr.id === selectedProjectId);

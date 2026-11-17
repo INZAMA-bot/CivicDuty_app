@@ -62,6 +62,7 @@ import { DeptIcon } from '../components/DeptIcon';
 import { MediaItem } from '../types';
 import { RewardModal } from '../components/RewardModal';
 import { TicketAuditTimeline } from '../components/TicketAuditTimeline';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { generateCryptoSealSync } from '../utils/cryptoSeal';
 import { QrCodeModal } from '../components/QrCodeModal';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
@@ -73,6 +74,11 @@ import {
   getDossierCompiledCount,
   buildDossierDigestText,
 } from '../utils/dossierEngine';
+import {
+  STAGES_UPDATED_EVENT,
+  getStoredStages,
+  isAuthorActiveInWorkstation,
+} from '../data/stageEstablishment';
 
 export const PostDetailView: React.FC = () => {
   const {
@@ -109,7 +115,15 @@ export const PostDetailView: React.FC = () => {
     setActivePost,
     isCitizenSpeaking,
     setIsCitizenSpeaking,
+    setPerkTab,
   } = useApp();
+
+  const [stagesSnapshot, setStagesSnapshot] = useState(() => getStoredStages());
+  React.useEffect(() => {
+    const sync = () => setStagesSnapshot(getStoredStages());
+    window.addEventListener(STAGES_UPDATED_EVENT, sync);
+    return () => window.removeEventListener(STAGES_UPDATED_EVENT, sync);
+  }, []);
 
   const [replyToSender, setReplyToSender] = useState<string | null>(null);
 
@@ -1203,6 +1217,38 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                 </span>
               </div>
             )}
+
+            {!p.anonymous && p.frontline_scout?.workstation_name && (() => {
+              const activeCheck = isAuthorActiveInWorkstation({
+                stageId: p.frontline_scout?.stage_id,
+                workstationName: p.frontline_scout?.workstation_name,
+                scoutId: p.citizen_id,
+                scoutName: p.citizen_name,
+                stages: stagesSnapshot,
+              });
+              if (!activeCheck.active || !activeCheck.stage) return null;
+              const st = activeCheck.stage;
+              return (
+                <div className="col-span-2 border-t border-slate-200 dark:border-slate-800 pt-2 flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-slate-600 dark:text-slate-400 font-bold">Active Workstation:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        sessionStorage.setItem('cd_open_community_pool', 'scout_bounty_vault');
+                        sessionStorage.setItem('cd_focus_stage_id', st.id);
+                      } catch {}
+                      setPerkTab('community_pools');
+                      go('perks');
+                    }}
+                    className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Users size={13} />
+                    <span>{st.name} · {st.scoutCount}/{st.thresholdRequired} {st.isCertified ? 'Certified' : 'Incubating'}</span>
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Master Dossier & Multi-Report Issue Compilation Engine */}
@@ -1321,26 +1367,40 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                     <label className="text-[9px] font-mono font-bold uppercase text-slate-500 block mb-1">
                       Your Frontline Role / Profession
                     </label>
-                    <select
+                    <SearchableSelect
+                      ariaLabel="Your Frontline Role or Profession"
+                      searchPlaceholder="Search or enter custom role..."
+                      allowCustom
                       value={witnessProfession}
-                      onChange={(e) => setWitnessProfession(e.target.value)}
-                      className="w-full text-xs font-bold bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2"
-                    >
-                      <option value={isUgPost ? 'Bodaboda Rider / Stage Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}>
-                        {isUgPost ? 'Bodaboda Rider / Road Scout' : `${transitSpec.scoutTabLabel} / Road Scout`}
-                      </option>
-                      <option value={`${transitSpec.taxiTabLabel} Operator`}>
-                        {transitSpec.taxiTabLabel} Operator
-                      </option>
-                      <option value={`${transitSpec.marketTabLabel} / Shop Owner`}>
-                        {transitSpec.marketTabLabel} / Shop Owner
-                      </option>
-                      <option value={isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health'}>
-                        {isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health'}
-                      </option>
-                      <option value="Teacher / School Administrator">Teacher / School Admin</option>
-                      <option value={`Local ${gov.tier1UnitLabel} Resident`}>Local {gov.tier1UnitLabel} Resident</option>
-                    </select>
+                      onChange={setWitnessProfession}
+                      triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-lg p-2 font-bold"
+                      options={[
+                        {
+                          value: isUgPost ? 'Bodaboda Rider / Stage Scout' : `${transitSpec.scoutTabLabel} / Road Scout`,
+                          label: isUgPost ? 'Bodaboda Rider / Road Scout' : `${transitSpec.scoutTabLabel} / Road Scout`,
+                        },
+                        {
+                          value: `${transitSpec.taxiTabLabel} Operator`,
+                          label: `${transitSpec.taxiTabLabel} Operator`,
+                        },
+                        {
+                          value: `${transitSpec.marketTabLabel} / Shop Owner`,
+                          label: `${transitSpec.marketTabLabel} / Shop Owner`,
+                        },
+                        {
+                          value: isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health',
+                          label: isUgPost ? 'Healthcare Worker / VHT' : 'Healthcare Worker / Community Health',
+                        },
+                        {
+                          value: 'Teacher / School Administrator',
+                          label: 'Teacher / School Admin',
+                        },
+                        {
+                          value: `Local ${gov.tier1UnitLabel} Resident`,
+                          label: `Local ${gov.tier1UnitLabel} Resident`,
+                        },
+                      ]}
+                    />
                   </div>
                   <div className="flex flex-col justify-end">
                     <button
@@ -1443,17 +1503,21 @@ Inscribed permanently into CivicDuty Sovereign Accountability Ledger.`;
                   Select another open ticket below that reports the same underlying infrastructure breakdown. Merging preserves the original citizen&apos;s report, GPS pin, and upvotes inside this Master Dossier so the Accounting Officer resolves them together.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Select Duplicate Report"
+                    searchPlaceholder="Search duplicate report by ID, dept, or author..."
+                    placeholder="Select duplicate report..."
                     value={selectedDupId}
-                    onChange={(e) => setSelectedDupId(e.target.value)}
-                    className="flex-1 text-xs font-bold bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5"
-                  >
-                    {candidateDuplicatePosts.map((cand) => (
-                      <option key={cand.id} value={cand.id}>
-                        #{cand.id.slice(-6).toUpperCase()} · [{cand.dept.toUpperCase()}] {cand.title} ({cand.citizen_name})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedDupId}
+                    className="flex-1"
+                    triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl p-2.5 font-bold"
+                    options={candidateDuplicatePosts.map((cand) => ({
+                      value: cand.id,
+                      label: `#${cand.id.slice(-6).toUpperCase()} · [${cand.dept.toUpperCase()}] ${cand.title}`,
+                      sublabel: cand.citizen_name,
+                      keywords: `${cand.id} ${cand.dept} ${cand.title} ${cand.citizen_name}`,
+                    }))}
+                  />
                   <button
                     type="button"
                     onClick={() => {

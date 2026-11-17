@@ -51,6 +51,7 @@ import { DefectsLiabilityPanel } from '../components/DefectsLiabilityPanel';
 import { ContractorCsrModal } from '../components/ContractorCsrModal';
 import { SiteDepotBranchesCard } from '../components/SiteDepotBranchesCard';
 import { PrintableTreasuryWarrantModal } from '../components/PrintableTreasuryWarrantModal';
+import { SearchableSelect } from '../components/SearchableSelect';
 import {
   ProjectMilestone,
   MilestoneEvidenceImage,
@@ -872,24 +873,30 @@ export const ProjectView: React.FC = () => {
         {effectiveCanAttestGrassroots && (
           <form onSubmit={handleSubmitGrassrootsAttestation} className="pt-2 border-t border-[#e3e6ea] dark:border-[#262b36] space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <select
+              <SearchableSelect
+                ariaLabel="Attestation leadership level"
+                searchPlaceholder="Search leadership tier..."
                 value={attestLevel}
-                onChange={(e) => setAttestLevel(e.target.value as any)}
-                className="px-2.5 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold"
-              >
-                <option value="lc1">LC1 / Village Chairperson</option>
-                <option value="parish_chief">Parish Chief / Ward Agent</option>
-                <option value="subcounty">Sub-County SAS / Clerk</option>
-              </select>
-              <select
+                onChange={(val) => setAttestLevel(val as any)}
+                triggerClassName="px-2.5 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116]"
+                options={[
+                  { value: 'lc1', label: 'LC1 / Village Chairperson' },
+                  { value: 'parish_chief', label: 'Parish Chief / Ward Agent' },
+                  { value: 'subcounty', label: 'Sub-County SAS / Clerk' },
+                ]}
+              />
+              <SearchableSelect
+                ariaLabel="Attestation status"
+                searchPlaceholder="Search status..."
                 value={attestStatus}
-                onChange={(e) => setAttestStatus(e.target.value as any)}
-                className="px-2.5 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-semibold"
-              >
-                <option value="on_site_confirmed">On-Site Work Confirmed</option>
-                <option value="needs_review">Needs Technical Review</option>
-                <option value="stalled_flagged">Stalled / No Crew On-Site</option>
-              </select>
+                onChange={(val) => setAttestStatus(val as any)}
+                triggerClassName="px-2.5 py-2 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116]"
+                options={[
+                  { value: 'on_site_confirmed', label: 'On-Site Work Confirmed' },
+                  { value: 'needs_review', label: 'Needs Technical Review' },
+                  { value: 'stalled_flagged', label: 'Stalled / No Crew On-Site' },
+                ]}
+              />
               <input
                 type="text"
                 value={attestUnit}

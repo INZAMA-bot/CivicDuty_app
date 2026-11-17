@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ArrowRight,
 } from 'lucide-react';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 interface CommissionedCabinetMember {
   id: string;
@@ -616,17 +617,18 @@ export const GovAdminView: React.FC = () => {
               <label className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold block mb-1">
                 1. Select Official Portfolio in Your Ministry
               </label>
-              <select
+              <SearchableSelect
+                ariaLabel="Select Official Portfolio"
+                searchPlaceholder="Search portfolio title..."
+                allowCustom
                 value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                {inviteRoleOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                onChange={setInviteRole}
+                triggerClassName="px-3 py-2 rounded-lg bg-white dark:bg-[#161a22] font-mono"
+                options={inviteRoleOptions.map((opt) => ({
+                  value: opt,
+                  label: opt,
+                }))}
+              />
             </div>
 
             <div>
@@ -651,15 +653,18 @@ export const GovAdminView: React.FC = () => {
                 3. PS Statutory Warrant Mode &amp; Email Dispatch
               </label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <select
+                <SearchableSelect
+                  ariaLabel="PS Statutory Warrant Mode"
+                  searchPlaceholder="Search statutory warrant mode..."
                   value={inviteAccessMode}
-                  onChange={(e) => setInviteAccessMode(e.target.value as 'read_only' | 'policy_advisory')}
-                  className="px-2.5 py-2 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-[11px] font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                  title={`Under ${gov.fiscalAct}, the Accounting Officer sets the Minister's operational warrant scope`}
-                >
-                  <option value="read_only">Read-Only Executive Oversight (Statutory Default)</option>
-                  <option value="policy_advisory">Read-Only Accounting + Policy Advisory</option>
-                </select>
+                  onChange={(val) => setInviteAccessMode(val as 'read_only' | 'policy_advisory')}
+                  className="sm:w-64 shrink-0"
+                  triggerClassName="px-2.5 py-2 rounded-lg bg-white dark:bg-[#161a22] font-mono text-[11px]"
+                  options={[
+                    { value: 'read_only', label: 'Read-Only Executive Oversight (Statutory Default)' },
+                    { value: 'policy_advisory', label: 'Read-Only Accounting + Policy Advisory' },
+                  ]}
+                />
                 <div className="flex flex-1 gap-2">
                   <input
                     type="text"

@@ -2079,19 +2079,22 @@ export const GovTeamView: React.FC = () => {
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Reason for Outgoing Officer Handover
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="Reason for Outgoing Officer Handover"
+                  searchPlaceholder="Search handover reason..."
                   value={handoverReason}
-                  onChange={(e) => setHandoverReason(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-                >
-                  <option value="transferred">Transferred to another station</option>
-                  <option value="promoted">Promoted to higher office</option>
-                  <option value="retired">Retired from civil service</option>
-                  <option value="contract_ended">Contract ended</option>
-                  <option value="resigned">Resigned</option>
-                  <option value="dismissed">Dismissed</option>
-                  <option value="other">Other statutory adjustment</option>
-                </select>
+                  onChange={setHandoverReason}
+                  triggerClassName="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  options={[
+                    { value: 'transferred', label: 'Transferred to another station' },
+                    { value: 'promoted', label: 'Promoted to higher office' },
+                    { value: 'retired', label: 'Retired from civil service' },
+                    { value: 'contract_ended', label: 'Contract ended' },
+                    { value: 'resigned', label: 'Resigned' },
+                    { value: 'dismissed', label: 'Dismissed' },
+                    { value: 'other', label: 'Other statutory adjustment' },
+                  ]}
+                />
               </div>
 
               <div>

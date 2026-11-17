@@ -737,30 +737,36 @@ export const CompanyManagementView: React.FC = () => {
                 />
               </div>
 
-              <div className="sm:w-40">
-                <select
+              <div className="sm:w-44">
+                <SearchableSelect
+                  ariaLabel="Filter priority"
+                  searchPlaceholder="Search priority..."
                   value={filterPriority}
-                  onChange={(e) => setFilterPriority(e.target.value)}
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-2 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-                >
-                  <option value="ALL">All Priorities</option>
-                  <option value="statutory_directive">Statutory Directive</option>
-                  <option value="urgent">Urgent Escalation</option>
-                  <option value="routine">Routine Sync</option>
-                </select>
+                  onChange={setFilterPriority}
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg px-2.5 py-2 font-mono"
+                  options={[
+                    { value: 'ALL', label: 'All Priorities' },
+                    { value: 'statutory_directive', label: 'Statutory Directive' },
+                    { value: 'urgent', label: 'Urgent Escalation' },
+                    { value: 'routine', label: 'Routine Sync' },
+                  ]}
+                />
               </div>
 
-              <div className="sm:w-40">
-                <select
+              <div className="sm:w-44">
+                <SearchableSelect
+                  ariaLabel="Filter status"
+                  searchPlaceholder="Search status..."
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-2.5 py-2 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="awaiting">Awaiting CD-Ops</option>
-                  <option value="reviewed_by_cd_ops">Under Review</option>
-                  <option value="actioned">Actioned</option>
-                </select>
+                  onChange={setFilterStatus}
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] rounded-lg px-2.5 py-2 font-mono"
+                  options={[
+                    { value: 'ALL', label: 'All Statuses' },
+                    { value: 'awaiting', label: 'Awaiting CD-Ops' },
+                    { value: 'reviewed_by_cd_ops', label: 'Under Review' },
+                    { value: 'actioned', label: 'Actioned' },
+                  ]}
+                />
               </div>
 
               {(searchQuery || filterCountry !== 'ALL' || filterPriority !== 'ALL' || filterStatus !== 'ALL') && (

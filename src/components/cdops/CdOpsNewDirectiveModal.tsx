@@ -12,6 +12,7 @@ import { useApp } from '../../context/AppContext';
 import { CountryCode } from '../../types';
 import { COUNTRIES } from '../../data/countries';
 import { GovFeedbackMessage } from '../../data/partnerships';
+import { SearchableSelect } from '../SearchableSelect';
 
 interface CdOpsNewDirectiveModalProps {
   isOpen: boolean;
@@ -112,17 +113,18 @@ export const CdOpsNewDirectiveModal: React.FC<CdOpsNewDirectiveModalProps> = ({
               <label className="text-[9px] mono text-slate-500 uppercase block font-bold mb-1">
                 Target Sovereign Nation *
               </label>
-              <select
+              <SearchableSelect
+                ariaLabel="Target Sovereign Nation"
+                searchPlaceholder="Search country..."
                 value={selectedCountry}
-                onChange={(e) => setSelectedCountry(e.target.value as CountryCode)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-teal-500"
-              >
-                {Object.entries(COUNTRIES).map(([code, c]) => (
-                  <option key={code} value={code}>
-                    [{code}] {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedCountry(val as CountryCode)}
+                triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold"
+                options={Object.entries(COUNTRIES).map(([code, c]) => ({
+                  value: code,
+                  label: `[${code}] ${c.name}`,
+                  keywords: `${code} ${c.name}`,
+                }))}
+              />
             </div>
 
             <div className="sm:col-span-2">
@@ -189,15 +191,18 @@ export const CdOpsNewDirectiveModal: React.FC<CdOpsNewDirectiveModalProps> = ({
               <label className="text-[9px] mono text-slate-500 uppercase block font-bold mb-1">
                 Directive Priority
               </label>
-              <select
+              <SearchableSelect
+                ariaLabel="Directive Priority"
+                searchPlaceholder="Search priority level..."
                 value={priority}
-                onChange={(e) => setFPriority(e.target.value as any)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-teal-500"
-              >
-                <option value="routine">Routine Advisory</option>
-                <option value="urgent">Urgent Operational Notice</option>
-                <option value="statutory_directive">Statutory Directive (PFMA)</option>
-              </select>
+                onChange={(val) => setFPriority(val as any)}
+                triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-2 font-mono font-bold"
+                options={[
+                  { value: 'routine', label: 'Routine Advisory' },
+                  { value: 'urgent', label: 'Urgent Operational Notice' },
+                  { value: 'statutory_directive', label: 'Statutory Directive (PFMA)' },
+                ]}
+              />
             </div>
           </div>
 

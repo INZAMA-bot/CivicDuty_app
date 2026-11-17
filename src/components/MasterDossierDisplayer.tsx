@@ -33,6 +33,7 @@ import {
 } from '../utils/dossierEngine';
 import { getDept, getPostGrassroots, stripDecorativeEmojis, timeAgo } from '../utils/helpers';
 import { RichCivicText } from './RichCivicText';
+import { SearchableSelect } from './SearchableSelect';
 import { MediaCard } from './MediaCard';
 import { DossierMultimediaUploader } from './DossierMultimediaUploader';
 
@@ -691,17 +692,18 @@ export const MasterDossierDisplayer: React.FC<MasterDossierDisplayerProps> = ({
               />
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <select
+                <SearchableSelect
                   value={newRole}
-                  onChange={(e) => setNewRole(e.target.value)}
-                  className="min-h-[40px] px-2.5 py-1.5 rounded-lg bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-800 dark:text-slate-200"
-                >
-                  {roleOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setNewRole(val)}
+                  ariaLabel="Contributor Role"
+                  placeholder="Select role..."
+                  searchPlaceholder="Search role..."
+                  allowCustom
+                  customLabelPrefix="Use role:"
+                  options={roleOptions.map((role) => ({ value: role, label: role }))}
+                  className="sm:w-64"
+                  triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116]"
+                />
 
                 <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
                   <input

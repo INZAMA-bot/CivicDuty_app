@@ -28,6 +28,7 @@ import {
   Camera,
 } from 'lucide-react';
 import { VoucherScannerModal } from './VoucherScannerModal';
+import { SearchableSelect } from './SearchableSelect';
 import { useApp } from '../context/AppContext';
 import {
   MerchantProductService,
@@ -449,17 +450,18 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                   <label className="text-[10.5px] font-mono font-bold text-slate-600 dark:text-slate-400 block mb-1">
                     Marketplace Category
                   </label>
-                  <select
+                  <SearchableSelect
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-emerald-500"
-                  >
-                    {MARKETPLACE_CATEGORIES.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setCategory(val)}
+                    ariaLabel="Marketplace Category"
+                    placeholder="Select category..."
+                    searchPlaceholder="Search marketplace categories..."
+                    options={MARKETPLACE_CATEGORIES.map((cat) => ({
+                      value: cat.id,
+                      label: cat.label,
+                    }))}
+                    triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] font-semibold"
+                  />
                 </div>
 
                 <div>
@@ -534,17 +536,21 @@ export const MerchantLoyaltyStudio: React.FC<MerchantLoyaltyStudioProps> = ({
                     <label className="text-[10.5px] font-mono font-bold text-slate-600 dark:text-slate-400 block mb-1">
                       Select Reward Form Type
                     </label>
-                    <select
+                    <SearchableSelect
                       value={rewardType}
-                      onChange={(e) => setRewardType(e.target.value as any)}
-                      className="w-full bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="discount">🏷️ Discount (e.g. 20% off braiding)</option>
-                      <option value="freebie">🎁 Freebie (e.g. Buy haircut get free wash)</option>
-                      <option value="bogo">🔄 BOGO (Buy 1 get 1 free)</option>
-                      <option value="gift">🛍️ Gift (Buy product X, get prize/product Y free)</option>
-                      <option value="cashback">💰 Cashback (Spend {sampleServicePrice.compact} get {sampleCashbackReturn.compact})</option>
-                    </select>
+                      onChange={(val) => setRewardType(val as any)}
+                      ariaLabel="Reward Form Type"
+                      placeholder="Select reward type..."
+                      searchPlaceholder="Search reward types..."
+                      options={[
+                        { value: 'discount', label: '🏷️ Discount (e.g. 20% off braiding)' },
+                        { value: 'freebie', label: '🎁 Freebie (e.g. Buy haircut get free wash)' },
+                        { value: 'bogo', label: '🔄 BOGO (Buy 1 get 1 free)' },
+                        { value: 'gift', label: '🛍️ Gift (Buy product X, get prize/product Y free)' },
+                        { value: 'cashback', label: `💰 Cashback (Spend ${sampleServicePrice.compact} get ${sampleCashbackReturn.compact})` },
+                      ]}
+                      triggerClassName="bg-[#f8f9fa] dark:bg-[#0e1116] font-semibold"
+                    />
                   </div>
                 </div>
 

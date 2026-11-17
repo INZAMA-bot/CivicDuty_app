@@ -34,6 +34,7 @@ import {
   Layers
 } from 'lucide-react';
 import { saveGatewayTransactionToCloud } from '../services/firestoreSync';
+import { SearchableSelect } from '../components/SearchableSelect';
 
 export const GovBillingView: React.FC = () => {
   const { user, invoices, recordInvoicePayment, go, toast } = useApp();
@@ -402,31 +403,41 @@ export const GovBillingView: React.FC = () => {
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Settlement Currency
                 </label>
-                <select
+                <SearchableSelect
+                  ariaLabel="Settlement Currency"
+                  searchPlaceholder="Search currency code, country, or name..."
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value as any)}
-                  className="w-full text-xs font-bold p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
-                >
-                  <optgroup label="── Primary Settlement Currencies">
-                    <option value="UGX">[UG] UGX — Uganda Shilling</option>
-                    <option value="KES">[KE] KES — Kenya Shilling</option>
-                    <option value="NGN">[NG] NGN — Nigeria Naira</option>
-                    <option value="GHS">[GH] GHS — Ghana Cedi</option>
-                    <option value="RWF">[RW] RWF — Rwanda Franc</option>
-                    <option value="TZS">[TZ] TZS — Tanzania Shilling</option>
-                    <option value="ZAR">[ZA] ZAR — South Africa Rand</option>
-                    <option value="USD">[US] USD — US Dollar</option>
-                    <option value="EUR">[EU] EUR — Euro</option>
-                    <option value="GBP">[GB] GBP — British Pound</option>
-                  </optgroup>
-                  <optgroup label={`── All Global Sovereign Jurisdictions (${Object.keys(COUNTRIES).length} Nations)`}>
-                    {Object.entries(COUNTRIES).map(([cCode, cInfo]) => (
-                      <option key={cCode} value={cInfo.currency || 'USD'}>
-                        [{cCode}] {cInfo.currency || 'USD'} — {cInfo.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
+                  onChange={(val) => setCurrency(val as any)}
+                  triggerClassName="p-2.5 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 font-bold"
+                  options={(() => {
+                    const primary = [
+                      { value: 'UGX', label: '[UG] UGX — Uganda Shilling', keywords: 'Uganda UGX UG' },
+                      { value: 'KES', label: '[KE] KES — Kenya Shilling', keywords: 'Kenya KES KE' },
+                      { value: 'NGN', label: '[NG] NGN — Nigeria Naira', keywords: 'Nigeria NGN NG' },
+                      { value: 'GHS', label: '[GH] GHS — Ghana Cedi', keywords: 'Ghana GHS GH' },
+                      { value: 'RWF', label: '[RW] RWF — Rwanda Franc', keywords: 'Rwanda RWF RW' },
+                      { value: 'TZS', label: '[TZ] TZS — Tanzania Shilling', keywords: 'Tanzania TZS TZ' },
+                      { value: 'ZAR', label: '[ZA] ZAR — South Africa Rand', keywords: 'South Africa ZAR ZA' },
+                      { value: 'USD', label: '[US] USD — US Dollar', keywords: 'United States USD US Dollar' },
+                      { value: 'EUR', label: '[EU] EUR — Euro', keywords: 'Europe Euro EUR EU' },
+                      { value: 'GBP', label: '[GB] GBP — British Pound', keywords: 'United Kingdom Pound GBP GB' },
+                    ];
+                    const seen = new Set(primary.map((p) => p.value));
+                    const extra: { value: string; label: string; sublabel?: string; keywords?: string }[] = [];
+                    Object.entries(COUNTRIES).forEach(([cCode, cInfo]) => {
+                      const cur = cInfo.currency || 'USD';
+                      if (!seen.has(cur)) {
+                        seen.add(cur);
+                        extra.push({
+                          value: cur,
+                          label: `[${cCode}] ${cur} — ${cInfo.name}`,
+                          keywords: `${cCode} ${cur} ${cInfo.name}`,
+                        });
+                      }
+                    });
+                    return [...primary, ...extra];
+                  })()}
+                />
               </div>
 
               <div>

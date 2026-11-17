@@ -28,9 +28,37 @@
         "featured_submission_id": { "type": "string", "maxLength": 128 },
         "is_master_dossier": { "type": "boolean" },
         "is_demo": { "type": "boolean" },
-        "demo_highlight": { "type": "string", "maxLength": 256 }
+        "demo_highlight": { "type": "string", "maxLength": 256 },
+        "frontline_scout": {
+          "type": "object",
+          "description": "Optional Frontline Scout workstation affiliation snapshot at report submission."
+        }
       },
       "required": ["id", "country", "dept", "lane", "title", "body", "source", "status", "created_at"]
+    },
+    "FrontlineStage": {
+      "title": "FrontlineStage",
+      "description": "Public Frontline Scout Workstation / Certified Stage hub with active member roster and Top-3 score-based vault distribution.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "normalizedName": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "enum": ["bodaboda", "market", "taxi", "health", "teacher", "artisan"] },
+        "categoryLabel": { "type": "string", "maxLength": 64 },
+        "country": { "type": "string", "maxLength": 8 },
+        "district": { "type": "string", "maxLength": 64 },
+        "subcounty": { "type": "string", "maxLength": 64 },
+        "parish": { "type": "string", "maxLength": 64 },
+        "scoutCount": { "type": "number" },
+        "thresholdRequired": { "type": "number" },
+        "isCertified": { "type": "boolean" },
+        "officialLabel": { "type": "string", "maxLength": 160 },
+        "patronSponsorPoolUgx": { "type": "number" },
+        "patronCount": { "type": "number" },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "normalizedName", "category", "country", "parish", "scoutCount", "thresholdRequired", "isCertified"]
     },
     "Department": {
       "title": "Department",
@@ -280,6 +308,10 @@
     "/posts/{postId}": {
       "schema": "Post",
       "description": "Citizen tickets, complaints, service breakdowns, and praises."
+    },
+    "/frontline_stages/{stageId}": {
+      "schema": "FrontlineStage",
+      "description": "Public Frontline Scout workstations, 15-member certification consensus, and Top-3 reward vaults."
     },
     "/departments/{deptId}": {
       "schema": "Department",

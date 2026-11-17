@@ -53,6 +53,7 @@ import {
 import { tiersFor } from '../data/tiers';
 import { getCountryPerks } from '../data/countryPerks';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { MerchantLoyaltyStudio } from '../components/MerchantLoyaltyStudio';
 import { InstitutionalVaultsDesk } from '../components/InstitutionalVaultsDesk';
 import { DeptIcon } from '../components/DeptIcon';
@@ -1460,15 +1461,19 @@ export const GovInboxView: React.FC = () => {
 
                 {/* Operator Switch & Terminal Lock */}
                 <div className="flex items-center gap-2 shrink-0">
-                  <select
+                  <SearchableSelect
+                    ariaLabel="POS Cashier Role"
+                    searchPlaceholder="Search cashier operator..."
                     value={posCashierRole}
-                    onChange={(e) => setPosCashierRole(e.target.value as any)}
-                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#0e1116] border border-emerald-500/30 text-[11px] font-mono font-bold text-slate-800 dark:text-slate-200"
-                  >
-                    <option value="cashier_1">Operator: Cashier #1 (Main Counter)</option>
-                    <option value="cashier_2">Operator: Cashier #2 (Fast-Track / Canteen)</option>
-                    <option value="lead_bursar">Operator: Lead Bursar / General Manager</option>
-                  </select>
+                    onChange={(val) => setPosCashierRole(val as any)}
+                    className="min-w-[230px]"
+                    triggerClassName="px-2.5 py-1 rounded-lg bg-white dark:bg-[#0e1116] border-emerald-500/30 font-mono font-bold text-[11px]"
+                    options={[
+                      { value: 'cashier_1', label: 'Operator: Cashier #1 (Main Counter)' },
+                      { value: 'cashier_2', label: 'Operator: Cashier #2 (Fast-Track / Canteen)' },
+                      { value: 'lead_bursar', label: 'Operator: Lead Bursar / General Manager' },
+                    ]}
+                  />
                   <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-mono font-bold uppercase tracking-wider shrink-0">
                     POS Online
                   </span>
@@ -1739,16 +1744,19 @@ export const GovInboxView: React.FC = () => {
                   placeholder={isSchool ? 'Circular title (e.g. S.1 Orientation & Fees Notice)...' : 'Bulletin title...'}
                   className="sm:col-span-2 px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
-                <select
+                <SearchableSelect
+                  ariaLabel="Bulletin Category"
+                  searchPlaceholder="Search bulletin category..."
                   value={bulletinCategory}
-                  onChange={(e) => setBulletinCategory(e.target.value as any)}
-                  className="px-2.5 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
-                >
-                  <option value="academic">Category: Academic</option>
-                  <option value="notice">Category: Notice</option>
-                  <option value="calendar">Category: Calendar</option>
-                  <option value="menu">Category: Menu &amp; Specials</option>
-                </select>
+                  onChange={(val) => setBulletinCategory(val as any)}
+                  triggerClassName="px-2.5 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] font-mono"
+                  options={[
+                    { value: 'academic', label: 'Category: Academic' },
+                    { value: 'notice', label: 'Category: Notice' },
+                    { value: 'calendar', label: 'Category: Calendar' },
+                    { value: 'menu', label: 'Category: Menu & Specials' },
+                  ]}
+                />
               </div>
 
               <textarea
@@ -2231,16 +2239,19 @@ export const GovInboxView: React.FC = () => {
                         <Clock size={12} className="text-slate-400" />
                         <span>Customer Response SLA</span>
                       </label>
-                      <select
+                      <SearchableSelect
+                        ariaLabel="Customer Response SLA"
+                        searchPlaceholder="Search SLA window..."
                         value={profileSla}
-                        onChange={(e) => setProfileSla(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                      >
-                        <option value="12">12 Hours (Rapid Priority SLA)</option>
-                        <option value="24">24 Hours (Founding Partner Standard)</option>
-                        <option value="48">48 Hours (Routine Standard SLA)</option>
-                        <option value="72">72 Hours (Extended Complex SLA)</option>
-                      </select>
+                        onChange={setProfileSla}
+                        triggerClassName="px-3 py-2 rounded-xl bg-[#f8f9fa] dark:bg-[#0e1116] font-medium"
+                        options={[
+                          { value: '12', label: '12 Hours (Rapid Priority SLA)' },
+                          { value: '24', label: '24 Hours (Founding Partner Standard)' },
+                          { value: '48', label: '48 Hours (Routine Standard SLA)' },
+                          { value: '72', label: '72 Hours (Extended Complex SLA)' },
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2816,15 +2827,18 @@ export const GovInboxView: React.FC = () => {
                   placeholder="Modification title (e.g. Add Borehole Serial No. field)..."
                   className="sm:col-span-2 px-3 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
-                <select
+                <SearchableSelect
+                  ariaLabel="Modification Priority"
+                  searchPlaceholder="Search priority level..."
                   value={modPriority}
-                  onChange={(e) => setModPriority(e.target.value as any)}
-                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
-                >
-                  <option value="routine">Priority: Routine</option>
-                  <option value="urgent">Priority: Urgent</option>
-                  <option value="statutory_directive">Priority: Statutory</option>
-                </select>
+                  onChange={(val) => setModPriority(val as any)}
+                  triggerClassName="px-2.5 py-1.5 rounded-lg bg-white dark:bg-[#161a22] font-mono"
+                  options={[
+                    { value: 'routine', label: 'Priority: Routine' },
+                    { value: 'urgent', label: 'Priority: Urgent' },
+                    { value: 'statutory_directive', label: 'Priority: Statutory' },
+                  ]}
+                />
               </div>
               <textarea
                 rows={2}
@@ -3326,19 +3340,23 @@ export const GovInboxView: React.FC = () => {
                       </button>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <select
+                      <SearchableSelect
+                        ariaLabel="Select Duplicate Report to Merge"
+                        searchPlaceholder="Search duplicate report by ID, title, or author..."
+                        placeholder="Select duplicate report..."
                         value={selectedDupToMerge}
-                        onChange={(e) => setSelectedDupToMerge(e.target.value)}
-                        className="flex-1 text-xs font-bold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg p-2"
-                      >
-                        {queue
+                        onChange={setSelectedDupToMerge}
+                        className="flex-1"
+                        triggerClassName="bg-white dark:bg-slate-900 border-indigo-300 dark:border-indigo-700 rounded-lg p-2 font-bold"
+                        options={queue
                           .filter((other) => other.id !== p.id && other.status !== 'resolved')
-                          .map((other) => (
-                            <option key={other.id} value={other.id}>
-                              #{other.id.slice(-6).toUpperCase()} — {other.title} ({other.citizen_name})
-                            </option>
-                          ))}
-                      </select>
+                          .map((other) => ({
+                            value: other.id,
+                            label: `#${other.id.slice(-6).toUpperCase()} — ${other.title}`,
+                            sublabel: other.citizen_name,
+                            keywords: `${other.id} ${other.title} ${other.citizen_name}`,
+                          }))}
+                      />
                       <button
                         onClick={() => {
                           if (!selectedDupToMerge) return;
@@ -3452,17 +3470,20 @@ export const GovInboxView: React.FC = () => {
                   <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
                     <UserPlus size={12} className="text-teal-600 dark:text-teal-400" /> Target Citizen Champion
                   </label>
-                  <select
+                  <SearchableSelect
+                    ariaLabel="Target Citizen Champion"
+                    searchPlaceholder="Search citizen by name, phone, or parish..."
+                    allowCustom
                     value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 text-[11px] focus:outline-none focus:border-teal-500"
-                  >
-                    {countryPerks.sampleCitizens.map((c, idx) => (
-                      <option key={idx} value={`${c.name} (${c.phone}) - ${c.location}`}>
-                        {c.name} ({c.phone}) · {c.location} ({c.points} pts)
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setRecipient}
+                    triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-[11px]"
+                    options={countryPerks.sampleCitizens.map((c) => ({
+                      value: `${c.name} (${c.phone}) - ${c.location}`,
+                      label: `${c.name} (${c.phone}) · ${c.location}`,
+                      sublabel: `${c.points} pts`,
+                      keywords: `${c.name} ${c.phone} ${c.location}`,
+                    }))}
+                  />
                 </div>
 
                 {dispatchModal === 'digital' ? (
@@ -3521,21 +3542,28 @@ export const GovInboxView: React.FC = () => {
                       <label className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
                         <Award size={12} className="text-teal-600 dark:text-teal-400" /> Award Item
                       </label>
-                      <select
+                      <SearchableSelect
+                        ariaLabel="Award Item"
+                        searchPlaceholder="Search award item..."
+                        allowCustom
                         value={prizeType}
-                        onChange={(e) => setPrizeType(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 text-[11px] focus:outline-none focus:border-teal-500"
-                      >
-                        <option value="Parish Watchdog Honor Plaque & Solar Lantern">
-                          Parish Watchdog Honor Plaque &amp; Solar Lantern
-                        </option>
-                        <option value="Executive Civic Excellence Duty Medal">
-                          Executive Civic Excellence Duty Medal
-                        </option>
-                        <option value="Solar Home Emergency Lighting System">
-                          Solar Home Emergency Lighting System
-                        </option>
-                      </select>
+                        onChange={setPrizeType}
+                        triggerClassName="bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2 text-[11px]"
+                        options={[
+                          {
+                            value: 'Parish Watchdog Honor Plaque & Solar Lantern',
+                            label: 'Parish Watchdog Honor Plaque & Solar Lantern',
+                          },
+                          {
+                            value: 'Executive Civic Excellence Duty Medal',
+                            label: 'Executive Civic Excellence Duty Medal',
+                          },
+                          {
+                            value: 'Solar Home Emergency Lighting System',
+                            label: 'Solar Home Emergency Lighting System',
+                          },
+                        ]}
+                      />
                     </div>
 
                     <div className="space-y-1">
