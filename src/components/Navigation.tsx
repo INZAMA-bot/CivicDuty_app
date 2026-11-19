@@ -34,7 +34,7 @@ interface NavigationProps {
 }
 
 export const Navigation: React.FC<NavigationProps> = () => {
-  const { user, ensureCitizenSession, view, go, setUser, t, setSelectedMinistryId, openGuide, openLegalCenter } = useApp();
+  const { user, ensureCitizenSession, view, go, setUser, t, setSelectedMinistryId, openGuide, openLegalCenter, activeDeskSection, openDeskPerksVaults } = useApp();
   const [collapsed, setCollapsed] = useState(false);
 
   const isPortalEntryView = [
@@ -121,6 +121,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
 
   const citizenWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
     { id: 'feed', label: t('feed') || 'Public Feed', icon: Layers },
+    { id: 'gov_projects', label: 'Works Near Me', icon: HardHat, active: view === 'gov_projects' || view === 'project' },
     { id: 'depts', label: t('depts') || 'Service Desks', icon: Building2 },
     { id: 'perk_vault', label: 'Honours & Perks', icon: Award },
     { id: 'profile', label: t('profile') || 'My Dossier', icon: User },
@@ -134,6 +135,8 @@ export const Navigation: React.FC<NavigationProps> = () => {
         ? `${activeUser.organization_name.split('(')[0].trim().slice(0, 16)} Desk`
         : 'Provider Desk',
       icon: Building2,
+      onClick: () => openDeskPerksVaults('inbox'),
+      active: (view === 'gov_inbox' || view === 'gov_reply') && activeDeskSection !== 'perks_vaults',
     },
     {
       id: 'gov_projects',
@@ -143,12 +146,24 @@ export const Navigation: React.FC<NavigationProps> = () => {
     { id: 'entity_team', label: 'Staff & Team Roster', icon: Users },
     { id: 'gov_audit', label: 'Audit Chain', icon: Scale },
     { id: 'entity_register', label: 'Desk Profile & Tier', icon: Layers },
-    { id: 'perk_vault', label: '5-Vault Perks', icon: Award },
+    {
+      id: 'gov_inbox',
+      label: 'Perks & Desk Vaults',
+      icon: Award,
+      onClick: () => openDeskPerksVaults('perks_vaults'),
+      active: view === 'gov_inbox' && activeDeskSection === 'perks_vaults',
+    },
   ];
 
   // Government Desk Workspace Navigation
   const govWorkspaceItems: { id: ViewType; label: string; icon: React.ElementType; onClick?: () => void; active?: boolean }[] = [
-    { id: 'gov_inbox', label: isGrassrootsChief ? 'Grassroots Inbox' : isMinister ? 'Portfolio Inbox' : 'Official Inbox', icon: Inbox },
+    {
+      id: 'gov_inbox',
+      label: isGrassrootsChief ? 'Grassroots Inbox' : isMinister ? 'Portfolio Inbox' : 'Official Inbox',
+      icon: Inbox,
+      onClick: () => openDeskPerksVaults('inbox'),
+      active: (view === 'gov_inbox' || view === 'gov_reply') && activeDeskSection !== 'perks_vaults',
+    },
     { id: 'gov_projects', label: isMinister ? 'Portfolio Works (RO)' : 'Public Works', icon: Building2 },
     ...(isAccountingOfficer
       ? [
@@ -199,6 +214,13 @@ export const Navigation: React.FC<NavigationProps> = () => {
           },
         ]
       : []),
+    {
+      id: 'gov_inbox',
+      label: 'Perks & Desk Vaults',
+      icon: Award,
+      onClick: () => openDeskPerksVaults('perks_vaults'),
+      active: view === 'gov_inbox' && activeDeskSection === 'perks_vaults',
+    },
     { id: 'gov_audit', label: 'Audit Chain', icon: FileCheck2 },
     { id: 'feed', label: isGrassrootsChief ? 'Grassroots Feed' : 'Public Feed', icon: Eye },
   ];
@@ -225,7 +247,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
           {/* Top Studio Brand Header */}
           <div className="h-13 px-3 border-b border-[#e3e6ea] dark:border-[#262b36] flex items-center justify-between gap-2 shrink-0 bg-white dark:bg-[#161a22]">
             <div
-              onClick={() => go(isGov || isPrivateProvider ? 'gov_inbox' : 'feed')}
+              onClick={() => (isGov || isPrivateProvider ? openDeskPerksVaults('inbox') : go('feed'))}
               className="flex items-center gap-2 min-w-0 cursor-pointer group"
               title="CivicDuty Studio"
             >
@@ -261,7 +283,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
             {isGov ? (
               <button
                 type="button"
-                onClick={() => go(isMinister ? 'ps_executive_desk' : 'gov_inbox')}
+                onClick={() => (isMinister ? go('ps_executive_desk') : openDeskPerksVaults('inbox'))}
                 title={isGrassrootsChief ? 'Grassroots Inbox' : isMinister ? 'Ministerial Portfolio Desk' : 'Official Jurisdiction Inbox'}
                 className={`w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center ${
                   collapsed ? 'justify-center px-0' : 'justify-start px-3 gap-2'
@@ -277,7 +299,7 @@ export const Navigation: React.FC<NavigationProps> = () => {
             ) : isPrivateProvider ? (
               <button
                 type="button"
-                onClick={() => go('gov_inbox')}
+                onClick={() => openDeskPerksVaults('inbox')}
                 title="Provider Operations Desk"
                 className={`w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center ${
                   collapsed ? 'justify-center px-0' : 'justify-start px-3 gap-2'
@@ -450,15 +472,26 @@ export const Navigation: React.FC<NavigationProps> = () => {
           {isPrivateProvider ? (
             <>
               <button
-                onClick={() => go('gov_inbox')}
+                onClick={() => openDeskPerksVaults('inbox')}
                 className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'gov_inbox' || view === 'gov_reply'
+                  (view === 'gov_inbox' || view === 'gov_reply') && activeDeskSection !== 'perks_vaults'
                     ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 <Inbox size={18} strokeWidth={1.75} />
                 <span className="text-[9.5px] font-mono">Inbox</span>
+              </button>
+              <button
+                onClick={() => openDeskPerksVaults('perks_vaults')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'gov_inbox' && activeDeskSection === 'perks_vaults'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Award size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Vaults</span>
               </button>
               <button
                 onClick={() => go('gov_projects')}
@@ -507,15 +540,26 @@ export const Navigation: React.FC<NavigationProps> = () => {
           ) : isGov ? (
             <>
               <button
-                onClick={() => go('gov_inbox')}
+                onClick={() => openDeskPerksVaults('inbox')}
                 className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
-                  view === 'gov_inbox' || view === 'gov_reply'
+                  (view === 'gov_inbox' || view === 'gov_reply') && activeDeskSection !== 'perks_vaults'
                     ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 font-semibold'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 <Inbox size={18} strokeWidth={1.75} />
                 <span className="text-[9.5px] font-mono">{isGrassrootsChief ? 'Grassroots' : isMinister ? 'Inbox' : 'Inbox'}</span>
+              </button>
+              <button
+                onClick={() => openDeskPerksVaults('perks_vaults')}
+                className={`flex-1 min-h-[46px] flex flex-col items-center justify-center gap-0.5 rounded-xl transition-colors cursor-pointer ${
+                  view === 'gov_inbox' && activeDeskSection === 'perks_vaults'
+                    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 font-semibold'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Award size={18} strokeWidth={1.75} />
+                <span className="text-[9.5px] font-mono">Vaults</span>
               </button>
               <button
                 onClick={() => go('gov_projects')}

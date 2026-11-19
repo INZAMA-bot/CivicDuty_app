@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   Scale,
   Plus,
+  HardHat,
 } from 'lucide-react';
 
 import { SplashView } from './views/SplashView';
@@ -209,6 +210,7 @@ const StudioRightInspector: React.FC = () => {
           {[
             { id: 'ps_executive_desk', label: 'Ministerial Executive Desk', icon: Scale },
             { id: 'compose', label: 'Ticket Studio (Auto-Suggest)', icon: Plus },
+            { id: 'gov_projects', label: 'Works Near Me', icon: HardHat },
             { id: 'entity_gateway', label: 'Uganda Provider Terminal', icon: ShieldCheck },
             { id: 'depts', label: 'Service Provider Registry', icon: Building2 },
             { id: 'perk_vault', label: 'Vault Marketplace & Perks', icon: Award },
@@ -257,7 +259,6 @@ const AppContent: React.FC = () => {
     'gov_team',
     'gov_bulk',
     'gov_billing',
-    'gov_projects',
     'gov_admin',
     'entity_team',
     'ps_opm_analytics',
@@ -371,7 +372,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  const showRightInspector = !isGov && !isPrivateProvider && ['feed', 'depts', 'dept_wall', 'post_detail', 'compose', 'profile'].includes(view);
+  const showRightInspector = !isGov && !isPrivateProvider && ['feed', 'depts', 'dept_wall', 'post_detail', 'compose', 'profile', 'gov_projects', 'project'].includes(view);
   const isFullWidthView = [
     'transit_preview',
     'livery',

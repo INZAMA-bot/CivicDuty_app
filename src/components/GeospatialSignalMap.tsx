@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Post } from '../types';
+import { Post, Project } from '../types';
 import { 
   MapPin, 
   Layers, 
@@ -16,16 +16,21 @@ import {
   ShieldAlert, 
   Maximize2, 
   Minimize2,
-  Filter
+  Filter,
+  HardHat
 } from 'lucide-react';
 import { catByID, getDept, slaStatus } from '../utils/helpers';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
+import { getProjectCoverageSummary } from '../utils/projectCoverage';
 
 interface GeospatialSignalMapProps {
   initialRegion?: 'ALL' | 'CENTRAL' | 'WESTERN' | 'EASTERN' | 'NORTHERN';
   customPosts?: Post[];
+  projects?: Project[];
+  projectsOnly?: boolean;
   compact?: boolean;
   onSelectPost?: (post: Post) => void;
+  onSelectProject?: (project: Project) => void;
 }
 
 // Pre-calibrated representative coordinates for Ugandan Districts & Municipalities on an SVG coordinate space (0..500 x, 0..500 y)
@@ -53,10 +58,13 @@ const DISTRICT_MAP_COORDS: Record<string, { x: number; y: number; region: string
 export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
   initialRegion = 'ALL',
   customPosts,
+  projects = [],
+  projectsOnly = false,
   compact = false,
   onSelectPost,
+  onSelectProject,
 }) => {
-  const { posts, setActivePost, go, theme, user, selectedCountry } = useApp();
+  const { posts, setActivePost, setActiveProject, go, theme, user, selectedCountry } = useApp();
   const activeCountry = (user?.country || selectedCountry || 'UG').toUpperCase();
   const gov = useMemo(() => getCountryGovernanceSchema(activeCountry), [activeCountry]);
   const isUg = activeCountry === 'UG';
@@ -64,10 +72,11 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [activeSignalFilter, setActiveSignalFilter] = useState<'ALL' | 'RED' | 'AMBER' | 'GREEN'>('ALL');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [viewMode, setViewMode] = useState<'PINS' | 'HEATMAP'>('PINS');
   const [radiusFilter, setRadiusFilter] = useState<'ALL' | '500M' | '2KM' | '10KM'>('ALL');
 
-  const sourcePosts = customPosts || posts;
+  const sourcePosts = projectsOnly ? [] : (customPosts || posts);
 
   // Filter posts based on controls
   const filteredPosts = useMemo(() => {
@@ -126,18 +135,79 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
     }).filter(pin => selectedRegion === 'ALL' || pin.region === selectedRegion);
   }, [filteredPosts, selectedRegion]);
 
+  const projectPins = useMemo(() => {
+    const projectCoords = (text: string, idx: number, lat?: number, lng?: number) => {
+      if (isUg && typeof lat === 'number' && typeof lng === 'number') {
+        // Project UG coordinates (lat -1.5..4.2, lng 29.5..35.0) onto SVG 80..430 box
+        const normX = Math.max(60, Math.min(440, Math.round(90 + ((lng - 29.5) / 5.5) * 340)));
+        const normY = Math.max(60, Math.min(440, Math.round(440 - ((lat + 1.5) / 5.7) * 360)));
+        const region = lat > 1.3 ? 'NORTHERN' : lng > 33.1 ? 'EASTERN' : lng < 31.3 ? 'WESTERN' : 'CENTRAL';
+        return { x: normX, y: normY, region };
+      }
+      const key = text.toUpperCase();
+      let base = { x: 250, y: 250, region: 'CENTRAL' };
+      if (key.includes('KAMPALA') || key.includes('NAKAWA') || key.includes('BUKOTO') || key.includes('NTINDA')) base = DISTRICT_MAP_COORDS.KLA;
+      else if (key.includes('WAKISO') || key.includes('GAYAZA')) base = DISTRICT_MAP_COORDS.WAK;
+      else if (key.includes('MUKONO') || key.includes('NAMAGUNGA')) base = DISTRICT_MAP_COORDS.MUK;
+      else if (key.includes('JINJA')) base = DISTRICT_MAP_COORDS.JIN;
+      else if (key.includes('MBALE')) base = DISTRICT_MAP_COORDS.MBL;
+      else if (key.includes('SOROTI')) base = DISTRICT_MAP_COORDS.SOR;
+      else if (key.includes('GULU')) base = DISTRICT_MAP_COORDS.GUL;
+      else if (key.includes('ARUA')) base = DISTRICT_MAP_COORDS.ARU;
+      else if (key.includes('MBARARA')) base = DISTRICT_MAP_COORDS.MBR;
+      else if (key.includes('KASESE')) base = DISTRICT_MAP_COORDS.KAS;
+      else if (key.includes('KABALE')) base = DISTRICT_MAP_COORDS.KAB;
+      else if (key.includes('MASAKA')) base = DISTRICT_MAP_COORDS.MAS;
+      else if (key.includes('LIRA')) base = DISTRICT_MAP_COORDS.LIRA;
+      else if (key.includes('HOIMA')) base = DISTRICT_MAP_COORDS.HOIMA;
+      const offsetX = ((idx * 19) % 28) - 14;
+      const offsetY = ((idx * 23) % 28) - 14;
+      return {
+        x: Math.max(40, Math.min(460, base.x + offsetX)),
+        y: Math.max(40, Math.min(460, base.y + offsetY)),
+        region: base.region,
+      };
+    };
+
+    return (projects || [])
+      .map((proj, idx) => {
+        const cov = getProjectCoverageSummary(proj);
+        const searchStr = `${proj.loc} ${cov.districtNames.join(' ')} ${cov.parishNames.join(' ')}`;
+        const start = projectCoords(searchStr, idx, cov.gpsPoint?.lat, cov.gpsPoint?.lng);
+        const end = cov.corridorEndGps
+          ? projectCoords(searchStr, idx + 3, cov.corridorEndGps.lat, cov.corridorEndGps.lng)
+          : cov.corridorType === 'multi_parish_corridor'
+          ? { x: Math.min(460, start.x + 18), y: Math.max(40, start.y - 14), region: start.region }
+          : null;
+        return { proj, cov, start, end };
+      })
+      .filter((item) => selectedRegion === 'ALL' || item.start.region === selectedRegion);
+  }, [projects, selectedRegion, isUg]);
+
   const redCount = pins.filter(p => p.signalColor === 'red').length;
   const amberCount = pins.filter(p => p.signalColor === 'amber').length;
   const greenCount = pins.filter(p => p.signalColor === 'green').length;
 
   const handlePinClick = (post: Post) => {
+    setSelectedProject(null);
     setSelectedPost(post);
     if (onSelectPost) onSelectPost(post);
+  };
+
+  const handleProjectPinClick = (proj: Project) => {
+    setSelectedPost(null);
+    setSelectedProject(proj);
+    if (onSelectProject) onSelectProject(proj);
   };
 
   const handleOpenDetail = (post: Post) => {
     setActivePost(post);
     go('post_detail');
+  };
+
+  const handleOpenProjectDetail = (proj: Project) => {
+    setActiveProject(proj);
+    go('project');
   };
 
   return (
@@ -146,17 +216,19 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
       <div className="p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/70 dark:bg-slate-950/50">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center justify-center">
-            <Compass className="w-4 h-4 animate-spin" style={{ animationDuration: '18s' }} />
+            {projectsOnly ? <HardHat className="w-4 h-4" /> : <Compass className="w-4 h-4" />}
           </div>
           <div>
             <h3 className="text-xs sm:text-sm font-black text-slate-950 dark:text-white flex items-center gap-1.5">
-              <span>Geospatial Signal Density Layer</span>
+              <span>{projectsOnly ? 'Geotagged Public Works Radar' : 'Geospatial Signal Density Layer'}</span>
               <span className="text-[9px] mono font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                LIVE GIS
+                {projectsOnly ? `${projectPins.length} WORKS` : 'LIVE GIS'}
               </span>
             </h3>
             <p className="text-[10px] text-slate-700 dark:text-slate-300 font-medium">
-              Real-time geocoded infrastructure signals across {isUg ? '146' : gov.tier3Count} {gov.tier3UnitLabel.toLowerCase()} jurisdictions ({gov.countryName}).
+              {projectsOnly
+                ? `Tap any geotagged contract corridor or site pin across ${isUg ? '146 districts & 11 cities' : `${gov.tier3Count} ${gov.tier3Plural.toLowerCase()}`}.`
+                : `Real-time geocoded infrastructure signals across ${isUg ? '146' : gov.tier3Count} ${gov.tier3UnitLabel.toLowerCase()} jurisdictions (${gov.countryName}).`}
             </p>
           </div>
         </div>
@@ -430,16 +502,113 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
               </g>
             );
           })}
+          {/* GEOTAGGED PUBLIC WORKS CONTRACTS & MULTI-PARISH CORRIDOR MARKERS */}
+          {projectPins.map((item) => {
+            const isProjSelected = selectedProject?.id === item.proj.id;
+            const isDefects = item.proj.status === 'defects';
+            const isCompleted = item.proj.status === 'completed';
+            const pinColor = isDefects ? '#f59e0b' : isCompleted ? '#10b981' : '#38bdf8';
+            return (
+              <g
+                key={`proj-${item.proj.id}`}
+                className="cursor-pointer"
+                onClick={() => handleProjectPinClick(item.proj)}
+              >
+                {item.end && (
+                  <line
+                    x1={item.start.x}
+                    y1={item.start.y}
+                    x2={item.end.x}
+                    y2={item.end.y}
+                    stroke={pinColor}
+                    strokeWidth={isProjSelected ? 3 : 2}
+                    strokeDasharray="4 3"
+                    opacity={0.85}
+                  />
+                )}
+                {item.end && (
+                  <circle
+                    cx={item.end.x}
+                    cy={item.end.y}
+                    r={isProjSelected ? 5 : 3.5}
+                    fill={pinColor}
+                    stroke="#0f172a"
+                    strokeWidth={1.5}
+                  />
+                )}
+                <polygon
+                  points={`${item.start.x},${item.start.y - (isProjSelected ? 9 : 7)} ${item.start.x + (isProjSelected ? 9 : 7)},${item.start.y} ${item.start.x},${item.start.y + (isProjSelected ? 9 : 7)} ${item.start.x - (isProjSelected ? 9 : 7)},${item.start.y}`}
+                  fill={pinColor}
+                  stroke={isProjSelected ? '#ffffff' : '#0f172a'}
+                  strokeWidth={isProjSelected ? 2 : 1.5}
+                />
+                {isProjSelected && (
+                  <circle
+                    cx={item.start.x}
+                    cy={item.start.y}
+                    r="14"
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 2"
+                  />
+                )}
+              </g>
+            );
+          })}
         </svg>
 
         {/* Live GPS Telemetry Overlay Chip */}
         <div className="absolute top-2.5 left-2.5 px-2.5 py-1 bg-slate-900/90 border border-slate-700 backdrop-blur-md rounded-xl text-[9px] mono text-slate-300 font-bold flex items-center gap-1.5 shadow-md">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>{gov.codePrefix}-GRID: EPSG:4326 · {pins.length} Live Signals</span>
+          <span>
+            {gov.codePrefix}-GRID: {projectsOnly ? `${projectPins.length} Geotagged Works` : `${pins.length} Signals · ${projectPins.length} Works`}
+          </span>
         </div>
 
+        {/* Selected Contract / Public Work Popover Preview Card */}
+        {selectedProject && (
+          <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-white/95 dark:bg-slate-900/95 border border-amber-400/60 dark:border-amber-600/50 backdrop-blur-md rounded-2xl p-3 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 a-fade text-slate-950 dark:text-white">
+            <div className="space-y-1 flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[8.5px] font-bold px-2 py-0.5 rounded uppercase font-mono bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                  {selectedProject.status === 'defects' ? '12-Mo Defects Window' : selectedProject.status}
+                </span>
+                <span className="text-[9.5px] font-bold text-slate-700 dark:text-slate-300 truncate">
+                  {selectedProject.loc}
+                </span>
+                <span className="text-[9.5px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                  {selectedProject.value}
+                </span>
+              </div>
+              <h4 className="text-xs font-black text-slate-950 dark:text-white line-clamp-1">
+                {selectedProject.title}
+              </h4>
+              <p className="text-[10px] text-slate-700 dark:text-slate-300 line-clamp-1 font-medium">
+                {selectedProject.contractor} · LC1 → Parish → Sub-County → CAO → PS ✓
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={() => setSelectedProject(null)}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenProjectDetail(selectedProject)}
+                className="text-[10.5px] font-black px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              >
+                <span>Open Contract Wall</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Selected Post Popover Preview Card */}
-        {selectedPost && (
+        {selectedPost && !selectedProject && (
           <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-white/95 dark:bg-slate-900/95 border border-slate-300 dark:border-slate-700 backdrop-blur-md rounded-2xl p-3 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 a-fade text-slate-950 dark:text-white">
             <div className="space-y-1 flex-1">
               <div className="flex items-center gap-1.5">
@@ -467,14 +636,16 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
 
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
               <button
+                type="button"
                 onClick={() => setSelectedPost(null)}
-                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
               >
                 Dismiss
               </button>
               <button
+                type="button"
                 onClick={() => handleOpenDetail(selectedPost)}
-                className="text-[10.5px] font-black px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white flex items-center gap-1.5 transition-all shadow-xs"
+                className="text-[10.5px] font-black px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
               >
                 <span>Inspect Signal</span>
                 <ExternalLink className="w-3 h-3" />
@@ -487,10 +658,18 @@ export const GeospatialSignalMap: React.FC<GeospatialSignalMapProps> = ({
       {/* Bottom Summary Bar */}
       <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[10.5px] font-bold text-slate-800 dark:text-slate-200">
         <div className="flex items-center gap-2">
-          <span>Active Display: <strong className="text-slate-950 dark:text-white">{pins.length} Signals</strong> in {selectedRegion} Region</span>
+          <span>
+            Active Display:{' '}
+            <strong className="text-slate-950 dark:text-white">
+              {projectsOnly ? `${projectPins.length} Geotagged Contracts` : `${pins.length} Signals · ${projectPins.length} Works`}
+            </strong>{' '}
+            in {selectedRegion} Region
+          </span>
         </div>
         <div className="text-[9.5px] mono text-slate-600 dark:text-slate-400">
-          Click any signal node to inspect real-time SLA timer and citizen verification.
+          {projectsOnly
+            ? 'Diamonds = Site GPS · Dashed Lines = Multi-Parish Corridors'
+            : 'Click any signal node or contract diamond to inspect verification.'}
         </div>
       </div>
     </div>

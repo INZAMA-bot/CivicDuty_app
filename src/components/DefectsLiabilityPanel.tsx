@@ -65,7 +65,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
             reportedAt: '2026-08-14',
             severity: 'critical',
             description: 'Runoff and red soil silting up 600mm precast pipe outlet. Standing water pooling on fresh asphalt edge.',
-            photoUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+            photoUrl: '/evidence/water_main_burst.jpg',
             status: 'flagged',
           },
           {
@@ -76,7 +76,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
             reportedAt: '2026-08-20',
             severity: 'medium',
             description: 'Hairline settlement crack approximately 12m length along edge beam. Requires hot-pour bitumen sealant.',
-            photoUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+            photoUrl: '/evidence/sidewalk_damage.jpg',
             status: 'flagged',
           },
           {
@@ -87,7 +87,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
             reportedAt: '2026-08-22',
             severity: 'low',
             description: 'Vibrations loosened top mounting clamp. Light works at night but solar array is tilted away from true azimuth.',
-            photoUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+            photoUrl: '/evidence/power_transformer_repair.jpg',
             status: 'flagged',
           },
         ]
@@ -100,7 +100,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
             reportedAt: '2026-08-14',
             severity: 'critical',
             description: 'Stormwater runoff and sediment silting up 600mm precast pipe outlet. Standing water pooling along fresh asphalt edge.',
-            photoUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+            photoUrl: '/evidence/water_main_burst.jpg',
             status: 'flagged',
           },
           {
@@ -111,7 +111,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
             reportedAt: '2026-08-20',
             severity: 'medium',
             description: 'Hairline settlement crack approximately 12m length along edge beam. Requires hot-pour bitumen sealant.',
-            photoUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+            photoUrl: '/evidence/sidewalk_damage.jpg',
             status: 'flagged',
           },
           {
@@ -122,7 +122,7 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
             reportedAt: '2026-08-22',
             severity: 'low',
             description: 'Vibrations loosened top mounting clamp. Light operates at night but solar array is tilted away from optimal azimuth.',
-            photoUrl: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+            photoUrl: '/evidence/power_transformer_repair.jpg',
             status: 'flagged',
           },
         ];
@@ -145,17 +145,17 @@ export const DefectsLiabilityPanel: React.FC<DefectsLiabilityPanelProps> = ({
   const REPAIR_PHOTO_PRESETS = [
     {
       title: 'Desilted Precast Culvert & Concrete Headwall Flushed',
-      url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/pipe_repaired_nwsc.jpg',
       note: 'Desilted 600mm pipe culvert; washed headwall clean and cleared stone pitch discharge apron to stream.',
     },
     {
       title: 'Hot-Pour Elastomeric Bitumen Crack Sealant Applied',
-      url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/kigali_asphalt_road_repair.jpg',
       note: 'Crack grooved to 15mm, blown dry with compressed air, and hot polymer bitumen sealant injected flush to road.',
     },
     {
       title: 'Solar Mast Plinth Bracket Re-Torqued & Calibrated',
-      url: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/power_transformer_repair.jpg',
       note: 'Replaced stainless U-bolts, calibrated tilt angle to 15° south, and verified night luminaire trigger.',
     },
   ];

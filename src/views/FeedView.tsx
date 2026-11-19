@@ -54,6 +54,7 @@ import { PromotionalAdFeedCard } from '../components/PromotionalAdFeedCard';
 import { getCountryPromotionalAds } from '../data/promotionalAds';
 import { getCountryGovernanceSchema } from '../data/countryGovernance';
 import { catByID, getDept, getPostGrassroots, slaStatus } from '../utils/helpers';
+import { filterProjectsForUser, getProjectCoverageSummary } from '../utils/projectCoverage';
 import { CountryCode, TicketCategory } from '../types';
 
 export const FeedView: React.FC = () => {
@@ -62,6 +63,7 @@ export const FeedView: React.FC = () => {
     ensureCitizenSession,
     selectedCountry,
     posts,
+    projects,
     feedTab,
     setFeedTab,
     trafficSignalFilter,
@@ -72,6 +74,7 @@ export const FeedView: React.FC = () => {
     setActiveDept,
     setActiveDeptCountry,
     setActivePost,
+    setActiveProject,
     t,
     promotionalAds,
     showDemos,
@@ -282,6 +285,25 @@ export const FeedView: React.FC = () => {
       (activeUser.district && p.territory?.district?.toLowerCase().includes(activeUser.district.toLowerCase()))
     );
   });
+
+  // Geotagged Public Works matching citizen Near Me parish/ward/district (or active country public ledger)
+  const countryPublicProjects = filterProjectsForUser(projects, user, {
+    countryOverride: activeJurisdiction,
+  });
+  const parishCleanLower = activeParish.replace(/ Parish/i, '').toLowerCase();
+  const wardCleanLower = activeWard.replace(/ Ward/i, '').toLowerCase();
+  const districtCleanLower = (activeUser.district || '').replace(/\s+district$/i, '').toLowerCase();
+  const localMatchedProjects = countryPublicProjects.filter((prj) => {
+    const cov = getProjectCoverageSummary(prj);
+    const hay = `${prj.loc} ${cov.districtNames.join(' ')} ${cov.subcountyNames.join(' ')} ${cov.parishNames.join(' ')} ${cov.villages.join(' ')}`.toLowerCase();
+    return (
+      (parishCleanLower && hay.includes(parishCleanLower)) ||
+      (wardCleanLower && hay.includes(wardCleanLower)) ||
+      (districtCleanLower && hay.includes(districtCleanLower))
+    );
+  });
+  const nearMeProjects = localMatchedProjects.length > 0 ? localMatchedProjects : countryPublicProjects;
+  const nearMeProjectsIsLocalMatch = localMatchedProjects.length > 0;
 
   const base = selectedCategory === 'praise' 
     ? allC 
@@ -977,6 +999,57 @@ export const FeedView: React.FC = () => {
               <span>{gov.grassrootsUnits.villageLabel}: {activeGrassroot}</span>
             </button>
           </div>
+
+          {/* Nearby Geotagged Public Works Strip */}
+          {nearMeProjects.length > 0 && (
+            <div className="pt-2 border-t border-slate-200/80 dark:border-[#1e2536] space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
+                  <HardHat size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>
+                    {nearMeProjectsIsLocalMatch
+                      ? `Public Works Near ${activeParish} (${nearMeProjects.length})`
+                      : `Public Works in ${activeCountryName} (${nearMeProjects.length})`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => go('gov_projects')}
+                  className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer whitespace-nowrap"
+                >
+                  Open Works Near Me Hub →
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {nearMeProjects.slice(0, 2).map((prj) => (
+                  <button
+                    key={prj.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveProject(prj);
+                      go('project');
+                    }}
+                    className="p-2.5 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36] hover:border-amber-500/60 text-left transition-colors cursor-pointer space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-mono">
+                      <span className="font-bold text-amber-700 dark:text-amber-400 truncate">
+                        {prj.status === 'defects' ? '12-Mo Defects Window' : prj.status.toUpperCase()}
+                      </span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0 tabular-nums">
+                        {prj.value}
+                      </span>
+                    </div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-white line-clamp-1">
+                      {prj.title}
+                    </div>
+                    <div className="text-[10.5px] text-slate-500 dark:text-slate-400 truncate">
+                      {prj.loc} · {prj.contractor}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1289,7 +1362,7 @@ export const FeedView: React.FC = () => {
               Switch to Feed Stream ✕
             </button>
           </div>
-          <GeospatialSignalMap customPosts={display} />
+          <GeospatialSignalMap customPosts={display} projects={nearMeProjects} />
         </div>
       )}
 

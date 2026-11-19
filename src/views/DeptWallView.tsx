@@ -65,6 +65,7 @@ export const DeptWallView: React.FC = () => {
     wallTab,
     setWallTab,
     setPerkTab,
+    openDeskPerksVaults,
     go,
     setActiveProject,
     toast,
@@ -139,7 +140,8 @@ export const DeptWallView: React.FC = () => {
 
   // Strictly check if current logged-in user is the owner/authorized officer of this desk
   const isDeskOwner = Boolean(
-    user && (
+    user &&
+      user.role !== 'citizen' && (
       user.dept === did ||
       user.dept === d.id ||
       (user.organization_name && d.name && (
@@ -1176,7 +1178,7 @@ export const DeptWallView: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => go('gov_inbox')}
+              onClick={() => openDeskPerksVaults('perks_vaults')}
               className="min-h-[40px] px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-mono font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Gift size={13} />
@@ -1189,7 +1191,7 @@ export const DeptWallView: React.FC = () => {
             activeMerchantDept={did}
             currentVouchers={wallVouchers}
             onSelectForVaultDeposit={(product) => {
-              go('gov_inbox');
+              openDeskPerksVaults('perks_vaults');
               toast(`Opening Desk Vaults to fund ${product.merchantName} voucher!`, 'emerald');
             }}
           />

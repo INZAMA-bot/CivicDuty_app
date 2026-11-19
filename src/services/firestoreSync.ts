@@ -902,8 +902,9 @@ export async function saveFrontlineStageToCloud(stage: any): Promise<void> {
     };
     await setDoc(doc(db, 'frontline_stages', stageId), payload, { merge: true });
   } catch (error) {
+    const code = (error as { code?: string } | null)?.code;
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes('offline') || msg.includes('unavailable') || msg.includes('Missing or insufficient permissions')) {
+    if (code === 'unavailable' || msg.includes('offline') || msg.includes('unavailable')) {
       console.info(`[Firestore Sync] Frontline stage ${stageId} queued locally:`, msg);
       return;
     }

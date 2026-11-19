@@ -26,6 +26,7 @@ import {
 import { CountryCode, Project, ProjectMilestone } from '../types';
 import { COUNTRIES, TERRITORY } from '../data/countries';
 import { SearchableSelect } from '../components/SearchableSelect';
+import { GeospatialSignalMap } from '../components/GeospatialSignalMap';
 import {
   filterProjectsForUser,
   getProjectCoverageSummary,
@@ -130,15 +131,38 @@ export const GovProjectsView: React.FC = () => {
   const [filterSubcounty, setFilterSubcounty] = useState<string>('');
   const [filterParish, setFilterParish] = useState<string>('');
   const [textFilter, setTextFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'defects' | 'completed'>('all');
+  const [worksViewMode, setWorksViewMode] = useState<'list' | 'map'>('list');
   const [showPublicCorridorForPrivate, setShowPublicCorridorForPrivate] = useState<boolean>(false);
 
-  // Seed citizen drilldown from onboarded district if available (optional quick preset)
+  // Match citizen's home district in Territory tree for 1-tap "My Area" vs "All Nationwide" toggle
+  const citizenMatchedDistrict = useMemo(() => {
+    const raw = (user?.district || '').trim().toLowerCase();
+    if (!raw) return null;
+    return (
+      (TERRITORY[country] || []).find(
+        (d) =>
+          d.id.toLowerCase() === raw ||
+          d.name.toLowerCase() === raw ||
+          d.name.toLowerCase().includes(raw.replace(/\s+district$/i, ''))
+      ) || null
+    );
+  }, [country, user?.district]);
+
+  // Auto-seed citizen district filter only if their home district actually has works (otherwise stay Nationwide with 1-tap toggle)
   const [citizenFilterSeeded, setCitizenFilterSeeded] = useState(false);
   useEffect(() => {
-    if (!citizenFilterSeeded && perspective.isCitizen && user?.district) {
+    if (!citizenFilterSeeded && perspective.isCitizen && citizenMatchedDistrict) {
+      const localMatches = filterProjectsForUser(projects, user, {
+        countryOverride: country,
+        districtFilter: citizenMatchedDistrict.id,
+      });
+      if (localMatches.length > 0) {
+        setFilterDistrict(citizenMatchedDistrict.id);
+      }
       setCitizenFilterSeeded(true);
     }
-  }, [citizenFilterSeeded, perspective.isCitizen, user?.district]);
+  }, [citizenFilterSeeded, perspective.isCitizen, citizenMatchedDistrict, projects, user, country]);
 
   // Creation Form State
   const [creating, setCreating] = useState(false);
@@ -220,15 +244,18 @@ export const GovProjectsView: React.FC = () => {
     [builderSubcountyNode, selectedUnits]
   );
 
-  // Apply Multi-Tier Coverage + Role Isolation Filtering
+  // Apply Multi-Tier Coverage + Role Isolation + Status Filtering
   const visibleProjects = useMemo(() => {
-    const base = filterProjectsForUser(projects, user, {
+    let base = filterProjectsForUser(projects, user, {
       countryOverride: country,
       districtFilter: filterDistrict,
       subcountyFilter: filterSubcounty,
       parishFilter: filterParish,
       showPublicCorridorForPrivate,
     });
+    if (statusFilter !== 'all') {
+      base = base.filter((p) => p.status === statusFilter);
+    }
     if (!textFilter.trim()) return base;
     const q = textFilter.trim().toLowerCase();
     return base.filter((p) => {
@@ -244,7 +271,7 @@ export const GovProjectsView: React.FC = () => {
         cov.villages.some((v) => v.toLowerCase().includes(q))
       );
     });
-  }, [projects, user, country, filterDistrict, filterSubcounty, filterParish, showPublicCorridorForPrivate, textFilter]);
+  }, [projects, user, country, filterDistrict, filterSubcounty, filterParish, showPublicCorridorForPrivate, statusFilter, textFilter]);
 
   const handleAddParishCoverage = (parishIdOrCustom: string) => {
     if (!parishIdOrCustom.trim()) return;
@@ -601,6 +628,74 @@ export const GovProjectsView: React.FC = () => {
               Reset Filters
             </button>
           )}
+        </div>
+
+        {/* Quick Scope, Status & Radar Map Bar */}
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {perspective.isCitizen && citizenMatchedDistrict && (
+              <button
+                type="button"
+                onClick={() => {
+                  const isActiveLocal = filterDistrict === citizenMatchedDistrict.id;
+                  setFilterDistrict(isActiveLocal ? '' : citizenMatchedDistrict.id);
+                  setFilterSubcounty('');
+                  setFilterParish('');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold border cursor-pointer transition-colors ${
+                  filterDistrict === citizenMatchedDistrict.id
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-700 dark:text-slate-300 border-[#e3e6ea] dark:border-[#262b36]'
+                }`}
+              >
+                📍 Near Me ({user?.parish || citizenMatchedDistrict.name})
+              </button>
+            )}
+            {[
+              { id: 'all' as const, label: 'All Works' },
+              { id: 'active' as const, label: 'In Progress' },
+              { id: 'defects' as const, label: '12-Mo Defects Window' },
+              { id: 'completed' as const, label: 'Handed Over' },
+            ].map((st) => (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setStatusFilter(st.id)}
+                className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-semibold border cursor-pointer transition-colors ${
+                  statusFilter === st.id
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white'
+                    : 'bg-[#f8f9fa] dark:bg-[#0e1116] text-slate-600 dark:text-slate-400 border-[#e3e6ea] dark:border-[#262b36] hover:border-slate-400'
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-[#0e1116] border border-[#e3e6ea] dark:border-[#262b36]">
+            <button
+              type="button"
+              onClick={() => setWorksViewMode('list')}
+              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold cursor-pointer transition-colors ${
+                worksViewMode === 'list'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              Contracts List ({visibleProjects.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorksViewMode('map')}
+              className={`px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-bold cursor-pointer transition-colors ${
+                worksViewMode === 'map'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              🗺️ Works Radar Map
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
@@ -1196,7 +1291,14 @@ export const GovProjectsView: React.FC = () => {
         </div>
       )}
 
-      {/* Contracts / Project Walls List */}
+      {/* Contracts / Project Walls List or Works Radar Map */}
+      {worksViewMode === 'map' && (
+        <div className="animate-fade-in">
+          <GeospatialSignalMap customPosts={[]} projects={visibleProjects} projectsOnly />
+        </div>
+      )}
+
+      {worksViewMode === 'list' && (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-[10px] mono text-slate-600 dark:text-slate-400 uppercase tracking-widest font-bold">
@@ -1387,6 +1489,7 @@ export const GovProjectsView: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Explainer note */}
       <div className="p-3.5 space-y-1 bg-teal-50/70 dark:bg-teal-500/10 rounded-2xl border border-teal-500/20 text-slate-600 dark:text-slate-400">

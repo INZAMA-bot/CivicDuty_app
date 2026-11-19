@@ -1,17 +1,18 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { initializeFirestore, doc, getDoc } from 'firebase/firestore';
+import { initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
 
 // CRITICAL: Must use firestoreDatabaseId from firebase-applet-config.json
-// Use initializeFirestore with experimentalForceLongPolling to handle restricted iframe/proxy environments gracefully
+// Use experimentalAutoDetectLongPolling so standard Fetch/WebChannel streaming works without forced XHR long-poll drops,
+// while still falling back automatically in restrictive proxy environments.
 export const db = initializeFirestore(
   app,
   {
-    experimentalForceLongPolling: true,
+    experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
   },
   firebaseConfig.firestoreDatabaseId
@@ -68,13 +69,22 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Test database connection on startup
 export async function testFirestoreConnection(): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return false;
+  }
   try {
-    await getDoc(doc(db, 'test', 'connection'));
+    await getDocFromServer(doc(db, 'test', 'connection'));
     console.log('[OK] Cloud Firestore connected successfully.');
     return true;
   } catch (error) {
+    const code = (error as { code?: string } | null)?.code;
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes('offline') || msg.includes('unavailable')) {
+    if (
+      code === 'unavailable' ||
+      msg.includes('the client is offline') ||
+      msg.includes('offline') ||
+      msg.includes('unavailable')
+    ) {
       console.info('Cloud Firestore active in resilient offline-first mode. Operating with local cache.');
     } else {
       console.warn('Firestore connectivity notice:', msg);

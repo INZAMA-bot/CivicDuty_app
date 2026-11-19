@@ -106,7 +106,7 @@ export const ProjectView: React.FC = () => {
       evidenceImages: [
         {
           id: 'ev-1-1',
-          url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=800&q=80',
+          url: '/evidence/unbuilt_road_site.jpg',
           caption: 'Baseline topographic survey & benchmark establishment at Chainage 0+000',
           uploadedAt: '2026-01-16',
           uploadedBy: 'Lead Surveyor & Site Engineer',
@@ -114,7 +114,7 @@ export const ProjectView: React.FC = () => {
         },
         {
           id: 'ev-1-2',
-          url: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=800&q=80',
+          url: '/evidence/sidewalk_damage.jpg',
           caption: 'Mechanical bush clearance & topsoil stripping (300mm depth)',
           uploadedAt: '2026-01-17',
           uploadedBy: 'Heavy Plant Supervisor',
@@ -139,7 +139,7 @@ export const ProjectView: React.FC = () => {
       evidenceImages: [
         {
           id: 'ev-2-1',
-          url: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80',
+          url: '/evidence/kigali_clean_corridor.jpg',
           caption: 'Site camp establishment, safety signage & hoardings along project corridor',
           uploadedAt: '2026-02-01',
           uploadedBy: 'Safety Officer & Site Agent',
@@ -159,7 +159,7 @@ export const ProjectView: React.FC = () => {
       evidenceImages: [
         {
           id: 'ev-3-1',
-          url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=800&q=80',
+          url: '/evidence/pipe_repaired_nwsc.jpg',
           caption: 'Channel prism trench excavation to grade with CAT 320 excavator',
           uploadedAt: '2026-05-08',
           uploadedBy: 'Excavation Foreman',
@@ -434,27 +434,27 @@ export const ProjectView: React.FC = () => {
   const SAMPLE_CIVIL_PHOTO_PRESETS = [
     {
       title: 'Concrete Box Culvert Bedding & Invert Slab',
-      url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/pipe_repaired_nwsc.jpg',
       caption: 'Precast box culvert units placed on 150mm class 15 concrete blinding bedding',
     },
     {
       title: 'Trench Prism Hydraulic Excavation',
-      url: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/water_main_burst.jpg',
       caption: 'Trapezoidal drainage channel excavation completed per hydraulic slope DWG-03',
     },
     {
       title: 'Subgrade Compaction & Slump Test Verification',
-      url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/unbuilt_road_site.jpg',
       caption: 'Nuclear density gauge test verifying 98% MDD compaction on base gravel layer',
     },
     {
       title: 'Asphalt Concrete (AC20) Binder Course Laying',
-      url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/kigali_asphalt_road_repair.jpg',
       caption: 'Vögele asphalt paver laying 60mm AC20 binder course at 155°C compaction temperature',
     },
     {
       title: 'Solar Streetlight Mast Foundation & Armature',
-      url: 'https://images.unsplash.com/photo-1509391365360-2e959784a276?auto=format&fit=crop&w=800&q=80',
+      url: '/evidence/power_transformer_repair.jpg',
       caption: 'C25 reinforced concrete plinth & anchor bolts installed for 8m solar streetlight masts',
     },
   ];
@@ -2095,7 +2095,7 @@ export const ProjectView: React.FC = () => {
                         const url = URL.createObjectURL(file);
                         const newPhoto: MilestoneEvidenceImage = {
                           id: `ev-file-${Date.now()}-${fIdx}`,
-                          url: isDoc ? 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=600&q=80' : url,
+                          url: isDoc ? '/evidence/kigali_clean_corridor.jpg' : url,
                           caption: `${isDoc ? 'Stamped Paperwork: ' : 'Field Photo: '} ${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`,
                           uploadedAt: new Date().toISOString().split('T')[0],
                           uploadedBy: `${proj.contractor} Resident Engineer`,

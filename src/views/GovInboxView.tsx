@@ -91,6 +91,9 @@ export const GovInboxView: React.FC = () => {
     projects,
     ministerialDirectives,
     submitDirectiveCompliance,
+    deskSectionIntent,
+    setActiveDeskSection,
+    clearDeskSectionIntent,
   } = useApp();
   const activeCountry = (user?.country || activeDeptCountry || 'UG').toUpperCase();
   const gov = getCountryGovernanceSchema(activeCountry);
@@ -121,6 +124,20 @@ export const GovInboxView: React.FC = () => {
   const [providerDeskTab, setProviderDeskTab] = useState<
     'tickets' | 'merchant_pos' | 'bulletins' | 'projects' | 'team' | 'perks' | 'profile'
   >('tickets');
+
+  useEffect(() => {
+    if (!deskSectionIntent) return;
+    if (deskSectionIntent.section === 'perks_vaults') {
+      setGovDeskSection('perks_vaults');
+      setProviderDeskTab('perks');
+    } else if (deskSectionIntent.section === 'merchant_pos') {
+      setProviderDeskTab('merchant_pos');
+    } else if (deskSectionIntent.section === 'inbox') {
+      setGovDeskSection('inbox');
+      setProviderDeskTab('tickets');
+    }
+    clearDeskSectionIntent();
+  }, [deskSectionIntent, clearDeskSectionIntent]);
   const [providerTicketSearch, setProviderTicketSearch] = useState('');
   const [selectedBranchFilter, setSelectedBranchFilter] = useState<string>('ALL');
   const [replyTicket, setReplyTicket] = useState<any | null>(null);
@@ -791,7 +808,10 @@ export const GovInboxView: React.FC = () => {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setProviderDeskTab(tab.id)}
+                onClick={() => {
+                  setProviderDeskTab(tab.id);
+                  setActiveDeskSection(tab.id === 'perks' ? 'perks_vaults' : tab.id === 'merchant_pos' ? 'merchant_pos' : 'inbox');
+                }}
                 className={`px-3.5 py-2.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                   isTabActive
                     ? 'bg-emerald-600 text-white shadow-xs'
@@ -1710,8 +1730,8 @@ export const GovInboxView: React.FC = () => {
               activeMerchantDept={user.dept}
               currentVouchers={[]}
               onSelectForVaultDeposit={() => {
-                go('perk_vault');
-                toast('Navigating to Sovereign Escrow Vault to pre-fund vouchers!', 'emerald');
+                setProviderDeskTab('perks');
+                toast('Switched to Perks & Desk Vaults to fund your vouchers!', 'emerald');
               }}
             />
           </div>
@@ -2600,7 +2620,11 @@ export const GovInboxView: React.FC = () => {
                 )}
                 <button
                   type="button"
-                  onClick={() => setGovDeskSection(govDeskSection === 'perks_vaults' ? 'inbox' : 'perks_vaults')}
+                  onClick={() => {
+                    const next = govDeskSection === 'perks_vaults' ? 'inbox' : 'perks_vaults';
+                    setGovDeskSection(next);
+                    setActiveDeskSection(next);
+                  }}
                   className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <Award size={11} />
@@ -2615,7 +2639,10 @@ export const GovInboxView: React.FC = () => {
         <div className="mt-3 flex items-center gap-1.5 p-1 rounded-xl bg-white dark:bg-[#161a22] border border-[#e3e6ea] dark:border-[#262b36]">
           <button
             type="button"
-            onClick={() => setGovDeskSection('inbox')}
+            onClick={() => {
+              setGovDeskSection('inbox');
+              setActiveDeskSection('inbox');
+            }}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
               govDeskSection === 'inbox'
                 ? 'bg-emerald-600 text-white shadow-xs'
@@ -2627,7 +2654,10 @@ export const GovInboxView: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setGovDeskSection('perks_vaults')}
+            onClick={() => {
+              setGovDeskSection('perks_vaults');
+              setActiveDeskSection('perks_vaults');
+            }}
             className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-2 transition-colors whitespace-nowrap cursor-pointer ${
               govDeskSection === 'perks_vaults'
                 ? 'bg-emerald-600 text-white shadow-xs'

@@ -361,6 +361,7 @@ export const PerkVaultView: React.FC = () => {
     showDemos,
     perkTab,
     setPerkTab,
+    openDeskPerksVaults,
   } = useApp();
 
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(
@@ -1283,7 +1284,7 @@ export const PerkVaultView: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => go('gov_inbox')}
+              onClick={() => openDeskPerksVaults('perks_vaults')}
               className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
             >
               <span>Open Desk Perks &amp; Vaults</span>

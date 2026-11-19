@@ -154,6 +154,11 @@ interface AppContextType {
   setGovTab: (t: 'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved') => void;
   perkTab: 'citizen_wallet' | 'redeem_xp' | 'community_pools';
   setPerkTab: (t: 'citizen_wallet' | 'redeem_xp' | 'community_pools') => void;
+  deskSectionIntent: { section: 'inbox' | 'perks_vaults' | 'merchant_pos'; ts: number } | null;
+  activeDeskSection: 'inbox' | 'perks_vaults' | 'merchant_pos';
+  setActiveDeskSection: (s: 'inbox' | 'perks_vaults' | 'merchant_pos') => void;
+  openDeskPerksVaults: (section?: 'inbox' | 'perks_vaults' | 'merchant_pos') => void;
+  clearDeskSectionIntent: () => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
 
@@ -573,6 +578,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     compose: '/speak',
     profile: '/profile',
     perk_vault: '/perks',
+    gov_projects: '/works',
     docs: '/docs',
     ussd: '/ussd',
     entity_register: '/register',
@@ -589,6 +595,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (pathname === '/feed' || hash === 'feed') return 'feed';
       if (pathname === '/subscription-confirmed' || pathname === '/confirmed') return 'entity_done';
       if (pathname === '/perks') return 'perk_vault';
+      if (pathname === '/works') return 'gov_projects';
       if (pathname === '/departments') return 'depts';
       if (pathname === '/speak') return 'compose';
       if (pathname === '/profile') return 'profile';
@@ -1312,6 +1319,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [wallTab, setWallTab] = useState<'posts' | 'announcements' | 'projects' | 'vouchers'>('posts');
   const [govTab, setGovTab] = useState<'all' | 'pending' | 'overdue' | 'investigating' | 'corruption' | 'resolved'>('all');
   const [perkTab, setPerkTab] = useState<'citizen_wallet' | 'redeem_xp' | 'community_pools'>('citizen_wallet');
+  const [deskSectionIntent, setDeskSectionIntent] = useState<{ section: 'inbox' | 'perks_vaults' | 'merchant_pos'; ts: number } | null>(null);
+  const [activeDeskSection, setActiveDeskSection] = useState<'inbox' | 'perks_vaults' | 'merchant_pos'>('inbox');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Persist state to local storage
@@ -1607,7 +1616,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const go = (v: ViewType) => {
-    if (['feed', 'depts', 'compose', 'profile', 'post_detail', 'dept_wall', 'gov_projects'].includes(v)) {
+    if (['feed', 'depts', 'compose', 'profile', 'post_detail', 'dept_wall', 'gov_projects', 'project'].includes(v)) {
       if (!user || (user.role === 'citizen' && user.country !== selectedCountry)) {
         setUser(ensureCitizenSession());
       }
@@ -1638,6 +1647,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch {}
       }
     }
+  };
+
+  const openDeskPerksVaults = (section: 'inbox' | 'perks_vaults' | 'merchant_pos' = 'perks_vaults') => {
+    setActiveDeskSection(section);
+    setDeskSectionIntent({ section, ts: Date.now() });
+    go('gov_inbox');
+  };
+
+  const clearDeskSectionIntent = () => {
+    setDeskSectionIntent(null);
   };
 
   const logAudit = (action: string, ticketId: string, detail: string, country?: CountryCode, dept?: string) => {
@@ -4699,6 +4718,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setGovTab,
         perkTab,
         setPerkTab,
+        deskSectionIntent,
+        activeDeskSection,
+        setActiveDeskSection,
+        openDeskPerksVaults,
+        clearDeskSectionIntent,
         searchQuery,
         setSearchQuery,
         ratifyResolution,
